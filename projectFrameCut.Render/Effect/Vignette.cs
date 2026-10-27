@@ -9,8 +9,12 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class VignetteEffect_IPicture : INormalEffect
+    public class VignetteEffect_IPicture : VignetteEffect<IPicture> { }
+
+    public class VignetteEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new VignetteEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -47,7 +51,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            var effect = new VignetteEffect_IPicture
+            var effect = new VignetteEffect<TPicture>
             {
                 Strength = DynamicParam.ToFloat(parameters.GetValueOrDefault("Strength")),
                 Radius = DynamicParam.ToFloat(parameters.GetValueOrDefault("Radius")),
@@ -58,11 +62,11 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             float strength = DynamicParam.Resolve(Parameters.GetValueOrDefault("Strength"), Strength);
             float radius = DynamicParam.Resolve(Parameters.GetValueOrDefault("Radius"), Radius);
-            return PictureEffectChannels.PreserveHdr(VignetteEffect.Process(source, strength, radius), source);
+            return PictureEffectChannels.PreserveHdr(PictureCalculation<TPicture>.Vignette(source, strength, radius), source);
         }
     }
 

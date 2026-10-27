@@ -1,4 +1,4 @@
-﻿using Kawazu;
+using Kawazu;
 using Microsoft.Maui.Controls;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -38,7 +38,7 @@ namespace projectFrameCut.Services
         {
             if (string.IsNullOrEmpty(fontPath) || !File.Exists(fontPath))
             {
-                return Picture8bpp.GenerateSolidColor(640, 480, 255, 255, 255, null);
+                return PictureFP16.GenerateSolidColor(640, 480, Half.One, Half.One, Half.One, null);
             }
 
             try
@@ -55,7 +55,7 @@ namespace projectFrameCut.Services
                     FillR = 0,
                     FillG = 0,
                     FillB = 0,
-                    FillA = 1f,
+                    FillA = Half.One,
                 };
                 var engine = new NormalTypesettingEngine();
                 var vectorCanvas = engine.Layout(textEntry, fontFace);
@@ -64,7 +64,7 @@ namespace projectFrameCut.Services
             }
             catch
             {
-                return Picture8bpp.GenerateSolidColor(640, 480, 255, 255, 255, null);
+                return PictureFP16.GenerateSolidColor(640, 480, Half.One, Half.One, Half.One, null);
             }
         }
 
@@ -114,7 +114,7 @@ namespace projectFrameCut.Services
                         FillR = 0,
                         FillG = 0,
                         FillB = 0,
-                        FillA = 1f,
+                        FillA = Half.One,
                     };
                     textEntry.Y = engine.Measure(textEntry, fontFace).height;
                     if (isDark)

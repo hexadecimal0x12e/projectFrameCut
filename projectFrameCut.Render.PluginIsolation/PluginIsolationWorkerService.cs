@@ -340,7 +340,7 @@ internal sealed class PluginIsolationWorkerService(
                 pictures[field.Id] = await PicturePayloadCodec.ReadAsync(field.PictureValue!, _payloads, cancellationToken).ConfigureAwait(false);
             ApplyProviderState(provider, request.Provider, pictures);
             var response = new IsolationEffectList();
-            foreach (var effect in provider.Build())
+            foreach (var effect in provider.BuildForDataFormat(request.PictureDataFormat == 0 ? null : (PictureDataFormat)request.PictureDataFormat))
             {
                 effect.Initialize();
                 response.Effects.Add(DescribeEffect(AddObject(effect), effect, request.Provider));
@@ -424,12 +424,17 @@ internal sealed class PluginIsolationWorkerService(
                 State = state, BoundProviders = new System.Collections.ObjectModel.ReadOnlyDictionary<string, EffectProviderTypeState>(sources),
                 InputTypes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, EffectArgumentFieldType>(
                     request.InputTypes.ToDictionary(p => p.Key, p => (EffectArgumentFieldType)p.Value)),
+                InputDataFormats = request.InputDataFormats.ToDictionary(p => p.Key, p => (object?)(PictureDataFormat)p.Value),
             };
             var response = new IsolationResolvedFieldTypes();
-            foreach (var (key, field) in state.Fields.Where(p => p.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)))
+            foreach (var (key, field) in state.Fields.Where(p => p.Value.FieldType.HasFlag(EffectArgumentFieldType.Any) || p.Value.FieldType.IsPicture()))
                 response.Inputs[key] = (ulong)provider.ResolveFieldType(key, true, context);
-            foreach (var (key, field) in state.Outputs.Where(p => p.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)))
+            foreach (var (key, field) in state.Outputs.Where(p => p.Value.FieldType.HasFlag(EffectArgumentFieldType.Any) || p.Value.FieldType.IsPicture()))
                 response.Outputs[key] = (ulong)provider.ResolveFieldType(key, false, context);
+            foreach (var key in state.Fields.Keys)
+                if (provider.ResolveDataFormat(key, true, context) is PictureDataFormat format) response.InputDataFormats[key] = (int)format;
+            foreach (var key in state.Outputs.Keys)
+                if (provider.ResolveDataFormat(key, false, context) is PictureDataFormat format) response.OutputDataFormats[key] = (int)format;
             return Success(envelope, response);
         }
         finally
@@ -444,7 +449,7 @@ internal sealed class PluginIsolationWorkerService(
         var key = new EffectImplementationKey(request.TypeName, (EffectImplementType)request.ImplementType);
         if (!RequirePlugin().EffectImplementationProvider.TryGetValue(key, out var factory))
             throw new KeyNotFoundException($"Effect implementation '{key.TypeName}/{key.ImplementType}' was not found.");
-        var effect = factory();
+        var effect = PictureDataFormats.Specialize(factory(), request.PictureDataFormat == 0 ? null : (PictureDataFormat)request.PictureDataFormat);
         effect.Initialize();
         return Success(envelope, DescribeEffect(AddObject(effect), effect, null));
     }
@@ -680,7 +685,7 @@ internal sealed class PluginIsolationWorkerService(
                     cancellationToken.ThrowIfCancellationRequested();
                     if (value is IPicture picture)
                     {
-                        var outputLease = await PicturePayloadCodec.WriteAsync(picture, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
+                        var outputLease = await PicturePayloadCodec.WriteAsync(EffectPictureProcessing.RequireFP16(picture, "Isolated plugin picture"), _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
                         published.Add(outputLease);
                         response.Pictures[key] = outputLease.Reference;
                     }
@@ -705,7 +710,7 @@ internal sealed class PluginIsolationWorkerService(
             if (result is not IPicture output)
                 return Success(envelope, new IsolationEffectComputeResponse { Value = IsolationValueConverter.FromObject(result) });
             pictures.Add(output);
-            var lease = await PicturePayloadCodec.WriteAsync(output, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
+            var lease = await PicturePayloadCodec.WriteAsync(EffectPictureProcessing.RequireFP16(output, "Isolated plugin picture"), _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
             return Success(envelope, new IsolationEffectComputeResponse { Picture = lease.Reference });
         }
         finally
@@ -845,7 +850,7 @@ internal sealed class PluginIsolationWorkerService(
         }
         using (picture)
         {
-            var lease = await PicturePayloadCodec.WriteAsync(picture, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
+            var lease = await PicturePayloadCodec.WriteAsync(EffectPictureProcessing.RequireFP16(picture, "Isolated plugin picture"), _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
             return Success(envelope, new IsolationPictureResponse { Picture = lease.Reference });
         }
     }
@@ -994,7 +999,7 @@ internal sealed class PluginIsolationWorkerService(
         ApplyClipState(clip, request.Clip.State);
         using var picture = clip.GetFrameRelativeToStartPointOfSource(request.FrameIndex, request.Width, request.Height,
             (IPicture.PicturePixelMode)request.PixelMode);
-        var lease = await PicturePayloadCodec.WriteAsync(picture, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
+        var lease = await PicturePayloadCodec.WriteAsync(EffectPictureProcessing.RequireFP16(picture, "Isolated plugin picture"), _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
         return Success(envelope, new IsolationPictureResponse { Picture = lease.Reference });
     }
 
@@ -1335,7 +1340,7 @@ internal sealed class PluginIsolationWorkerService(
                 rendered = render();
             }
             using var output = rendered;
-            var lease = await PicturePayloadCodec.WriteAsync(output, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
+            var lease = await PicturePayloadCodec.WriteAsync(EffectPictureProcessing.RequireFP16(output, "Isolated plugin picture"), _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
             return Success(envelope, new IsolationPictureResponse { Picture = lease.Reference });
         }
         finally
@@ -1363,8 +1368,8 @@ internal sealed class PluginIsolationWorkerService(
                 : pictures.TryGetValue(item.Id, out var picture) ? (object)picture : IsolationValueConverter.ToObject(item.Value)
                     ?? (type.BaseType() == EffectArgumentFieldType.AudioSample ? null : item.DefaultValue);
             fields[item.Id] = item.IsDynamic
-                ? new DynamicEffectParamField(item.Id, type, item.BoundProviderId, value) { FieldType = type }
-                : new StaticEffectArgumentField(value, type);
+                ? new DynamicEffectParamField(item.Id, type, item.BoundProviderId, value) { FieldType = type, DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat }
+                : new StaticEffectArgumentField(value, type) { DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat };
         }
         provider.Fields = fields;
     }
@@ -1402,6 +1407,7 @@ internal sealed class PluginIsolationWorkerService(
         TypeName = field.TypeName,
         FromPlugin = field.FromPlugin,
         FieldType = (ulong)field.FieldType,
+        DataFormat = field.DataFormat is PictureDataFormat format ? (int)format : 0,
         DefaultValue = field.DefaultValue,
         MinimumValue = field.MinValue,
         MaximumValue = field.MaxValue,
@@ -1477,7 +1483,7 @@ internal sealed class PluginIsolationWorkerService(
         Fps = source.Fps,
         Width = source.Width,
         Height = source.Height,
-        SupportsHdr = source is IHDRVideoSource,
+        SupportsHdr = source is IHDRVideoSource { HasHdrContent: true },
     };
 
     private static IsolationVectorComponentDescriptor DescribeVectorComponent(IVectorComponent component, long objectId) => new()

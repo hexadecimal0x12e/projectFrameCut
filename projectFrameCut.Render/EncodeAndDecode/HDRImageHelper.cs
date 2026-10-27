@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private const float DefaultHdrMaximumBrightness = 1000f;
         private const float HdrReferencePeakNits = 10000f;
 
-        public static void SaveAsHeif(this HDRPicture16bpp picture, string filePath)
+        public static void SaveAsHeif(this HDRPictureFP16 picture, string filePath)
         {
             ArgumentNullException.ThrowIfNull(picture);
             if (string.IsNullOrWhiteSpace(filePath))
@@ -44,7 +44,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             AVDictionary* codecOpts = null;
 
             bool headerWritten = false;
-            float maximumBrightness = NormalizeMaximumBrightness(picture.MaximumBrightness);
+            Half maximumBrightness = NormalizeMaximumBrightness(picture.MaximumBrightness);
             (uint maxCll, uint maxFall) = ComputeContentLightLevel(picture, maximumBrightness);
             var sw = Stopwatch.StartNew();
 
@@ -87,7 +87,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if ((fmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
                     codecCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
 
-                ConfigureEncoderOptions(codec, maximumBrightness, maxCll, maxFall, &codecOpts);
+                ConfigureEncoderOptions(codec, (float)maximumBrightness, maxCll, maxFall, &codecOpts);
 
                 FFmpegHelper.Throw(ffmpeg.avcodec_open2(codecCtx, codec, &codecOpts), "avcodec_open2(HEVC)");
                 ffmpeg.av_dict_free(&codecOpts);
@@ -111,10 +111,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 srcFrame = ffmpeg.av_frame_alloc();
                 if (srcFrame == null)
                     throw new InvalidOperationException("Failed to allocate source frame.");
-                srcFrame->format = (int)AVPixelFormat.AV_PIX_FMT_BGR48LE;
+                srcFrame->format = (int)FFmpegFP16FrameCodec.EncoderFormat;
                 srcFrame->width = picture.Width;
                 srcFrame->height = picture.Height;
-                FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(srcFrame, 32), "av_frame_get_buffer(src BGR48)");
+                FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(srcFrame, 32), "av_frame_get_buffer(src FP16)");
 
                 dstFrame = ffmpeg.av_frame_alloc();
                 if (dstFrame == null)
@@ -125,14 +125,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(dstFrame, 32), "av_frame_get_buffer(dst HDR)");
 
                 FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(srcFrame), "av_frame_make_writable(src)");
-                FillBgr48SourceFrame(srcFrame, picture);
+                FFmpegFP16FrameCodec.Write(srcFrame, picture);
 
                 FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(dstFrame), "av_frame_make_writable(dst)");
 
                 sws = ffmpeg.sws_getContext(
                     picture.Width,
                     picture.Height,
-                    AVPixelFormat.AV_PIX_FMT_BGR48LE,
+                    FFmpegFP16FrameCodec.EncoderFormat,
                     picture.Width,
                     picture.Height,
                     targetPixelFormat,
@@ -144,13 +144,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (sws == null)
                     throw new InvalidOperationException("Failed to create swscale context for HDR HEIF conversion.");
 
+                FFmpegFP16FrameCodec.ConfigureEncoderColorspace(sws, codecCtx);
                 int scaled = FFmpegHelper.ScaleFrame(sws, srcFrame, dstFrame);
 
-                if (scaled <= 0)
+                if (scaled != picture.Height)
                     throw new InvalidOperationException($"sws_scale failed for HDR HEIF conversion (returned {scaled}).");
 
                 dstFrame->pts = 0;
-                AttachHdrMetadata(dstFrame, maximumBrightness, maxCll, maxFall);
+                AttachHdrMetadata(dstFrame, (float)maximumBrightness, maxCll, maxFall);
 
                 EncodeFrameAndWritePackets(fmtCtx, codecCtx, stream, dstFrame);
                 FlushEncoderAndWritePackets(fmtCtx, codecCtx, stream);
@@ -216,6 +217,25 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     fmtCtx = null;
                 }
             }
+        }
+
+        private static (uint MaxCLL, uint MaxFALL) ComputeContentLightLevel(HDRPictureFP16 picture, Half maximumBrightness)
+        {
+            var brightness = picture.Brightness;
+            var average = new projectFrameCut.Shared.HalfChannelAccumulator();
+            Half maximum = Half.Zero;
+            bool hasBrightness = brightness is not null && brightness.Length == picture.Pixels;
+            for (int i = 0; i < picture.Pixels; i++)
+            {
+                Half value = hasBrightness ? projectFrameCut.Shared.HalfChannelMath.Clamp(brightness![i])
+                    : projectFrameCut.Shared.HalfChannelMath.Luminance((float)picture.r[i], (float)picture.g[i], (float)picture.b[i], 1f);
+                maximum = Half.Max(maximum, value);
+                average.Add(value);
+            }
+            Half peak = maximumBrightness;
+            uint maxCll = (uint)Math.Clamp((int)Half.Round(maximum * peak), 1, 65535);
+            uint maxFall = (uint)Math.Clamp((int)Half.Round(average.Average * peak), 1, (int)maxCll);
+            return (maxCll, maxFall);
         }
 
         private static void OpenHeifOutputContext(string filePath, AVFormatContext** fmtCtx)
@@ -351,79 +371,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return $"G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)L({maxL},{minL})";
         }
 
-        private static float NormalizeMaximumBrightness(float input)
+        private static Half NormalizeMaximumBrightness(Half input)
         {
-            if (!float.IsFinite(input) || input <= 0f)
-                return DefaultHdrMaximumBrightness;
+            if (!Half.IsFinite(input) || input <= Half.Zero)
+                return (Half)DefaultHdrMaximumBrightness;
 
-            return Math.Clamp(input, DefaultSdrMaximumBrightness, HdrReferencePeakNits);
-        }
-
-        private static (uint MaxCLL, uint MaxFALL) ComputeContentLightLevel(HDRPicture16bpp picture, float maximumBrightness)
-        {
-            ReadOnlySpan<float> brightness = (picture.Brightness != null && picture.Brightness.Length == picture.Pixels)
-                ? picture.Brightness
-                : ReadOnlySpan<float>.Empty;
-
-            if (!brightness.IsEmpty)
-            {
-                double sumNits = 0;
-                float maxNits = 0f;
-
-                for (int i = 0; i < brightness.Length; i++)
-                {
-                    float b = brightness[i];
-                    if (!float.IsFinite(b) || b < 0f) b = 0f;
-                    float nits = Math.Clamp(b * maximumBrightness, 0f, HdrReferencePeakNits);
-                    if (nits > maxNits) maxNits = nits;
-                    sumNits += nits;
-                }
-
-                uint maxCll = (uint)Math.Clamp((int)Math.Round(maxNits), 1, 65535);
-                uint maxFall = (uint)Math.Clamp((int)Math.Round(sumNits / brightness.Length), 1, 65535);
-                if (maxFall > maxCll) maxFall = maxCll;
-                return (maxCll, maxFall);
-            }
-
-            double sumSignal = 0;
-            float maxSignal = 0f;
-            for (int i = 0; i < picture.Pixels; i++)
-            {
-                float r = picture.r[i] / 65535f;
-                float g = picture.g[i] / 65535f;
-                float b = picture.b[i] / 65535f;
-                float luma = Math.Clamp(0.2627f * r + 0.6780f * g + 0.0593f * b, 0f, 1f);
-                if (luma > maxSignal) maxSignal = luma;
-                sumSignal += luma;
-            }
-
-            uint fallbackMaxCll = (uint)Math.Clamp((int)Math.Round(maxSignal * maximumBrightness), 1, 65535);
-            uint fallbackMaxFall = (uint)Math.Clamp((int)Math.Round((sumSignal / picture.Pixels) * maximumBrightness), 1, 65535);
-            if (fallbackMaxFall > fallbackMaxCll) fallbackMaxFall = fallbackMaxCll;
-            return (fallbackMaxCll, fallbackMaxFall);
-        }
-
-        private static void FillBgr48SourceFrame(AVFrame* srcFrame, HDRPicture16bpp picture)
-        {
-            fixed (ushort* pr = picture.r)
-            fixed (ushort* pg = picture.g)
-            fixed (ushort* pb = picture.b)
-            {
-                for (int y = 0; y < picture.Height; y++)
-                {
-                    ushort* row = (ushort*)(srcFrame->data[0] + y * srcFrame->linesize[0]);
-                    int baseIndex = y * picture.Width;
-
-                    for (int x = 0; x < picture.Width; x++)
-                    {
-                        int k = baseIndex + x;
-                        int offset = x * 3;
-                        row[offset + 0] = pb[k];
-                        row[offset + 1] = pg[k];
-                        row[offset + 2] = pr[k];
-                    }
-                }
-            }
+            return Half.Clamp(input, (Half)DefaultSdrMaximumBrightness, (Half)HdrReferencePeakNits);
         }
 
         private static void AttachHdrMetadata(AVFrame* frame, float maximumBrightness, uint maxCll, uint maxFall)

@@ -61,6 +61,18 @@ public sealed class EffectImplementationRegistry
         .ToArray();
 
     public IEffect Create(string typeName, EffectImplementType requestedType, EffectImplementType defaultType, Dictionary<string, object> parameters)
+        => CreateCore(typeName, requestedType, defaultType, parameters, null);
+
+    public IEffect Create<TPicture>(string typeName, EffectImplementType requestedType, EffectImplementType defaultType, Dictionary<string, object> parameters)
+        where TPicture : projectFrameCut.Drawing.Base.IPicture
+    {
+        var effect = CreateCore(typeName, requestedType, defaultType, parameters, blank => blank.WithPictureType<TPicture>());
+        Logger.LogDiagnostic($"Created '{effect.GetType().Name}' for '{typeName}/{effect.ImplementType}', picture '{typeof(TPicture).Name}'.");
+        return effect;
+    }
+
+    private IEffect CreateCore(string typeName, EffectImplementType requestedType, EffectImplementType defaultType,
+        Dictionary<string, object> parameters, Func<IEffect, IEffect>? specialize)
     {
         typeName = ResolveTypeName(typeName, parameters);
         var type = requestedType == EffectImplementType.NotSpecified ? defaultType : requestedType;
@@ -77,6 +89,12 @@ public sealed class EffectImplementationRegistry
         IEffect? effect = null;
         try
         {
+            if (specialize is not null)
+            {
+                var typed = specialize(blank);
+                if (!ReferenceEquals(typed, blank) && (typed is not TypedPictureEffect wrapper || !wrapper.Owns(blank)) && blank is IDisposable disposable) disposable.Dispose();
+                blank = typed;
+            }
             Validate(blank, typeName, type);
             effect = blank.WithParameters(parameters) ?? throw new InvalidOperationException($"WithParameters returned null for '{typeName}/{type}'.");
             Validate(effect, typeName, type);

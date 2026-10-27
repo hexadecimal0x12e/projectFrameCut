@@ -12,13 +12,24 @@ public class FadeTransform : TransformEffectBase
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override string TypeName => "Fade";
     public override TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportOneInput;
+    public virtual IEffect WithPictureType<TPicture>() where TPicture : IPicture =>
+        ImplementType == EffectImplementType.IPicture ? new FadeTransform<TPicture>() : TypedPictureEffect.Create<TPicture>(this);
     public override IEffect WithParameters(Dictionary<string, object> parameters) => new FadeTransform { Parameters = parameters };
 
     public override IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int targetWidth, int targetHeight) =>
-        RenderOpacity(left, Math.Clamp(side == TransformSide.Left ? progress : 1 - progress, 0, 1), targetWidth, targetHeight);
+        RenderOpacity(left, Half.Clamp(side == TransformSide.Left ? (Half)progress : Half.One - (Half)progress, Half.Zero, Half.One), targetWidth, targetHeight);
 
-    protected virtual IPicture RenderOpacity(IPicture input, float opacity, int width, int height) =>
-        new FadeOpacityEffect_IPicture { Opacity = opacity }.Render(input, width, height);
+    protected virtual IPicture RenderOpacity(IPicture input, Half opacity, int width, int height) =>
+        new FadeOpacityEffect_IPicture { Opacity = (float)opacity }.Render(input, width, height);
+}
+
+public class FadeTransform<TPicture> : FadeTransform, ITransform<TPicture> where TPicture : IPicture
+{
+    public override IEffect WithParameters(Dictionary<string, object> parameters) => new FadeTransform<TPicture> { Parameters = parameters };
+    public override IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int width, int height) =>
+        PictureEffectDispatch.Transform(this, left, right, progress, side, width, height);
+    public IPicture Render(TPicture left, TPicture? right, float progress, TransformSide side, int width, int height) =>
+        new FadeOpacityEffect<TPicture> { Opacity = (float)Half.Clamp(side == TransformSide.Left ? (Half)progress : Half.One - (Half)progress, Half.Zero, Half.One) }.Render(left, width, height);
 }
 
 public class FadeTransformProvider : TransformEffectProviderBase

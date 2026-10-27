@@ -127,7 +127,7 @@ namespace projectFrameCut.Render.Rendering
                         Y = (int)(height - measuredH - padding),
                         FontName = fontFamily,
                         FontSize = fontSize,
-                        FillR = 65535, FillG = 65535, FillB = 65535, FillA = 0.5f
+                        FillR = 65535, FillG = 65535, FillB = 65535, FillA = (Half)0.5f
                     }
                 },
             };

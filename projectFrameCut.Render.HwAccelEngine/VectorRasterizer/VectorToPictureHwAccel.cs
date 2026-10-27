@@ -68,7 +68,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             if (primitives.Count == 0)
             {
                 Logger.Log("Trying to render a blank rect.", "error");
-                return Picture16bpp.GenerateSolidColor(width, height, 128 * 257, 0, 128 * 257, 1f);
+                return PictureFP16.GenerateSolidColor(width, height, (Half)(128 / 255f), Half.Zero, (Half)(128 / 255f), Half.One);
             }
 
             var result = Windows.ILGpuVectorRasterizer.Render(primitives, build.Edges, renderWidth, renderHeight, transparentBackground);
@@ -76,7 +76,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             if (scaleFactor > 1)
             {
                 using (result)
-                    return VectorPictureRasterization.Downsample((Picture16bpp)result, width, height, scaleFactor, ct);
+                    return VectorPictureRasterization.Downsample((PictureFP16)result, width, height, scaleFactor, ct);
             }
 
             return result;
@@ -87,7 +87,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             if (primitives.Count == 0)
             {
                 Logger.Log("Trying to render a blank rect.", "error");
-                return Picture16bpp.GenerateSolidColor(width, height, 128 * 257, 0, 128 * 257, 1f);
+                return PictureFP16.GenerateSolidColor(width, height, (Half)(128 / 255f), Half.Zero, (Half)(128 / 255f), Half.One);
             }
 
             IPicture result;
@@ -103,7 +103,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             if (scaleFactor > 1)
             {
                 using (result)
-                    return VectorPictureRasterization.Downsample((Picture16bpp)result, width, height, scaleFactor, ct);
+                    return VectorPictureRasterization.Downsample((PictureFP16)result, width, height, scaleFactor, ct);
             }
             return result;
 #else

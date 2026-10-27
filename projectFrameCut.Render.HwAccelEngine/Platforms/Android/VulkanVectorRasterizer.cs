@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using projectFrameCut.Render.HwAccelEngine.Effect;
 using System.Diagnostics;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
@@ -9,7 +11,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     /// <summary>
     /// Vulkan compute-shader vector rasterizer.
-    /// Converts flattened GPU primitives to a <see cref="Picture16bpp"/>
+    /// Converts flattened GPU primitives to a <see cref="PictureFP16"/>
     /// via a per-pixel compute kernel dispatched through <see cref="VulkanComputeView"/>.
     /// </summary>
     internal static class VulkanVectorRasterizer
@@ -32,7 +34,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
             int primInfoLen = pc * 2;
             int primDataLen = pc * FloatsPerPrimitive;
-            int packedOutputLen = pixelCount * 4;
+            int packedOutputLen = pixelCount * 3;
 
             var primInfoFloat = new float[primInfoLen];
             var primDataFloat = new float[primDataLen];
@@ -46,7 +48,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 primDataFloat[db + 0] = p.R;
                 primDataFloat[db + 1] = p.G;
                 primDataFloat[db + 2] = p.B;
-                primDataFloat[db + 3] = p.A;
+                primDataFloat[db + 3] = BitConverter.Int32BitsToSingle(BitConverter.HalfToUInt16Bits(p.A));
                 primDataFloat[db + 4] = p.D0;
                 primDataFloat[db + 5] = p.D1;
                 primDataFloat[db + 6] = p.D2;
@@ -111,26 +113,27 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 throw;
             }
 
-            var rOut = new ushort[pixelCount];
-            var gOut = new ushort[pixelCount];
-            var bOut = new ushort[pixelCount];
-            var aOut = new float[pixelCount];
+            var output = MemoryMarshal.Cast<float, ResidentPixel>(packedOutput.AsSpan()).Slice(0, pixelCount).ToArray();
+            var rOut = new Half[pixelCount];
+            var gOut = new Half[pixelCount];
+            var bOut = new Half[pixelCount];
+            var aOut = new Half[pixelCount];
 
             // Parallelize the readback conversion — a single-threaded loop
             // here was a needless bottleneck on larger canvases.
             int alphaFlag = 0;
             Parallel.For(0, pixelCount, i =>
             {
-                rOut[i] = ClampUshort(packedOutput[i]);
-                gOut[i] = ClampUshort(packedOutput[i + pixelCount]);
-                bOut[i] = ClampUshort(packedOutput[i + pixelCount * 2]);
-                aOut[i] = packedOutput[i + pixelCount * 3];
-                if (aOut[i] < 1f) Volatile.Write(ref alphaFlag, 1);
+                rOut[i] = output[i].Red;
+                gOut[i] = output[i].Green;
+                bOut[i] = output[i].Blue;
+                aOut[i] = output[i].Alpha;
+                if (aOut[i] < Half.One) Volatile.Write(ref alphaFlag, 1);
             });
             bool hasAlpha = alphaFlag != 0;
 
             Logger.LogDiagnostic($"VulkanVectorRasterizer done in {sw.Elapsed}.");
-            return new Picture16bpp(width, height)
+            return new PictureFP16(width, height)
             {
                 r = rOut,
                 g = gOut,
@@ -145,6 +148,9 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         {
             return $$"""
 {{'#'}}version 450
+{{'#'}}extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+{{'#'}}extension GL_EXT_shader_16bit_storage : require
+struct ResidentKernelPixel { float16_t Red; float16_t Green; float16_t Blue; float16_t Alpha; float16_t Brightness; float16_t Padding; };
 layout(local_size_x = {{WorkGroupSize}}) in;
 
 layout(set = 0, binding = 0, std430) buffer _Dummy { float _d[]; };
@@ -153,7 +159,7 @@ layout(set = 0, binding = 2, std430) buffer PrimDataBuf { float primData[]; };
 layout(set = 0, binding = 3, std430) buffer TileOffsetsBuf { float tileOffsets[]; };
 layout(set = 0, binding = 4, std430) buffer TileIndicesBuf { float tileIndices[]; };
 layout(set = 0, binding = 5, std430) buffer EdgesBuf { float edges[]; };
-layout(set = 0, binding = 6, std430) buffer OutBuf { float outPacked[]; };
+layout(set = 0, binding = 6, std430) buffer OutBuf { ResidentKernelPixel outPacked[]; };
 
 void main()
 {
@@ -167,7 +173,8 @@ void main()
     float cy = float(y) + 0.5;
 
     // Accumulated premultiplied colour + coverage.
-    float accR = 0.0, accG = 0.0, accB = 0.0, accA = 0.0;
+    float accR = 0.0, accG = 0.0, accB = 0.0;
+    float16_t accA = float16_t(0.0);
 
     // Only test primitives that overlap this pixel's tile instead of every
     // primitive in the scene.
@@ -188,8 +195,8 @@ void main()
         float sr = primData[dataBase + 0];
         float sg = primData[dataBase + 1];
         float sb = primData[dataBase + 2];
-        float sa = primData[dataBase + 3];
-        if (sa <= 0.0)
+        float16_t sa = unpackFloat2x16(floatBitsToUint(primData[dataBase + 3])).x;
+        if (sa <= float16_t(0.0))
             continue;
 
         float bbMinX = primData[dataBase + 10];
@@ -287,22 +294,23 @@ void main()
 
         // "Under" compositing: this primitive is behind everything
         // accumulated so far.
-        float contrib = sa * (1.0 - accA);
-        accR += sr * contrib;
-        accG += sg * contrib;
-        accB += sb * contrib;
+        float16_t contrib = sa * (float16_t(1.0) - accA);
+        accR += sr * float(contrib);
+        accG += sg * float(contrib);
+        accB += sb * float(contrib);
         accA += contrib;
 
         // Coverage saturated — nothing below can contribute.
-        if (accA >= 1.0 - 1e-6)
+        if (accA >= float16_t(1.0))
             break;
     }
 
-    float pr, pg, pb, pa;
+    float pr, pg, pb;
+    float16_t pa;
     {{'#'}}if {{transparentBg}}
-        if (accA > 1e-6)
+        if (accA > float16_t(0.0))
         {
-            pr = accR / accA; pg = accG / accA; pb = accB / accA;
+            pr = accR / float(accA); pg = accG / float(accA); pb = accB / float(accA);
         }
         else
         {
@@ -310,17 +318,19 @@ void main()
         }
         pa = accA;
     {{'#'}}else
-        float rem = 1.0 - accA;
-        pr = accR + 65535.0 * rem;
-        pg = accG + 65535.0 * rem;
-        pb = accB + 65535.0 * rem;
-        pa = 1.0;
+        float16_t rem = float16_t(1.0) - accA;
+        pr = accR + 65535.0 * float(rem);
+        pg = accG + 65535.0 * float(rem);
+        pb = accB + 65535.0 * float(rem);
+        pa = float16_t(1.0);
     {{'#'}}endif
 
-    outPacked[i] = pr;
-    outPacked[i + uint({{pixelCount}})] = pg;
-    outPacked[i + uint({{pixelCount * 2}})] = pb;
-    outPacked[i + uint({{pixelCount * 3}})] = pa;
+    outPacked[i].Red = float16_t(pr / 65535.0);
+    outPacked[i].Green = float16_t(pg / 65535.0);
+    outPacked[i].Blue = float16_t(pb / 65535.0);
+    outPacked[i].Alpha = pa;
+    outPacked[i].Brightness = float16_t(1.0);
+                outPacked[i].Padding = float16_t(0.0);
 }
 """;
         }

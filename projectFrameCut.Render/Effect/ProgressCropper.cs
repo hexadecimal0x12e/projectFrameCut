@@ -6,8 +6,12 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ProgressCropper_IPicture : IContinuousEffect
+    public class ProgressCropper_IPicture : ProgressCropper<IPicture> { }
+
+    public class ProgressCropper<TPicture> : IContinuousEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new ProgressCropper<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -32,7 +36,7 @@ namespace projectFrameCut.Render.Effect
         public List<CropData> CropList { get; set; } = new();
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public IPicture Render(IPicture source, float progress, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, float progress, int targetWidth, int targetHeight)
         {
             int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
             int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
@@ -46,7 +50,7 @@ namespace projectFrameCut.Render.Effect
         public IEffect WithParameters(Dictionary<string, object> parameters)
         {
             ArgumentNullException.ThrowIfNull(parameters);
-            return new ProgressCropper_IPicture
+            return new ProgressCropper<TPicture>
             {
                 Parameters = parameters,
                 StartX = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartX")),

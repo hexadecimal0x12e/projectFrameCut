@@ -63,7 +63,7 @@ public sealed class EffectProviderTypeState
 
     private static EffectArgumentFieldDescriptor Describe(string id, IEffectArgumentField field) => new()
     {
-        Id = id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = field.FieldType,
+        Id = id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = field.FieldType, DataFormat = field.DataFormat,
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinValue = field.MinValue,
         MaxValue = field.MaxValue, PresetOptions = field.PresetOptions?.ToArray(), Remarks = field.Remarks,
     };
@@ -76,6 +76,7 @@ public sealed class EffectFieldTypeContext
     public IReadOnlyDictionary<string, object?> Parameters => State.Parameters;
     public IReadOnlyDictionary<string, EffectProviderTypeState> BoundProviders { get; init; } = new Dictionary<string, EffectProviderTypeState>();
     public IReadOnlyDictionary<string, EffectArgumentFieldType> InputTypes { get; init; } = new Dictionary<string, EffectArgumentFieldType>();
+    public IReadOnlyDictionary<string, object?> InputDataFormats { get; init; } = new Dictionary<string, object?>();
 }
 
 /// <summary>A type snapshot shared by binding validation and a built render graph.</summary>
@@ -84,6 +85,8 @@ public sealed class EffectFieldTypeResolution
     public sealed record Diagnostic(Guid ProviderId, string Code, string Message);
     private readonly Dictionary<(Guid Provider, bool Input, string Field), EffectArgumentFieldType> types = new();
     private readonly Dictionary<Guid, EffectFieldTypeContext> contexts = new();
+    private readonly Dictionary<(Guid Provider, bool Input, string Field), object?> formats = new();
+    private readonly object? inputDataFormat;
     private readonly List<Diagnostic> diagnostics = new();
     private readonly IReadOnlyDictionary<Guid, IEffectProvider> providers;
     private readonly EffectFieldTypeResolution? parent;
@@ -92,13 +95,14 @@ public sealed class EffectFieldTypeResolution
     public IReadOnlyList<Diagnostic> Diagnostics => diagnostics;
 
     public EffectFieldTypeResolution(IReadOnlyDictionary<Guid, IEffectProvider> providers,
-        IReadOnlyDictionary<Guid, IReadOnlyDictionary<string, string>>? bindingOverrides = null)
-        : this(providers, bindingOverrides, null) { }
+        IReadOnlyDictionary<Guid, IReadOnlyDictionary<string, string>>? bindingOverrides = null, object? inputDataFormat = null)
+        : this(providers, bindingOverrides, null, inputDataFormat) { }
 
     private EffectFieldTypeResolution(IReadOnlyDictionary<Guid, IEffectProvider> providers,
         IReadOnlyDictionary<Guid, IReadOnlyDictionary<string, string>>? bindingOverrides,
-        Dictionary<Guid, EffectProviderTypeState>? snapshots)
+        Dictionary<Guid, EffectProviderTypeState>? snapshots, object? inputDataFormat)
     {
+        this.inputDataFormat = inputDataFormat;
         this.providers = providers;
         var states = snapshots ?? providers.ToDictionary(p => p.Key,
             p => EffectProviderTypeState.Capture(p.Value, bindingOverrides?.GetValueOrDefault(p.Key)));
@@ -114,6 +118,7 @@ public sealed class EffectFieldTypeResolution
             var state = states[id];
             var sources = new Dictionary<string, EffectProviderTypeState>();
             var inputs = new Dictionary<string, EffectArgumentFieldType>();
+            var inputFormats = new Dictionary<string, object?>();
             foreach (var (key, source) in state.Bindings.Where(p => !EffectProviderAnchorExtensions.IsOutputBindingKey(p.Key)))
             {
                 if (EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var sourceId, out _) && states.TryGetValue(sourceId, out var upstream))
@@ -121,14 +126,19 @@ public sealed class EffectFieldTypeResolution
                     Visit(sourceId);
                     sources[key] = upstream;
                 }
+                inputFormats[key] = GetSourceDataFormat(source);
                 inputs[key] = source == IEffectProvider.InputAnchorGUID.ToString()
                     ? providers[id].GetPipeline().GetContentType() : GetSourceType(source, providers);
             }
+            if (!inputFormats.ContainsKey(EffectProviderBase.PrimaryInputAnchorKey)
+                || state.Bindings.GetValueOrDefault(EffectProviderBase.PrimaryInputAnchorKey) == IEffectProvider.NoConnectionGUID.ToString())
+                inputFormats[EffectProviderBase.PrimaryInputAnchorKey] = inputDataFormat;
             var context = new EffectFieldTypeContext
             {
                 State = state,
                 BoundProviders = new ReadOnlyDictionary<string, EffectProviderTypeState>(sources),
                 InputTypes = new ReadOnlyDictionary<string, EffectArgumentFieldType>(inputs),
+                InputDataFormats = new ReadOnlyDictionary<string, object?>(inputFormats),
             };
             ResolveFields(providers[id], context);
             contexts[id] = context;
@@ -144,7 +154,7 @@ public sealed class EffectFieldTypeResolution
         void Resolve(string key, bool input, EffectArgumentFieldDescriptor field)
         {
             var type = field.FieldType;
-            if (type.HasFlag(EffectArgumentFieldType.Any))
+            if (type.HasFlag(EffectArgumentFieldType.Any) || type.IsPicture())
             {
                 try
                 {
@@ -159,6 +169,13 @@ public sealed class EffectFieldTypeResolution
                 }
             }
             types[(provider.Id, input, key)] = type;
+            try { formats[(provider.Id, input, key)] = provider.ResolveDataFormat(key, input, context); }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, $"Resolve data format '{key}' on provider {provider.Id}", this);
+                formats[(provider.Id, input, key)] = null;
+                diagnostics.Add(new(provider.Id, "InvalidDataFormat", $"Cannot resolve format for '{key}' on provider {provider.Id}: {ex.Message}"));
+            }
         }
     }
 
@@ -182,17 +199,23 @@ public sealed class EffectFieldTypeResolution
     private EffectFieldTypeResolution(EffectFieldTypeResolution parent, IEffectProvider provider, EffectProviderTypeState state)
     {
         this.parent = parent;
+        inputDataFormat = parent.inputDataFormat;
         providers = parent.providers;
         var sources = new Dictionary<string, EffectProviderTypeState>();
         var inputs = new Dictionary<string, EffectArgumentFieldType>();
+        var inputFormats = new Dictionary<string, object?>();
         foreach (var (key, value) in state.Bindings.Where(p => !EffectProviderAnchorExtensions.IsOutputBindingKey(p.Key)))
         {
             if (EffectProviderOutputExtensions.TryParseOutputSourceId(value, out var id, out _) && providers.ContainsKey(id))
                 sources[key] = parent.GetContext(id).State;
+            inputFormats[key] = parent.GetSourceDataFormat(value);
             inputs[key] = value == IEffectProvider.InputAnchorGUID.ToString()
                 ? provider.GetPipeline().GetContentType() : parent.GetSourceType(value, providers);
         }
-        var context = new EffectFieldTypeContext { State = state, BoundProviders = sources, InputTypes = inputs };
+        if (!inputFormats.ContainsKey(EffectProviderBase.PrimaryInputAnchorKey)
+            || state.Bindings.GetValueOrDefault(EffectProviderBase.PrimaryInputAnchorKey) == IEffectProvider.NoConnectionGUID.ToString())
+            inputFormats[EffectProviderBase.PrimaryInputAnchorKey] = inputDataFormat;
+        var context = new EffectFieldTypeContext { State = state, BoundProviders = sources, InputTypes = inputs, InputDataFormats = inputFormats };
         diagnostics.AddRange(parent.Diagnostics.Where(d => d.ProviderId != provider.Id));
         ResolveFields(provider, context);
         contexts[provider.Id] = context;
@@ -209,7 +232,7 @@ public sealed class EffectFieldTypeResolution
         {
             var snapshots = providers.Keys.ToDictionary(key => key, key => GetContext(key).State);
             snapshots[provider.Id] = state;
-            return new(providers, null, snapshots);
+            return new(providers, null, snapshots, inputDataFormat);
         }
         return new(this, provider, state);
     }
@@ -236,7 +259,7 @@ public sealed class EffectFieldTypeResolution
     }
 
     public static Task<EffectFieldTypeResolution> ResolveAsync(IReadOnlyDictionary<Guid, IEffectProvider> providers,
-        CancellationToken cancellationToken = default, IReadOnlyDictionary<Guid, IReadOnlyDictionary<string, string>>? bindingOverrides = null)
+        CancellationToken cancellationToken = default, IReadOnlyDictionary<Guid, IReadOnlyDictionary<string, string>>? bindingOverrides = null, object? inputDataFormat = null)
     {
         var copy = providers.ToDictionary();
         var captures = copy.ToDictionary(p => p.Key, p => EffectProviderTypeState.PrepareCapture(p.Value, bindingOverrides?.GetValueOrDefault(p.Key)));
@@ -248,7 +271,7 @@ public sealed class EffectFieldTypeResolution
                 cancellationToken.ThrowIfCancellationRequested();
                 states[id] = capture();
             }
-            return new EffectFieldTypeResolution(copy, null, states);
+            return new EffectFieldTypeResolution(copy, null, states, inputDataFormat);
         }, cancellationToken);
     }
 
@@ -278,7 +301,9 @@ public sealed class EffectFieldTypeResolution
         field = null!;
         if (provider is IMultipleOutputEffectProvider && outputId is null) return false;
         outputId ??= context.State.Outputs.Keys.SingleOrDefault();
-        return outputId is not null && context.State.Outputs.TryGetValue(outputId, out field!);
+        if (outputId is null || !context.State.Outputs.TryGetValue(outputId, out field!)) return false;
+        field = field with { DataFormat = GetDataFormat(provider.Id, false, outputId) };
+        return true;
     }
 
     public EffectArgumentFieldDescriptor GetOutputField(IEffectProvider provider) =>
@@ -298,6 +323,30 @@ public sealed class EffectFieldTypeResolution
         return EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out var outputId) && providers.TryGetValue(id, out var provider)
             ? GetOutputType(provider, outputId) : EffectArgumentFieldType.Any;
     }
+
+    public object? GetInputDataFormat(IEffectProvider provider, string fieldId) => GetDataFormat(provider.Id, true, fieldId);
+    public object? GetOutputDataFormat(IEffectProvider provider, string? outputId = null) =>
+        TryGetOutputField(provider, outputId, out var field) ? field.DataFormat : null;
+
+    public object? GetBuildDataFormat(IEffectProvider provider)
+    {
+        var state = GetContext(provider.Id).State;
+        var values = state.Fields.Where(p => GetInputType(provider, p.Key).IsPicture()
+            && (p.Value.FieldType.HasFlag(EffectArgumentFieldType.Mandatory) || p.Key == EffectProviderBase.PrimaryInputAnchorKey
+                || state.Bindings.TryGetValue(p.Key, out var binding) && binding != IEffectProvider.NoConnectionGUID.ToString()
+                || state.Parameters.GetValueOrDefault(p.Key) is projectFrameCut.Drawing.Base.IPicture))
+            .Select(p => GetInputDataFormat(provider, p.Key) is PictureDataFormat f ? f : PictureDataFormat.Unknown).ToArray();
+        if (values.Length == 0) return inputDataFormat;
+        var result = PictureDataFormats.Unify(values);
+        return result == PictureDataFormat.Unknown ? null : result;
+    }
+
+    private object? GetDataFormat(Guid id, bool input, string field) =>
+        formats.TryGetValue((id, input, field), out var format) ? format : parent?.GetDataFormat(id, input, field);
+
+    private object? GetSourceDataFormat(string source) => source == IEffectProvider.InputAnchorGUID.ToString() ? inputDataFormat
+        : EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out var output) && providers.TryGetValue(id, out var provider)
+            ? GetOutputDataFormat(provider, output) : null;
 
     public void ValidateValue(IEffectProvider provider, string fieldId, bool input, IEffectArgumentField field, object? value, uint? frame = null)
     {

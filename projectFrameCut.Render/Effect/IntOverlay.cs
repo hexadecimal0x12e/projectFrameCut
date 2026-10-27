@@ -17,8 +17,12 @@ namespace projectFrameCut.Render.Effect
     /// value-provider effect (e.g. <see cref="IntArithmeticValueProviderEffect"/>); the text
     /// is re-rendered every frame so a changing value is reflected immediately.
     /// </summary>
-    public class IntOverlayEffect : INormalEffect
+    public class IntOverlayEffect : IntOverlayEffect<IPicture> { }
+
+    public class IntOverlayEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new IntOverlayEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -39,7 +43,7 @@ namespace projectFrameCut.Render.Effect
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
-            return new IntOverlayEffect
+            return new IntOverlayEffect<TPicture>
             {
                 Parameters = parameters ?? new Dictionary<string, object>(),
             };
@@ -49,7 +53,7 @@ namespace projectFrameCut.Render.Effect
 
         public void Initialize() { }
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
             if (targetWidth <= 0 || targetHeight <= 0)
@@ -84,6 +88,8 @@ namespace projectFrameCut.Render.Effect
             }
 
             // Dispatch to the strongly-typed overload matching the unified bit depth.
+            if (sourceForCompose is IPicture<Half> fb && overlayForCompose is IPicture<Half> ft)
+                return PictureComposer.Default.Compose(fb, ft, BlendMode.Overlay, 0, 0, targetWidth, targetHeight);
             if (sourceForCompose is IPicture<ushort> uBase && overlayForCompose is IPicture<ushort> uTop)
                 return PictureComposer.Default.Compose(uBase, uTop, BlendMode.Overlay, 0, 0, targetWidth, targetHeight);
             if (sourceForCompose is IPicture<byte> bBase && overlayForCompose is IPicture<byte> bTop)
@@ -113,11 +119,11 @@ namespace projectFrameCut.Render.Effect
                 FillR = ToUShort(Parameters.GetValueOrDefault("FillR"), ushort.MaxValue),
                 FillG = ToUShort(Parameters.GetValueOrDefault("FillG"), ushort.MaxValue),
                 FillB = ToUShort(Parameters.GetValueOrDefault("FillB"), ushort.MaxValue),
-                FillA = ToFloat(Parameters.GetValueOrDefault("FillA"), 1f),
+                FillA = (Half)ToFloat(Parameters.GetValueOrDefault("FillA"), 1f),
                 StrokeR = ToUShort(Parameters.GetValueOrDefault("StrokeR"), 0),
                 StrokeG = ToUShort(Parameters.GetValueOrDefault("StrokeG"), 0),
                 StrokeB = ToUShort(Parameters.GetValueOrDefault("StrokeB"), 0),
-                StrokeA = ToFloat(Parameters.GetValueOrDefault("StrokeA"), 0f),
+                StrokeA = (Half)ToFloat(Parameters.GetValueOrDefault("StrokeA"), 0f),
                 StrokeThickness = DynamicParam.Resolve(Parameters.GetValueOrDefault("StrokeThickness"), 2f),
                 CharacterSpacing = DynamicParam.Resolve(Parameters.GetValueOrDefault("CharacterSpacing"), 0f),
                 LineSpacing = DynamicParam.Resolve(Parameters.GetValueOrDefault("LineSpacing"), 0.3f),
@@ -173,6 +179,13 @@ namespace projectFrameCut.Render.Effect
             {
                 ["Value"] = Field("Value", EffectArgumentFieldType.Integer, "0"),
             };
+
+        public override object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context)
+        {
+            if (isInput) return base.ResolveDataFormat(fieldId, true, context);
+            var input = base.ResolveDataFormat(PrimaryInputAnchorKey, true, context);
+            return input is PictureDataFormat f && f.HasFlag(PictureDataFormat.Bit16) ? PictureDataFormats.WithLocation(f, false) : null;
+        }
 
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {

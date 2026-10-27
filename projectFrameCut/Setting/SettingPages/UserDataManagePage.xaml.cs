@@ -2,6 +2,7 @@ using LocalizedResources;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Services;
+using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.Globalization;
 
@@ -21,10 +22,22 @@ public partial class UserDataManagePage : ContentPage
         Unspecified
     }
 
-    private sealed class ProjectSizeBuilder(string name, string path)
+    private sealed class ProjectSizeBuilder
     {
-        public string Name { get; } = name;
-        public string Path { get; } = path;
+        public ProjectSizeBuilder(string name, string path)
+        {
+            Name = name;
+            Path = path;
+            CacheRoots = ProjectCachePaths.GetStorageRoots(path);
+            CacheDirectories = CacheRoots.SelectMany(root => ProjectCachePaths.DirectoryNames.Where(n => n != "proxy").Select(n => System.IO.Path.Combine(root, n))).ToList();
+            ProxyDirectories = CacheRoots.Select(root => System.IO.Path.Combine(root, "proxy")).ToList();
+        }
+
+        public string Name { get; }
+        public string Path { get; }
+        public IReadOnlyList<string> CacheRoots { get; }
+        public List<string> CacheDirectories { get; }
+        public List<string> ProxyDirectories { get; }
         public long CacheSize { get; set; }
         public long ProxySize { get; set; }
         public long AssetSize { get; set; }
@@ -34,6 +47,8 @@ public partial class UserDataManagePage : ContentPage
         {
             Name = Name,
             FullPath = Path,
+            CacheDirectories = CacheDirectories,
+            ProxyDirectories = ProxyDirectories,
             CacheSizeInBytes = CacheSize,
             ProxySizeInBytes = ProxySize,
             AssetSizeInBytes = AssetSize,
@@ -47,6 +62,7 @@ public partial class UserDataManagePage : ContentPage
         public required string Name { get; init; }
         public bool IsCombined { get; set; }
         public bool IsUserDataDisk { get; set; }
+        public bool IsApplicationDisk { get; init; }
         public bool HasDiskInfo { get; init; }
         public long TotalSize { get; init; }
         public long FreeSize { get; init; }
@@ -82,6 +98,8 @@ public partial class UserDataManagePage : ContentPage
     {
         public string Name { get; init; } = string.Empty;
         public string FullPath { get; init; } = string.Empty;
+        public List<string> CacheDirectories { get; init; } = [];
+        public List<string> ProxyDirectories { get; init; } = [];
         public long CacheSizeInBytes { get; init; }
         public long ProxySizeInBytes { get; init; }
         public long AssetSizeInBytes { get; init; }
@@ -153,6 +171,7 @@ public partial class UserDataManagePage : ContentPage
     private readonly StringComparison _pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
     private CancellationTokenSource? _refreshCts;
     private UserDataSnapshot? _lastSnapshot;
+    private string[] _projectCacheDirectories = [];
     private bool _isLoading;
     private bool _operationRunning;
     private bool _themeSubscribed;
@@ -248,8 +267,11 @@ public partial class UserDataManagePage : ContentPage
 
     private UserDataSnapshot BuildSnapshot(CancellationToken cancellationToken)
     {
-        var projects = GetDirectoriesSafe(_draftPath)
-            .ToDictionary(NormalizePath, p => new ProjectSizeBuilder(Path.GetFileName(p), p), PathComparer());
+        var projects = GetDirectoriesSafe(_draftPath).Select(p => new ProjectSizeBuilder(Path.GetFileName(p), p)).ToList();
+        _projectCacheDirectories = projects.SelectMany(p => p.CacheRoots)
+            .Concat(string.IsNullOrWhiteSpace(ProjectCachePaths.RedirectRoot) ? [] : GetDirectoriesSafe(ProjectCachePaths.RedirectRoot).Where(root => File.Exists(Path.Combine(root, ProjectCachePaths.MarkerFileName))))
+            .SelectMany(root => ProjectCachePaths.DirectoryNames.Select(name => Path.Combine(root, name)))
+            .Distinct(PathComparer()).ToArray();
         var disks = CreateDiskSnapshots();
         var categorySizes = Enum.GetValues<StorageCategory>().ToDictionary(x => x, _ => 0L);
 
@@ -265,14 +287,15 @@ public partial class UserDataManagePage : ContentPage
                 DiskSnapshot disk = SelectDisk(disks, file);
                 disk.Categories[category] = disk.Categories.GetValueOrDefault(category) + size;
 
-                ProjectSizeBuilder? project = FindProject(projects, file);
-                if (project is null) return;
-                if (IsUnder(file, Path.Combine(project.Path, "thumbs"))) project.CacheSize += size;
-                else if (IsUnder(file, Path.Combine(project.Path, "proxy"))) project.ProxySize += size;
-                else if (IsUnder(file, Path.Combine(project.Path, "assets")) ||
-                         string.Equals(Path.GetFileName(file), "assets.json", StringComparison.OrdinalIgnoreCase) &&
-                         string.Equals(Path.GetDirectoryName(file), project.Path, _pathComparison)) project.AssetSize += size;
-                else project.OtherSize += size;
+                foreach (var project in projects.Where(p => p.CacheRoots.Any(root => IsUnder(file, root))))
+                {
+                    if (!ProjectCachePaths.IsProjectCover(file) && project.ProxyDirectories.Any(root => IsUnder(file, root))) project.ProxySize += size;
+                    else if (!ProjectCachePaths.IsProjectCover(file) && project.CacheDirectories.Any(root => IsUnder(file, root))) project.CacheSize += size;
+                    else if (IsUnder(file, Path.Combine(project.Path, "assets")) ||
+                             string.Equals(Path.GetFileName(file), "assets.json", StringComparison.OrdinalIgnoreCase) &&
+                             string.Equals(Path.GetDirectoryName(file), project.Path, _pathComparison)) project.AssetSize += size;
+                    else project.OtherSize += size;
+                }
             }, cancellationToken);
         }
 
@@ -307,7 +330,7 @@ public partial class UserDataManagePage : ContentPage
 
         return new UserDataSnapshot
         {
-            DraftItems = projects.Values.Select(x => x.Build()).OrderByDescending(x => x.SizeInBytes).ThenBy(x => x.Name).ToList(),
+            DraftItems = projects.Select(x => x.Build()).OrderByDescending(x => x.SizeInBytes).ThenBy(x => x.Name).ToList(),
             AssetItems = assetItems,
             TemplateItems = templateItems,
             PluginItems = pluginItems,
@@ -320,49 +343,25 @@ public partial class UserDataManagePage : ContentPage
     {
         VolumeSnapshot user = GetVolumeSnapshot(MauiProgram.DataPath);
         VolumeSnapshot app = GetVolumeSnapshot(MauiProgram.BasicDataPath);
-        if (string.Equals(user.Key, app.Key, _pathComparison))
-        {
-            return [new DiskSnapshot
+        return new[] { MauiProgram.DataPath, MauiProgram.BasicDataPath, MauiProgram.CachePath, FileSystem.AppDataDirectory }
+            .Concat(_projectCacheDirectories.Where(Directory.Exists))
+            .Select(path => Path.GetPathRoot(Path.GetFullPath(path)) ?? path).Distinct(PathComparer())
+            .Select(GetVolumeSnapshot).Select(volume => new DiskSnapshot
             {
-                Key = user.Key,
-                Name = user.Name,
-                IsCombined = true,
-                IsUserDataDisk = true,
-                HasDiskInfo = user.HasDiskInfo,
-                TotalSize = user.TotalSize,
-                FreeSize = user.FreeSize
-            }];
-        }
-
-        return
-        [
-            new DiskSnapshot
-            {
-                Key = user.Key,
-                Name = user.Name,
-                IsUserDataDisk = true,
-                HasDiskInfo = user.HasDiskInfo,
-                TotalSize = user.TotalSize,
-                FreeSize = user.FreeSize
-            },
-            new DiskSnapshot
-            {
-                Key = app.Key,
-                Name = app.Name,
-                HasDiskInfo = app.HasDiskInfo,
-                TotalSize = app.TotalSize,
-                FreeSize = app.FreeSize
-            }
-        ];
+                Key = volume.Key,
+                Name = volume.Name,
+                IsUserDataDisk = string.Equals(volume.Key, user.Key, _pathComparison),
+                IsApplicationDisk = string.Equals(volume.Key, app.Key, _pathComparison),
+                IsCombined = string.Equals(volume.Key, user.Key, _pathComparison) && string.Equals(volume.Key, app.Key, _pathComparison),
+                HasDiskInfo = volume.HasDiskInfo,
+                TotalSize = volume.TotalSize,
+                FreeSize = volume.FreeSize
+            }).ToList();
     }
 
     private DiskSnapshot SelectDisk(List<DiskSnapshot> disks, string file)
     {
-        if (disks.Count == 1) return disks[0];
-        bool appData = IsUnder(file, MauiProgram.BasicDataPath) ||
-                       IsUnder(file, MauiProgram.CachePath) ||
-                       IsUnder(file, FileSystem.AppDataDirectory);
-        return appData ? disks.First(x => !x.IsUserDataDisk) : disks.First(x => x.IsUserDataDisk);
+        return disks.FirstOrDefault(disk => IsUnder(file, disk.Key)) ?? disks[0];
     }
 
     private VolumeSnapshot GetVolumeSnapshot(string path)
@@ -386,18 +385,9 @@ public partial class UserDataManagePage : ContentPage
         }
     }
 
-    private ProjectSizeBuilder? FindProject(Dictionary<string, ProjectSizeBuilder> projects, string file)
-    {
-        if (!IsUnder(file, _draftPath)) return null;
-        string relative = Path.GetRelativePath(_draftPath, file);
-        string? first = relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(first)) return null;
-        projects.TryGetValue(NormalizePath(Path.Combine(_draftPath, first)), out var project);
-        return project;
-    }
-
     private StorageCategory Classify(string file)
     {
+        if (ProjectCachePaths.IsProjectCover(file)) return StorageCategory.Projects;
         if (GetDiagnosticRoots().Any(root => IsUnder(file, root)) || IsCrashCachePath(file)) return StorageCategory.Diagnostics;
         if (IsUnder(file, _pluginPath)) return StorageCategory.Plugins;
         if (GetCacheRoots().Any(root => IsUnder(file, root))) return StorageCategory.Cache;
@@ -423,6 +413,7 @@ public partial class UserDataManagePage : ContentPage
         yield return Path.Combine(MauiProgram.DataPath, "Remote Assets");
         yield return Path.Combine(MauiProgram.BasicDataPath, "EBWebView");
         yield return Path.Combine(FileSystem.AppDataDirectory, "EBWebView");
+        foreach (string root in _projectCacheDirectories) yield return root;
     }
 
     private IEnumerable<string> GetDiagnosticRoots()
@@ -441,7 +432,7 @@ public partial class UserDataManagePage : ContentPage
 
     private List<string> GetNonOverlappingScanRoots()
     {
-        var roots = new[] { MauiProgram.DataPath, MauiProgram.BasicDataPath, MauiProgram.CachePath, FileSystem.AppDataDirectory }
+        var roots = new[] { MauiProgram.DataPath, MauiProgram.BasicDataPath, MauiProgram.CachePath, FileSystem.AppDataDirectory }.Concat(_projectCacheDirectories)
             .Where(x => !string.IsNullOrWhiteSpace(x) && Directory.Exists(x))
             .Select(NormalizePath)
             .Distinct(PathComparer())
@@ -504,10 +495,10 @@ public partial class UserDataManagePage : ContentPage
                 ? Localized.UserDataManagePage_DiskCombined
                 : disk.IsUserDataDisk
                     ? Localized.UserDataManagePage_DiskUser
-                    : Localized.UserDataManagePage_DiskApplication;
+                    : disk.IsApplicationDisk ? Localized.UserDataManagePage_DiskApplication : Localized.UserDataManagePage_CategoryCache;
             DiskCharts.Add(new DiskChartItem
             {
-                Title = string.IsNullOrWhiteSpace(disk.Name) ? title : $"{title} {(disk.IsUserDataDisk ? $"· {MauiProgram.DataPath}" : "")} ",
+                Title = string.IsNullOrWhiteSpace(disk.Name) ? title : $"{title} · {(disk.IsUserDataDisk ? MauiProgram.DataPath : disk.Name)}",
                 Summary = disk.HasDiskInfo
                     ? $"{FormatSize(disk.TotalSize - disk.FreeSize)} / {FormatSize(disk.TotalSize)}"
                     : Localized.UserDataManagePage_DiskUnavailable,
@@ -606,6 +597,17 @@ public partial class UserDataManagePage : ContentPage
         return result;
     }
 
+    private CleanupResult DeleteProjectCache(IEnumerable<string> directories, CancellationToken cancellationToken, IProgress<CleanupProgress> progress)
+    {
+        var files = new Dictionary<string, long>(PathComparer());
+        foreach (string directory in directories)
+            ScanFiles(directory, file =>
+            {
+                if (!ProjectCachePaths.IsProjectCover(file)) files.TryAdd(file, GetFileSize(file));
+            }, cancellationToken);
+        return DeleteFiles(files.Select(file => (file.Key, file.Value)).ToList(), cancellationToken, progress, "Delete project cache");
+    }
+
     private CleanupResult DeleteFiles(List<(string Path, long Size)> files, CancellationToken cancellationToken, IProgress<CleanupProgress> progress, string operation)
     {
         long deleted = 0;
@@ -658,14 +660,14 @@ public partial class UserDataManagePage : ContentPage
     {
         if (sender is not Button { BindingContext: ProjectDataEntry entry }) return;
         await RunCleanupAsync($"{entry.Name} · {Localized.UserDataManagePage_ProjectCache}", entry.CacheSizeInBytes,
-            (ct, progress) => DeleteFilesInDirectory(Path.Combine(entry.FullPath, "thumbs"), ct, progress));
+            (ct, progress) => DeleteProjectCache(entry.CacheDirectories, ct, progress));
     }
 
     private async void OnClearProjectProxyClicked(object sender, EventArgs e)
     {
         if (sender is not Button { BindingContext: ProjectDataEntry entry }) return;
         await RunCleanupAsync($"{entry.Name} · {Localized.UserDataManagePage_ProjectProxy}", entry.ProxySizeInBytes,
-            (ct, progress) => DeleteFilesInDirectory(Path.Combine(entry.FullPath, "proxy"), ct, progress));
+            (ct, progress) => DeleteProjectCache(entry.ProxyDirectories, ct, progress));
     }
 
     private async Task OpenDirectoryAsync(string path)
@@ -843,14 +845,7 @@ public partial class UserDataManagePage : ContentPage
     }
 
     private bool IsUnder(string path, string root)
-    {
-        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(root)) return false;
-        string fullPath = NormalizePath(path);
-        string fullRoot = NormalizePath(root);
-        if (string.Equals(fullPath, fullRoot, _pathComparison)) return true;
-        return fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, _pathComparison) ||
-               fullPath.StartsWith(fullRoot + Path.AltDirectorySeparatorChar, _pathComparison);
-    }
+        => !string.IsNullOrWhiteSpace(path) && !string.IsNullOrWhiteSpace(root) && ProjectCachePaths.IsUnder(path, root);
 
     private StringComparer PathComparer() => OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 

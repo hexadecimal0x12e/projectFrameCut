@@ -208,8 +208,9 @@ public static class ClipInitializationFailure
         // 暗红背景（RGB 58,22,22），与红色系图标、白字黑描边文字协调且不刺眼
         IPicture picture = (int)pixelMode switch
         {
-            8 => Picture8bpp.GenerateSolidColor(width, height, 58, 22, 22, 1),
-            16 => Picture16bpp.GenerateSolidColor(width, height, 14906, 5654, 5654, 1),
+            116 => PictureFP16.GenerateSolidColor(width, height, (Half)(58 / 255f), (Half)(22 / 255f), (Half)(22 / 255f), Half.One),
+            8 => Picture8bpp.GenerateSolidColor(width, height, 58, 22, 22, Half.One),
+            16 => Picture16bpp.GenerateSolidColor(width, height, 14906, 5654, 5654, Half.One),
             _ => throw new InvalidDataException("Unsupport pixel mode.")
         };
 
@@ -319,11 +320,11 @@ public static class ClipInitializationFailure
                 FillR = ushort.MaxValue,
                 FillG = ushort.MaxValue,
                 FillB = ushort.MaxValue,
-                FillA = 1f,
+                FillA = Half.One,
                 StrokeR = 0,
                 StrokeG = 0,
                 StrokeB = 0,
-                StrokeA = 1f,
+                StrokeA = Half.One,
                 StrokeThickness = MathF.Max(1f, fontSize * 0.08f),
                 CharacterSpacing = 0f,
                 WordSpacing = 0f,
@@ -383,7 +384,9 @@ public static class ClipInitializationFailure
         IPicture? result = null;
         try
         {
-            if (baseForCompose is IPicture<ushort> uBase && topForCompose is IPicture<ushort> uTop)
+            if (baseForCompose is IPicture<Half> fb && topForCompose is IPicture<Half> ft)
+                result = PictureComposer.Default.Compose(fb, ft, BlendMode.Overlay, startX, startY, targetWidth, targetHeight);
+            else if (baseForCompose is IPicture<ushort> uBase && topForCompose is IPicture<ushort> uTop)
                 result = PictureComposer.Default.Compose(uBase, uTop, BlendMode.Overlay, startX, startY, targetWidth, targetHeight);
             else if (baseForCompose is IPicture<byte> bBase && topForCompose is IPicture<byte> bTop)
                 result = PictureComposer.Default.Compose(bBase, bTop, BlendMode.Overlay, startX, startY, targetWidth, targetHeight);

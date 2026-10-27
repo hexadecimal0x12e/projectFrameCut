@@ -204,7 +204,7 @@ public static class RenderScheduleBenchmark
         IClip[] clips = [];
         Renderer? renderer = null;
         VideoBuilder? builder = null;
-        VideoWriterHWAccel? writer = null;
+        VideoWriterHWAccelFP16? writer = null;
         string encoder = report.Encoder;
         string? error = null;
         int frames = 0;
@@ -221,11 +221,11 @@ public static class RenderScheduleBenchmark
             foreach (var clip in clips)
             {
                 clip.ExtraData ??= new Dictionary<string, object>();
-                clip.ReInit(IPicture.PicturePixelMode.BytePicture);
+                clip.ReInit(IPicture.PicturePixelMode.Float16Picture);
             }
             token.ThrowIfCancellationRequested();
             sw.Start();
-            writer = new VideoWriterHWAccel
+            writer = new VideoWriterHWAccelFP16
             {
                 OutputPath = Path.Combine(directory, "output.mp4"),
                 Width = report.Width,

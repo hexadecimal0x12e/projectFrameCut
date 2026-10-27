@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -46,6 +47,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Keyed by field Id.
         /// </summary>
         private Dictionary<string, object> _fieldValues = new();
+        private readonly Dictionary<string, object> _fieldDataFormats = new();
 
         /// <summary>
         /// Runtime-only value providers injected for the current effect build.
@@ -96,6 +98,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             (isInput ? context.State.Fields : context.State.Outputs).TryGetValue(fieldId, out var field)
                 ? field.FieldType : EffectArgumentFieldType.Any;
 
+        public virtual object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            PictureDataFormats.Resolve(this, fieldId, isInput, context);
+
         /// <summary>
         /// The single source of truth of the anchor bindings.
         /// Kept as a live backing dictionary. Read and mutate it through the
@@ -144,6 +149,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         {
                             Id = desc.Id,
                             FieldType = desc.FieldType,
+                            DataFormat = _fieldDataFormats.GetValueOrDefault(desc.Id) ?? desc.DataFormat,
                             BoundProviderId = boundSourceId,
                             StaticFallbackValue = value,
                             DefaultValue = desc.DefaultValue,
@@ -159,6 +165,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         {
                             Id = desc.Id,
                             FieldType = desc.FieldType,
+                            DataFormat = _fieldDataFormats.GetValueOrDefault(desc.Id) ?? desc.DataFormat,
                             Value = value,
                             DefaultValue = desc.DefaultValue,
                             MinValue = desc.MinValue,
@@ -176,6 +183,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 foreach (var kvp in value)
                 {
                     if (kvp.Value is null) continue;
+                    if (kvp.Value.DataFormat is { } format) _fieldDataFormats[kvp.Key] = format;
+                    else _fieldDataFormats.Remove(kvp.Key);
                     var bindingKey = BoundParameterKey(kvp.Key);
                     if (kvp.Value is DynamicEffectParamField df && df.BoundProviderId is { } boundId)
                     {
@@ -378,14 +387,20 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             return BuildRegisteredEffects(imp, p);
         }
 
-        private IEffect[] BuildRegisteredEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        public virtual IEffect[] Build<TPicture>() where TPicture : IPicture =>
+            BuildRegisteredEffects(ResolveImplementType(SupportedImplementTypes(), DefaultImplementType), BuildDynamicParameters(),
+                (typeName, implementation, parameters) => Plugins.IPluginBase.EffectImplementations.Create<TPicture>(typeName, implementation, DefaultImplementType, parameters));
+
+        private IEffect[] BuildRegisteredEffects(EffectImplementType implementType, Dictionary<string, object> parameters,
+            Func<string, EffectImplementType, Dictionary<string, object>, IEffect>? create = null)
         {
             this.ValidateOutputFields();
             var typeName = TypeName;
             if (typeName == "Crop" && (MetaData.ContainsKey(IsContinuousEffectParameterKey) || parameters.ContainsKey(IsContinuousEffectParameterKey)))
                 typeName = "ProgressCrop";
 
-            return [Plugins.IPluginBase.EffectImplementations.Create(typeName, implementType, DefaultImplementType, parameters)];
+            return [create is null ? Plugins.IPluginBase.EffectImplementations.Create(typeName, implementType, DefaultImplementType, parameters)
+                : create(typeName, implementType, parameters)];
         }
 
         /// <summary>

@@ -13,7 +13,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
     /// FFmpeg input-device based decoder.
     /// Source format: "{inputFormat}:{source}", e.g. "lavfi:testsrc=size=1280x720:rate=30".
     /// </summary>
-    public sealed unsafe class FFmpegDeviceDecoderContext : IVideoSource<byte>
+    public sealed unsafe class FFmpegDeviceDecoderContext : IVideoSource<Half>
     {
         public bool IsDeterministic => false;
 
@@ -28,7 +28,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private AVPacket* _pkt = null;
         private AVFrame* _frm = null;
         private AVFrame* _rgb = null;
-        private byte* _rgbBuffer = null;
         private bool _eof = false;
         private bool _flushSent = false;
 
@@ -49,7 +48,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public string[] PreferredExtension => [];
         public string TypeName => "FFmpegDeviceDecoderContext";
-        public int? ResultBitPerPixel => 8;
+        public int? ResultBitPerPixel => IPicture.PicturePixelMode.Float16Picture;
         public bool AllowCachingResult => false;
 
         public bool EnableLock { get; set; } = true;
@@ -142,8 +141,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 _pkt = ffmpeg.av_packet_alloc();
                 _frm = ffmpeg.av_frame_alloc();
-                _rgb = ffmpeg.av_frame_alloc();
-                if (_pkt == null || _frm == null || _rgb == null)
+                if (_pkt == null || _frm == null)
                 {
                     throw new OutOfMemoryException($"Failed to allocate memory for FFmpeg input device '{_sourceSpec}'.");
                 }
@@ -170,51 +168,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 long nbFrames = (long)_fmt->streams[_videoStreamIndex]->nb_frames;
                 _totalFrames = nbFrames > 0 ? nbFrames : -1;
 
-                _sws = ffmpeg.sws_getContext(
-                    _width, _height, _codec->pix_fmt,
-                    _width, _height, AVPixelFormat.AV_PIX_FMT_BGR24,
-                    4, null, null, null);
-                if (_sws == null)
-                {
-                    throw new InvalidOperationException("Failed to alloc sws context for FFmpeg device decoder.");
-                }
-
-                int bufferSize = ffmpeg.av_image_get_buffer_size(AVPixelFormat.AV_PIX_FMT_BGR24, _width, _height, 1);
-                if (bufferSize <= 0)
-                {
-                    throw new OutOfMemoryException("Failed to calculate RGB buffer size.");
-                }
-
-                _rgbBuffer = (byte*)ffmpeg.av_malloc((ulong)bufferSize);
-                if (_rgbBuffer == null)
-                {
-                    throw new OutOfMemoryException("Failed to allocate RGB buffer.");
-                }
-
-                byte_ptrArray4 tmpData = default;
-                int_array4 tmpLinesize = default;
-                int fillRet = ffmpeg.av_image_fill_arrays(
-                    ref tmpData,
-                    ref tmpLinesize,
-                    _rgbBuffer,
-                    AVPixelFormat.AV_PIX_FMT_BGR24,
-                    _width,
-                    _height,
-                    1);
-                if (fillRet < 0)
-                {
-                    throw new InvalidOperationException("av_image_fill_arrays failed.");
-                }
-
-                for (uint i = 0; i < 4; i++)
-                {
-                    _rgb->data[i] = tmpData[i];
-                    _rgb->linesize[i] = tmpLinesize[i];
-                }
-
-                _rgb->format = (int)AVPixelFormat.AV_PIX_FMT_BGR24;
-                _rgb->width = _width;
-                _rgb->height = _height;
+                _rgb = FFmpegFP16FrameCodec.AllocateFrame(_width, _height, FFmpegFP16FrameCodec.DecoderFormat);
 
                 _currentFrameNumber = 0;
                 _eof = false;
@@ -238,7 +192,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        public IPicture<byte> GetFrame(uint targetFrame)
+        public IPicture<Half> GetFrame(uint targetFrame)
         {
             bool lockTaken = false;
             try
@@ -348,7 +302,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 throw new InvalidOperationException($"Decoder for '{_sourceSpec}' is not initialized when reading frame {targetFrame}.");
             }
-            if (_fmt == null || _codec == null || _pkt == null || _frm == null || _rgb == null || _sws == null || _rgbBuffer == null)
+            if (_fmt == null || _codec == null || _pkt == null || _frm == null || _rgb == null)
             {
                 throw new InvalidDataException($"Decoder native state is invalid for '{_sourceSpec}' when reading frame {targetFrame}.");
             }
@@ -358,19 +312,26 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private IPicture<byte> ConvertCurrentFrame(uint targetFrame)
+        private IPicture<Half> ConvertCurrentFrame(uint targetFrame)
         {
+            FFmpegFP16FrameCodec.ApplyDecoderMetadata(_frm, _codec);
+            _sws = ffmpeg.sws_getCachedContext(_sws, _frm->width, _frm->height, (AVPixelFormat)_frm->format,
+                _width, _height, (AVPixelFormat)_rgb->format, 4, null, null, null);
+            if (_sws == null) throw new InvalidOperationException("Failed to create the floating-point device conversion context.");
+            FFmpegFP16FrameCodec.ConfigureDecoderColorspace(_sws, _frm);
             int scaledRows = FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
-            if (scaledRows <= 0)
+            if (scaledRows != _height)
             {
                 throw new InvalidDataException($"Failed to convert frame for '{_sourceSpec}' (sws_scale returned {scaledRows}).");
             }
 
             Index++;
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _sourceSpec, targetFrame);
+            return FFmpegFP16FrameCodec.Read(_rgb, FFmpegFP16FrameCodec.HasAlpha(_frm), _sourceSpec, targetFrame,
+                typeof(FFmpegDeviceDecoderContext), FFmpegFP16FrameCodec.IsHdr(_frm->color_trc)
+                    ? FFmpegFP16FrameCodec.ResolveMaximumBrightness(_frm) : null, _frm->color_trc);
         }
 
-        private IPicture<byte> HandleFrameNotFound(uint targetFrame)
+        private IPicture<Half> HandleFrameNotFound(uint targetFrame)
         {
             if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
             {
@@ -385,53 +346,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         [DebuggerNonUserCode]
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, string source = "", uint frameIdx = 0)
-        {
-            if (data == null) throw new ArgumentNullException(nameof(data));
-            if (width <= 0 || height <= 0) throw new ArgumentException($"Invalid dimensions: {width}x{height}");
-            if (stride <= 0 || stride < width * 3) throw new ArgumentException($"Invalid stride {stride} for width {width}.");
-
-            int size = width * height;
-            var result = new Picture8bpp(width, height)
-            {
-                r = new byte[size],
-                g = new byte[size],
-                b = new byte[size],
-            };
-
-            result.ProcessStack = new List<PictureProcessStack>
-            {
-                new PictureProcessStack
-                {
-                    OperationDisplayName = $"From video '{source}', frame #{frameIdx}",
-                    Operator = typeof(FFmpegDeviceDecoderContext),
-                    ProcessingFuncStackTrace = new StackTrace(true)
-                }
-            };
-
-            int idx;
-            int baseIndex;
-            int offset;
-            int x;
-            int y;
-            byte* srcRow;
-            for (y = 0; y < height; y++)
-            {
-                srcRow = data + y * stride;
-                baseIndex = y * width;
-                for (x = 0; x < width; x++)
-                {
-                    idx = baseIndex + x;
-                    offset = x * 3;
-                    result.r[idx] = srcRow[offset + 2];
-                    result.g[idx] = srcRow[offset + 1];
-                    result.b[idx] = srcRow[offset + 0];
-                }
-            }
-
-            return result;
-        }
-
         private static (string inputFormatName, string inputSource) ParseSourceSpec(string sourceSpec)
         {
             if (string.IsNullOrWhiteSpace(sourceSpec))
@@ -465,7 +379,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (Disposed) return;
             Disposed = true;
 
-            if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
             if (_frm != null) { AVFrame* tmp = _frm; _frm = null; ffmpeg.av_frame_free(&tmp); }
             if (_pkt != null) { AVPacket* tmp = _pkt; _pkt = null; ffmpeg.av_packet_free(&tmp); }

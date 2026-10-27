@@ -190,6 +190,7 @@ internal sealed class RemoteValueProviderEffect : RemoteEffectBase, IValueProvid
     string IEffectArgumentField.FromPlugin => _field.FromPlugin;
     public bool IsDynamic => true;
     public EffectArgumentFieldType FieldType => (EffectArgumentFieldType)_field.FieldType;
+    public object? DataFormat => _field.DataFormat == 0 ? null : (PictureDataFormat)_field.DataFormat;
     public string DefaultValue { get => _field.DefaultValue; set => _field.DefaultValue = value; }
     public string MinValue { get => _field.MinimumValue; set => _field.MinimumValue = value; }
     public string MaxValue { get => _field.MaximumValue; set => _field.MaximumValue = value; }
@@ -325,6 +326,18 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
     public int RelativeWidth { get; set; }
     public int RelativeHeight { get; set; }
     public string? BindedEffectProvidingSystemID { get; set; }
+
+    public IEffect WithPictureType<TPicture>() where TPicture : IPicture
+    {
+        var format = PictureDataFormats.FromType<TPicture>();
+        if (format == PictureDataFormat.Unknown) return this;
+        var descriptor = Session.InvokeAsync<IsolationEffectImplementationCatalogItem, IsolationEffectDescriptor>(
+            RenderOperation.IsolationCreateEffectImplementation, new()
+            {
+                TypeName = TypeName, ImplementType = (int)ImplementType, PictureDataFormat = (int)format,
+            }).AsTask().GetAwaiter().GetResult();
+        return TypedPictureEffect.CreateTransport<TPicture>(RemoteEffectFactory.Create(Session, descriptor));
+    }
 
     public IEffect WithParameters(Dictionary<string, object> parameters)
     {

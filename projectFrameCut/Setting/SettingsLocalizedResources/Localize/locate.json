@@ -2485,22 +2485,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "\u5E76\u884C\u5206\u5757\u6570",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 \u8868\u793A\u4E32\u884C\uFF1B\u6BCF\u5757\u5171\u4EAB\u603B\u6E32\u67D3\u7EBF\u7A0B\u9884\u7B97\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "\u542F\u7528\u65AD\u70B9\u7EED\u6E32",
         "Mode": "ConstString",
@@ -3497,6 +3481,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "\u5141\u8BB8 Assembly \u5916\u90E8\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "\u91CD\u5B9A\u5411\u7F13\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "\u7F13\u5B58\u6309\u9879\u76EE\u540D\u79F0\u5206\u7C7B\uFF0C\u540C\u540D\u9879\u76EE\u5171\u7528\u76EE\u5F55\u3002\u4FEE\u6539\u540E\u91CD\u542F\u751F\u6548\uFF0C\u73B0\u6709\u7F13\u5B58\u4E0D\u8FC1\u79FB\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "\u9879\u76EE\u539F\u76EE\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "\u7F13\u5B58\u76EE\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "\u9009\u62E9\u7F13\u5B58\u6587\u4EF6\u5939",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "\u6062\u590D\u9ED8\u8BA4\u7F13\u5B58\u76EE\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "\u65E0\u6CD5\u4F7F\u7528\u91CD\u5B9A\u5411\u7F13\u5B58\u76EE\u5F55\uFF0C\u672C\u6B21\u4F7F\u7528\u539F\u9879\u76EE\u76EE\u5F55\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "\u7F13\u5B58\u89E3\u7801\u540E\u7684\u539F\u59CB\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "\u5173\u95ED\u540E\u4EC5\u7F13\u5B58\u5E73\u53F0\u9884\u89C8\uFF1B\u4FEE\u6539\u6548\u679C\u65F6\u9700\u8981\u91CD\u65B0\u89E3\u7801\u539F\u59CB\u5E27\u3002\u4E0B\u6B21\u64AD\u653E\u65F6\u751F\u6548\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6460,24 +6516,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "Parallel Chunk Count",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 indicates serial; each chunk shares the total render thread budget.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "Enable Resume Rendering",
         "Mode": "ConstString",
@@ -7093,6 +7131,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Allow Assembly external sources",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Cache decoded source frames",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "When disabled, only platform previews are cached; changing effects requires decoding the source again. Applies on the next playback.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10048,24 +10158,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "\u5E73\u884C\u5206\u584A\u6578",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 \u8868\u793A\u4E32\u5217\uFF1B\u6BCF\u500B\u5340\u584A\u5171\u7528\u7E3D\u6E32\u67D3\u57F7\u884C\u7DD2\u9810\u7B97\u3002",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "\u555F\u7528\u65B7\u9EDE\u7E8C\u6E32",
         "Mode": "ConstString",
@@ -10690,6 +10782,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "\u5141\u8A31 Assembly \u5916\u90E8\u4F86\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "\u91CD\u65B0\u5C0E\u5411\u5FEB\u53D6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "\u5FEB\u53D6\u4F9D\u5C08\u6848\u540D\u7A31\u5206\u985E\uFF0C\u540C\u540D\u5C08\u6848\u5171\u7528\u76EE\u9304\u3002\u4FEE\u6539\u5F8C\u91CD\u65B0\u555F\u52D5\u751F\u6548\uFF0C\u73FE\u6709\u5FEB\u53D6\u4E0D\u642C\u79FB\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "\u5C08\u6848\u539F\u76EE\u9304",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "\u5FEB\u53D6\u76EE\u9304",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "\u9078\u64C7\u5FEB\u53D6\u8CC7\u6599\u593E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "\u9084\u539F\u9810\u8A2D\u5FEB\u53D6\u76EE\u9304",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "\u7121\u6CD5\u4F7F\u7528\u91CD\u65B0\u5C0E\u5411\u5FEB\u53D6\u76EE\u9304\uFF0C\u672C\u6B21\u4F7F\u7528\u5C08\u6848\u539F\u76EE\u9304\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "\u5FEB\u53D6\u89E3\u78BC\u5F8C\u7684\u539F\u59CB\u756B\u683C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "\u95DC\u9589\u5F8C\u50C5\u5FEB\u53D6\u5E73\u53F0\u9810\u89BD\uFF1B\u4FEE\u6539\u6548\u679C\u6642\u9700\u8981\u91CD\u65B0\u89E3\u78BC\u539F\u59CB\u756B\u683C\u3002\u4E0B\u6B21\u64AD\u653E\u6642\u751F\u6548\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13649,24 +13813,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "\u4E26\u5217\u5206\u5272\u6570",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 \u306F\u76F4\u5217\u3002\u5404\u30C1\u30E3\u30F3\u30AF\u304C\u63CF\u753B\u30B9\u30EC\u30C3\u30C9\u306E\u7DCF\u4E88\u7B97\u3092\u5171\u6709\u3057\u307E\u3059\u3002",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "\u30C1\u30E3\u30F3\u30AF\u63CF\u753B\u306E\u518D\u958B\u3092\u6709\u52B9\u5316",
         "Mode": "ConstString",
@@ -14291,6 +14437,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Assembly \u5916\u90E8\u30BD\u30FC\u30B9\u3092\u8A31\u53EF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "\u30C7\u30B3\u30FC\u30C9\u6E08\u307F\u306E\u5143\u30D5\u30EC\u30FC\u30E0\u3092\u30AD\u30E3\u30C3\u30B7\u30E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "\u7121\u52B9\u306E\u5834\u5408\u306F\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306E\u30D7\u30EC\u30D3\u30E5\u30FC\u306E\u307F\u3092\u4FDD\u5B58\u3057\u3001\u30A8\u30D5\u30A7\u30AF\u30C8\u306E\u5909\u66F4\u6642\u306B\u5143\u30D5\u30EC\u30FC\u30E0\u3092\u518D\u30C7\u30B3\u30FC\u30C9\u3057\u307E\u3059\u3002\u6B21\u56DE\u306E\u518D\u751F\u304B\u3089\u9069\u7528\u3055\u308C\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17244,24 +17462,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "\uBCD1\uB82C \uCCAD\uD06C \uC218",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1\uC740 \uC9C1\uB82C\uC744 \uB098\uD0C0\uB0B4\uBA70, \uAC01 \uCCAD\uD06C\uB294 \uCD1D \uB80C\uB354 \uC2A4\uB808\uB4DC \uC608\uC0B0\uC744 \uACF5\uC720\uD569\uB2C8\uB2E4.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "\uC911\uB2E8\uC810\uC5D0\uC11C \uB80C\uB354\uB9C1 \uC7AC\uAC1C \uC0AC\uC6A9",
         "Mode": "ConstString",
@@ -17885,6 +18085,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Assembly \uC678\uBD80 \uC18C\uC2A4 \uD5C8\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "\uB514\uCF54\uB529\uB41C \uC6D0\uBCF8 \uD504\uB808\uC784 \uCE90\uC2DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "\uB044\uBA74 \uD50C\uB7AB\uD3FC \uBBF8\uB9AC \uBCF4\uAE30\uB9CC \uC800\uC7A5\uD558\uBA70 \uD6A8\uACFC\uB97C \uBCC0\uACBD\uD560 \uB54C \uC6D0\uBCF8\uC744 \uB2E4\uC2DC \uB514\uCF54\uB529\uD569\uB2C8\uB2E4. \uB2E4\uC74C \uC7AC\uC0DD\uBD80\uD130 \uC801\uC6A9\uB429\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20838,24 +21110,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "Nombre de blocs parall\u00E8les",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 indique le mode s\u00E9rie ; chaque bloc partage le budget total des threads de rendu.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "Activer la reprise du rendu",
         "Mode": "ConstString",
@@ -21480,6 +21734,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Autoriser les sources externes Assembly",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Mettre en cache les images source d\u00E9cod\u00E9es",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "Si d\u00E9sactiv\u00E9, seul l\u0027aper\u00E7u de la plateforme est conserv\u00E9 ; modifier les effets n\u00E9cessite un nouveau d\u00E9codage. Appliqu\u00E9 \u00E0 la prochaine lecture.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24437,24 +24763,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "\u0639\u062F\u062F \u0627\u0644\u0642\u0637\u0639 \u0627\u0644\u0645\u062A\u0648\u0627\u0632\u064A\u0629",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 \u064A\u0639\u0646\u064A \u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A\u061B \u0648\u062A\u0634\u062A\u0631\u0643 \u0643\u0644 \u0643\u062A\u0644\u0629 \u0641\u064A \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629 \u0644\u062E\u064A\u0648\u0637 \u0627\u0644\u062A\u0635\u064A\u064A\u0631.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "\u062A\u0645\u0643\u064A\u0646 \u0627\u0633\u062A\u0626\u0646\u0627\u0641 \u0627\u0644\u062A\u0635\u064A\u064A\u0631 \u0645\u0646 \u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u0648\u0642\u0641",
         "Mode": "ConstString",
@@ -25078,6 +25386,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0645\u0635\u0627\u062F\u0631 \u0627\u0644\u062E\u0627\u0631\u062C\u064A\u0629 \u0639\u0628\u0631 Assembly",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "\u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0625\u0637\u0627\u0631\u0627\u062A \u0627\u0644\u0623\u0635\u0644\u064A\u0629 \u0627\u0644\u0645\u0641\u0643\u0648\u0643\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "\u0639\u0646\u062F \u0627\u0644\u062A\u0639\u0637\u064A\u0644\u060C \u062A\u064F\u062E\u0632\u064E\u0651\u0646 \u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0645\u0646\u0635\u0629 \u0641\u0642\u0637\u061B \u062A\u062A\u0637\u0644\u0628 \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0627\u0644\u062A\u0623\u062B\u064A\u0631 \u0625\u0639\u0627\u062F\u0629 \u0641\u0643 \u0627\u0644\u0625\u0637\u0627\u0631. \u064A\u0633\u0631\u064A \u0639\u0646\u062F \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u062A\u0627\u0644\u064A.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28030,24 +28410,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "Anzahl paralleler Chunks",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 steht f\u00FCr seriell; jeder Chunk teilt sich das gesamte Render-Thread-Budget.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "Rendering-Wiederaufnahme aktivieren",
         "Mode": "ConstString",
@@ -28672,6 +29034,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Externe Assembly-Quellen zulassen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Dekodierte Originalbilder zwischenspeichern",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "Ist dies deaktiviert, wird nur die Plattformvorschau gespeichert; Effekt\u00E4nderungen erfordern erneutes Dekodieren. Gilt ab der n\u00E4chsten Wiedergabe.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31627,24 +32061,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "N\u00FAmero de bloques en paralelo",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 indica modo en serie; cada bloque comparte el presupuesto total de hilos de renderizado.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "Habilitar reanudaci\u00F3n del renderizado",
         "Mode": "ConstString",
@@ -32269,6 +32685,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Permitir fuentes externas de Assembly",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Guardar en cach\u00E9 los fotogramas originales decodificados",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "Al desactivarlo, solo se guarda la vista previa de la plataforma; cambiar efectos requiere volver a decodificar. Se aplica en la pr\u00F3xima reproducci\u00F3n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -35223,24 +35711,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "Numero di chunk paralleli",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 indica seriale; ogni blocco condivide il budget totale dei thread di rendering.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "Abilita ripresa del rendering",
         "Mode": "ConstString",
@@ -35865,6 +36335,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Consenti sorgenti esterne Assembly",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Memorizza nella cache i fotogrammi originali decodificati",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "Se disattivato, viene salvata solo l\u0027anteprima della piattaforma; modificare gli effetti richiede una nuova decodifica. Si applica alla prossima riproduzione.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38819,24 +39361,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "Liczba r\u00F3wnoleg\u0142ych fragment\u00F3w",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 oznacza tryb szeregowy; ka\u017Cdy fragment wsp\u00F3\u0142dzieli \u0142\u0105czny bud\u017Cet w\u0105tku renderowania.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "W\u0142\u0105cz wznawianie renderowania",
         "Mode": "ConstString",
@@ -39461,6 +39985,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Zezwalaj na zewn\u0119trzne \u017Ar\u00F3d\u0142a Assembly",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Buforuj zdekodowane klatki \u017Ar\u00F3d\u0142owe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "Po wy\u0142\u0105czeniu zapisywany jest tylko podgl\u0105d platformy; zmiana efekt\u00F3w wymaga ponownego dekodowania. Obowi\u0105zuje od nast\u0119pnego odtwarzania.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -42415,24 +43011,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "N\u00FAmero de blocos paralelos",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 significa serial; cada bloco compartilha o or\u00E7amento total de threads de renderiza\u00E7\u00E3o.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "Ativar retomada de renderiza\u00E7\u00E3o",
         "Mode": "ConstString",
@@ -43057,6 +43635,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Permitir fontes externas Assembly",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Armazenar em cache os quadros originais decodificados",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "Quando desativado, apenas a pr\u00E9via da plataforma \u00E9 armazenada; alterar efeitos exige nova decodifica\u00E7\u00E3o. Aplicado na pr\u00F3xima reprodu\u00E7\u00E3o.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -46015,24 +46665,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "\u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0445 \u0447\u0430\u043D\u043A\u043E\u0432",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 \u2014 \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0440\u0435\u0436\u0438\u043C; \u043A\u0430\u0436\u0434\u044B\u0439 \u0447\u0430\u043D\u043A \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u043E\u0431\u0449\u0438\u0439 \u0431\u044E\u0434\u0436\u0435\u0442 \u043F\u043E\u0442\u043E\u043A\u043E\u0432 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430",
         "Mode": "ConstString",
@@ -46657,6 +47289,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0432\u043D\u0435\u0448\u043D\u0438\u0435 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 Assembly",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "\u041A\u044D\u0448\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0438\u0441\u0445\u043E\u0434\u043D\u044B\u0435 \u043A\u0430\u0434\u0440\u044B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "\u0415\u0441\u043B\u0438 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u043E, \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440 \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u044B; \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u044D\u0444\u0444\u0435\u043A\u0442\u043E\u0432 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u043E\u0433\u043E \u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F. \u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u0441\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0432\u043E\u0441\u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -49613,24 +50317,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ChunkRender_Parallelism",
-        "Value": "Paralel par\u00E7a say\u0131s\u0131",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ChunkRender_Parallelism_Desc",
-        "Value": "1 seri oldu\u011Funu belirtir; her blok toplam render i\u015F par\u00E7ac\u0131\u011F\u0131 b\u00FCt\u00E7esini payla\u015F\u0131r.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_ChunkRender_Resume",
         "Value": "Kald\u0131\u011F\u0131 yerden render etmeyi etkinle\u015Ftir",
         "Mode": "ConstString",
@@ -50255,6 +50941,78 @@
       {
         "Id": "Security_ExternalSources_AllowAssemblySources",
         "Value": "Harici Assembly kaynaklar\u0131na izin ver",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Title",
+        "Value": "Redirect project cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Description",
+        "Value": "Group caches by project name; projects with the same name share a directory. Changes apply after restart. Existing caches are not moved.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Default",
+        "Value": "Original project directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Path",
+        "Value": "Cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Select",
+        "Value": "Choose cache folder",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Reset",
+        "Value": "Restore default cache directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_ProjectCache_Fallback",
+        "Value": "The redirected cache directory is unavailable. The original project directory will be used for this session.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames",
+        "Value": "Kod \u00E7\u00F6z\u00FClm\u00FC\u015F kaynak kareleri \u00F6nbelle\u011Fe al",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_CacheDecodedPreviewFrames_Subtitle",
+        "Value": "Kapal\u0131yken yaln\u0131zca platform \u00F6nizlemesi kaydedilir; efekt de\u011Fi\u015Fiklikleri kayna\u011F\u0131n yeniden \u00E7\u00F6z\u00FClmesini gerektirir. Sonraki oynatmada uygulan\u0131r.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

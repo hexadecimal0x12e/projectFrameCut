@@ -26,7 +26,7 @@ public sealed record FrameHashOptions
     public int ProjectWidth { get; init; }
     public int ProjectHeight { get; init; }
     public double FrameRate { get; init; } = 30;
-    public int PixelMode { get; init; } = 8;
+    public int PixelMode { get; init; } = IPicture.PicturePixelMode.Float16Picture;
     public bool Hdr { get; init; }
     public int SdrBrightness { get; init; } = 203;
     public int PeakBrightness { get; init; } = 1000;
@@ -292,6 +292,7 @@ public static class FrameHashHelper
                 case byte[] b: hash.AppendData(b); break;
                 case ushort[] u: hash.AppendData(MemoryMarshal.AsBytes(u.AsSpan())); break;
                 case float[] f: hash.AppendData(MemoryMarshal.AsBytes(f.AsSpan())); break;
+                case Half[] h: hash.AppendData(MemoryMarshal.AsBytes(h.AsSpan())); break;
                 default: throw new NotSupportedException($"Unsupported picture channel {channel.GetType()}.");
             }
         }
@@ -322,7 +323,7 @@ public static class FrameHashHelper
                     Append(picture.GetSpecificChannel(id) as Array);
             if (picture.HasAlphaChannel) Append(picture.GetSpecificChannel(IPicture.ChannelId.Alpha) as Array);
         }
-        if (picture is IHDRPicture<ushort> hdr)
+        if (picture is IHDRPicture<Half> hdr)
         {
             if (picture is IReadOnlyPictureChannels<ushort> read) AppendReadOnly(read.ReadBrightness);
             else Append(hdr.Brightness);

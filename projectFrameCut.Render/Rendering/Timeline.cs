@@ -25,13 +25,14 @@ namespace projectFrameCut.Render.Rendering
 {
     public static class Timeline
     {
-        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
+        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => PictureFP16.GenerateSolidColor(w, h, Half.Zero, Half.Zero, Half.Zero, null);
         public static bool ProcessEffectFromCanvas { get; set; } = true;
 
         internal static IPicture CreateTransparentFrame(int width, int height, IPicture.PicturePixelMode pixelMode) => pixelMode.Value switch
         {
-            8 => Picture8bpp.GenerateSolidColor(width, height, 0, 0, 0, 0),
-            16 => HDRPicture16bpp.GenerateSolidColor(width, height, 0, 0, 0, 0, 0),
+            116 => PictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero),
+            8 => Picture8bpp.GenerateSolidColor(width, height, 0, 0, 0, Half.Zero),
+            16 => HDRPictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero, Half.Zero),
             _ => throw new NotSupportedException($"Unsupported target pixel mode {pixelMode}."),
         };
 
@@ -50,7 +51,7 @@ namespace projectFrameCut.Render.Rendering
             IEnumerable<OneFrame> Read() => ReadFramesInOneFrame(video, targetFrame, targetWidth, targetHeight,
                 targetPPB, projectRelativeWidth, projectRelativeHeight, applyTransforms, initializeClips, argumentFrames);
             return new FrameSequence(video, Read, () => ClipValuePassThrough.Open(video, targetFrame, targetWidth,
-                targetHeight, projectRelativeWidth, projectRelativeHeight, targetPPB ?? 8, CancellationToken.None));
+                targetHeight, projectRelativeWidth, projectRelativeHeight, targetPPB ?? IPicture.PicturePixelMode.Float16Picture, CancellationToken.None));
         }
 
         private sealed class FrameSequence(IClip[] clips, Func<IEnumerable<OneFrame>> read, Func<IDisposable?> open) : IEnumerable<OneFrame>
@@ -69,7 +70,7 @@ namespace projectFrameCut.Render.Rendering
             int projectRelativeHeight, bool applyTransforms, bool initializeClips, ClipArgumentFrameCache? argumentFrames)
         {
             argumentFrames ??= new();
-            var ppb = targetPPB ?? 8;
+            var ppb = targetPPB ?? IPicture.PicturePixelMode.Float16Picture;
             List<OneFrame> result = new List<OneFrame>();
             foreach (var original in video)
             {
@@ -216,7 +217,7 @@ namespace projectFrameCut.Render.Rendering
             uint frameIndex,
             int targetWidth,
             int targetHeight,
-            int targetPPB = 8,
+            int targetPPB = 116,
             Action<IEffect, IPicture>? AfterEffectCallback = null,
             bool autoCenterImplicitClip = false,
             int projectRelativeWidth = 0,
@@ -309,7 +310,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         result = EffectPictureProcessing.Mix(PreviewSourceFrameContext.ReadingRaw ? ClassicOverlayMixture.Default
                                 : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default,
-                            result ?? Track(transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight)),
+                            result ?? Track(transparentBackground ? PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero) : FallBackImageGetter(targetWidth, targetHeight)),
                             srcFrame.Clip, targetPPB, 0, 0, targetWidth, targetHeight);
                         Track(result);
                         if (!PreviewSourceFrameContext.ReadingRaw)
@@ -482,7 +483,7 @@ namespace projectFrameCut.Render.Rendering
                         else
                         {
                             result = EffectPictureProcessing.Mix(mixer,
-                                Track(transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight)),
+                                Track(transparentBackground ? PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero) : FallBackImageGetter(targetWidth, targetHeight)),
                                 effected,
                                 targetPPB,
                                 clipX,
@@ -522,7 +523,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             ok:
                 result = EffectPictureProcessing.Mix(ClassicOverlayMixture.Default,
-                    Track(transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight)),
+                    Track(transparentBackground ? PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero) : FallBackImageGetter(targetWidth, targetHeight)),
                     result, targetPPB, 0, 0, targetWidth, targetHeight);
                 Track(result);
                 result = Track(EffectPictureProcessing.Resize(result, targetWidth, targetHeight, true));

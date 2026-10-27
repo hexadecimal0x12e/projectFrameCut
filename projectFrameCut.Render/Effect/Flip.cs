@@ -9,8 +9,12 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class FlipEffect_IPicture : INormalEffect
+    public class FlipEffect_IPicture : FlipEffect<IPicture> { }
+
+    public class FlipEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new FlipEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -48,7 +52,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            var effect = new FlipEffect_IPicture
+            var effect = new FlipEffect<TPicture>
             {
                 Horizontal = DynamicParam.ToBool(parameters.GetValueOrDefault("Horizontal")),
                 Vertical = DynamicParam.ToBool(parameters.GetValueOrDefault("Vertical")),
@@ -59,11 +63,11 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             bool horizontal = DynamicParam.Resolve(Parameters.GetValueOrDefault("Horizontal"), Horizontal);
             bool vertical = DynamicParam.Resolve(Parameters.GetValueOrDefault("Vertical"), Vertical);
-            return PictureEffectChannels.MapHdr(FlipEffect.Process(source, horizontal, vertical), source,
+            return PictureEffectChannels.MapHdr(PictureCalculation<TPicture>.Flip(source, horizontal, vertical), source,
                 (x, y) => (horizontal ? source.Width - 1 - x : x, vertical ? source.Height - 1 - y : y));
         }
     }

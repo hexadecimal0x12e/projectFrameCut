@@ -329,6 +329,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
 
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _perClipThumbCts = new();
+    private static readonly SemaphoreSlim TimelineThumbFileCheckGate = new(4);
     private readonly Dictionary<Guid, OnClipUIPreview> _activeClipPreviews = new();
     private const int ThumbIntervalFrames = 30;
     private const int ThumbMaxCount = 60;
@@ -930,6 +931,18 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (Inited) return;
         Inited = true;
+        if (!IsRemoteProject || _remoteProjectSession!.UsesLocalArtifacts)
+        {
+            ProjectCachePaths.Initialize(WorkingPath, ProjectInfo.ProjectName);
+            previewer.LocalProjectRoot = WorkingPath;
+        }
+        else
+        {
+            previewer.LocalProjectRoot = Path.Combine(MauiProgram.CachePath, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"));
+            ProjectCachePaths.Initialize(previewer.LocalProjectRoot, ProjectInfo.ProjectName);
+        }
+        if (ProjectCachePaths.TakeRedirectError(previewer.ProjectRoot) is { } cacheError)
+            await DisplayAlertAsync(Localized._Warn, $"{SettingsManager.SettingLocalizedResources.General_ProjectCache_Fallback}\n{cacheError.Message}", Localized._OK);
 #if WINDOWS || LINUX
         if (IsRemoteProject)
             projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend = true;
@@ -943,8 +956,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         ApplyClipEditorPreviewOverlayMode();
 
         string dynamicPreviewCacheRoot = IsRemoteProject
-            ? Path.Combine(MauiProgram.CachePath, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"))
-            : Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
+            ? ProjectCachePaths.GetRoot(previewer.ProjectRoot)
+            : Path.Combine(ProjectCachePaths.GetRoot(WorkingPath), "thumbs", "clipLocalFallback");
         if (IsRemoteProject)
         {
             Directory.CreateDirectory(dynamicPreviewCacheRoot);
@@ -959,8 +972,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         previewer.targetFrameRate = Math.Max(1, (int)ProjectInfo.TargetFrameRate);
         previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
         previewer.TempPath = IsRemoteProject
-            ? Path.Combine(MauiProgram.CachePath, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"), "thumbs")
-            : Path.Combine(WorkingPath, "thumbs");
+            ? ProjectCachePaths.ResolvePath(previewer.ProjectRoot, "thumbs")
+            : ProjectCachePaths.ResolvePath(WorkingPath, "thumbs");
         previewer.ProjectName = ProjectName;
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
         DynamicPreviewProvider.PreviewWarmupSeconds = SettingsManager.GetSettingAs("Edit_PreviewWarmupSeconds", 5, 5);
@@ -985,7 +998,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             foreach (var item in DirectoriesNeeded)
             {
-                Directory.CreateDirectory(Path.Combine(WorkingPath, item));
+                Directory.CreateDirectory(ProjectCachePaths.ResolvePath(WorkingPath, item));
             }
         }
 
@@ -1837,21 +1850,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     try
                     {
-                        if (HDRDecoderContext.IsHdrVideo(resolvedPath))
+                        if (HDRDecoderContextFP16.IsHdrVideo(resolvedPath))
                         {
-                            elem.ExtraData["TargetDecoder"] = "HDRDecoderContext";
-                        }
-                        else
-                        {
-                            if (FFmpegHelper.DetectVideoBitDepth(path) > 8)
-                            {
-                                elem.ExtraData["TargetDecoder"] = "DecoderContext16Bit";
-                            }
+                            elem.ExtraData["TargetDecoder"] = "HDRDecoderContextFP16";
                         }
                     }
                     catch (Exception ex)
                     {
-                        Log(ex, $"Detect bpp for video clip {path}", this);
+                        Log(ex, $"Detect HDR for video clip {resolvedPath}", this);
                     }
                 }
             }
@@ -2300,18 +2306,16 @@ public partial class DraftPage : ContentPage, IDraftPage
         var clipId = clip.Id;
         var totalFrames = clip.maxFrameCount > 0 ? (int)clip.maxFrameCount : (int)clip.lengthInFrame;
         if (totalFrames <= 0) return;
-        var outDir = Path.Combine(WorkingPath, "thumbs", "perClip", clipId.ToString(), "timeline");
-        if (Enumerable.Range(0, Math.Min(ThumbMaxCount, (int)(((long)totalFrames + ThumbIntervalFrames - 1) / ThumbIntervalFrames)))
-            .All(i => File.Exists(Path.Combine(outDir, $"{(long)i * ThumbIntervalFrames}.png"))))
-            return;
-
-        if (_perClipThumbCts.TryRemove(clipId, out var existingCts))
+        var outDir = Path.Combine(ProjectCachePaths.GetRoot(WorkingPath), "thumbs", "perClip", clipId.ToString(), "timeline");
+        bool hadExisting = _perClipThumbCts.TryRemove(clipId, out var existingCts);
+        if (hadExisting)
         {
-            try { existingCts.Cancel(); } catch { }
+            try { existingCts!.Cancel(); } catch { }
         }
 
         var cts = new CancellationTokenSource();
         _perClipThumbCts[clipId] = cts;
+        var token = cts.Token;
 
         var sourcePath = clip.SourcePath;
         var completed = false;
@@ -2320,8 +2324,22 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             try
             {
+                await TimelineThumbFileCheckGate.WaitAsync(token).ConfigureAwait(false);
+                bool thumbnailsExist;
+                try
+                {
+                    thumbnailsExist = Enumerable.Range(0, Math.Min(ThumbMaxCount, (int)(((long)totalFrames + ThumbIntervalFrames - 1) / ThumbIntervalFrames)))
+                        .All(i => !token.IsCancellationRequested && File.Exists(Path.Combine(outDir, $"{(long)i * ThumbIntervalFrames}.png")));
+                }
+                finally { TimelineThumbFileCheckGate.Release(); }
+                token.ThrowIfCancellationRequested();
+                if (thumbnailsExist)
+                {
+                    completed = hadExisting;
+                    return;
+                }
                 await previewer.GenerateTimelineThumbnailsAsync(clipId, sourcePath, totalFrames,
-                    ThumbIntervalFrames, ThumbMaxCount, ThumbTargetWidth, cts.Token).ConfigureAwait(false);
+                    ThumbIntervalFrames, ThumbMaxCount, ThumbTargetWidth, token).ConfigureAwait(false);
                 completed = true;
             }
             catch (OperationCanceledException) { }
@@ -2331,13 +2349,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             finally
             {
-                if (_perClipThumbCts.TryGetValue(clipId, out var registeredCts)
-                    && ReferenceEquals(registeredCts, cts))
-                {
-                    _perClipThumbCts.TryRemove(clipId, out _);
-                }
+                bool current = ((ICollection<KeyValuePair<Guid, CancellationTokenSource>>)_perClipThumbCts).Remove(new(clipId, cts))
+                    && !token.IsCancellationRequested;
                 cts.Dispose();
-                if (completed)
+                if (completed && current)
                 {
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
@@ -5261,7 +5276,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 if (createProxy)
                 {
-                    var proxiedPath = Path.Combine(WorkingPath, "proxy", $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
+                    var proxiedPath = Path.Combine(ProjectCachePaths.GetRoot(WorkingPath), "proxy", $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
                     VideoResizer.ReencodeToResolution(item.Path, proxiedPath, 1280, 720, "libx264");
                 }
                 Assets[cid].SourceHash = await HashServices.ComputeFileHashAsync(item.Path, null, c);
@@ -7425,7 +7440,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ? session.Snapshot.SessionId
             : session.Snapshot.RenderSession.SessionId;
         page.previewer.RenderProjectRoot = session.ProjectRoot;
-        page.previewer.RenderProxyRoot = Path.Combine(session.ProjectRoot, "proxy");
+        page.previewer.RenderProxyRoot = Path.Combine(string.IsNullOrWhiteSpace(session.Snapshot.RenderSession.CacheRoot) ? session.ProjectRoot : session.Snapshot.RenderSession.CacheRoot, "proxy");
         page.previewer.RemoteAssets = session.Assets
             .Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId) && !string.IsNullOrWhiteSpace(asset.Path))
             .Select(static asset => new AssetPathEntry { AssetId = asset.AssetId!, Path = asset.Path! })
@@ -7850,11 +7865,12 @@ public partial class DraftPage : ContentPage, IDraftPage
                 }
             });
 
-            var thumbsRoot = Path.Combine(WorkingPath, "thumbs");
+            var thumbsRoot = ProjectCachePaths.ResolvePath(previewer.ProjectRoot, "thumbs");
             if (Directory.Exists(thumbsRoot))
             {
                 foreach (var item in Directory.EnumerateFiles(thumbsRoot, "*", SearchOption.AllDirectories).ToArray())
                 {
+                    if (ProjectCachePaths.IsProjectCover(item)) continue;
                     try { File.Delete(item); } catch (FileNotFoundException) { }
                 }
             }
@@ -8462,6 +8478,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 previewer.CleanupMaterializedPreviews();
                 try { await RenderRpcBootstrap.DisposeAsync(); }
                 catch (Exception ex) { Log(ex, "Dispose render RPC backend", this); }
+                if (!IsRemoteProject || !_remoteProjectSession!.UsesLocalArtifacts)
+                    ProjectCachePaths.Forget(previewer.ProjectRoot);
                 try
                 {
                     await _workspaceWindowHost.DisposeAsync();
@@ -8513,7 +8531,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (!string.IsNullOrWhiteSpace(projectThumbPath) && File.Exists(projectThumbPath))
                     File.Copy(projectThumbPath, tempPath, true);
                 else
-                    File.WriteAllBytes(tempPath, previewer.RenderFramePngBytes(0U, 1280, 720));
+                {
+                    var framePath = previewer.TryRenderFrame(0U, 1280, 720);
+                    if (framePath is null) return;
+                    File.Copy(framePath, tempPath, true);
+                }
                 File.Move(tempPath, destPath, true);
                 LogDiagnostic($"Project thumbnail saved before exit: {destPath}");
             }

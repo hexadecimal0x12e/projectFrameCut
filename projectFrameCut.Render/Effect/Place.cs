@@ -16,8 +16,12 @@ namespace projectFrameCut.Render.Effect
     /// <summary>
     /// The Render-side provider of the Place effect.
     /// </summary>
-    public class PlaceEffect_IPicture : INormalEffect
+    public class PlaceEffect_IPicture : PlaceEffect<IPicture> { }
+
+    public class PlaceEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new PlaceEffect<T>();
+
         public bool IsDeterministic => true;
 
 
@@ -68,7 +72,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException("Too many parameters provided.");
             }
 
-            var effect = new PlaceEffect_IPicture
+            var effect = new PlaceEffect<TPicture>
             {
                 StartX = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartX")),
                 StartY = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartY")),
@@ -79,7 +83,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             if (targetWidth <= 0 || targetHeight <= 0)
             {
@@ -96,7 +100,7 @@ namespace projectFrameCut.Render.Effect
                 startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
-            return PictureEffectChannels.MapHdr(projectFrameCut.Drawing.Effect.PlaceEffect.Process(source, startX, startY, targetWidth, targetHeight), source, (x, y) => (x - startX, y - startY));
+            return PictureEffectChannels.MapHdr(PictureCalculation<TPicture>.Place(source, startX, startY, targetWidth, targetHeight), source, (x, y) => (x - startX, y - startY));
         }
 
     }

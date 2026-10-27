@@ -18,5 +18,6 @@
 		<Using Include="projectFrameCut.Shared.Logger">
 			<Static>True</Static>
 		</Using>
+		<Using Include="System.Half" Alias="float16" />
 	</ItemGroup>
 </Project>

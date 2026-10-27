@@ -829,7 +829,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     try
                     {
-                        using var img = new Picture8bpp(clip.SourcePath);
+                        using var img = PictureFP16.Load(clip.SourcePath);
                         aspect = (double)img.Width / img.Height;
                         return aspect > 0;
                     }
@@ -852,7 +852,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     try
                     {
-                        using var img = new Picture8bpp(asset.Path);
+                        using var img = PictureFP16.Load(asset.Path);
                         aspect = (double)img.Width / img.Height;
                         return aspect > 0;
                     }

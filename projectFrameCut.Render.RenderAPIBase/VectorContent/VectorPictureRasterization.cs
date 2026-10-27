@@ -33,41 +33,42 @@ public static class VectorPictureRasterization
         public override VectorSegment[] Draw() => source.Draw().Select(s => s with { Thickness = s.Thickness * scale }).ToArray();
     }
 
-    public static IPicture Downsample(Picture16bpp source, int width, int height, int scale, CancellationToken ct = default)
+    public static IPicture Downsample(PictureFP16 source, int width, int height, int scale, CancellationToken ct = default)
     {
         int pixels = width * height;
-        var r = new ushort[pixels];
-        var g = new ushort[pixels];
-        var b = new ushort[pixels];
-        var a = new float[pixels];
+        var r = new Half[pixels];
+        var g = new Half[pixels];
+        var b = new Half[pixels];
+        var a = new Half[pixels];
         Parallel.For(0, height, new ParallelOptions { CancellationToken = ct }, y =>
         {
             for (int x = 0; x < width; x++)
             {
-                double sr = 0, sg = 0, sb = 0, sa = 0;
+                double sr = 0, sg = 0, sb = 0;
+                Half sa = Half.Zero;
                 for (int sy = 0; sy < scale; sy++)
                 for (int sx = 0; sx < scale; sx++)
                 {
                     int i = (y * scale + sy) * source.Width + x * scale + sx;
-                    float alpha = source.HasAlphaChannel ? source.a[i] : 1;
-                    sr += source.r[i] * alpha;
-                    sg += source.g[i] * alpha;
-                    sb += source.b[i] * alpha;
+                    Half alpha = source.HasAlphaChannel ? source.a[i] : Half.One;
+                    sr += (double)source.r[i] * (double)alpha;
+                    sg += (double)source.g[i] * (double)alpha;
+                    sb += (double)source.b[i] * (double)alpha;
                     sa += alpha;
                 }
                 int o = y * width + x;
-                // Average premultiplied colors, then restore Picture16bpp's straight alpha.
-                if (sa > 0)
+                // Average premultiplied colors, then restore PictureFP16's straight alpha.
+                if (sa > Half.Zero)
                 {
-                    r[o] = (ushort)Math.Clamp(Math.Round(sr / sa), 0, ushort.MaxValue);
-                    g[o] = (ushort)Math.Clamp(Math.Round(sg / sa), 0, ushort.MaxValue);
-                    b[o] = (ushort)Math.Clamp(Math.Round(sb / sa), 0, ushort.MaxValue);
+                    r[o] = PictureFP16.Unit((float)(sr / (double)sa));
+                    g[o] = PictureFP16.Unit((float)(sg / (double)sa));
+                    b[o] = PictureFP16.Unit((float)(sb / (double)sa));
                 }
-                a[o] = (float)(sa / (scale * scale));
+                a[o] = sa / (Half)(scale * scale);
             }
         });
-        bool hasAlpha = a.Any(alpha => alpha < 1);
-        return new Picture16bpp(width, height) { r = r, g = g, b = b, a = hasAlpha ? a : null, HasAlphaChannel = hasAlpha };
+        bool hasAlpha = a.Any(alpha => alpha < Half.One);
+        return new PictureFP16(width, height) { r = r, g = g, b = b, a = hasAlpha ? a : null, HasAlphaChannel = hasAlpha };
     }
 }
 
@@ -81,7 +82,7 @@ public sealed class CpuVectorPictureRasterizer : IVectorPictureRasterizer
             throw new ArgumentOutOfRangeException(nameof(aaMode), $"Invalid raster size {width}x{height} or antialias mode {aaMode}.");
         if (scale == 1)
             return new CPUVectorPictureRasterizer().Convert(canvas, width, height, transparentBackground, AntiAliasMode.None, cancellationToken);
-        using var source = (Picture16bpp)new CPUVectorPictureRasterizer().Convert(
+        using var source = (PictureFP16)new CPUVectorPictureRasterizer().Convert(
             VectorPictureRasterization.ScaleStrokes(canvas, scale), checked(width * scale), checked(height * scale),
             transparentBackground, AntiAliasMode.None, cancellationToken);
         Logger.LogDiagnostic($"CPU vector rasterization at {width}x{height}, SSAA {scale}x.");

@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using projectFrameCut.Render.HwAccelEngine.Effect;
 using System.Diagnostics;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Drawing.Base.Picture;
@@ -9,7 +11,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
     /// <summary>
     /// OpenGL ES 3.1 compute-shader vector rasterizer.
-    /// Converts flattened GPU primitives to a <see cref="Picture16bpp"/>
+    /// Converts flattened GPU primitives to a <see cref="PictureFP16"/>
     /// via a per-pixel compute kernel dispatched through <see cref="GLComputeView"/>.
     /// </summary>
     internal static class OpenGLVectorRasterizer
@@ -35,7 +37,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             // primData: 14 floats per primitive [r,g,b,a, d0..d5, bboxMinX..bboxMaxY]
             int primInfoLen = pc * 2;
             int primDataLen = pc * FloatsPerPrimitive;
-            int packedOutputLen = pixelCount * 4; // RGBA interleaved
+            int packedOutputLen = pixelCount * 3; // RGBA interleaved
 
             var primInfoFloat = new float[primInfoLen];
             var primDataFloat = new float[primDataLen];
@@ -49,7 +51,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 primDataFloat[db + 0] = p.R;
                 primDataFloat[db + 1] = p.G;
                 primDataFloat[db + 2] = p.B;
-                primDataFloat[db + 3] = p.A;
+                primDataFloat[db + 3] = BitConverter.Int32BitsToSingle(BitConverter.HalfToUInt16Bits(p.A));
                 primDataFloat[db + 4] = p.D0;
                 primDataFloat[db + 5] = p.D1;
                 primDataFloat[db + 6] = p.D2;
@@ -75,7 +77,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             var edgesFloat = polygonEdges.Count > 0 ? polygonEdges.ToArray() : new float[4];
 
             // All SSBOs must have the same element count for GLComputeView.
-            // Pad to accommodate the largest buffer (packed output: pixelCount * 4).
+            // Pad to accommodate the largest buffer (packed output: pixelCount * 3).
             int glPad = Math.Max(packedOutputLen,
                 Math.Max(primInfoLen, Math.Max(primDataLen,
                 Math.Max(edgesFloat.Length, Math.Max(tileOffsetsFloat.Length, tileIndicesFloat.Length)))));
@@ -168,24 +170,25 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
             // Extract packed RGBA channels. Parallelized — this was a
             // single-threaded bottleneck on larger canvases.
-            var rOut = new ushort[pixelCount];
-            var gOut = new ushort[pixelCount];
-            var bOut = new ushort[pixelCount];
-            var aOut = new float[pixelCount];
+            var output = MemoryMarshal.Cast<float, ResidentPixel>(packedOutput.AsSpan()).Slice(0, pixelCount).ToArray();
+            var rOut = new Half[pixelCount];
+            var gOut = new Half[pixelCount];
+            var bOut = new Half[pixelCount];
+            var aOut = new Half[pixelCount];
 
             int alphaFlag = 0;
             Parallel.For(0, pixelCount, i =>
             {
-                rOut[i] = ClampUshort(packedOutput[i]);
-                gOut[i] = ClampUshort(packedOutput[i + pixelCount]);
-                bOut[i] = ClampUshort(packedOutput[i + pixelCount * 2]);
-                aOut[i] = packedOutput[i + pixelCount * 3];
-                if (aOut[i] < 1f) Volatile.Write(ref alphaFlag, 1);
+                rOut[i] = output[i].Red;
+                gOut[i] = output[i].Green;
+                bOut[i] = output[i].Blue;
+                aOut[i] = output[i].Alpha;
+                if (aOut[i] < Half.One) Volatile.Write(ref alphaFlag, 1);
             });
             bool hasAlpha = alphaFlag != 0;
 
             Logger.LogDiagnostic($"OpenGLVectorRasterizer done in {sw.Elapsed}.");
-            return new Picture16bpp(width, height)
+            return new PictureFP16(width, height)
             {
                 r = rOut,
                 g = gOut,
@@ -201,6 +204,11 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             return 
                 $$"""
                 {{'#'}}version 310 es
+                {{'#'}}extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+                {{'#'}}extension GL_EXT_shader_16bit_storage : require
+                precision highp float;
+                precision highp int;
+                struct ResidentKernelPixel { float16_t Red; float16_t Green; float16_t Blue; float16_t Alpha; float16_t Brightness; float16_t Padding; };
                 layout(local_size_x = {{WorkGroupSize}}) in;
 
                 layout(std430, binding = 0) buffer _Dummy { float _d[]; };
@@ -209,7 +217,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 layout(std430, binding = 3) buffer TileOffsetsBuf { float tileOffsets[]; };
                 layout(std430, binding = 4) buffer TileIndicesBuf { float tileIndices[]; };
                 layout(std430, binding = 5) buffer EdgesBuf { float edges[]; };
-                layout(std430, binding = 6) buffer OutBuf { float outPacked[]; };
+                layout(std430, binding = 6) buffer OutBuf { ResidentKernelPixel outPacked[]; };
 
                 void main()
                 {
@@ -223,7 +231,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                     float cy = float(y) + 0.5;
 
                     // Accumulated premultiplied colour + coverage.
-                    float accR = 0.0, accG = 0.0, accB = 0.0, accA = 0.0;
+                    float accR = 0.0, accG = 0.0, accB = 0.0;
+                float16_t accA = float16_t(0.0);
 
                     // Only test primitives that overlap this pixel's tile
                     // instead of every primitive in the scene.
@@ -244,8 +253,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                         float sr = primData[dataBase + 0];
                         float sg = primData[dataBase + 1];
                         float sb = primData[dataBase + 2];
-                        float sa = primData[dataBase + 3];
-                        if (sa <= 0.0)
+                        float16_t sa = unpackFloat2x16(floatBitsToUint(primData[dataBase + 3])).x;
+                        if (sa <= float16_t(0.0))
                             continue;
 
                         float bbMinX = primData[dataBase + 10];
@@ -343,22 +352,23 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
                         // "Under" compositing: this primitive is behind
                         // everything accumulated so far.
-                        float contrib = sa * (1.0 - accA);
-                        accR += sr * contrib;
-                        accG += sg * contrib;
-                        accB += sb * contrib;
+                        float16_t contrib = sa * (float16_t(1.0) - accA);
+                        accR += sr * float(contrib);
+                        accG += sg * float(contrib);
+                        accB += sb * float(contrib);
                         accA += contrib;
 
                         // Coverage saturated — nothing below can contribute.
-                        if (accA >= 1.0 - 1e-6)
+                        if (accA >= float16_t(1.0))
                             break;
                     }
 
-                    float pr, pg, pb, pa;
+                    float pr, pg, pb;
+                float16_t pa;
                     {{'#'}}if {{transparentBg}}
-                        if (accA > 1e-6)
+                        if (accA > float16_t(0.0))
                         {
-                            pr = accR / accA; pg = accG / accA; pb = accB / accA;
+                            pr = accR / float(accA); pg = accG / float(accA); pb = accB / float(accA);
                         }
                         else
                         {
@@ -366,17 +376,19 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                         }
                         pa = accA;
                     {{'#'}}else
-                        float rem = 1.0 - accA;
-                        pr = accR + 65535.0 * rem;
-                        pg = accG + 65535.0 * rem;
-                        pb = accB + 65535.0 * rem;
-                        pa = 1.0;
+                        float16_t rem = float16_t(1.0) - accA;
+                        pr = accR + 65535.0 * float(rem);
+                        pg = accG + 65535.0 * float(rem);
+                        pb = accB + 65535.0 * float(rem);
+                        pa = float16_t(1.0);
                     {{'#'}}endif
 
-                    outPacked[i] = pr;
-                    outPacked[i + uint({{pixelCount}})] = pg;
-                    outPacked[i + uint({{pixelCount * 2}})] = pb;
-                    outPacked[i + uint({{pixelCount * 3}})] = pa;
+                    outPacked[i].Red = float16_t(pr / 65535.0);
+                    outPacked[i].Green = float16_t(pg / 65535.0);
+                    outPacked[i].Blue = float16_t(pb / 65535.0);
+                    outPacked[i].Alpha = pa;
+                outPacked[i].Brightness = float16_t(1.0);
+                outPacked[i].Padding = float16_t(0.0);
                 }
                 """;
         }

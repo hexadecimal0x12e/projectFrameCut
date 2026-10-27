@@ -19,7 +19,7 @@ internal static class TextStyleRenderHelper
     }
 }
 
-internal readonly record struct TextStyleColor(float Red, float Green, float Blue, float Alpha)
+internal readonly record struct TextStyleColor(float Red, float Green, float Blue, Half Alpha)
 {
     public static TextStyleColor FromArgb(string value)
     {
@@ -30,19 +30,19 @@ internal readonly record struct TextStyleColor(float Red, float Green, float Blu
             return new(colorValue.GetProperty("r").GetUInt16() / 65535f,
                 colorValue.GetProperty("g").GetUInt16() / 65535f,
                 colorValue.GetProperty("b").GetUInt16() / 65535f,
-                colorValue.TryGetProperty("a", out var alpha) ? alpha.GetSingle() : 1);
+                colorValue.TryGetProperty("a", out var alpha) ? (Half)alpha.GetSingle() : Half.One);
         }
         string hex = value.TrimStart('#');
         if (hex.Length is not (6 or 8)) throw new FormatException("Expected an RGB or ARGB color.");
         uint color = uint.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         return new((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f, (color & 255) / 255f,
-            hex.Length == 8 ? (color >> 24) / 255f : 1);
+            hex.Length == 8 ? (Half)((color >> 24) / 255f) : Half.One);
     }
 }
 
 internal static class TextStyleColors
 {
-    public static TextStyleColor White => new(1, 1, 1, 1);
-    public static TextStyleColor Black => new(0, 0, 0, 1);
+    public static TextStyleColor White => new(1, 1, 1, Half.One);
+    public static TextStyleColor Black => new(0, 0, 0, Half.One);
     public static TextStyleColor LightGray => TextStyleColor.FromArgb("#CFCFCF");
 }

@@ -86,15 +86,15 @@ public sealed class FrameHashTests
     [TestMethod]
     public void PictureHashesIncludeAlphaDimensionsAndHdrBrightness()
     {
-        using var a = Picture8bpp.GenerateSolidColor(1, 2, 1, 2, 3, 1);
-        using var b = Picture8bpp.GenerateSolidColor(2, 1, 1, 2, 3, 1);
+        using var a = Picture8bpp.GenerateSolidColor(1, 2, 1, 2, 3, Half.One);
+        using var b = Picture8bpp.GenerateSolidColor(2, 1, 1, 2, 3, Half.One);
         Assert.AreNotEqual(FrameHashHelper.HashPicture(a), FrameHashHelper.HashPicture(b));
         string opaque = FrameHashHelper.HashPicture(a);
-        ((IPicture<byte>)a).a![0] = 0.5f;
+        ((IPicture<byte>)a).a![0] = (Half)0.5f;
         Assert.AreNotEqual(opaque, FrameHashHelper.HashPicture(a));
-        using var hdr = HDRPicture16bpp.GenerateSolidColor(1, 1, 1, 2, 3, 1, 1);
+        using var hdr = HDRPicture16bpp.GenerateSolidColor(1, 1, 1, 2, 3, Half.One, Half.One);
         string original = FrameHashHelper.HashPicture(hdr);
-        hdr.MaximumBrightness += 1;
+        hdr.MaximumBrightness += Half.One;
         Assert.AreNotEqual(original, FrameHashHelper.HashPicture(hdr));
     }
 

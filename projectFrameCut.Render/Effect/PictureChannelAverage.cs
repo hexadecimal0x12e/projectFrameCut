@@ -35,8 +35,12 @@ public sealed class PictureChannelAverageEffectProvider : EffectProviderBase, IM
     protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 }
 
-public sealed class PictureChannelAverageEffect : IEffect, IMultipleOutputEffect
+public class PictureChannelAverageEffect : PictureChannelAverageEffect<IPicture> { }
+
+public class PictureChannelAverageEffect<TPicture> : IMultipleOutputEffect<TPicture> where TPicture : IPicture
 {
+    public IEffect WithPictureType<T>() where T : IPicture => new PictureChannelAverageEffect<T>();
+
     public bool IsDeterministic => true;
 
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -52,14 +56,20 @@ public sealed class PictureChannelAverageEffect : IEffect, IMultipleOutputEffect
     public int RelativeWidth { get; set; }
     public int RelativeHeight { get; set; }
     public string? BindedEffectProvidingSystemID { get; set; }
-    public IEffect WithParameters(Dictionary<string, object> parameters) => new PictureChannelAverageEffect();
+    public IEffect WithParameters(Dictionary<string, object> parameters) => new PictureChannelAverageEffect<TPicture>();
 
-    public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context)
+    public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context) =>
+        ComputeOutputs(context.Input is null ? default : (TPicture)context.Input, context);
+
+    public IReadOnlyDictionary<string, object?> ComputeOutputs(TPicture? source, EffectExecutionContext context)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
-        if (context.Input is not IPicture input)
+        if (source is not IPicture input)
             throw new ArgumentException("The primary input must be an IPicture.");
 
+        if (input is IPicture<Half> fp) return Average(fp, context.CancellationToken);
+        if (PictureCalculation<TPicture>.Is8) return Average((IPicture<byte>)(object)input, context.CancellationToken);
+        if (PictureCalculation<TPicture>.Is16) return Average((IPicture<ushort>)(object)input, context.CancellationToken);
         return input switch
         {
             IPicture<byte> p => Average(p, context.CancellationToken),
@@ -70,7 +80,7 @@ public sealed class PictureChannelAverageEffect : IEffect, IMultipleOutputEffect
 
     private IReadOnlyDictionary<string, object?> Average<T>(IPicture<T> input, CancellationToken cancellationToken) where T : INumber<T>
     {
-        double r = 0, g = 0, b = 0, a = 0, brightness = 0;
+        double r = 0, g = 0, b = 0;
         var alpha = input.HasAlphaChannel ? input.a : null;
         var hdr = input as IHDRPicture<T>;
         for (int i = 0; i < input.Pixels; i++)
@@ -79,8 +89,6 @@ public sealed class PictureChannelAverageEffect : IEffect, IMultipleOutputEffect
             r += double.CreateChecked(input.r[i]);
             g += double.CreateChecked(input.g[i]);
             b += double.CreateChecked(input.b[i]);
-            a += alpha is null ? 1 : alpha[i];
-            brightness += hdr is null ? 1 : hdr.Brightness[i];
         }
 
         if (input.Pixels > 0)
@@ -88,21 +96,21 @@ public sealed class PictureChannelAverageEffect : IEffect, IMultipleOutputEffect
             r /= input.Pixels;
             g /= input.Pixels;
             b /= input.Pixels;
-            a /= input.Pixels;
-            brightness /= input.Pixels;
         }
 
+        Half a = input.Pixels == 0 ? Half.Zero : alpha is null ? Half.One : HalfChannelMath.Average(alpha, cancellationToken);
+        Half brightness = input.Pixels == 0 ? Half.Zero : hdr is null ? Half.One : HalfChannelMath.Average(hdr.Brightness, cancellationToken);
         Log($"PictureChannelAverage {Id}/{Name}: {input.Width}x{input.Height}, R={r}, G={g}, B={b}, A={a}, Brightness={brightness}");
         return new Dictionary<string, object?>
         {
             ["R"] = (float)r,
             ["G"] = (float)g,
             ["B"] = (float)b,
-            ["A"] = (float)a,
-            ["Brightness"] = (float)brightness,
-            ["RInt"] = (int)Math.Round(r, MidpointRounding.AwayFromZero),
-            ["GInt"] = (int)Math.Round(g, MidpointRounding.AwayFromZero),
-            ["BInt"] = (int)Math.Round(b, MidpointRounding.AwayFromZero),
+            ["A"] = a,
+            ["Brightness"] = brightness,
+            ["RInt"] = (int)Math.Round(r * (typeof(T) == typeof(Half) ? 65535 : 1), MidpointRounding.AwayFromZero),
+            ["GInt"] = (int)Math.Round(g * (typeof(T) == typeof(Half) ? 65535 : 1), MidpointRounding.AwayFromZero),
+            ["BInt"] = (int)Math.Round(b * (typeof(T) == typeof(Half) ? 65535 : 1), MidpointRounding.AwayFromZero),
         };
     }
 }

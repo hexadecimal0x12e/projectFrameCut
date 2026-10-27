@@ -133,7 +133,8 @@ public sealed class MosaicMaskSource : MaskSource
                 for (int x = 0; x < backdrop.Width; x += size)
                 {
                     int right = Math.Min(x + size, backdrop.Width), bottom = Math.Min(y + size, backdrop.Height);
-                    if (result is IPicture<byte> p8) FillBlock(p8, x, y, right, bottom);
+                    if (result is IPicture<Half> fp) FillBlock(fp, x, y, right, bottom);
+                    else if (result is IPicture<byte> p8) FillBlock(p8, x, y, right, bottom);
                     else if (result is IPicture<ushort> p16) FillBlock(p16, x, y, right, bottom);
                     else throw new NotSupportedException($"Unsupported mask picture {result.GetType().Name}.");
                 }
@@ -149,9 +150,11 @@ public sealed class MosaicMaskSource : MaskSource
 
     private static void FillBlock<T>(IPicture<T> p, int x, int y, int right, int bottom) where T : System.Numerics.INumber<T>
     {
-        double r = 0, g = 0, b = 0, a = 0, brightness = 0;
+        double r = 0, g = 0, b = 0;
+        var a = new projectFrameCut.Shared.HalfChannelAccumulator();
+        var brightness = new projectFrameCut.Shared.HalfChannelAccumulator();
         int count = (right - x) * (bottom - y);
-        var hdr = p as IHDRPicture<ushort>;
+        var hdr = p as IHDRPicture<T>;
         for (int yy = y; yy < bottom; yy++)
         {
             for (int xx = x; xx < right; xx++)
@@ -160,8 +163,8 @@ public sealed class MosaicMaskSource : MaskSource
                 r += double.CreateChecked(p.r[i]);
                 g += double.CreateChecked(p.g[i]);
                 b += double.CreateChecked(p.b[i]);
-                a += p.HasAlphaChannel && p.a is not null ? p.a[i] : 1;
-                if (hdr is not null) brightness += hdr.Brightness[i];
+                a.Add(p.HasAlphaChannel && p.a is not null ? p.a[i] : Half.One);
+                if (hdr is not null) brightness.Add(hdr.Brightness[i]);
             }
         }
         for (int yy = y; yy < bottom; yy++)
@@ -169,11 +172,11 @@ public sealed class MosaicMaskSource : MaskSource
             for (int xx = x; xx < right; xx++)
             {
                 int i = yy * p.Width + xx;
-                p.r[i] = T.CreateChecked(Math.Round(r / count));
-                p.g[i] = T.CreateChecked(Math.Round(g / count));
-                p.b[i] = T.CreateChecked(Math.Round(b / count));
-                if (p.HasAlphaChannel && p.a is not null) p.a[i] = (float)(a / count);
-                if (hdr is not null) hdr.Brightness[i] = (float)(brightness / count);
+                p.r[i] = T.CreateChecked((typeof(T) == typeof(Half) ? r / count : Math.Round(r / count)));
+                p.g[i] = T.CreateChecked((typeof(T) == typeof(Half) ? g / count : Math.Round(g / count)));
+                p.b[i] = T.CreateChecked((typeof(T) == typeof(Half) ? b / count : Math.Round(b / count)));
+                if (p.HasAlphaChannel && p.a is not null) p.a[i] = a.Average;
+                if (hdr is not null) hdr.Brightness[i] = brightness.Average;
             }
         }
     }

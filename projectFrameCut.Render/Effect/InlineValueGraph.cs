@@ -32,7 +32,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         {
             var provider = providers[id];
             provider.ValidateOutputFields();
-            var effects = provider.Enabled ? EffectBindingHelper.BuildProviderEffects(provider) : [];
+            var effects = provider.Enabled ? EffectBindingHelper.BuildProviderEffects(provider, Types) : [];
             foreach (var effect in effects) effect.BindedEffectProvidingSystemID = provider.Id.ToString();
             try
             {
@@ -240,6 +240,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         public bool IsDynamic => true;
         public bool IsDynamicAtRenderTime => true;
         public EffectArgumentFieldType FieldType => output.FieldType;
+        public object? DataFormat => output.DataFormat;
         public string DefaultValue { get; set; } = output.DefaultValue;
         public string MinValue { get; set; } = output.MinValue;
         public string MaxValue { get; set; } = output.MaxValue;

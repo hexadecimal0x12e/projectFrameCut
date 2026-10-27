@@ -810,7 +810,7 @@ public sealed class DynamicPreview : IDisposable
         int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
     {
         bool scRgb = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled;
-        var mode = scRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+        var mode = IPicture.PicturePixelMode.Float16Picture;
         using var audio = EffectProcessing.OpenAudioFrame(_previewer?.AudioSamples);
         using var context = new FrameHashContext(new()
         {
@@ -822,11 +822,11 @@ public sealed class DynamicPreview : IDisposable
         var clips = _clips ?? [clip];
         clip.ReInit(mode);
         using var cache = new PreviewFrameCache(id => Path.Combine(DiskCacheRoot, id.ToString()), frameIndex,
-            canvasWidth, canvasHeight, projectWidth, projectHeight, scRgb, false, token,
-            findSource: key => GetLocalCacheIndex().FindPreviewSource(key));
+            canvasWidth, canvasHeight, projectWidth, projectHeight, scRgb, false, token, keepHwAccelPicture: scRgb,
+            findSource: key => GetLocalCacheIndex().FindPreviewSource(key), cacheSourceFrames: DynamicPreviewSettings.CacheSourceFrames);
         IPicture? rendered = null;
         IPicture Render() => rendered ??= projectFrameCut.Render.RPCProtocol.ClipPreviewRenderer.Render(clip, clips,
-            canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token, mode, initializeClips: false)
+            canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token, mode, initializeClips: false, keepHwAccelPicture: scRgb)
             ?? throw new InvalidOperationException($"Clip {clip.Id} did not produce a preview frame.");
         try
         {
@@ -837,7 +837,7 @@ public sealed class DynamicPreview : IDisposable
                 () => clips.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c)));
             var result = PreviewFrameMaterializer.FromData(new(cached.Path, cached.Data.Width, cached.Data.Height,
                 scRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage, false)
-                { PreviewContainer = "vfd2m", PreviewEffectHash = cached.Data.EffectHash }, cached.Data);
+                { PreviewContainer = PreviewFrameContainer.GetContainer(cached.Path), PreviewEffectHash = cached.Data.EffectHash }, cached.Data);
             if (!cached.Persistent) File.Delete(cached.Path);
             else
             {
@@ -898,12 +898,12 @@ public sealed class DynamicPreview : IDisposable
     private static Func<double, double, bool>? CreateTransparencyHitTest(IPicture picture)
     {
         if (!picture.HasAlphaChannel
-            || picture.GetSpecificChannel(IPicture.ChannelId.Alpha) is not float[] alpha)
+            || picture.GetSpecificChannel(IPicture.ChannelId.Alpha) is not Half[] alpha)
         {
             return null;
         }
 
-        return CreateTransparencyHitTest(picture.Width, picture.Height, i => i < alpha.Length && float.IsFinite(alpha[i]) && alpha[i] == 0f);
+        return CreateTransparencyHitTest(picture.Width, picture.Height, i => i < alpha.Length && Half.IsFinite(alpha[i]) && alpha[i] == Half.Zero);
     }
 
     private static Func<double, double, bool>? CreateTransparencyHitTest(int width, int height, Func<int, bool> isTransparent)
@@ -1674,7 +1674,7 @@ public sealed class DynamicPreview : IDisposable
                 if (!TryGetResizedFallbackFrame(cacheKey, out frame)
                     && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
                 {
-                    frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.BytePicture);
+                    frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.Float16Picture);
                 }
 
                 if (frame is not null)
@@ -1700,7 +1700,7 @@ public sealed class DynamicPreview : IDisposable
                     if (!TryGetResizedFallbackFrame(cacheKey, out frame)
                         && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
                     {
-                        frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.BytePicture);
+                        frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.Float16Picture);
                     }
 
                     if (frame is not null)
@@ -1747,7 +1747,7 @@ public sealed class DynamicPreview : IDisposable
             if (!TryGetResizedFallbackFrame(cacheKey, out frame)
                 && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
             {
-                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.BytePicture);
+                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.Float16Picture);
             }
 
             if (frame is not null)
@@ -2068,9 +2068,8 @@ public sealed class DynamicPreview : IDisposable
         }
         else
         {
-            resizedFrame = resized.BitPerPixel == IPicture.PicturePixelMode.BytePicture
-                ? resized
-                : resized.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+            resizedFrame = resized;
+            source.Dispose();
         }
         return true;
     }
@@ -2553,17 +2552,17 @@ public sealed class DynamicPreview : IDisposable
 
         if (geometry is null) return null;
 
-        bool hasFill = segment.FillA > 0;
-        bool hasStroke = segment.Thickness > 0 && segment.StrokeA > 0;
+        bool hasFill = (float)segment.FillA > 0;
+        bool hasStroke = segment.Thickness > 0 && (float)segment.StrokeA > 0;
 
         return new ShapesPath
         {
             Data = geometry,
             Fill = hasFill
-                ? new SolidColorBrush(Color.FromRgba(segment.FillR / 65535f, segment.FillG / 65535f, segment.FillB / 65535f, segment.FillA))
+                ? new SolidColorBrush(Color.FromRgba(segment.FillR / 65535f, segment.FillG / 65535f, segment.FillB / 65535f, (float)segment.FillA))
                 : null,
             Stroke = hasStroke
-                ? new SolidColorBrush(Color.FromRgba(segment.StrokeR / 65535f, segment.StrokeG / 65535f, segment.StrokeB / 65535f, segment.StrokeA))
+                ? new SolidColorBrush(Color.FromRgba(segment.StrokeR / 65535f, segment.StrokeG / 65535f, segment.StrokeB / 65535f, (float)segment.StrokeA))
                 : null,
             StrokeThickness = hasStroke ? segment.Thickness : 0,
         };
@@ -2933,80 +2932,14 @@ public sealed class DynamicPreview : IDisposable
 
     /// <summary>
     /// Extracts a rectangular region from <paramref name="source"/> and returns it as a new
-    /// <see cref="Picture8bpp"/> of the requested <paramref name="w"/> × <paramref name="h"/> size.
+    /// <see cref="PictureFP16"/> of the requested <paramref name="w"/> × <paramref name="h"/> size.
     /// The crop rectangle is clamped to the source bounds; pixels outside the source become
     /// transparent (zero alpha).  If the source uses 16bpp it is first down-converted to 8bpp.
     /// </summary>
     private static IPicture CropPictureRegion(IPicture source, int x, int y, int w, int h)
     {
-        var src8 = (Picture8bpp)source.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
-
-        int srcW = src8.Width;
-        int srcH = src8.Height;
-
-        // Clamp crop rectangle to source bounds
-        int cropX = Math.Clamp(x, 0, Math.Max(0, srcW - 1));
-        int cropY = Math.Clamp(y, 0, Math.Max(0, srcH - 1));
-        int cropW = Math.Min(w, srcW - cropX);
-        int cropH = Math.Min(h, srcH - cropY);
-
-        var result = new Picture8bpp(Math.Max(1, w), Math.Max(1, h))
-        {
-            HasAlphaChannel = src8.HasAlphaChannel,
-            ProcessStack = new List<PictureProcessStack>
-            {
-                new PictureProcessStack
-                {
-                    OperationDisplayName = "CropPictureRegion",
-                    Operator = typeof(DynamicPreview),
-                    ProcessingFuncStackTrace = new StackTrace(true),
-                    Properties = new Dictionary<string, object>
-                    {
-                        ["SourceWidth"] = srcW,
-                        ["SourceHeight"] = srcH,
-                        ["CropX"] = cropX,
-                        ["CropY"] = cropY,
-                        ["CropWidth"] = cropW,
-                        ["CropHeight"] = cropH,
-                        ["TargetWidth"] = w,
-                        ["TargetHeight"] = h,
-                    },
-                }
-            }
-        };
-
-        if (cropW <= 0 || cropH <= 0)
-            return result; // fully transparent placeholder
-
-        var srcR = (byte[])src8.GetSpecificChannel(IPicture.ChannelId.Red);
-        var srcG = (byte[])src8.GetSpecificChannel(IPicture.ChannelId.Green);
-        var srcB = (byte[])src8.GetSpecificChannel(IPicture.ChannelId.Blue);
-
-        // Fast row-by-row copy for the overlapping region
-        for (int row = 0; row < cropH; row++)
-        {
-            int srcBase = (cropY + row) * srcW + cropX;
-            int dstBase = row * w;
-            Array.Copy(srcR, srcBase, result.r, dstBase, cropW);
-            Array.Copy(srcG, srcBase, result.g, dstBase, cropW);
-            Array.Copy(srcB, srcBase, result.b, dstBase, cropW);
-        }
-
-        if (src8.HasAlphaChannel)
-        {
-            result.a = new float[result.Pixels];
-            var srcA = (float[])src8.GetSpecificChannel(IPicture.ChannelId.Alpha);
-            for (int row = 0; row < cropH; row++)
-            {
-                int srcBase = (cropY + row) * srcW + cropX;
-                int dstBase = row * w;
-                Array.Copy(srcA, srcBase, result.a, dstBase, cropW);
-            }
-
-            // Pixels outside the crop region remain zero alpha (transparent) already.
-        }
-
-        return result;
+        using var fp = projectFrameCut.Drawing.Base.Picture.FP16Conversion.FromPicture(source);
+        return projectFrameCut.Drawing.Base.Picture.FP16Raster.Crop(fp, x, y, Math.Max(1, w), Math.Max(1, h));
     }
 
     public sealed record PreviewRequest(IClip Clip);

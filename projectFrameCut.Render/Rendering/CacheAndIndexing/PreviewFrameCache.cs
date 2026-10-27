@@ -17,6 +17,7 @@ public sealed class PreviewFrameCache : IDisposable
     private readonly bool readOnly;
     private readonly bool keepHwAccelPicture;
     private readonly bool metadataOnly;
+    private readonly bool cacheSourceFrames;
     private readonly Func<string, string?>? findSource;
     private readonly CancellationToken token;
     private readonly PreviewSourceFrameContext scope;
@@ -28,7 +29,8 @@ public sealed class PreviewFrameCache : IDisposable
 
     public PreviewFrameCache(Func<Guid, string> directory, uint frame, int canvasWidth, int canvasHeight,
         int projectWidth, int projectHeight, bool scRgb, bool beforeLayout, CancellationToken token, bool readOnly = false,
-        bool keepHwAccelPicture = false, Func<string, string?>? findSource = null, bool metadataOnly = false)
+        bool keepHwAccelPicture = false, Func<string, string?>? findSource = null, bool metadataOnly = false,
+        bool cacheSourceFrames = true)
     {
         this.directory = directory; this.frame = frame;
         this.canvasWidth = canvasWidth; this.canvasHeight = canvasHeight;
@@ -37,6 +39,7 @@ public sealed class PreviewFrameCache : IDisposable
         this.readOnly = readOnly;
         this.keepHwAccelPicture = keepHwAccelPicture;
         this.metadataOnly = metadataOnly;
+        this.cacheSourceFrames = cacheSourceFrames;
         this.findSource = findSource;
         scope = new(ReadSource);
     }
@@ -51,7 +54,7 @@ public sealed class PreviewFrameCache : IDisposable
             hash = unstableHashes.GetOrAdd((clip.Id, sourceFrame, width, height, mode.Value), _ => Guid.NewGuid().ToString("N"));
         }
         string frameKey = FrameHashHelper.IsFrameInvariant(clip, layout: true) ? "static" : frame.ToString();
-        string name = $"dynamic_vfd2m_{hash}_{frameKey}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{(beforeLayout ? "before" : "clip")}_{(scRgb ? "scrgb16" : "png")}.vfd2m";
+        string name = $"dynamic_{(cacheSourceFrames ? "vfd2m" : "pfcv")}_{hash}_{frameKey}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{(beforeLayout ? "before" : "clip")}_{(scRgb ? "scrgb16" : "png")}{(cacheSourceFrames ? ".vfd2m" : PreviewFrameContainer.ViewExtension)}";
         return (hash, Path.Combine(Path.GetFullPath(directory(clip.Id)), name));
     }
 
@@ -114,6 +117,7 @@ public sealed class PreviewFrameCache : IDisposable
     private IPicture ReadSource(IClip clip, uint sourceFrame, int width, int height, IPicture.PicturePixelMode mode, Func<IPicture> compute)
     {
         token.ThrowIfCancellationRequested();
+        if (!cacheSourceFrames) return compute();
         bool native = clip is IVectorContentClip or MaskClip
             || clip.FromPlugin != Plugin.InternalPluginBase.InternalPluginBaseID;
         if (readOnly && (native || clip is not (VideoClip or PhotoClip))) return compute();
@@ -167,7 +171,7 @@ public sealed class PreviewFrameCache : IDisposable
         var outputIdentity = FrameHashHelper.GetClipOutputHash(clips, clip, frame, FrameHashContext.Current?.Options ?? new()
         {
             Width = canvasWidth, Height = canvasHeight, ProjectWidth = projectWidth, ProjectHeight = projectHeight,
-            PixelMode = scRgb ? 16 : 8, Stage = beforeLayout ? "before-layout" : "clip",
+            PixelMode = IPicture.PicturePixelMode.Float16Picture, Stage = beforeLayout ? "before-layout" : "clip",
             ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
         }, token);
         allowCaching &= outputIdentity.CanReuse;
@@ -176,14 +180,15 @@ public sealed class PreviewFrameCache : IDisposable
             : (int)Math.Round((double)clip.TargetWidth * canvasWidth / projectWidth, MidpointRounding.AwayFromZero));
         int height = Math.Max(1, clip.TargetHeight <= 0 ? canvasHeight
             : (int)Math.Round((double)clip.TargetHeight * canvasHeight / projectHeight, MidpointRounding.AwayFromZero));
-        var mode = scRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+        var mode = IPicture.PicturePixelMode.Float16Picture;
         uint sourceFrame = clip.GetRelativeFrameIndex(frame) ?? clip.StartFrame + clip.GetEffectiveDuration();
         var entry = Locate(clip, sourceFrame, width, height, mode);
-        string path = PreviewFrameContainer.GetSourcePrefix(entry.Path) + effectHash + ".vfd2m";
+        string path = PreviewFrameContainer.GetSourcePrefix(entry.Path) + effectHash + Path.GetExtension(entry.Path);
+        if (!cacheSourceFrames) temporaryPath = Path.ChangeExtension(temporaryPath, PreviewFrameContainer.ViewExtension);
         lock (PreviewFrameContainer.Gate(entry.Path))
         {
             token.ThrowIfCancellationRequested();
-            string? existing = File.Exists(path) ? path : FindSourcePath(entry.Path, findSource);
+            string? existing = File.Exists(path) ? path : cacheSourceFrames ? FindSourcePath(entry.Path, findSource) : null;
             if (allowCaching && existing is not null)
             {
                 try
@@ -208,39 +213,44 @@ public sealed class PreviewFrameCache : IDisposable
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (!sources.TryGetValue(entry.Path, out var savedSource))
+                IPicture? cachedSource = null;
+                if (cacheSourceFrames)
                 {
-                    using var sourceScope = PreviewSourceFrameContext.Suspend();
-                    bool native = clip is IVectorContentClip or MaskClip || clip.FromPlugin != Plugin.InternalPluginBase.InternalPluginBaseID;
-                    using var raw = native ? PreviewSourceFrameContext.Raw() : null;
-                    using var rawMask = native && MaskFrameContext.Current is { } m
-                        ? MaskFrameContext.Open(m.Clips, m.Frame, m.Width, m.Height, m.ProjectWidth, m.ProjectHeight, m.PixelMode, token, forceNew: true) : null;
-                    IPicture source;
-                    try
+                    if (!sources.TryGetValue(entry.Path, out var savedSource))
                     {
-                        if (ClipInitializationFailure.IsMarked(clip) || !ClipArgumentBinding.ShouldRender(clip))
+                        using var sourceScope = PreviewSourceFrameContext.Suspend();
+                        bool native = clip is IVectorContentClip or MaskClip || clip.FromPlugin != Plugin.InternalPluginBase.InternalPluginBaseID;
+                        using var raw = native ? PreviewSourceFrameContext.Raw() : null;
+                        using var rawMask = native && MaskFrameContext.Current is { } m
+                            ? MaskFrameContext.Open(m.Clips, m.Frame, m.Width, m.Height, m.ProjectWidth, m.ProjectHeight, m.PixelMode, token, forceNew: true) : null;
+                        IPicture source;
+                        try
+                        {
+                            if (ClipInitializationFailure.IsMarked(clip) || !ClipArgumentBinding.ShouldRender(clip))
+                            {
+                                Interlocked.Increment(ref sourceFailures);
+                                source = Timeline.CreateTransparentFrame(width, height, mode);
+                            }
+                            else source = TryLoadSource(clip, entry.Path, mode)
+                                ?? VectorPictureEffectProcessing.ReadFrame(clip, sourceFrame, width, height, mode);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
                         {
                             Interlocked.Increment(ref sourceFailures);
+                            Log(ex, $"Capture raw preview source for clip {clip.Id}; using a temporary preview", this);
                             source = Timeline.CreateTransparentFrame(width, height, mode);
                         }
-                        else source = TryLoadSource(clip, entry.Path, mode)
-                            ?? VectorPictureEffectProcessing.ReadFrame(clip, sourceFrame, width, height, mode);
+                        savedSource = new(() => source);
+                        sources.TryAdd(entry.Path, savedSource);
                     }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
-                    {
-                        Interlocked.Increment(ref sourceFailures);
-                        Log(ex, $"Capture raw preview source for clip {clip.Id}; using a temporary preview", this);
-                        source = Timeline.CreateTransparentFrame(width, height, mode);
-                    }
-                    savedSource = new(() => source);
-                    sources.TryAdd(entry.Path, savedSource);
+                    cachedSource = savedSource.Value;
                 }
                 loadedSources.TryGetValue(entry.Path, out var loadedPath);
                 // Keep a reusable source even when its new derived output cannot be reused.
                 bool persistent = (allowCaching || loadedPath is not null) && sourceFailures == 0 && unstableHashes.IsEmpty
                     && canPersist() && !ClipInitializationFailure.IsMarked(clip);
-                var pending = new PendingFrame(persistent ? path : temporaryPath, entry.Path, loadedPath, output, savedSource.Value,
-                    entry.Hash, effectHash, scRgb, persistent, findSource, token, metadataOnly);
+                var pending = new PendingFrame(persistent ? path : temporaryPath, entry.Path, loadedPath, output, cachedSource,
+                    entry.Hash, effectHash, scRgb, persistent, findSource, token, metadataOnly, cacheSourceFrames);
                 sources.TryRemove(entry.Path, out _);
                 return pending;
             }
@@ -255,6 +265,7 @@ public sealed class PreviewFrameCache : IDisposable
         private readonly string? loadedPath;
         private readonly bool scRgb;
         private readonly bool metadataOnly;
+        private readonly bool cacheSourceFrames;
         private readonly Func<string, string?>? findSource;
         private readonly CancellationToken token;
         private IPicture? output, source;
@@ -272,14 +283,15 @@ public sealed class PreviewFrameCache : IDisposable
             CacheHit = Persistent = true;
         }
 
-        internal PendingFrame(string path, string sourceKey, string? loadedPath, IPicture output, IPicture source,
+        internal PendingFrame(string path, string sourceKey, string? loadedPath, IPicture output, IPicture? source,
             string sourceHash, string effectHash, bool scRgb, bool persistent, Func<string, string?>? findSource,
-            CancellationToken token, bool metadataOnly)
+            CancellationToken token, bool metadataOnly, bool cacheSourceFrames)
         {
             this.path = path; this.output = output; this.source = source;
             this.sourceKey = sourceKey; this.loadedPath = loadedPath; this.findSource = findSource;
             this.sourceHash = sourceHash; this.effectHash = effectHash;
             this.scRgb = scRgb; Persistent = persistent; this.token = token; this.metadataOnly = metadataOnly;
+            this.cacheSourceFrames = cacheSourceFrames;
         }
 
         public (string Path, PreviewFrameData Data, bool CacheHit, bool Persistent) Complete()
@@ -321,11 +333,11 @@ public sealed class PreviewFrameCache : IDisposable
                             }
                             catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException) { }
                         }
-                        using var downloaded = output is IHwAccelPicture gpu ? gpu.Download() : null;
-                        var prepared = PreviewFrameData.Create(downloaded ?? output!, sourceHash, effectHash, scRgb);
+                        var prepared = PreviewFrameData.Create(output!, sourceHash, effectHash, scRgb);
                         token.ThrowIfCancellationRequested();
                         string? existing = Persistent && loadedPath is not null ? FindSourcePath(sourceKey, findSource, loadedPath) : null;
-                        if (existing is not null)
+                        if (!cacheSourceFrames) PreviewFrameContainer.SaveView(path, prepared, token);
+                        else if (existing is not null)
                         {
                             PreviewFrameContainer.ReplaceMetadata(existing, prepared, token);
                             if (!string.Equals(existing, path, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))

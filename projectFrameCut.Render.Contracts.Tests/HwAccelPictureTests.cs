@@ -365,7 +365,7 @@ public sealed class HwAccelPictureTests
         public IHwAccelPictureContext Context => Storage.Device;
         public object ContentIdentity => Storage;
         public bool IsHdr => false;
-        public float MaximumBrightness => 203;
+        public Half MaximumBrightness => (Half)203;
         public int Width { get => Storage.Picture.Width; set => throw new NotSupportedException(); }
         public int Height { get => Storage.Picture.Height; set => throw new NotSupportedException(); }
         public int Pixels { get => Storage.Picture.Pixels; set => throw new NotSupportedException(); }

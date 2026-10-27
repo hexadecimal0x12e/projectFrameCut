@@ -23,10 +23,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
             if (disposed)
                 return;
             disposed = true;
-            ReleaseNativeResources();
         }
 
-        partial void ReleaseNativeResources();
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Crop";
@@ -57,76 +55,33 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         };
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
-            { "StartX", "int" },
-            { "StartY", "int" },
-            { "Height", "int" },
-            { "Width", "int" },
-            { "Angle", "float" },
-            { "CropList", "string" },
+            {
+                "StartX",
+                "int"
+            },
+            {
+                "StartY",
+                "int"
+            },
+            {
+                "Height",
+                "int"
+            },
+            {
+                "Width",
+                "int"
+            },
+            {
+                "Angle",
+                "float"
+            },
+            {
+                "CropList",
+                "string"
+            },
         };
 
-        public IPicture Render(IPicture source, float progress, int targetWidth, int targetHeight)
-        {
-            try
-            {
-                using var scope = nativeLock.EnterScope();
-                ObjectDisposedException.ThrowIf(disposed, this);
-                int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
-                int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
-                int cropW = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
-                int cropH = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
-                float cropAngle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
-                int startX = cropX;
-                int startY = cropY;
-                int width = cropW;
-                int height = cropH;
-                float angle = cropAngle;
-                if (CropList.Count > 0)
-                {
-                    var crop = CropEffectShared.GetCropForProgress(CropList, Math.Clamp(progress, 0.0, 1.0));
-                    crop = CropEffectShared.Scale(crop, targetWidth, targetHeight, RelativeWidth, RelativeHeight);
-                    startX = crop.StartX;
-                    startY = crop.StartY;
-                    width = crop.Width;
-                    height = crop.Height;
-                    angle = crop.Angle;
-                }
-                else if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
-                {
-                    startX = (int)Math.Round((double)cropX * targetWidth / RelativeWidth);
-                    startY = (int)Math.Round((double)cropY * targetHeight / RelativeHeight);
-                    width = (int)Math.Round((double)cropW * targetWidth / RelativeWidth);
-                    height = (int)Math.Round((double)cropH * targetHeight / RelativeHeight);
-                }
-
-                if (width <= 0 || height <= 0)
-                {
-                    throw new ArgumentException("Width and Height must be positive");
-                }
-
-                if (startX >= source.Width || startY >= source.Height || startX + width <= 0 || startY + height <= 0)
-                {
-                    return PictureEffectChannels.PreserveHdr(CropEffectShared.CreateTransparent(width, height, source.BitPerPixel), source, new float[checked(width * height)]);
-                }
-
-                var safeRect = CropEffectShared.BuildSafeCropRect(startX, startY, width, height, source.Width, source.Height);
-                var sw = Stopwatch.StartNew();
-                var(r, g, b, a, sourceHasAlpha) = CropEffectShared.ExtractFloatChannels(source);
-                FourChannelResult cropResult;
-                cropResult = ComputeCrop(r, g, b, a, source.Width, source.Height, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height, angle);
-                var result = CropEffectShared.BuildPicture(source, safeRect.Width, safeRect.Height, cropResult.R, cropResult.G, cropResult.B, cropResult.A, sourceHasAlpha || Math.Abs(angle) > float.Epsilon);
-                result = HwAccelEffectHelper.WithBrightness(result, source, source is IHDRPicture<ushort> hdr ? ComputeCrop(hdr.Brightness, hdr.Brightness, hdr.Brightness, a, source.Width, source.Height, safeRect.X, safeRect.Y, safeRect.Width, safeRect.Height, angle).R : null);
-                sw.Stop();
-                result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack { Elapsed = sw.Elapsed, OperationDisplayName = "Crop (GPU)", Operator = typeof(ProgressCropper_HwAccel), ProcessingFuncStackTrace = new StackTrace(true), Properties = new Dictionary<string, object> { { "StartX", safeRect.X }, { "StartY", safeRect.Y }, { "Width", safeRect.Width }, { "Height", safeRect.Height }, { "Angle", angle } } }).ToList();
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Execute ProgressCropper effect", "HwAccelEngine");
-                throw;
-            }
-        }
-
+        public IPicture Render(IPicture source, float progress, int targetWidth, int targetHeight) => ResidentEffectResult.Download(EffectPictureProcessing.Render(this, source, targetWidth, targetHeight, progress));
         public IEffect WithParameters(Dictionary<string, object> parameters)
         {
             ArgumentNullException.ThrowIfNull(parameters);

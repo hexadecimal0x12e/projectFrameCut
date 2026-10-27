@@ -82,6 +82,8 @@ public partial class EditSettingPage : ContentPage
                 c => c.AddEntry("Edit_PreviewWarmupSeconds", SettingLocalizedResources.Edit_PreviewWarmupSeconds, GetSetting("Edit_PreviewWarmupSeconds", "5"), "5"))
             .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
                 c => c.AddCheckbox("Edit_UseLightweightDynamicPreviewHost", SettingLocalizedResources.Edit_UseLightweightDynamicPreviewHost, IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true))
+                      .AddCheckbox(DynamicPreviewSettings.CacheSourceFramesSettingKey, SettingLocalizedResources.Edit_CacheDecodedPreviewFrames, DynamicPreviewSettings.CacheSourceFrames)
+                      .AddText(new Label { Text = SettingLocalizedResources.Edit_CacheDecodedPreviewFrames_Subtitle, FontSize = 12, Margin = new Thickness(12, 0, 12, 8) })
                       .AddEntry("Edit_DynamicPreviewClipPoolMiB", SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB, GetSetting("Edit_DynamicPreviewClipPoolMiB", "64"), "64")
                       .AddText(new Label { Text = SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB_Subtitle, FontSize = 12, Margin = new Thickness(12, 0, 12, 8) })
                       .AddCheckbox("Edit_IgnorePreviewWindowSize", SettingLocalizedResources.Edit_IgnorePreviewWindowSize, IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"))
@@ -274,6 +276,13 @@ public partial class EditSettingPage : ContentPage
                 case DynamicPreviewSettings.TargetPixelsSettingKey:
                     if (args.Value is string resolution && DynamicPreviewResolutionOptions.TryGetValue(resolution, out var pixels))
                         DynamicPreviewSettings.SetTargetResolution(pixels);
+                    return;
+                case DynamicPreviewSettings.CacheSourceFramesSettingKey:
+                    if (args.Value is bool cacheSourceFrames)
+                    {
+                        WriteSetting(args.Id, cacheSourceFrames.ToString());
+                        LogDiagnostic($"Cache decoded preview source frames: {cacheSourceFrames}.");
+                    }
                     return;
                 case "Edit_DynamicPreviewClipPoolMiB":
                     if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var poolMiB)

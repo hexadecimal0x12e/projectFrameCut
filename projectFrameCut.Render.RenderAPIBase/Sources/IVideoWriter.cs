@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
@@ -56,18 +56,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         public void Finish();
 
 
-        public void Append(IPicture<ushort> picture);
-        public void Append(IPicture<byte> picture);
-        public void Append(HDRPicture16bpp pic) => Append((IPicture<ushort>)pic);
-
-        public void Append(Picture16bpp pic) => Append((IPicture<ushort>)pic);
-        public void Append(Picture8bpp pic) => Append((IPicture<byte>)pic);
+        public void Append(IPicture<Half> picture);
         public void Append(IPicture source)
         {
             ArgumentNullException.ThrowIfNull(source);
-            if (source.BitPerPixel == 16) Append((IPicture<ushort>)source);
-            else if (source.BitPerPixel == 8) Append((IPicture<byte>)source);
-            else throw new NotSupportedException($"Unsupported pixel mode.");
+            if (source is not IPicture<Half> fp) throw new NotSupportedException("The video writer requires FP16 pictures.");
+            Append(fp);
         }
     }
 }

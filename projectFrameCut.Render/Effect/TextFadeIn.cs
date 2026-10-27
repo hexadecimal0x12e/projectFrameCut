@@ -32,7 +32,7 @@ namespace projectFrameCut.Render.Effect
 
         public TextEntry[] Process(TextEntry[] source, float progress)
         {
-            float alpha = Math.Clamp(progress, 0f, 1f);
+            Half alpha = Half.Clamp((Half)progress, Half.Zero, Half.One);
 
             var result = new TextEntry[source.Length];
             for (int i = 0; i < source.Length; i++)

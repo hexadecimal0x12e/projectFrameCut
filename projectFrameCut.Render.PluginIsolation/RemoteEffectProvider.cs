@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -55,8 +56,24 @@ public class RemoteEffectProvider : IEffectProvider
 
     public EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context)
     {
-        if (!_session.Capabilities.SupportsFieldTypeResolution) return EffectArgumentFieldType.Any;
-        var result = _fieldTypes.GetValue(context, c =>
+        var declared = (isInput ? context.State.Fields : context.State.Outputs).GetValueOrDefault(fieldId)?.FieldType ?? EffectArgumentFieldType.Any;
+        if (!_session.Capabilities.SupportsFieldTypeResolution) return declared;
+        var result = ResolveTypes(context);
+        return (isInput ? result.Inputs : result.Outputs).TryGetValue(fieldId, out var type)
+            ? (EffectArgumentFieldType)type : declared;
+    }
+
+    public object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context)
+    {
+        if (!_session.Capabilities.SupportsFieldTypeResolution) return null;
+        var result = ResolveTypes(context);
+        return (isInput ? result.InputDataFormats : result.OutputDataFormats).TryGetValue(fieldId, out var format) && format != 0
+            ? (PictureDataFormat)format : null;
+    }
+
+    private IsolationResolvedFieldTypes ResolveTypes(EffectFieldTypeContext context)
+    {
+        return _fieldTypes.GetValue(context, c =>
         {
             var leases = new List<IsolationPayloadLease>();
             try
@@ -66,6 +83,7 @@ public class RemoteEffectProvider : IEffectProvider
                     ObjectId = _objectId, State = IsolationFieldTypeCodec.Write(c.State, _session, leases),
                     BoundProviders = c.BoundProviders.ToDictionary(p => p.Key, p => IsolationFieldTypeCodec.Write(p.Value, _session, leases)),
                     InputTypes = c.InputTypes.ToDictionary(p => p.Key, p => (ulong)p.Value),
+                    InputDataFormats = c.InputDataFormats.Where(p => p.Value is PictureDataFormat).ToDictionary(p => p.Key, p => (int)(PictureDataFormat)p.Value!),
                 });
             }
             finally
@@ -73,11 +91,13 @@ public class RemoteEffectProvider : IEffectProvider
                 foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
             }
         });
-        return (isInput ? result.Inputs : result.Outputs).TryGetValue(fieldId, out var type)
-            ? (EffectArgumentFieldType)type : EffectArgumentFieldType.Any;
     }
 
-    public IEffect[] Build()
+    public IEffect[] Build<TPicture>() where TPicture : IPicture => BuildCore<TPicture>(PictureDataFormats.FromType<TPicture>());
+
+    public IEffect[] Build() => BuildCore<IPicture>(PictureDataFormat.Unknown);
+
+    private IEffect[] BuildCore<TPicture>(PictureDataFormat format) where TPicture : IPicture
     {
         this.ValidateOutputFields();
         if (this is IMultipleOutputEffectProvider)
@@ -86,7 +106,9 @@ public class RemoteEffectProvider : IEffectProvider
             try
             {
                 return Invoke<IsolationBuildProviderRequest, IsolationEffectList>(RenderOperation.IsolationBuildProvider,
-                    new() { Provider = CreateState(leases) }).Effects.Select(e => RemoteEffectFactory.Create(_session, e)).ToArray();
+                    new() { Provider = CreateState(leases), PictureDataFormat = (int)format }).Effects
+                    .Select(e => format == PictureDataFormat.Unknown ? RemoteEffectFactory.Create(_session, e)
+                        : TypedPictureEffect.CreateTransport<TPicture>(RemoteEffectFactory.Create(_session, e))).ToArray();
             }
             finally
             {
@@ -105,7 +127,8 @@ public class RemoteEffectProvider : IEffectProvider
         var typeName = TypeName == "Crop" && MetaData.ContainsKey(IEffectProvider.IsContinuousEffectParameterKey)
             ? "ProgressCrop"
             : TypeName;
-        return [IPluginBase.EffectImplementations.Create(typeName, requested, DefaultImplementType, parameters)];
+        return [format == PictureDataFormat.Unknown ? IPluginBase.EffectImplementations.Create(typeName, requested, DefaultImplementType, parameters)
+            : IPluginBase.EffectImplementations.Create<TPicture>(typeName, requested, DefaultImplementType, parameters)];
     }
 
     public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
@@ -131,6 +154,7 @@ public class RemoteEffectProvider : IEffectProvider
                 TypeName = item.Value.TypeName,
                 FromPlugin = item.Value.FromPlugin,
                 FieldType = (ulong)item.Value.FieldType,
+                DataFormat = item.Value.DataFormat is PictureDataFormat f ? (int)f : 0,
                 DefaultValue = item.Value.DefaultValue,
                 MinimumValue = item.Value.MinValue,
                 MaximumValue = item.Value.MaxValue,
@@ -173,6 +197,7 @@ public class RemoteEffectProvider : IEffectProvider
         TypeName = value.TypeName,
         FromPlugin = value.FromPlugin,
         FieldType = (EffectArgumentFieldType)value.FieldType,
+        DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
         DefaultValue = value.DefaultValue,
         MinValue = value.MinimumValue,
         MaxValue = value.MaximumValue,
@@ -186,10 +211,11 @@ public class RemoteEffectProvider : IEffectProvider
         var type = (EffectArgumentFieldType)value.FieldType;
         var fieldValue = IsolationValueConverter.ToObject(value.Value) ?? value.DefaultValue;
         return value.IsDynamic
-            ? new DynamicEffectParamField(value.Id, type, value.BoundProviderId, fieldValue) { FieldType = type }
+            ? new DynamicEffectParamField(value.Id, type, value.BoundProviderId, fieldValue) { FieldType = type, DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat }
             : new StaticEffectArgumentField(fieldValue, type)
             {
                 Id = value.Id,
+                DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
                 DefaultValue = value.DefaultValue,
                 MinValue = value.MinimumValue,
                 MaxValue = value.MaximumValue,
@@ -205,6 +231,7 @@ public class RemoteMultipleOutputEffectProvider : RemoteEffectProvider, IMultipl
         => OutFields = descriptor.OutputFields.ToDictionary(x => x.Id, x => new EffectArgumentFieldDescriptor
         {
             Id = x.Id, TypeName = x.TypeName, FromPlugin = x.FromPlugin, FieldType = (EffectArgumentFieldType)x.FieldType,
+            DataFormat = x.DataFormat == 0 ? null : (PictureDataFormat)x.DataFormat,
             DefaultValue = x.DefaultValue, MinValue = x.MinimumValue, MaxValue = x.MaximumValue,
             PresetOptions = x.PresetOptions.ToArray(), Remarks = x.Remarks, IsDynamic = x.IsDynamic,
         });

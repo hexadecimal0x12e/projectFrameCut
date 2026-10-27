@@ -44,7 +44,7 @@ public sealed class ExampleInvertEffect : INormalEffect
             var result = new Picture8bpp(byteSource.Width, byteSource.Height)
             {
                 HasAlphaChannel = byteSource.HasAlphaChannel,
-                a = byteSource.a is null ? null : (float[])byteSource.a.Clone()
+                a = byteSource.a is null ? null : (Half[])byteSource.a.Clone()
             };
             for (int i = 0; i < result.Pixels; i++)
             {
@@ -60,7 +60,7 @@ public sealed class ExampleInvertEffect : INormalEffect
             var result = new Picture16bpp(ushortSource.Width, ushortSource.Height)
             {
                 HasAlphaChannel = ushortSource.HasAlphaChannel,
-                a = ushortSource.a is null ? null : (float[])ushortSource.a.Clone()
+                a = ushortSource.a is null ? null : (Half[])ushortSource.a.Clone()
             };
             for (int i = 0; i < result.Pixels; i++)
             {

@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render.EncodeAndDecode;
 /// <summary>Reads MKV packages produced by <see cref="AlphaBrightnessVideoWriter"/>.</summary>
-public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>, IHDRVideoSource
+public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<Half>, IHDRVideoSource
 {
     public bool IsDeterministic => true;
 
@@ -25,7 +25,7 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
     private int _mainIndex = -1;
     private int _nextFrame;
     private bool _eof;
-    private float _maximumBrightness = 1000f;
+    private Half _maximumBrightness = (Half)1000;
 
     public bool Disposed { get; private set; }
     public bool Initialized { get; private set; }
@@ -33,7 +33,7 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
     public bool StrictMode { get; set; } = true;
     public string TypeName => nameof(AlphaBrightnessDecoderContext);
     public string[] PreferredExtension => [".mkv"];
-    public int? ResultBitPerPixel => 16;
+    public int? ResultBitPerPixel => IPicture.PicturePixelMode.Float16Picture;
     public uint Index { get; set; }
     public long TotalFrames { get; private set; } = -1;
     public double Fps { get; private set; }
@@ -97,7 +97,7 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
                 else if (role == AlphaBrightnessVideoWriter.BrightnessRole)
                 {
                     brightness = brightness < 0 ? i : throw new InvalidDataException("The package contains multiple brightness streams.");
-                    if (float.TryParse(ReadMetadata(stream->metadata, AlphaBrightnessVideoWriter.MaximumBrightnessMetadataKey), NumberStyles.Float, CultureInfo.InvariantCulture, out float n) && float.IsFinite(n) && n > 0) _maximumBrightness = n;
+                    if (Half.TryParse(ReadMetadata(stream->metadata, AlphaBrightnessVideoWriter.MaximumBrightnessMetadataKey), NumberStyles.Float, CultureInfo.InvariantCulture, out Half n) && Half.IsFinite(n) && n > Half.Zero) _maximumBrightness = n;
                 }
             }
 
@@ -105,9 +105,9 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
             ValidateAuxiliary(_format, _mainIndex, alpha);
             ValidateAuxiliary(_format, _mainIndex, brightness);
 
-            _main = new TrackDecoder(_format, _mainIndex, AVPixelFormat.AV_PIX_FMT_BGR48LE, true);
-            if (alpha >= 0) _alpha = new TrackDecoder(_format, alpha, AVPixelFormat.AV_PIX_FMT_GRAY16LE, false);
-            if (brightness >= 0) _brightness = new TrackDecoder(_format, brightness, AVPixelFormat.AV_PIX_FMT_GRAY16LE, false);
+            _main = new TrackDecoder(_format, _mainIndex, FFmpegFP16FrameCodec.DecoderFormat, true);
+            if (alpha >= 0) _alpha = new TrackDecoder(_format, alpha, AVPixelFormat.AV_PIX_FMT_GRAYF32LE, false);
+            if (brightness >= 0) _brightness = new TrackDecoder(_format, brightness, AVPixelFormat.AV_PIX_FMT_GRAYF32LE, false);
             _packet = ffmpeg.av_packet_alloc();
             if (_packet == null) throw new OutOfMemoryException("Failed to allocate the multistream packet.");
 
@@ -130,11 +130,15 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
         }
     }
 
-    public IPicture<ushort> GetFrame(uint targetFrame) => GetHDRFrame(targetFrame, true).DegradeToSDR();
-    public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false) => GetHDRFrame(targetFrame, hasAlpha).DegradeToSDR();
-    public HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false) => GetHDRFrame(targetFrame, 0, 0, Width, Height, Width, Height, hasAlpha);
+    public IPicture<Half> GetFrame(uint targetFrame) => GetFrame(targetFrame, true);
+    public IPicture<Half> GetFrame(uint targetFrame, bool hasAlpha)
+    {
+        using var frame = GetHDRFrame(targetFrame, hasAlpha);
+        return frame.DegradeToSDR();
+    }
+    public HDRPictureFP16 GetHDRFrame(uint targetFrame, bool hasAlpha = false) => GetHDRFrame(targetFrame, 0, 0, Width, Height, Width, Height, hasAlpha);
 
-    public HDRPicture16bpp GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false)
+    public HDRPictureFP16 GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false)
     {
         if (Disposed) throw new ObjectDisposedException(nameof(AlphaBrightnessDecoderContext));
         if (!Initialized || _main is null) throw new InvalidOperationException("The multistream decoder is not initialized.");
@@ -150,33 +154,17 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
             if (target != _nextFrame) Seek(target);
             DecodeUntil(target);
 
-            ushort[] main = _main.Take(target);
-            ushort[]? alpha = _alpha?.Take(target);
-            ushort[]? brightness = _brightness?.Take(target);
-            int pixels = Width * Height;
-            var picture = new HDRPicture16bpp(Width, Height)
+            Half[][] main = _main.Take(target);
+            Half[]? alpha = _alpha?.Take(target)[0];
+            Half[]? brightness = _brightness?.Take(target)[0];
+            int pixels = checked(Width * Height);
+            if (hasAlpha && alpha is null)
             {
-                r = new ushort[pixels],
-                g = new ushort[pixels],
-                b = new ushort[pixels],
-                Brightness = new float[pixels],
-                MaximumBrightness = _maximumBrightness
-            };
-            for (int i = 0; i < pixels; i++)
-            {
-                picture.b[i] = main[i * 3];
-                picture.g[i] = main[i * 3 + 1];
-                picture.r[i] = main[i * 3 + 2];
+                alpha = new Half[pixels];
+                Array.Fill(alpha, Half.One);
             }
-            if (alpha is not null)
-            {
-                picture.a = new float[pixels];
-                picture.HasAlphaChannel = true;
-                for (int i = 0; i < pixels; i++) picture.a[i] = alpha[i] / 65535f;
-            }
-            if (brightness is not null)
-                for (int i = 0; i < pixels; i++) picture.Brightness[i] = brightness[i] / 65535f;
-
+            var picture = HDRPictureFP16.FromOwnedChannels(Width, Height, main[0], main[1], main[2],
+                hasAlpha ? alpha : null, brightness ?? new Half[pixels], _maximumBrightness);
             _nextFrame = checked(target + 1);
             Index++;
             if (sourceX == 0 && sourceY == 0 && sourceWidth == Width && sourceHeight == Height && targetWidth == Width && targetHeight == Height) return picture;
@@ -185,13 +173,13 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
             {
                 if (sourceX != 0 || sourceY != 0 || sourceWidth != Width || sourceHeight != Height)
                 {
-                    HDRPicture16bpp cropped = (HDRPicture16bpp)PictureCropper.Crop(picture, sourceX, sourceY, sourceWidth, sourceHeight);
+                    HDRPictureFP16 cropped = (HDRPictureFP16)PictureCropper.Crop(picture, sourceX, sourceY, sourceWidth, sourceHeight);
                     picture.Dispose();
                     picture = cropped;
                 }
                 if (picture.Width != targetWidth || picture.Height != targetHeight)
                 {
-                    HDRPicture16bpp resized = (HDRPicture16bpp)((IHDRPicture<ushort>)picture).Resize(targetWidth, targetHeight, false);
+                    HDRPictureFP16 resized = (HDRPictureFP16)((IHDRPicture<Half>)picture).Resize(targetWidth, targetHeight, false);
                     picture.Dispose();
                     picture = resized;
                 }
@@ -301,7 +289,7 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
         if (auxiliary < 0) return;
         AVCodecParameters* a = c->streams[main]->codecpar;
         AVCodecParameters* b = c->streams[auxiliary]->codecpar;
-        if (a->width != b->width || a->height != b->height || b->format != (int)AVPixelFormat.AV_PIX_FMT_GRAY16LE)
+        if (a->width != b->width || a->height != b->height || b->format != (int)AVPixelFormat.AV_PIX_FMT_GRAYF32LE)
             throw new InvalidDataException("Auxiliary stream dimensions or pixel format do not match the main stream.");
         if (c->streams[main]->time_base.num != c->streams[auxiliary]->time_base.num || c->streams[main]->time_base.den != c->streams[auxiliary]->time_base.den)
             throw new InvalidDataException("Auxiliary stream time base does not match the main stream.");
@@ -327,8 +315,7 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
         private readonly bool _color;
         private readonly AVFrame* _frame;
         private readonly AVFrame* _output;
-        private readonly byte* _buffer;
-        private readonly Dictionary<int, ushort[]> _frames = [];
+        private readonly Dictionary<int, Half[][]> _frames = [];
         private SwsContext* _sws;
         private AVPixelFormat _inputFormat = AVPixelFormat.AV_PIX_FMT_NONE;
         private int _fallbackFrame;
@@ -358,14 +345,8 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
                 FFmpegHelper.Throw(ffmpeg.avcodec_open2(Codec, decoder, null), "open multistream codec");
 
                 _frame = ffmpeg.av_frame_alloc();
-                _output = ffmpeg.av_frame_alloc();
-                int size = ffmpeg.av_image_get_buffer_size(outputFormat, Width, Height, 1);
-                _buffer = size > 0 ? (byte*)ffmpeg.av_malloc((ulong)size) : null;
-                if (_frame == null || _output == null || _buffer == null) throw new OutOfMemoryException("Failed to allocate multistream conversion buffers.");
-                byte_ptrArray4 data = default;
-                int_array4 lines = default;
-                FFmpegHelper.Throw(ffmpeg.av_image_fill_arrays(ref data, ref lines, _buffer, outputFormat, Width, Height, 1), "prepare multistream conversion buffer");
-                for (uint i = 0; i < 4; i++) { _output->data[i] = data[i]; _output->linesize[i] = lines[i]; }
+                _output = FFmpegFP16FrameCodec.AllocateFrame(Width, Height, outputFormat);
+                if (_frame == null) throw new OutOfMemoryException("Failed to allocate a multistream decoding frame.");
             }
             catch
             {
@@ -395,8 +376,9 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
             }
         }
 
-        private ushort[] ConvertFrame()
+        private Half[][] ConvertFrame()
         {
+            FFmpegFP16FrameCodec.ApplyDecoderMetadata(_frame, Codec);
             AVPixelFormat input = (AVPixelFormat)_frame->format;
             if (_sws == null || _inputFormat != input)
             {
@@ -405,22 +387,18 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
                 _sws = ffmpeg.sws_getContext(Width, Height, input, Width, Height, _outputFormat, 4, null, null, null);
                 if (_sws == null) throw new InvalidOperationException("Failed to create a multistream conversion context.");
             }
-            FFmpegHelper.Throw(FFmpegHelper.ScaleFrame(_sws, _frame, _output), "convert multistream frame");
-
-            int channels = _color ? 3 : 1;
-            ushort[] result = new ushort[Width * Height * channels];
-            for (int y = 0; y < Height; y++)
-            {
-                ushort* row = (ushort*)(_output->data[0] + y * _output->linesize[0]);
-                new ReadOnlySpan<ushort>(row, Width * channels).CopyTo(result.AsSpan(y * Width * channels, Width * channels));
-            }
-            return result;
+            FFmpegFP16FrameCodec.ConfigureDecoderColorspace(_sws, _frame);
+            int rows = FFmpegHelper.ScaleFrame(_sws, _frame, _output);
+            if (rows != Height) throw new InvalidDataException($"Multistream conversion produced {rows}/{Height} rows.");
+            return _color
+                ? [FFmpegFP16FrameCodec.ReadPlane(_output, 2), FFmpegFP16FrameCodec.ReadPlane(_output, 0), FFmpegFP16FrameCodec.ReadPlane(_output, 1)]
+                : [FFmpegFP16FrameCodec.ReadPlane(_output, 0)];
         }
 
         public bool Has(int frame) => _frames.ContainsKey(frame);
-        public ushort[] Take(int frame)
+        public Half[][] Take(int frame)
         {
-            if (!_frames.Remove(frame, out ushort[]? data)) throw new InvalidOperationException($"Multistream track {StreamIndex} did not decode frame {frame}.");
+            if (!_frames.Remove(frame, out Half[][]? data)) throw new InvalidOperationException($"Multistream track {StreamIndex} did not decode frame {frame}.");
             return data;
         }
 
@@ -444,7 +422,6 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
         {
             _frames.Clear();
             if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
-            if (_buffer != null) ffmpeg.av_free(_buffer);
             if (_output != null) { AVFrame* f = _output; ffmpeg.av_frame_free(&f); }
             if (_frame != null) { AVFrame* f = _frame; ffmpeg.av_frame_free(&f); }
             if (Codec != null) { AVCodecContext* c = Codec; Codec = null; ffmpeg.avcodec_free_context(&c); }

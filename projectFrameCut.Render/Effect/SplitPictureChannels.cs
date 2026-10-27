@@ -28,14 +28,30 @@ public sealed class SplitPictureChannelsEffectProvider : EffectProviderBase, IMu
         id => id,
         id => Field(id, EffectArgumentFieldType.IPicture, "", remarks: $"Isolated {id} channel."));
 
+    public override object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context)
+    {
+        if (isInput) return base.ResolveDataFormat(fieldId, true, context);
+        if (fieldId == "Brightness") return PictureDataFormat.CpuHdrFP16;
+        if (base.ResolveDataFormat(PrimaryInputAnchorKey, true, context) is not PictureDataFormat input
+            || PictureDataFormats.GetPictureType(input) is null) return null;
+        if (input.HasFlag(PictureDataFormat.Float16)) return PictureDataFormat.CpuFP16;
+        return input.HasFlag(PictureDataFormat.Hdr) && fieldId == "A" ? PictureDataFormat.CpuHdr16
+            : input.HasFlag(PictureDataFormat.Bit16) ? PictureDataFormat.Cpu16 : PictureDataFormat.Cpu8;
+    }
+
     protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
 
     public new IEffect[] Build() => [new SplitPictureChannelsEffect()];
+    public override IEffect[] Build<TPicture>() => [new SplitPictureChannelsEffect<TPicture>()];
     IEffect[] IEffectProvider.Build() => Build();
 }
 
-public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
+public class SplitPictureChannelsEffect : SplitPictureChannelsEffect<IPicture> { }
+
+public class SplitPictureChannelsEffect<TPicture> : IMultipleOutputEffect<TPicture> where TPicture : IPicture
 {
+    public IEffect WithPictureType<T>() where T : IPicture => new SplitPictureChannelsEffect<T>();
+
     public bool IsDeterministic => true;
 
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -51,11 +67,18 @@ public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
     public int RelativeWidth { get; set; }
     public int RelativeHeight { get; set; }
     public string? BindedEffectProvidingSystemID { get; set; }
-    public IEffect WithParameters(Dictionary<string, object> parameters) => new SplitPictureChannelsEffect();
+    public IEffect WithParameters(Dictionary<string, object> parameters) => new SplitPictureChannelsEffect<TPicture>();
 
-    public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context)
+    public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context) =>
+        ComputeOutputs(context.Input is null ? default : (TPicture)context.Input, context);
+
+    public IReadOnlyDictionary<string, object?> ComputeOutputs(TPicture? source, EffectExecutionContext context)
     {
-        if (context.Input is not IPicture input) throw new ArgumentException("The primary input must be an IPicture.");
+        if (source is not IPicture input) throw new ArgumentException("The primary input must be an IPicture.");
+        if (input is IPicture<Half> fp) return SplitFP16(fp);
+        if (PictureCalculation<TPicture>.IsHdr) return Split((IPicture<ushort>)(object)input, (IHDRPicture<ushort>)(object)input);
+        if (PictureCalculation<TPicture>.Is16) return Split((IPicture<ushort>)(object)input, input as IHDRPicture<ushort>);
+        if (PictureCalculation<TPicture>.Is8) return Split((IPicture<byte>)(object)input);
         if (input is IHDRPicture<ushort> hdr) return Split(hdr, hdr);
 
         return input switch
@@ -64,6 +87,35 @@ public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
             IPicture<byte> p => Split(p),
             _ => throw new NotSupportedException($"Unsupported picture type: {input.GetType().FullName}")
         };
+    }
+
+    private static IReadOnlyDictionary<string, object?> SplitFP16(IPicture<Half> source)
+    {
+        var result = new Dictionary<string, object?>();
+        foreach (string name in new[] { "R", "G", "B", "A", "Brightness" })
+        {
+            PictureFP16 p = name == "Brightness" ? new HDRPictureFP16(source.Width, source.Height) { MaximumBrightness = (source as IHDRPicture<Half>)?.MaximumBrightness ?? (Half)203 }
+                : new PictureFP16(source.Width, source.Height);
+            if (name == "A") p.SetAlpha(true);
+            using (var e = p.Edit())
+            {
+                for (int i = 0; i < source.Pixels; i++)
+                {
+                    if (name == "R") e.Red[i] = source.r[i];
+                    else if (name == "G") e.Green[i] = source.g[i];
+                    else if (name == "B") e.Blue[i] = source.b[i];
+                    else
+                    {
+                        e.Red[i] = e.Green[i] = e.Blue[i] = Half.One;
+                        if (name == "A") e.Alpha[i] = Alpha(source, i);
+                        else e.Brightness[i] = source is IHDRPicture<Half> h ? h.Brightness[i]
+                            : PictureFP16.Unit((float)source.r[i] * .2627f + (float)source.g[i] * .678f + (float)source.b[i] * .0593f);
+                    }
+                }
+            }
+            result[name] = p;
+        }
+        return result;
     }
 
     private static IReadOnlyDictionary<string, object?> Split(IPicture<byte> source)
@@ -114,7 +166,7 @@ public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
                     break;
                 case "A":
                     FillAlpha(hdr ?? source, output, ushort.MaxValue);
-                    if (output is HDRPicture16bpp a) Array.Fill(a.Brightness, 1f);
+                    if (output is HDRPicture16bpp a) Array.Fill(a.Brightness, Half.One);
                     break;
             }
             result[channel] = output;
@@ -128,7 +180,7 @@ public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
         Array.Fill(output.r, maximum);
         Array.Fill(output.g, maximum);
         Array.Fill(output.b, maximum);
-        output.a = new float[source.Pixels];
+        output.a = new Half[source.Pixels];
         for (int i = 0; i < source.Pixels; i++) output.a[i] = Alpha(source, i);
         output.HasAlphaChannel = true;
     }
@@ -137,7 +189,7 @@ public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
     {
         var output = new HDRPicture16bpp(source.Width, source.Height)
         {
-            MaximumBrightness = hdr?.MaximumBrightness ?? 203f
+            MaximumBrightness = hdr?.MaximumBrightness ?? (Half)203
         };
         Array.Fill(output.r, ushort.MaxValue);
         Array.Fill(output.g, ushort.MaxValue);
@@ -147,13 +199,13 @@ public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
         else
         {
             for (int i = 0; i < source.Pixels; i++)
-                output.Brightness[i] = (float)Math.Clamp((0.2627 * Convert.ToDouble(source.r[i])
+                output.Brightness[i] = (Half)Math.Clamp((0.2627 * Convert.ToDouble(source.r[i])
                     + 0.6780 * Convert.ToDouble(source.g[i]) + 0.0593 * Convert.ToDouble(source.b[i])) / maximum, 0, 1);
         }
         return output;
     }
 
-    private static float Alpha<T>(IPicture<T> picture, int index) =>
-        picture.HasAlphaChannel && picture.a is { } alpha && index < alpha.Length && float.IsFinite(alpha[index])
-            ? Math.Clamp(alpha[index], 0f, 1f) : 1f;
+    private static Half Alpha<T>(IPicture<T> picture, int index) =>
+        picture.HasAlphaChannel && picture.a is { } alpha && index < alpha.Length && Half.IsFinite(alpha[index])
+            ? Half.Clamp(alpha[index], Half.Zero, Half.One) : Half.One;
 }

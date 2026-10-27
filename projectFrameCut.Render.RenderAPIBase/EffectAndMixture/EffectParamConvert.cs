@@ -17,6 +17,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static object? Normalize(object? raw)
         {
+            if (raw is Half half) return (float)half;
             if (raw is not JsonElement element)
             {
                 return raw;

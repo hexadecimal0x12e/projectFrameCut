@@ -15,9 +15,11 @@ public sealed class ExternalSourceSettings
 
     public static ExternalSourceSettings Load(string dataRoot)
     {
+        var path = Path.Combine(dataRoot, "ExternalSourceSettings.json");
+        if (!File.Exists(path)) return new();
         try
         {
-            using var stream = new FileStream(Path.Combine(dataRoot, "ExternalSourceSettings.json"), FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
             return JsonSerializer.Deserialize<ExternalSourceSettings>(stream) ?? new();
         }
         catch (FileNotFoundException) { return new(); }

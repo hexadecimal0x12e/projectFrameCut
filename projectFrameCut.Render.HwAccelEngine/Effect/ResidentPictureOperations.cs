@@ -110,13 +110,13 @@ internal static class ResidentPictureOperations
         return Run(source, ResidentOperation.Crop, [x, y, MathF.Cos(a), MathF.Sin(a)], width, height, source.HasAlphaChannel || Math.Abs(angle) > float.Epsilon || x >= source.Width || y >= source.Height || x + width <= 0 || y + height <= 0);
     }
 
-    internal static ResidentPicture Mix(IHwAccelPicture bottom, IHwAccelPicture top, int mode, int bits, int x, int y, int width, int height)
+    internal static ResidentPicture Mix(IHwAccelPicture bottom, IHwAccelPicture top, int mode, int bits, int x, int y, int width, int height, bool approximate = false)
     {
         using var a = Own(bottom);
         using var b = (ResidentPicture)a.Context.Upload(top);
-        float peak = a.IsHdr ? b.IsHdr ? Math.Max(a.MaximumBrightness, b.MaximumBrightness) : a.MaximumBrightness : b.IsHdr ? b.MaximumBrightness : 1000;
+        Half peak = a.IsHdr ? b.IsHdr ? Half.Max(a.MaximumBrightness, b.MaximumBrightness) : a.MaximumBrightness : b.IsHdr ? b.MaximumBrightness : (Half)1000;
         bool alpha = a.HasAlphaChannel || b.HasAlphaChannel || a.Width != width || a.Height != height;
-        return a.Storage.Context.Run(a, ResidentOperation.Mixture, width, height, [x, y, mode, peak], alpha, bits, bits == 16 && (a.IsHdr || b.IsHdr), peak, b);
+        return a.Storage.Context.Run(a, ResidentOperation.Mixture, width, height, [x, y, mode, approximate ? 1 : 0], alpha, bits, (a.IsHdr || b.IsHdr), peak, b);
     }
 
     internal static ResidentPicture Crossfade(IHwAccelPicture left, IHwAccelPicture right, float progress)
@@ -125,7 +125,7 @@ internal static class ResidentPictureOperations
             throw new ArgumentException("Crossfade input sizes must match.");
         using var a = Own(left);
         using var b = (ResidentPicture)a.Context.Upload(right);
-        float peak = Math.Max(a.MaximumBrightness, b.MaximumBrightness);
-        return a.Storage.Context.Run(a, ResidentOperation.Crossfade, a.Width, a.Height, [Math.Clamp(progress, 0, 1), peak], true, a.BitPerPixel == 16 || b.BitPerPixel == 16 ? 16 : 8, a.IsHdr || b.IsHdr, peak, b);
+        Half peak = Half.Max(a.MaximumBrightness, b.MaximumBrightness);
+        return a.Storage.Context.Run(a, ResidentOperation.Crossfade, a.Width, a.Height, [(float)Half.Clamp((Half)progress, Half.Zero, Half.One), (float)peak], true, IPicture.PicturePixelMode.Float16Picture, a.IsHdr || b.IsHdr, peak, b);
     }
 }

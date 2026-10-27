@@ -32,6 +32,14 @@ public sealed class IfConditionNodeEffectProvider : EffectProviderBase
 
     protected override EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, EffectArgumentFieldType.Any, "");
 
+    public override object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context)
+    {
+        if (isInput) return base.ResolveDataFormat(fieldId, true, context);
+        var a = context.InputDataFormats.GetValueOrDefault("TrueValue");
+        var b = context.InputDataFormats.GetValueOrDefault("FalseValue");
+        return a is PictureDataFormat && Equals(a, b) ? a : null;
+    }
+
     public override EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context)
     {
         if (isInput && context.State.Fields.TryGetValue(fieldId, out var field) && !field.FieldType.HasFlag(EffectArgumentFieldType.Any)) return field.FieldType;

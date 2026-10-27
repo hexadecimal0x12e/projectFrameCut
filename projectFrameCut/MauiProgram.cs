@@ -962,7 +962,7 @@ namespace projectFrameCut
                 {
                     if (!AdminServices.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
                     {
-                        plugins.AddRange(PluginService.LoadUserPlugins());
+                        plugins.AddRange(PluginService.LoadUserPlugins(internalPlugins: plugins));
 #if WINDOWS
                         Helper.HelperProgram.ResetPluginLoadingStat();
 #endif

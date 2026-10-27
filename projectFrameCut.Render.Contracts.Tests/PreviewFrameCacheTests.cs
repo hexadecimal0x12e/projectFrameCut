@@ -17,7 +17,7 @@ public sealed class PreviewFrameCacheTests
         string path = Path.Combine(files.Directory("cache"), "frame.vfd2m");
         using var source = new Picture8bpp(2, 1);
         source.r[0] = 32;
-        using var output = new Picture8bpp(2, 1) { HasAlphaChannel = true, a = [1, 0] };
+        using var output = new Picture8bpp(2, 1) { HasAlphaChannel = true, a = [Half.One, Half.Zero] };
         output.g[0] = 255;
         var data = PreviewFrameData.Create(output, "source", "effect", true);
         PreviewFrameContainer.Save(path, source, data, default);

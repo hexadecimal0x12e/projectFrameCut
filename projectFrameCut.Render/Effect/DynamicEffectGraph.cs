@@ -465,7 +465,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                             var pixelMode = mixturePixelMode ?? lower.BitPerPixel;
                             if (lowerPosition.TargetX != 0 || lowerPosition.TargetY != 0 || lower.Width != width || lower.Height != height)
                                 lower = Track(EffectPictureProcessing.Mix(ClassicOverlayMixture.Default,
-                                    Track(Picture16bpp.GenerateSolidColor(width, height, 0, 0, 0, 0)), lower, pixelMode,
+                                    Track(PictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero)), lower, pixelMode,
                                     lowerPosition.TargetX, lowerPosition.TargetY, width, height));
                             position = new(0, 0, width, height, false);
                             return EffectPictureProcessing.Mix(mixer, lower, upper, pixelMode,

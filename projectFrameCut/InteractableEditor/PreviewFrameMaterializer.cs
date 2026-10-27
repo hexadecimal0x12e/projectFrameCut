@@ -9,10 +9,10 @@ internal static class PreviewFrameMaterializer
 {
     public static IPicture LoadVfd(string path)
     {
-        if (Path.GetExtension(path).Equals(".vfd2m", StringComparison.OrdinalIgnoreCase))
+        if (PreviewFrameContainer.IsPreviewContainer(path))
             throw new InvalidDataException("A preview container's source picture is not its display result.");
         using var stream = PreviewFrameContainer.Open(path);
-        if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? picture) || picture is null)
+        if (!PictureExtensions.SharedVfdPictureDecoder.TryLoadFP16(stream, out var picture) || picture is null)
             throw new InvalidDataException($"Preview source '{path}' is not a valid VFD picture.");
         return picture;
     }
@@ -21,7 +21,7 @@ internal static class PreviewFrameMaterializer
     {
         if (frame.ScRgb is { IsCurrent: true } || frame.Png is not null) return frame;
         Func<int, byte[]>? allocatePixels = buffer is null ? null : buffer.GetBytes;
-        if (frame.PreviewContainer == "vfd2m" || Path.GetExtension(frame.VfdPath).Equals(".vfd2m", StringComparison.OrdinalIgnoreCase))
+        if (frame.PreviewContainer is "vfd2m" or PreviewFrameContainer.ViewContainer || PreviewFrameContainer.IsPreviewContainer(frame.VfdPath))
         {
             var data = PreviewFrameContainer.Read(frame.VfdPath, frame.PreviewEffectHash,
                 frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb, allocatePixels);
@@ -44,7 +44,7 @@ internal static class PreviewFrameMaterializer
 
     public static byte[] ToPngBytes(string path)
     {
-        if (Path.GetExtension(path).Equals(".vfd2m", StringComparison.OrdinalIgnoreCase))
+        if (PreviewFrameContainer.IsPreviewContainer(path))
             return PreviewFrameContainer.Read(path).ToPng();
         using var picture = LoadVfd(path);
         return ToPngBytes(picture);
@@ -69,7 +69,7 @@ internal static class PreviewFrameMaterializer
 
     public static ScRgbFrame ToScRgb(string path)
     {
-        if (Path.GetExtension(path).Equals(".vfd2m", StringComparison.OrdinalIgnoreCase))
+        if (PreviewFrameContainer.IsPreviewContainer(path))
         {
             var data = PreviewFrameContainer.Read(path, scRgb: true);
             return new(data.Pixels, data.Width, data.Height, data.Stride, data.HasTransparency, data.ContentHash);

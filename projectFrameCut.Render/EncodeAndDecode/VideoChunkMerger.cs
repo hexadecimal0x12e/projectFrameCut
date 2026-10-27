@@ -162,12 +162,12 @@ internal static unsafe class VideoChunkMerger
                     || !new ReadOnlySpan<byte>(p->extradata, p->extradata_size).SequenceEqual(new ReadOnlySpan<byte>(q->extradata, q->extradata_size)))))
                 throw new InvalidDataException($"Video chunk '{path}', stream {i} has different encoding parameters. Render all chunks with the same encoder settings.");
 
-            if (float.TryParse(ReadMetadata(b->metadata, AlphaBrightnessVideoWriter.MaximumBrightnessMetadataKey), NumberStyles.Float, CultureInfo.InvariantCulture, out float brightness)
-                && float.IsFinite(brightness) && brightness > 0)
+            if (Half.TryParse(ReadMetadata(b->metadata, AlphaBrightnessVideoWriter.MaximumBrightnessMetadataKey), NumberStyles.Float, CultureInfo.InvariantCulture, out Half brightness)
+                && Half.IsFinite(brightness) && brightness > Half.Zero)
             {
-                float.TryParse(ReadMetadata(a->metadata, AlphaBrightnessVideoWriter.MaximumBrightnessMetadataKey), NumberStyles.Float, CultureInfo.InvariantCulture, out float previous);
+                Half.TryParse(ReadMetadata(a->metadata, AlphaBrightnessVideoWriter.MaximumBrightnessMetadataKey), NumberStyles.Float, CultureInfo.InvariantCulture, out Half previous);
                 ffmpeg.av_dict_set(&a->metadata, AlphaBrightnessVideoWriter.MaximumBrightnessMetadataKey,
-                    Math.Max(previous, brightness).ToString(CultureInfo.InvariantCulture), 0);
+                    Half.Max(previous, brightness).ToString(CultureInfo.InvariantCulture), 0);
             }
         }
     }

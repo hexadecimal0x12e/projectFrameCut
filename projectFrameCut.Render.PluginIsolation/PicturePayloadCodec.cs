@@ -21,7 +21,13 @@ public static class PicturePayloadCodec
         var lease = await exchange.AllocateAsync(length, preferredKind, cancellationToken).ConfigureAwait(false);
         lease.Reference.Media = descriptor;
         await using var stream = await exchange.OpenWriteAsync(lease.Reference, cancellationToken).ConfigureAwait(false);
-        if (picture is IPicture<byte> p8)
+        if (picture is IPicture<Half> fp)
+        {
+            await WritePlaneAsync(stream, fp.r, cancellationToken).ConfigureAwait(false);
+            await WritePlaneAsync(stream, fp.g, cancellationToken).ConfigureAwait(false);
+            await WritePlaneAsync(stream, fp.b, cancellationToken).ConfigureAwait(false);
+        }
+        else if (picture is IPicture<byte> p8)
         {
             await stream.WriteAsync(p8.r, cancellationToken).ConfigureAwait(false);
             await stream.WriteAsync(p8.g, cancellationToken).ConfigureAwait(false);
@@ -35,9 +41,11 @@ public static class PicturePayloadCodec
         }
         else throw new NotSupportedException($"Picture type '{picture.GetType().FullName}' is not supported by isolation.");
 
-        if (picture.GetSpecificChannel(IPicture.ChannelId.Alpha) is float[] alpha)
+        if (descriptor.HasAlpha && picture.GetSpecificChannel(IPicture.ChannelId.Alpha) is Half[] alpha)
             await WritePlaneAsync(stream, alpha, cancellationToken).ConfigureAwait(false);
-        if (picture is IHDRPicture<ushort> hdr)
+        if (picture is IHDRPicture<Half> hf)
+            await WritePlaneAsync(stream, hf.Brightness, cancellationToken).ConfigureAwait(false);
+        else if (picture is IHDRPicture<ushort> hdr)
             await WritePlaneAsync(stream, hdr.Brightness, cancellationToken).ConfigureAwait(false);
         await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
         return lease;
@@ -46,72 +54,62 @@ public static class PicturePayloadCodec
     public static async ValueTask<IPicture> ReadAsync(IsolationPayloadReference reference, IIsolationPayloadResolver resolver, CancellationToken cancellationToken = default)
     {
         var d = reference.Media ?? throw new InvalidDataException("Picture payload has no media descriptor.");
-        if (d.LayoutVersion != 1) throw new InvalidDataException($"Unsupported picture payload layout {d.LayoutVersion}.");
+        if (d.LayoutVersion is not (1 or 2) || d.UsesFloat16 != (d.LayoutVersion == 2)) throw new InvalidDataException($"Unsupported picture payload layout {d.LayoutVersion}.");
+        if (d.UsesFloat16 && d.BitsPerChannel != 16) throw new InvalidDataException("FP16 payload channels must be 16 bits.");
         int pixels = ValidateDimensions(d.Width, d.Height);
         int bytes = d.BitsPerChannel switch { 8 => 1, 16 => 2, _ => throw new InvalidDataException("Picture payload bit depth must be 8 or 16.") };
         long channelLength = checked((long)pixels * bytes);
-        long floatLength = checked((long)pixels * sizeof(float));
+        long halfLength = checked((long)pixels * sizeof(ushort));
         if (d.RedLength != channelLength || d.GreenLength != channelLength || d.BlueLength != channelLength
-            || d.AlphaLength != (d.HasAlpha ? floatLength : 0)
-            || d.BrightnessLength != (d.HasHdrBrightness ? floatLength : 0)
+            || d.AlphaLength != (d.HasAlpha ? halfLength : 0)
+            || d.BrightnessLength != (d.HasHdrBrightness ? halfLength : 0)
             || reference.Length != checked(channelLength * 3 + d.AlphaLength + d.BrightnessLength))
             throw new InvalidDataException("Picture payload plane lengths are invalid.");
 
         await using var stream = await resolver.OpenReadAsync(reference, cancellationToken).ConfigureAwait(false);
-        if (d.BitsPerChannel == 8)
-        {
-            var picture = new Picture8bpp(d.Width, d.Height);
-            await ReadExactlyAsync(stream, picture.r, cancellationToken).ConfigureAwait(false);
-            await ReadExactlyAsync(stream, picture.g, cancellationToken).ConfigureAwait(false);
-            await ReadExactlyAsync(stream, picture.b, cancellationToken).ConfigureAwait(false);
-            if (d.HasAlpha)
-            {
-                picture.a = new float[pixels];
-                await ReadPlaneAsync(stream, picture.a, cancellationToken).ConfigureAwait(false);
-                picture.HasAlphaChannel = true;
-            }
-            return picture;
-        }
+        var red = await ReadColorPlaneAsync(stream, pixels, d, cancellationToken).ConfigureAwait(false);
+        var green = await ReadColorPlaneAsync(stream, pixels, d, cancellationToken).ConfigureAwait(false);
+        var blue = await ReadColorPlaneAsync(stream, pixels, d, cancellationToken).ConfigureAwait(false);
+        var alpha = d.HasAlpha ? await ReadHalfPlaneAsync(stream, pixels, cancellationToken).ConfigureAwait(false) : null;
+        return d.HasHdrBrightness
+            ? HDRPictureFP16.FromOwnedChannels(d.Width, d.Height, red, green, blue, alpha,
+                await ReadHalfPlaneAsync(stream, pixels, cancellationToken).ConfigureAwait(false), d.MaximumBrightness)
+            : PictureFP16.FromOwnedChannels(d.Width, d.Height, red, green, blue, alpha);
+    }
 
-        Picture16bpp result = d.HasHdrBrightness ? new HDRPicture16bpp(d.Width, d.Height) : new Picture16bpp(d.Width, d.Height);
-        await ReadPlaneAsync(stream, result.r, cancellationToken).ConfigureAwait(false);
-        await ReadPlaneAsync(stream, result.g, cancellationToken).ConfigureAwait(false);
-        await ReadPlaneAsync(stream, result.b, cancellationToken).ConfigureAwait(false);
-        if (d.HasAlpha)
-        {
-            result.a = new float[pixels];
-            await ReadPlaneAsync(stream, result.a, cancellationToken).ConfigureAwait(false);
-            result.HasAlphaChannel = true;
-        }
-        if (result is HDRPicture16bpp hdr)
-        {
-            hdr.Brightness = new float[pixels];
-            hdr.MaximumBrightness = d.MaximumBrightness;
-            await ReadPlaneAsync(stream, hdr.Brightness, cancellationToken).ConfigureAwait(false);
-        }
+    private static async Task<Half[]> ReadColorPlaneAsync(Stream stream, int pixels, IsolationMediaDescriptor d, CancellationToken ct)
+    {
+        if (d.UsesFloat16) return await ReadHalfPlaneAsync(stream, pixels, ct).ConfigureAwait(false);
+        var data = new byte[checked(pixels * (d.BitsPerChannel / 8))];
+        await ReadExactlyAsync(stream, data, ct).ConfigureAwait(false);
+        var result = new Half[pixels];
+        for (int i = 0; i < pixels; i++) result[i] = (Half)(d.BitsPerChannel == 8 ? data[i] / 255f
+            : System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(i * 2, 2)) / 65535f);
         return result;
     }
 
     private static IsolationMediaDescriptor CreateDescriptor(IPicture picture, int pixels)
     {
-        int bytes = picture.BitPerPixel.Value switch { 8 => 1, 16 => 2, _ => throw new NotSupportedException("Only 8-bit and 16-bit pictures can cross the isolation boundary.") };
+        int bytes = picture.BitPerPixel.Value switch { 116 => 2, 8 => 1, 16 => 2, _ => throw new NotSupportedException("Only 8-bit and 16-bit pictures can cross the isolation boundary.") };
         long channelLength = checked((long)pixels * bytes);
-        long floatLength = checked((long)pixels * sizeof(float));
-        bool hasAlpha = picture.HasAlphaChannel && picture.GetSpecificChannel(IPicture.ChannelId.Alpha) is float[] { Length: > 0 };
-        bool hdr = picture is IHDRPicture<ushort>;
+        long halfLength = checked((long)pixels * sizeof(ushort));
+        bool hasAlpha = picture.HasAlphaChannel && picture.GetSpecificChannel(IPicture.ChannelId.Alpha) is Half[] { Length: > 0 };
+        bool hdr = picture is IHDRPicture<Half> or IHDRPicture<ushort>;
         return new()
         {
+            LayoutVersion = picture is IPicture<Half> ? 2 : 1,
+            UsesFloat16 = picture is IPicture<Half>,
             Width = picture.Width,
             Height = picture.Height,
-            BitsPerChannel = picture.BitPerPixel.Value,
+            BitsPerChannel = picture is IPicture<Half> ? 16 : picture.BitPerPixel.Value,
             HasAlpha = hasAlpha,
             HasHdrBrightness = hdr,
-            MaximumBrightness = hdr ? ((IHDRPicture<ushort>)picture).MaximumBrightness : 0,
+            MaximumBrightness = picture is IHDRPicture<Half> hf ? hf.MaximumBrightness : hdr ? ((IHDRPicture<ushort>)picture).MaximumBrightness : Half.Zero,
             RedLength = channelLength,
             GreenLength = channelLength,
             BlueLength = channelLength,
-            AlphaLength = hasAlpha ? floatLength : 0,
-            BrightnessLength = hdr ? floatLength : 0,
+            AlphaLength = hasAlpha ? halfLength : 0,
+            BrightnessLength = hdr ? halfLength : 0,
         };
     }
 
@@ -135,9 +133,16 @@ public static class PicturePayloadCodec
     private static ValueTask WritePlaneAsync<T>(Stream stream, T[] values, CancellationToken cancellationToken) where T : unmanaged
         => stream.WriteAsync(MemoryMarshal.AsBytes<T>(values.AsSpan()).ToArray(), cancellationToken);
 
+    private static async Task<Half[]> ReadHalfPlaneAsync(Stream stream, int pixels, CancellationToken cancellationToken)
+    {
+        var values = GC.AllocateUninitializedArray<Half>(pixels);
+        await ReadPlaneAsync(stream, values, cancellationToken).ConfigureAwait(false);
+        return values;
+    }
+
     private static async Task ReadPlaneAsync<T>(Stream stream, T[] values, CancellationToken cancellationToken) where T : unmanaged
     {
-        var bytes = new byte[checked(values.Length * Marshal.SizeOf<T>())];
+        var bytes = new byte[MemoryMarshal.AsBytes<T>(values.AsSpan()).Length];
         await ReadExactlyAsync(stream, bytes, cancellationToken).ConfigureAwait(false);
         MemoryMarshal.Cast<byte, T>(bytes).CopyTo(values);
     }

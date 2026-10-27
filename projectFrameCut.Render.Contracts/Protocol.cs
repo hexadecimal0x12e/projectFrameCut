@@ -334,6 +334,7 @@ public sealed class OpenProjectRequest
     [ProtoMember(9)] public int FrameRate { get; set; }
     [ProtoMember(10)] public string CacheNamespace { get; set; } = string.Empty;
     [ProtoMember(11)] public List<ProjectExternalSourceApproval> AllowedExternalSources { get; set; } = [];
+    [ProtoMember(12)] public string CacheRoot { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -349,6 +350,7 @@ public sealed class RenderSession
     [ProtoMember(8)] public string SnapshotHash { get; set; } = string.Empty;
     [ProtoMember(9)] public FrameHashIndex HashIndex { get; set; } = new();
     [ProtoMember(10)] public List<Guid> CacheableClipIds { get; set; } = [];
+    [ProtoMember(11)] public string CacheRoot { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -437,6 +439,7 @@ public enum PreviewPixelFormat
     [ProtoEnum] Rgba16FloatScRgb = 1,
     [ProtoEnum] VfdPicture = 2,
     [ProtoEnum] PngImage = 3,
+    [ProtoEnum] PreviewFrame = 4,
 }
 
 [ProtoContract]
@@ -482,6 +485,7 @@ public sealed class ClipPreviewRequest
     [ProtoMember(9)] public string? VectorClipJson { get; set; }
     [ProtoMember(10)] public bool BeforeLayout { get; set; }
     [ProtoMember(12)] public bool UsePreviewMetadata { get; set; }
+    [ProtoMember(13)] public bool DisableSourceFrameCache { get; set; }
 }
 
 [ProtoContract]
@@ -518,6 +522,7 @@ public sealed class StartDynamicPreviewRequest
     [ProtoMember(17)] public bool EnableMemoryBudget { get; set; }
     [ProtoMember(18)] public long MaxBufferedBytes { get; set; }
     [ProtoMember(19)] public bool UsePreviewMetadata { get; set; }
+    [ProtoMember(20)] public bool DisableSourceFrameCache { get; set; }
 }
 
 [ProtoContract]

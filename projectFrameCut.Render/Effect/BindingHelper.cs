@@ -246,6 +246,7 @@ namespace projectFrameCut.Render.Effect
                 {
                     Id = fieldId,
                     FieldType = descriptor.FieldType,
+                    DataFormat = descriptor.DataFormat,
                     Value = (descriptor.FieldType.HasFlag(EffectArgumentFieldType.Any)
                         ? rawValue : EffectParamConvert.Normalize(rawValue)) ?? new object(),
                     DefaultValue = descriptor.DefaultValue,
@@ -410,7 +411,7 @@ namespace projectFrameCut.Render.Effect
         public static Dictionary<string, IEffect>? RebuildAllEffects(
             IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders,
             Dictionary<string, IEffect>? existingEffects,
-            RenderAPIBase.ClipAndTrack.IClip? clip = null)
+            RenderAPIBase.ClipAndTrack.IClip? clip = null, object? inputDataFormat = null)
         {
             var newEffects = new Dictionary<string, IEffect>();
             bool dynamicGraph = DynamicEffectBindings.RequiresGraph(effectProviders);
@@ -439,7 +440,7 @@ namespace projectFrameCut.Render.Effect
                 {
                     Rendering.TransformProcessing.ValidateProviders(effectProviders);
                     MaterializeFields(effectProviders.Values);
-                    types = dynamicGraph ? new(effectProviders) : null;
+                    types = new(effectProviders, inputDataFormat: inputDataFormat);
                     inlineValues = dynamicGraph ? new InlineValueGraph(effectProviders, types) : null;
                     if (dynamicGraph && ValidateBindings(effectProviders, types) is { Count: > 0 } errors)
                         throw new InvalidOperationException("Invalid effect graph: " + string.Join(" ", errors.Select(e => e.Message)));
@@ -467,7 +468,7 @@ namespace projectFrameCut.Render.Effect
                             continue;
                         }
 
-                        var effects = inlineValues?.FindEffects(provider.Id) ?? BuildProviderEffects(provider);
+                        var effects = inlineValues?.FindEffects(provider.Id) ?? BuildProviderEffects(provider, types);
 
                         if (!provider.Target.HasFlag(EffectTarget.ValueProvider)
                             && effects.Any(e => e.TypeOfEffect.GetStage() != provider.Stage))
@@ -581,7 +582,7 @@ namespace projectFrameCut.Render.Effect
             }
         }
 
-        internal static IEffect[] BuildProviderEffects(IEffectProvider provider)
+        internal static IEffect[] BuildProviderEffects(IEffectProvider provider, EffectFieldTypeResolution? types = null)
         {
             provider.ValidateOutputFields();
             bool hadPersistedImplementType = provider.MetaData.TryGetValue(
@@ -601,7 +602,7 @@ namespace projectFrameCut.Render.Effect
                 ?? EffectHelper.GetPicturePreference(provider.TypeName)
                 ?? persistedImplementType
                 ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
-            try { return provider.Build(); }
+            try { return provider.BuildForDataFormat(types?.GetBuildDataFormat(provider)); }
             finally
             {
                 if (hadPersistedImplementType)
@@ -1210,6 +1211,7 @@ namespace projectFrameCut.Render.Effect
                         {
                             Id = fieldKey,
                             FieldType = field.FieldType,
+                            DataFormat = field.DataFormat,
                             BoundProviderId = sourceId,
                             StaticFallbackValue = fallback,
                             DefaultValue = field.DefaultValue,
@@ -1223,6 +1225,7 @@ namespace projectFrameCut.Render.Effect
                         {
                             Id = fieldKey,
                             FieldType = field.FieldType,
+                            DataFormat = field.DataFormat,
                             Value = (field.FieldType.HasFlag(EffectArgumentFieldType.Any)
                                 ? fallback : EffectParamConvert.Normalize(fallback)) ?? new object(),
                             DefaultValue = field.DefaultValue,

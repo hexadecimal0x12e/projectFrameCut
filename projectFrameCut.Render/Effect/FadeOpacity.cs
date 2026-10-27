@@ -9,8 +9,12 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class FadeOpacityEffect_IPicture : INormalEffect
+    public class FadeOpacityEffect_IPicture : FadeOpacityEffect<IPicture> { }
+
+    public class FadeOpacityEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new FadeOpacityEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -45,7 +49,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            var effect = new FadeOpacityEffect_IPicture
+            var effect = new FadeOpacityEffect<TPicture>
             {
                 Opacity = DynamicParam.ToFloat(parameters.GetValueOrDefault("Opacity")),
             };
@@ -55,10 +59,10 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
-            float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
-            return PictureEffectChannels.PreserveHdr(OpacityEffect.Process(source, opacity), source);
+            Half opacity = Half.Clamp((Half)DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity), Half.Zero, Half.One);
+            return PictureEffectChannels.PreserveHdr(PictureCalculation<TPicture>.Opacity(source, opacity), source);
         }
     }
 

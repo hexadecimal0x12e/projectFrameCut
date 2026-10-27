@@ -33,8 +33,7 @@ internal sealed class RemoteVideoWriter : IVideoWriter
     public bool SupportCodec(string codecName) => Invoke<IsolationVideoWriterCodecRequest, IsolationBooleanResponse>(
         RenderOperation.IsolationVideoWriterSupportsCodec, new() { ObjectId = _objectId, CodecName = codecName }).Value;
     public void Finish() => Apply(Invoke<IsolationVideoWriterState, IsolationVideoWriterState>(RenderOperation.IsolationFinishVideoWriter, State()));
-    public void Append(IPicture<ushort> picture) => AppendCore(picture);
-    public void Append(IPicture<byte> picture) => AppendCore(picture);
+    public void Append(IPicture<Half> picture) => AppendCore(picture);
 
     private void AppendCore(IPicture picture)
     {

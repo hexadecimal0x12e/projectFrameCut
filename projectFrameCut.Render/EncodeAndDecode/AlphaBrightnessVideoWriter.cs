@@ -35,18 +35,18 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
     public bool PreferToSpeed { get; set; }
     public Dictionary<string, string>? Metadata { get; set; }
     public uint DurationWritten => _index;
-    public IPicture.PicturePixelMode? TargetPPB => IPicture.PicturePixelMode.UShortPicture;
+    public IPicture.PicturePixelMode? TargetPPB => IPicture.PicturePixelMode.Float16Picture;
     public AuxiliaryVideoChannels Channels { get; set; }
 
     private IVideoWriter? _main;
-    private VideoWriter? _alpha;
-    private VideoWriter? _brightness;
+    private VideoWriterFP16? _alpha;
+    private VideoWriterFP16? _brightness;
     private string? _workDirectory;
     private string? _mainPath;
     private string? _alphaPath;
     private string? _brightnessPath;
     private uint _index;
-    private float _maximumBrightness;
+    private Half _maximumBrightness;
     private bool _initialized;
     private bool _finished;
 
@@ -64,7 +64,7 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
         _workDirectory = Path.Combine(GlobalPluginHelper.GetCacheRoot(), "pjfc_multistream", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_workDirectory);
         _mainPath = Path.Combine(_workDirectory, "main.mkv");
-        _main = FFmpegHelper.IsHardwareVideoEncoder(CodecName) ? new VideoWriterHWAccel() : new VideoWriter();
+        _main = FFmpegHelper.IsHardwareVideoEncoder(CodecName) ? new VideoWriterHWAccelFP16() : new VideoWriterFP16();
         _main.Width = Width;
         _main.Height = Height;
         _main.FramePerSecond = FramePerSecond;
@@ -89,28 +89,24 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
         _initialized = true;
     }
 
-    private VideoWriter CreateAuxiliaryWriter(string path)
+    private VideoWriterFP16 CreateAuxiliaryWriter(string path)
     {
-        var w = new VideoWriter { Width = Width, Height = Height, FramePerSecond = FramePerSecond, OutputPath = path, CodecName = "ffv1", PixelFormat = "AV_PIX_FMT_GRAY16LE", BitRate = BitRate };
+        var w = new VideoWriterFP16 { Width = Width, Height = Height, FramePerSecond = FramePerSecond, OutputPath = path, CodecName = "ffv1", PixelFormat = "AV_PIX_FMT_GRAY16LE", BitRate = BitRate };
         w.Initialize();
         return w;
     }
 
-    public void Append(HDRPicture16bpp picture) => Append((IPicture<ushort>)picture);
-
-    public void Append(IPicture<byte> picture) => throw new NotSupportedException("The multistream writer requires 16-bit pictures.");
-
-    public void Append(IPicture<ushort> picture)
+    public void Append(IPicture<Half> picture)
     {
         if (!_initialized || _main is null) throw new InvalidOperationException("Initialize before appending frames.");
         if (picture.Width != Width || picture.Height != Height) throw new ArgumentException("Frame dimensions do not match the writer.");
         int pixels = checked(Width * Height);
         if (_alpha is not null && picture.HasAlphaChannel && picture.a?.Length != pixels)
             throw new InvalidDataException($"Frame #{_index} has an invalid alpha channel.");
-        if (_brightness is not null && picture is IHDRPicture<ushort> hdrSource && hdrSource.Brightness?.Length != pixels)
+        if (_brightness is not null && picture is IHDRPicture<Half> hdrSource && hdrSource.Brightness?.Length != pixels)
             throw new InvalidDataException($"Frame #{_index} has an invalid HDR brightness channel.");
 
-        if (picture is HDRPicture16bpp hdrPicture)
+        if (picture is IHDRPicture<Half> hdrPicture)
         {
             using var sdr = hdrPicture.DegradeToSDR(HDRImageDegradeToSDRMode.DiscardBrightnessChannel);
             _main.Append(sdr);
@@ -119,8 +115,8 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
         {
             _main.Append(picture);
         }
-        if (picture is IHDRPicture<ushort> hdr && float.IsFinite(hdr.MaximumBrightness) && hdr.MaximumBrightness > 0f)
-            _maximumBrightness = Math.Max(_maximumBrightness, hdr.MaximumBrightness);
+        if (picture is IHDRPicture<Half> hdr && Half.IsFinite(hdr.MaximumBrightness) && hdr.MaximumBrightness > Half.Zero)
+            _maximumBrightness = Half.Max(_maximumBrightness, hdr.MaximumBrightness);
         if (_alpha is not null)
         {
             using var alpha = CreateGrayPicture(picture, false);
@@ -134,35 +130,35 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
         _index++;
     }
 
-    private Picture16bpp CreateGrayPicture(IPicture<ushort> source, bool brightness)
+    private PictureFP16 CreateGrayPicture(IPicture<Half> source, bool brightness)
     {
         int pixels = checked(Width * Height);
-        ushort[] values = new ushort[pixels];
-        if (brightness && source is IHDRPicture<ushort> hdr && hdr.Brightness?.Length == pixels)
+        Half[] values = new Half[pixels];
+        if (brightness && source is IHDRPicture<Half> hdr && hdr.Brightness?.Length == pixels)
         {
-            for (int i = 0; i < pixels; i++) values[i] = (ushort)(Math.Clamp(float.IsFinite(hdr.Brightness[i]) ? hdr.Brightness[i] : 0f, 0f, 1f) * 65535f + .5f);
+            for (int i = 0; i < pixels; i++) values[i] = PictureFP16.Unit((float)hdr.Brightness[i]);
         }
         else if (!brightness && source.HasAlphaChannel && source.a?.Length == pixels)
         {
-            for (int i = 0; i < pixels; i++) values[i] = (ushort)(Math.Clamp(float.IsFinite(source.a[i]) ? source.a[i] : 1f, 0f, 1f) * 65535f + .5f);
+            for (int i = 0; i < pixels; i++) values[i] = Half.IsFinite(source.a[i]) ? PictureFP16.Unit((float)source.a[i]) : Half.One;
         }
         else if (!brightness)
         {
-            Array.Fill(values, ushort.MaxValue);
+            Array.Fill(values, Half.One);
         }
-        return new Picture16bpp(Width, Height) { r = values, g = (ushort[])values.Clone(), b = (ushort[])values.Clone() };
+        return PictureFP16.FromOwnedChannels(Width, Height, values, (Half[])values.Clone(), (Half[])values.Clone());
     }
 
     public void Finish()
     {
         if (_finished) return;
         _main?.Finish(); _alpha?.Finish(); _brightness?.Finish();
-        if (_index > 0 && _mainPath is not null) Mux(_mainPath, _alphaPath, _brightnessPath, OutputPath, _maximumBrightness > 0f ? _maximumBrightness : 1000f);
+        if (_index > 0 && _mainPath is not null) Mux(_mainPath, _alphaPath, _brightnessPath, OutputPath, _maximumBrightness > Half.Zero ? _maximumBrightness : (Half)1000);
         _finished = true;
         Log($"[AlphaBrightnessVideoWriter] Finished {OutputPath}, {_index} frames, channels={Channels}.");
     }
 
-    private static void Mux(string main, string? alpha, string? brightness, string output, float maximumBrightness)
+    private static void Mux(string main, string? alpha, string? brightness, string output, Half maximumBrightness)
     {
         var inputs = new List<(string path, string role)> { (main, "main") };
         if (alpha is not null) inputs.Add((alpha, AlphaRole));

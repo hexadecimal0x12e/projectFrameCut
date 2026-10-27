@@ -18,7 +18,7 @@ namespace projectFrameCut.Render.Compose
         public static bool CaptureStackTraces { get; set; }
         public static IMixture Default => EffectRuntimeDefaults.Mixture;
 
-        private IPicture ResizeTop(IPicture source, int width, int height) => new EffectPictureResizer(ImplementType).ResizePicture(source, width, height);
+        private IPicture ResizeTop<TPicture>(TPicture source, int width, int height) where TPicture : IPicture => new EffectPictureResizer(ImplementType).ResizePicture(source, width, height);
         public virtual EffectImplementType ImplementType => EffectImplementType.IPicture;
         public string TypeName => "ClassicOverlayMixture";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.Compose
         public Dictionary<string, object> Parameters { get; set; }
         public string? BindedEffectProvidingSystemID { get; set; }
 
-        private bool UseApproximatePath => Parameters?.GetValueOrDefault("AccuracyMode")?.ToString() switch
+        protected bool UseApproximatePath => Parameters?.GetValueOrDefault("AccuracyMode")?.ToString() switch
         {
             "Accurate" => false,
             "Approximate" => true,
@@ -46,7 +46,7 @@ namespace projectFrameCut.Render.Compose
             return MixInternal(basePicture, topPicture, targetPPB, false, topStartX, topStartY, targetWidth, targetHeight);
         }
 
-        private IPicture MixInternal(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, bool resizeTopWhenDimensionMismatch, int topStartX, int topStartY, int targetWidth, int targetHeight)
+        protected IPicture MixInternal<TPicture>(TPicture basePicture, TPicture topPicture, IPicture.PicturePixelMode targetPPB, bool resizeTopWhenDimensionMismatch, int topStartX, int topStartY, int targetWidth, int targetHeight) where TPicture : IPicture
         {
             if (targetWidth <= 0 || targetHeight <= 0)
                 throw new ArgumentException("targetWidth and targetHeight must be positive.");
@@ -65,10 +65,11 @@ namespace projectFrameCut.Render.Compose
             {
                 if (resizeTopWhenDimensionMismatch && (topPicture.Width != targetWidth || topPicture.Height != targetHeight))
                 {
-                    topPicture = resizedTop = ResizeTop(topPicture, targetWidth, targetHeight);
+                    resizedTop = ResizeTop(topPicture, targetWidth, targetHeight);
+                    topPicture = (TPicture)resizedTop;
                     topStartX = topStartY = 0;
                 }
-                bool custom = GetType() != typeof(ClassicOverlayMixture);
+                bool custom = GetType() != typeof(ClassicOverlayMixture) && GetType() != typeof(ClassicOverlayMixture<TPicture>);
                 PictureCompositor.ChannelBlend? blend = custom ? ((int)targetPPB == 8 ? Blend8 : Blend16) : null;
                 var result = PictureCompositor.Mix(basePicture, topPicture, targetPPB, topStartX, topStartY,
                     targetWidth, targetHeight, CompositionMode.Normal, blend, custom ? BlendBrightness : null);
@@ -89,220 +90,89 @@ namespace projectFrameCut.Render.Compose
             }
         }
 
-        private (Array Color, float[] Alpha) Blend8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int count)
+        private (Array Color, Half[] Alpha) Blend8(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int count)
         {
             var result = UseApproximatePath ? ApproximateOverlay8(top, bottom, topAlpha, bottomAlpha, count)
                 : Overlay8(top, bottom, topAlpha, bottomAlpha, count);
             return (result.Color, result.Alpha);
         }
 
-        private (Array Color, float[] Alpha) Blend16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int count)
+        private (Array Color, Half[] Alpha) Blend16(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int count)
         {
             var result = UseApproximatePath ? ApproximateOverlay16(top, bottom, topAlpha, bottomAlpha, count)
                 : Overlay16(top, bottom, topAlpha, bottomAlpha, count);
             return (result.Color, result.Alpha);
         }
 
-        private (Array Color, float[] Alpha) BlendBrightness(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int count)
+        private (Half[] Color, Half[] Alpha) BlendBrightness(Half[] top, Half[] bottom, Half[] topAlpha, Half[] bottomAlpha, int count)
         {
             var result = UseApproximatePath ? ApproximateOverlayHdr(top, bottom, topAlpha, bottomAlpha, count)
                 : OverlayHdr(top, bottom, topAlpha, bottomAlpha, count);
             return (result.Color, result.Alpha);
         }
 
+        public virtual IEffect WithPictureType<TPicture>() where TPicture : IPicture =>
+            ImplementType == EffectImplementType.IPicture ? new ClassicOverlayMixture<TPicture>() : TypedPictureEffect.Create<TPicture>(this);
+
         public virtual IEffect WithParameters(Dictionary<string, object> parameters) => new ClassicOverlayMixture
         {
             Parameters = parameters
         };
-        protected virtual (byte[] Color, float[] Alpha) Overlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
-        {
-            var outC = new byte[pixelCount];
-            var outA = new float[pixelCount];
-            OverlayBlend8Scalar(top, bottom, topAlpha, bottomAlpha, outC, outA, pixelCount);
-            return (outC, outA);
-        }
+        protected virtual (byte[] Color, Half[] Alpha) Overlay8(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount) =>
+            ComputeOverlay8(top, bottom, topAlpha, bottomAlpha, pixelCount);
 
-        protected virtual (ushort[] Color, float[] Alpha) Overlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        private static (byte[] Color, Half[] Alpha) ComputeOverlay8(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount)
         {
-            var outC = new ushort[pixelCount];
-            var outA = new float[pixelCount];
-            OverlayBlend16Simd(top, bottom, topAlpha, bottomAlpha, outC, outA, pixelCount);
-            return (outC, outA);
-        }
-
-        protected virtual (float[] Color, float[] Alpha) OverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
-        {
-            var outC = new float[pixelCount];
-            var outA = new float[pixelCount];
-            OverlayBlendFloat(top, bottom, topAlpha, bottomAlpha, outC, outA, pixelCount);
-            return (outC, outA);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private static void OverlayBlend8Scalar(float[] a, float[] b, float[] aAlpha, float[] bAlpha, byte[] outC, float[] outA, int pixelCount)
-        {
+            var colors = new byte[pixelCount];
+            var alpha = new Half[pixelCount];
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0;
-                    outA[i] = 0f;
-                }
-                else
-                {
-                    float aC = a[i] * aA / outAlpha;
-                    float bC = b[i] * bA * (1f - aA) / outAlpha;
-                    float outColor = aC + bC;
-                    outC[i] = (byte)Math.Clamp(outColor / 257f, 0f, 255f);
-                    outA[i] = outAlpha;
-                }
+                Half weight = bottomAlpha[i] * (Half.One - topAlpha[i]), a = topAlpha[i] + weight;
+                alpha[i] = a < (Half)1e-6f ? Half.Zero : a;
+                colors[i] = a < (Half)1e-6f ? (byte)0 : (byte)Math.Clamp((top[i] * (float)topAlpha[i] + bottom[i] * (float)weight) / (float)a / 257f, 0, 255);
             }
+            return (colors, alpha);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private static void OverlayBlend16Simd(float[] a, float[] b, float[] aAlpha, float[] bAlpha, ushort[] outC, float[] outA, int pixelCount)
-        {
-            int simdWidth = Vector<float>.Count;
-            var one = Vector<float>.One;
-            var zero = Vector<float>.Zero;
-            var epsilon = new Vector<float>(1e-6f);
-            var max16 = new Vector<float>(65535f);
-            int i = 0;
-            for (; i <= pixelCount - simdWidth; i += simdWidth)
-            {
-                var vA = new Vector<float>(a, i);
-                var vB = new Vector<float>(b, i);
-                var vAa = new Vector<float>(aAlpha, i);
-                var vBa = new Vector<float>(bAlpha, i);
-                var vOutAlpha = vAa + vBa * (one - vAa);
-                var vAC = vA * vAa;
-                var vBC = vB * vBa * (one - vAa);
-                var vOutColor = (vAC + vBC) / vOutAlpha;
-                vOutColor = Vector.Min(Vector.Max(vOutColor, zero), max16);
-                var mask = Vector.GreaterThanOrEqual(vOutAlpha, epsilon);
-                vOutColor = Vector.ConditionalSelect(mask, vOutColor, zero);
-                vOutAlpha = Vector.ConditionalSelect(mask, vOutAlpha, zero);
-                // Write back: store alpha via CopyTo, convert color via scalar per-element
-                vOutAlpha.CopyTo(outA, i);
-                for (int j = 0; j < simdWidth; j++)
-                    outC[i + j] = (ushort)vOutColor[j];
-            }
+        protected virtual (ushort[] Color, Half[] Alpha) Overlay16(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount) =>
+            ComputeOverlay16(top, bottom, topAlpha, bottomAlpha, pixelCount);
 
-            // Remainder: scalar fallback
-            for (; i < pixelCount; i++)
-            {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0;
-                    outA[i] = 0f;
-                }
-                else
-                {
-                    float aC = a[i] * aA / outAlpha;
-                    float bC = b[i] * bA * (1f - aA) / outAlpha;
-                    outC[i] = (ushort)Math.Clamp(aC + bC, 0f, 65535f);
-                    outA[i] = outAlpha;
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private static void OverlayBlendFloat(float[] a, float[] b, float[] aAlpha, float[] bAlpha, float[] outC, float[] outA, int pixelCount)
+        private static (ushort[] Color, Half[] Alpha) ComputeOverlay16(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount)
         {
+            var colors = new ushort[pixelCount];
+            var alpha = new Half[pixelCount];
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = aAlpha[i];
-                float bA = bAlpha[i];
-                float outAlpha = aA + bA * (1f - aA);
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
-                else
-                {
-                    float aC = a[i] * aA / outAlpha;
-                    float bC = b[i] * bA * (1f - aA) / outAlpha;
-                    outC[i] = Math.Clamp(aC + bC, 0f, 65535f);
-                    outA[i] = outAlpha;
-                }
+                Half weight = bottomAlpha[i] * (Half.One - topAlpha[i]), a = topAlpha[i] + weight;
+                alpha[i] = a < (Half)1e-6f ? Half.Zero : a;
+                colors[i] = a < (Half)1e-6f ? (ushort)0 : (ushort)Math.Clamp((top[i] * (float)topAlpha[i] + bottom[i] * (float)weight) / (float)a, 0, 65535);
             }
+            return (colors, alpha);
         }
 
-        protected virtual (byte[] Color, float[] Alpha) ApproximateOverlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        protected virtual (Half[] Color, Half[] Alpha) OverlayHdr(Half[] top, Half[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount) =>
+            ComputeOverlayHdr(top, bottom, topAlpha, bottomAlpha, pixelCount);
+
+        private static (Half[] Color, Half[] Alpha) ComputeOverlayHdr(Half[] top, Half[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount)
         {
-            var outC = new byte[pixelCount];
-            var outA = new float[pixelCount];
+            var colors = new Half[pixelCount];
+            var alpha = new Half[pixelCount];
             for (int i = 0; i < pixelCount; i++)
             {
-                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0;
-                    outA[i] = 0f;
-                }
-                else
-                {
-                    float aC = top[i] * aA / outAlpha, bC = bottom[i] * bA * (1f - aA) / outAlpha;
-                    outC[i] = (byte)Math.Clamp((aC + bC) / 257f, 0f, 255f);
-                    outA[i] = outAlpha;
-                }
+                alpha[i] = HalfChannelMath.Overlay(topAlpha[i], bottomAlpha[i]);
+                colors[i] = HalfChannelMath.Blend(top[i], bottom[i], topAlpha[i], bottomAlpha[i]);
             }
-
-            return (outC, outA);
+            return (colors, alpha);
         }
 
-        protected virtual (ushort[] Color, float[] Alpha) ApproximateOverlay16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
-        {
-            var outC = new ushort[pixelCount];
-            var outA = new float[pixelCount];
-            for (int i = 0; i < pixelCount; i++)
-            {
-                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0;
-                    outA[i] = 0f;
-                }
-                else
-                {
-                    float aC = top[i] * aA / outAlpha, bC = bottom[i] * bA * (1f - aA) / outAlpha;
-                    outC[i] = (ushort)Math.Clamp(aC + bC, 0f, 65535f);
-                    outA[i] = outAlpha;
-                }
-            }
+        protected virtual (byte[] Color, Half[] Alpha) ApproximateOverlay8(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount) =>
+            ComputeOverlay8(top, bottom, topAlpha, bottomAlpha, pixelCount);
 
-            return (outC, outA);
-        }
+        protected virtual (ushort[] Color, Half[] Alpha) ApproximateOverlay16(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount) =>
+            ComputeOverlay16(top, bottom, topAlpha, bottomAlpha, pixelCount);
 
-        protected virtual (float[] Color, float[] Alpha) ApproximateOverlayHdr(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
-        {
-            var outC = new float[pixelCount];
-            var outA = new float[pixelCount];
-            for (int i = 0; i < pixelCount; i++)
-            {
-                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
-                if (outAlpha < 1e-6f)
-                {
-                    outC[i] = 0f;
-                    outA[i] = 0f;
-                }
-                else
-                {
-                    float aC = top[i] * aA / outAlpha, bC = bottom[i] * bA * (1f - aA) / outAlpha;
-                    outC[i] = Math.Clamp(aC + bC, 0f, 65535f);
-                    outA[i] = outAlpha;
-                }
-            }
-
-            return (outC, outA);
-        }
+        protected virtual (Half[] Color, Half[] Alpha) ApproximateOverlayHdr(Half[] top, Half[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount) =>
+            ComputeOverlayHdr(top, bottom, topAlpha, bottomAlpha, pixelCount);
     }
 
     /// <summary>

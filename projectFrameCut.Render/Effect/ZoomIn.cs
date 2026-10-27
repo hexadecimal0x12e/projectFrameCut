@@ -9,8 +9,12 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ZoomInContinuousEffect : IContinuousEffect
+    public class ZoomInContinuousEffect : ZoomInContinuousEffect<IPicture> { }
+
+    public class ZoomInContinuousEffect<TPicture> : IContinuousEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new ZoomInContinuousEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -34,7 +38,7 @@ namespace projectFrameCut.Render.Effect
         public Dictionary<string, object> Parameters { get; set; } = new();
 
 
-        public IPicture Render(IPicture source, float progress, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, float progress, int targetWidth, int targetHeight)
         {
             double clampedProgress = Math.Clamp(progress, 0.0, 1.0);
 
@@ -50,15 +54,14 @@ namespace projectFrameCut.Render.Effect
 
             int startX = Math.Max(0, (source.Width - currentWidth) / 2);
             int startY = Math.Max(0, (source.Height - currentHeight) / 2);
-            var cropped = CropEffect.Process(source, startX, startY, currentWidth, currentHeight);
-            var result = cropped.Resize(targetWidth, targetHeight, preserveAspect: false);
-            return result;
+            using var cropped = CropEffectShared.CropAndProcess(source, startX, startY, currentWidth, currentHeight, 0);
+            return PictureCalculation<TPicture>.Resize((TPicture)cropped, targetWidth, targetHeight, false);
         }
 
 
         public IEffect WithParameters(Dictionary<string, object> parameters)
         {
-            return new ZoomInContinuousEffect
+            return new ZoomInContinuousEffect<TPicture>
             {
                 Parameters = parameters,
                 TargetX = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetX")),

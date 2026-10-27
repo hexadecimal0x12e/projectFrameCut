@@ -23,10 +23,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
             if (disposed)
                 return;
             disposed = true;
-            ReleaseNativeResources();
         }
 
-        partial void ReleaseNativeResources();
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Sharpen";
@@ -42,7 +40,10 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         public static List<string> ParametersNeeded { get; } = ["Amount"];
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
-            { "Amount", "float" }
+            {
+                "Amount",
+                "float"
+            }
         };
         public string TypeName => "Sharpen";
         public string? BindedEffectProvidingSystemID { get; set; }
@@ -65,28 +66,6 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
-        {
-            try
-            {
-                using var scope = nativeLock.EnterScope();
-                ObjectDisposedException.ThrowIf(disposed, this);
-                float amount = DynamicParam.Resolve(Parameters.GetValueOrDefault("Amount"), Amount);
-                var sw = Stopwatch.StartNew();
-                var(r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
-                FourChannelResult computeResult;
-                computeResult = ComputeSharpen(r, g, b, a, source.Width, amount);
-                var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height, computeResult.R, computeResult.G, computeResult.B, computeResult.A, sourceHasAlpha);
-                result = HwAccelEffectHelper.WithBrightness(result, source);
-                sw.Stop();
-                result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack { Elapsed = sw.Elapsed, OperationDisplayName = "Sharpen (GPU)", Operator = typeof(SharpenEffect_HwAccel), ProcessingFuncStackTrace = new StackTrace(true), Properties = new Dictionary<string, object> { { "Amount", amount } } }).ToList();
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Execute Sharpen effect", "HwAccelEngine");
-                throw;
-            }
-        }
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight) => ResidentEffectResult.Download(EffectPictureProcessing.Render(this, source, targetWidth, targetHeight));
     }
 }

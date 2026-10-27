@@ -41,7 +41,7 @@ internal sealed class DynamicMixtureGraph(DynamicEffectGraph graph) : IMixture, 
             return picture;
         try
         {
-            using var blank = Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+            using var blank = PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero);
             return EffectPictureProcessing.Mix(ClassicOverlayMixture.Default, blank, picture, targetPPB,
                 result.Position.TargetX, result.Position.TargetY, targetWidth, targetHeight);
         }

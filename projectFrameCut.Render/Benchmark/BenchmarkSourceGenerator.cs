@@ -627,7 +627,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f - 60,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 1f,
+                    FillB = (ushort)(1f * 65535), FillA = Half.One,
                 },
                 new TextEntry
                 {
@@ -638,7 +638,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f + 20,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(0.85f * 65535), FillG = (ushort)(0.85f * 65535),
-                    FillB = (ushort)(0.85f * 65535), FillA = 0.85f,
+                    FillB = (ushort)(0.85f * 65535), FillA = (Half)0.85f,
                 },
                 new TextEntry
                 {
@@ -649,7 +649,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f + 75,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(0.6f * 65535), FillG = (ushort)(0.6f * 65535),
-                    FillB = (ushort)(0.6f * 65535), FillA = 0.5f,
+                    FillB = (ushort)(0.6f * 65535), FillA = (Half)0.5f,
                 },
             ],
             Effects =
@@ -691,7 +691,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f - 40,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 1f,
+                    FillB = (ushort)(1f * 65535), FillA = Half.One,
                 },
                 new TextEntry
                 {
@@ -702,7 +702,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f + 30,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(0.7f * 65535), FillG = (ushort)(0.7f * 65535),
-                    FillB = (ushort)(0.7f * 65535), FillA = 0.6f,
+                    FillB = (ushort)(0.7f * 65535), FillA = (Half)0.6f,
                 },
                 new TextEntry
                 {
@@ -713,7 +713,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f + 80,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(0.5f * 65535), FillG = (ushort)(0.5f * 65535),
-                    FillB = (ushort)(0.5f * 65535), FillA = 0.4f,
+                    FillB = (ushort)(0.5f * 65535), FillA = (Half)0.4f,
                 },
             ],
             Effects =
@@ -775,7 +775,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f - 60,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 1f,
+                    FillB = (ushort)(1f * 65535), FillA = Half.One,
                 },
                 new TextEntry
                 {
@@ -786,7 +786,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f + 20,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(0.8f * 65535), FillG = (ushort)(0.8f * 65535),
-                    FillB = (ushort)(0.8f * 65535), FillA = 0.7f,
+                    FillB = (ushort)(0.8f * 65535), FillA = (Half)0.7f,
                 },
             ],
             Effects =
@@ -830,7 +830,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f - 50,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 1f,
+                    FillB = (ushort)(1f * 65535), FillA = Half.One,
                 },
                 new TextEntry
                 {
@@ -841,7 +841,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height / 2f + 30,
                     Alignment = TextAlignment.Center,
                     FillR = (ushort)(0.85f * 65535), FillG = (ushort)(0.85f * 65535),
-                    FillB = (ushort)(0.65f * 65535), FillA = 0.8f,
+                    FillB = (ushort)(0.65f * 65535), FillA = (Half)0.8f,
                 },
             ],
             Effects =
@@ -892,7 +892,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = 180,
                     Alignment = TextAlignment.Left,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.7f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.7f,
                 },
                 new TextEntry
                 {
@@ -903,7 +903,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = 260,
                     Alignment = TextAlignment.Left,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.7f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.7f,
                 },
                 new TextEntry
                 {
@@ -914,7 +914,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = 340,
                     Alignment = TextAlignment.Left,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.7f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.7f,
                 },
                 new TextEntry
                 {
@@ -925,7 +925,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = 420,
                     Alignment = TextAlignment.Left,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.7f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.7f,
                 },
                 new TextEntry
                 {
@@ -936,7 +936,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = 500,
                     Alignment = TextAlignment.Left,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.7f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.7f,
                 },
                 new TextEntry
                 {
@@ -947,7 +947,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = 580,
                     Alignment = TextAlignment.Left,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.7f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.7f,
                 },
             ],
         };
@@ -979,7 +979,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = height - 30,
                     Alignment = TextAlignment.Left,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.4f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.4f,
                 },
             ],
         };
@@ -1043,7 +1043,7 @@ namespace projectFrameCut.Render.Benchmark
                     Y = 12,
                     Alignment = TextAlignment.Right,
                     FillR = (ushort)(1f * 65535), FillG = (ushort)(1f * 65535),
-                    FillB = (ushort)(1f * 65535), FillA = 0.35f,
+                    FillB = (ushort)(1f * 65535), FillA = (Half)0.35f,
                 },
             ],
         };

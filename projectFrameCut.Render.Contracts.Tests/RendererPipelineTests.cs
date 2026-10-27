@@ -19,6 +19,39 @@ namespace projectFrameCut.Render.Contracts.Tests;
 public sealed class RendererPipelineTests
 {
     [TestMethod]
+    public async Task ChunkRenderSessionReusesInitializedClipsUntilTheSessionEnds()
+    {
+        int firstInit = 0, secondInit = 0, disposed = 0;
+        IPicture Frame(uint _) => PictureFP16.GenerateSolidColor(2, 1, Half.Zero, Half.Zero, Half.Zero, Half.One);
+        var first = Clip(Frame, duration: 6, initialize: () => firstInit++, dispose: () => disposed++);
+        var second = Clip(Frame, startFrame: 2, duration: 4, initialize: () => secondInit++, dispose: () => disposed++);
+        try
+        {
+            using (var session = new RenderClipSession([first, second]))
+            {
+                for (uint start = 0; start < 6; start += 2)
+                {
+                    var writer = Writer();
+                    writer.OnFrameWrite += (_, _) => { };
+                    using var builder = new VideoBuilder(writer) { StartFrame = start, Duration = 2, BlockWrite = true };
+                    var renderer = new Renderer
+                    {
+                        Clips = session.Clips, ClipSession = session, builder = builder,
+                        StartFrame = start, Duration = 2, MaxThreads = 1,
+                    };
+                    renderer.PrepareRender(default);
+                    await renderer.GoRender(default);
+                    Assert.AreEqual(1, firstInit);
+                    Assert.AreEqual(start == 0 ? 0 : 1, secondInit);
+                    Assert.AreEqual(0, disposed);
+                }
+            }
+            Assert.AreEqual(2, disposed);
+        }
+        finally { IRenderContext.Current = null; }
+    }
+
+    [TestMethod]
     public async Task WorkersCompleteOutOfOrderButOneCompositorWritesAndPublishesInOrder()
     {
         using var secondReady = new ManualResetEventSlim();
@@ -28,13 +61,13 @@ public sealed class RendererPipelineTests
         {
             if (frame == 2) Assert.IsTrue(secondReady.Wait(TimeSpan.FromSeconds(5), timeout.Token));
             decoded.Enqueue(frame);
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, Half.One);
         }, duration: 4);
         using var second = Clip(frame =>
         {
             decoded.Enqueue(frame + 4);
             secondReady.Set();
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(frame + 4), 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(frame + 4), 0, 0, Half.One);
         }, startFrame: 4, duration: 2);
         var written = new List<byte>();
         var previews = new List<byte>();
@@ -90,7 +123,7 @@ public sealed class RendererPipelineTests
         using var clip = Clip(frame =>
         {
             if (frame == 1) nextReady.Set();
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, Half.One);
         }, duration: 3);
         var written = new List<byte>();
         var writer = Writer();
@@ -119,7 +152,7 @@ public sealed class RendererPipelineTests
     [TestMethod]
     public async Task WriterCanConsumeFramesBeforePreviewGeneration()
     {
-        using var clip = Clip(_ => Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, 1));
+        using var clip = Clip(_ => Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, Half.One));
         using var builder = new VideoBuilder(Writer())
         {
             Duration = 1, EnablePreview = true, minFrameCountToGeneratePreview = 1,
@@ -152,7 +185,7 @@ public sealed class RendererPipelineTests
         IPicture Generate(string name, uint frame)
         {
             Record($"{name} {frame}");
-            return Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, Half.One);
         }
         using var bottom = Clip(f => Generate("bottom", f), layer: 1, initialize: () => Record("init bottom"));
         using var middle = Clip(f => Generate("middle", f), subLayer: 1, initialize: () => Record("init middle"));
@@ -189,7 +222,7 @@ public sealed class RendererPipelineTests
         {
             Assert.AreEqual(initialized[i], Environment.CurrentManagedThreadId);
             frames.GetOrAdd(i, _ => []).Add(frame);
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(i * 3 + frame), 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(i * 3 + frame), 0, 0, Half.One);
         }, startFrame: (uint)i * 3, duration: 3, initialize: () =>
         {
             Assert.IsTrue(initialized.TryAdd(i, Environment.CurrentManagedThreadId));
@@ -230,7 +263,7 @@ public sealed class RendererPipelineTests
         {
             started.Signal();
             Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(5), timeout.Token));
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)i, 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)i, 0, 0, Half.One);
         }, duration: 1, layer: (uint)i)).ToArray();
         try
         {
@@ -265,7 +298,7 @@ public sealed class RendererPipelineTests
             if (Interlocked.Increment(ref count) <= 2) started.Signal();
             else thirdStarted.Set();
             Assert.IsTrue(release.Wait(TimeSpan.FromSeconds(5), timeout.Token));
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)i, 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)i, 0, 0, Half.One);
         }, duration: 1, layer: (uint)i)).ToArray();
         try
         {
@@ -308,7 +341,7 @@ public sealed class RendererPipelineTests
         {
             Assert.AreEqual(1, Volatile.Read(ref initialized));
             Interlocked.Increment(ref reads);
-            return Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, Half.One);
         }, layer: 1, initialize: () => Interlocked.Increment(ref initialized));
         using var mask = new MaskClip
         {
@@ -343,12 +376,12 @@ public sealed class RendererPipelineTests
         {
             Assert.AreEqual(1, Volatile.Read(ref initialized));
             Interlocked.Increment(ref reads);
-            return Picture8bpp.GenerateSolidColor(2, 1, 90, 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, 90, 0, 0, Half.One);
         }, startFrame: 2, duration: 2, initialize: () => Interlocked.Increment(ref initialized));
         IEffectProvider transform = new CrossfadeTransformProvider();
         TransformProcessing.Configure(transform, TransformSide.Right, TransformInputMode.TwoInput, 2, right.Id,
             TransformRenderOrder.BeforeEffects);
-        using var left = Clip(_ => Picture8bpp.GenerateSolidColor(2, 1, 30, 0, 0, 1), duration: 2, providers: [transform]);
+        using var left = Clip(_ => Picture8bpp.GenerateSolidColor(2, 1, 30, 0, 0, Half.One), duration: 2, providers: [transform]);
         using var builder = new VideoBuilder(Writer()) { StartFrame = 1, Duration = 1 };
         var renderer = new Renderer
         {
@@ -371,7 +404,7 @@ public sealed class RendererPipelineTests
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         int initialized = 0;
-        using var clip = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(frame + 20), 0, 0, 1),
+        using var clip = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(frame + 20), 0, 0, Half.One),
             initialize: () => Interlocked.Increment(ref initialized));
         var written = new List<byte>();
         Renderer? renderer = null;
@@ -472,12 +505,12 @@ public sealed class RendererPipelineTests
         using var bottom = Clip(frame =>
         {
             Interlocked.Increment(ref decoded);
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(10 + frame), 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(10 + frame), 0, 0, Half.One);
         }, duration: 4, layer: 1);
         using var top = Clip(frame =>
         {
             Interlocked.Increment(ref decoded);
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(20 + frame), 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(20 + frame), 0, 0, Half.One);
         }, duration: 4);
         var written = new List<byte>();
         var progress = new List<double>();
@@ -523,7 +556,7 @@ public sealed class RendererPipelineTests
         using var first = Clip(frame =>
         {
             if (frame == 2) cancellation.Cancel();
-            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(30 + frame), 0, 0, 1);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(30 + frame), 0, 0, Half.One);
         }, duration: 4);
         using var firstBuilder = new VideoBuilder(Writer()) { Duration = 4 };
         var initial = DeferredRenderer(first, firstBuilder, root);
@@ -546,7 +579,7 @@ public sealed class RendererPipelineTests
             using var next = Clip(frame =>
             {
                 decoded.Enqueue(frame);
-                return Picture8bpp.GenerateSolidColor(2, 1, (byte)(30 + frame), 0, 0, 1);
+                return Picture8bpp.GenerateSolidColor(2, 1, (byte)(30 + frame), 0, 0, Half.One);
             }, duration: 4, id: first.Id);
             using var builder = new VideoBuilder(Writer()) { Duration = 4 };
             var resumed = DeferredRenderer(next, builder, root);
@@ -574,7 +607,7 @@ public sealed class RendererPipelineTests
     {
         string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(40 + frame), 0, 0, 1), duration: 4);
+        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(40 + frame), 0, 0, Half.One), duration: 4);
         var firstWriter = Writer();
         firstWriter.OnFrameWrite += (_, _) => cancellation.Cancel();
         using var firstBuilder = new VideoBuilder(firstWriter) { Duration = 4 };
@@ -619,7 +652,7 @@ public sealed class RendererPipelineTests
     public async Task DeferredResumeRejectsChangedStateAndHonorsItsSwitch(bool resume, bool changed)
     {
         string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
-        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, 1), duration: 4);
+        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, Half.One), duration: 4);
         using var firstBuilder = new VideoBuilder(Writer()) { Duration = 4 };
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try
@@ -631,7 +664,7 @@ public sealed class RendererPipelineTests
             using var next = Clip(frame =>
             {
                 decoded++;
-                return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, 1);
+                return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, Half.One);
             }, duration: 4, id: first.Id);
             using var builder = new VideoBuilder(Writer()) { Duration = 4 };
             var renderer = DeferredRenderer(next, builder, root);
@@ -652,7 +685,7 @@ public sealed class RendererPipelineTests
     public async Task DeferredResumeRegeneratesOnlyTheCorruptFrame()
     {
         string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
-        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(50 + frame), 0, 0, 1), duration: 4);
+        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(50 + frame), 0, 0, Half.One), duration: 4);
         using var firstBuilder = new VideoBuilder(Writer()) { Duration = 4 };
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try
@@ -666,7 +699,7 @@ public sealed class RendererPipelineTests
             using var next = Clip(frame =>
             {
                 decoded.Add(frame);
-                return Picture8bpp.GenerateSolidColor(2, 1, (byte)(50 + frame), 0, 0, 1);
+                return Picture8bpp.GenerateSolidColor(2, 1, (byte)(50 + frame), 0, 0, Half.One);
             }, duration: 4, id: first.Id);
             using var builder = new VideoBuilder(Writer()) { Duration = 4 };
             var resumed = DeferredRenderer(next, builder, root);
@@ -709,7 +742,7 @@ public sealed class RendererPipelineTests
             string directory = Path.Combine(root, "thumbs", "perClip", clip.Id.ToString(), "dynamic");
             Directory.CreateDirectory(directory);
             string preview = Path.Combine(directory, $"dynamic_{RenderBackendService.ClipPreviewCacheVersion}_{identity.Hash}_2x1_2x1_vfd8.vfd");
-            using var cached = Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, 1);
+            using var cached = Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, Half.One);
             cached.SaveToDisk(preview, PictureExtensions.SharedVfdPictureEncoder);
             byte[] existing = File.ReadAllBytes(preview);
             var renderer = DeferredRenderer(clip, builder, root);
@@ -745,21 +778,21 @@ public sealed class RendererPipelineTests
     };
 
     private static VirtualSourceVideoClip Clip(Func<uint, IPicture> generate, uint startFrame = 0, uint duration = 10,
-        uint layer = 0, uint subLayer = 0, Action? initialize = null, IEffectProvider[]? providers = null, Guid? id = null) => new()
+        uint layer = 0, uint subLayer = 0, Action? initialize = null, IEffectProvider[]? providers = null, Guid? id = null, Action? dispose = null) => new()
     {
         Id = id ?? Guid.NewGuid(), Name = "clip", StartFrame = startFrame, Duration = duration, FrameTime = 1f / 30,
         LayerIndex = layer, SubLayerIndex = subLayer,
         EffectProviders = providers?.Select(EffectBindingHelper.SerializeProvider).ToArray(),
-        TargetWidth = 2, TargetHeight = 1, VirtualSource = new Source(generate, initialize),
+        TargetWidth = 2, TargetHeight = 1, VirtualSource = new Source(generate, initialize, dispose),
     };
 
-    private sealed class Source(Func<uint, IPicture> generate, Action? initialize) : IVirtualVideoSource
+    private sealed class Source(Func<uint, IPicture> generate, Action? initialize, Action? dispose = null) : IVirtualVideoSource
     {
         public bool IsDeterministic => false;
 
         public string TypeName => nameof(Source);
         public void Init(int width, int height, int fps, uint duration, IPicture.PicturePixelMode mode) => initialize?.Invoke();
         public IPicture Generate(uint frame, bool hasAlpha) => generate(frame);
-        public void Dispose() { }
+        public void Dispose() => dispose?.Invoke();
     }
 }

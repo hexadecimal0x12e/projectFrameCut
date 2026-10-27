@@ -91,7 +91,7 @@ public static class VideoClipRotation
             if (!PreviewSourceFrameContext.ReadingRaw)
                 clip.EffectStagePlan?.Complete(clip, Stage.SourceReplacement, ClipArgumentBinding.GetFrameIndex(clip,
                     VectorPictureEffectProcessing.GetTargetFrame(clip, frameIndex)));
-            return source;
+            return EffectPictureProcessing.RequireFP16(source, $"Clip {clip.Name}/{clip.Id}");
         }
         catch
         {
@@ -123,13 +123,16 @@ public static class VideoClipRotation
         var (width, height) = GetOutputSize(angle, source.Width, source.Height);
         IPicture result = source switch
         {
+            IHDRPicture<Half> hdrFp => new HDRPictureFP16(width, height) { MaximumBrightness = hdrFp.MaximumBrightness },
+            IPicture<Half> => new PictureFP16(width, height),
             IHDRPicture<ushort> hdr => new HDRPicture16bpp(width, height) { MaximumBrightness = hdr.MaximumBrightness },
             IPicture<ushort> => new Picture16bpp(width, height),
             IPicture<byte> => new Picture8bpp(width, height),
             _ => throw new NotSupportedException($"Clip rotation does not support {source.GetType().Name}.")
         };
         result.HasAlphaChannel = true;
-        if (source is IPicture<byte> p8) RotatePixels(p8, (IPicture<byte>)result, angle);
+        if (source is IPicture<Half> fp) RotatePixels(fp, (IPicture<Half>)result, angle);
+        else if (source is IPicture<byte> p8) RotatePixels(p8, (IPicture<byte>)result, angle);
         else RotatePixels((IPicture<ushort>)source, (IPicture<ushort>)result, angle);
         result.Tag = source.Tag;
         result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
@@ -145,13 +148,13 @@ public static class VideoClipRotation
 
     private static void RotatePixels<T>(IPicture<T> source, IPicture<T> result, float angle) where T : unmanaged, INumber<T>
     {
-        result.a = new float[result.Pixels];
+        result.a = new Half[result.Pixels];
         double radians = angle * Math.PI / 180d;
         double cos = Math.Cos(radians), sin = Math.Sin(radians);
         if (Math.Abs(cos) < 1e-10) cos = 0;
         if (Math.Abs(sin) < 1e-10) sin = 0;
-        var hdrSource = source as IHDRPicture<ushort>;
-        var hdrResult = result as IHDRPicture<ushort>;
+        var hdrSource = source as IHDRPicture<T>;
+        var hdrResult = result as IHDRPicture<T>;
         for (int y = 0; y < result.Height; y++)
         {
             for (int x = 0; x < result.Width; x++)
@@ -161,8 +164,9 @@ public static class VideoClipRotation
                 double sx = dx * cos + dy * sin + source.Width / 2d - 0.5;
                 double sy = -dx * sin + dy * cos + source.Height / 2d - 0.5;
                 int x0 = (int)Math.Floor(sx), y0 = (int)Math.Floor(sy);
-                double fx = sx - x0, fy = sy - y0;
-                double r = 0, g = 0, b = 0, a = 0, brightness = 0;
+                Half fx = (Half)(sx - x0), fy = (Half)(sy - y0);
+                double r = 0, g = 0, b = 0;
+                Half a = Half.Zero, brightness = Half.Zero;
                 for (int j = 0; j < 2; j++)
                 {
                     for (int i = 0; i < 2; i++)
@@ -170,22 +174,22 @@ public static class VideoClipRotation
                         int px = x0 + i, py = y0 + j;
                         if (px < 0 || px >= source.Width || py < 0 || py >= source.Height) continue;
                         int index = py * source.Width + px;
-                        double weight = (i == 0 ? 1 - fx : fx) * (j == 0 ? 1 - fy : fy)
-                            * (source.HasAlphaChannel && source.a is not null ? source.a[index] : 1);
+                        Half weight = (i == 0 ? Half.One - fx : fx) * (j == 0 ? Half.One - fy : fy)
+                            * (source.HasAlphaChannel && source.a is not null ? source.a[index] : Half.One);
                         a += weight;
-                        r += double.CreateChecked(source.r[index]) * weight;
-                        g += double.CreateChecked(source.g[index]) * weight;
-                        b += double.CreateChecked(source.b[index]) * weight;
+                        r += double.CreateChecked(source.r[index]) * (double)weight;
+                        g += double.CreateChecked(source.g[index]) * (double)weight;
+                        b += double.CreateChecked(source.b[index]) * (double)weight;
                         if (hdrSource is not null) brightness += hdrSource.Brightness[index] * weight;
                     }
                 }
-                if (a <= 1e-10) continue;
+                if (a <= Half.Zero) continue;
                 int output = y * result.Width + x;
-                result.r[output] = T.CreateSaturating(Math.Round(r / a));
-                result.g[output] = T.CreateSaturating(Math.Round(g / a));
-                result.b[output] = T.CreateSaturating(Math.Round(b / a));
-                result.a[output] = (float)Math.Clamp(a, 0, 1);
-                if (hdrResult is not null) hdrResult.Brightness[output] = (float)(brightness / a);
+                result.r[output] = T.CreateSaturating((typeof(T) == typeof(Half) ? r / (double)a : Math.Round(r / (double)a)));
+                result.g[output] = T.CreateSaturating((typeof(T) == typeof(Half) ? g / (double)a : Math.Round(g / (double)a)));
+                result.b[output] = T.CreateSaturating((typeof(T) == typeof(Half) ? b / (double)a : Math.Round(b / (double)a)));
+                result.a[output] = Half.Clamp(a, Half.Zero, Half.One);
+                if (hdrResult is not null) hdrResult.Brightness[output] = brightness / a;
             }
         }
     }

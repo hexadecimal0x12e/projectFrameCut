@@ -114,16 +114,15 @@ internal sealed class OpenGLResidentPictureContext : ResidentPictureContext
         }
     }
 
-    private Buffer AllocateBuffer(int length, float[]? values = null)
+    private Buffer AllocateBuffer(int length, byte[]? values = null)
     {
         var ids = new int[1];
         GLES31.GlGenBuffers(1, ids, 0);
         GLES31.GlBindBuffer(GLES31.GlShaderStorageBuffer, ids[0]);
-        using var bytes = values is null ? null : ByteBuffer.AllocateDirect(checked(length * sizeof(float))).Order(ByteOrder.NativeOrder());
-        using var floats = bytes?.AsFloatBuffer();
-        floats?.Put(values!);
-        floats?.Position(0);
-        GLES31.GlBufferData(GLES31.GlShaderStorageBuffer, checked(length * sizeof(float)), floats, GLES31.GlDynamicCopy);
+        using var bytes = values is null ? null : ByteBuffer.AllocateDirect(checked(length)).Order(ByteOrder.NativeOrder());
+        bytes?.Put(values!);
+        bytes?.Position(0);
+        GLES31.GlBufferData(GLES31.GlShaderStorageBuffer, checked(length), bytes, GLES31.GlDynamicCopy);
         Check();
         return new(this, ids[0], length);
     }
@@ -136,28 +135,26 @@ internal sealed class OpenGLResidentPictureContext : ResidentPictureContext
     }
 
     protected override ResidentBuffer CreateBuffer(int length) => Invoke(() => AllocateBuffer(length));
-    protected override void WriteBuffer(ResidentBuffer buffer, float[] values) => Invoke(() =>
+    protected override void WriteBuffer(ResidentBuffer buffer, byte[] values) => Invoke(() =>
     {
-        using var bytes = ByteBuffer.AllocateDirect(checked(values.Length * sizeof(float))).Order(ByteOrder.NativeOrder());
-        using var floats = bytes.AsFloatBuffer();
-        floats.Put(values);
-        floats.Position(0);
+        using var bytes = ByteBuffer.AllocateDirect(checked(values.Length)).Order(ByteOrder.NativeOrder());
+        bytes.Put(values);
+        bytes.Position(0);
         GLES31.GlBindBuffer(GLES31.GlShaderStorageBuffer, ((Buffer)buffer).Id);
-        GLES31.GlBufferSubData(GLES31.GlShaderStorageBuffer, 0, checked(values.Length * sizeof(float)), floats);
+        GLES31.GlBufferSubData(GLES31.GlShaderStorageBuffer, 0, checked(values.Length), bytes);
         Check();
         return true;
     });
-    protected override float[] Read(ResidentBuffer buffer) => Invoke(() =>
+    protected override byte[] Read(ResidentBuffer buffer) => Invoke(() =>
     {
         var b = (Buffer)buffer;
         GLES31.GlBindBuffer(GLES31.GlShaderStorageBuffer, b.Id);
-        var mapped = GLES31.GlMapBufferRange(GLES31.GlShaderStorageBuffer, 0, checked(b.Length * sizeof(float)), GLES31.GlMapReadBit) as ByteBuffer ?? throw new InvalidOperationException("Could not map GPU image.");
+        var mapped = GLES31.GlMapBufferRange(GLES31.GlShaderStorageBuffer, 0, checked(b.Length), GLES31.GlMapReadBit) as ByteBuffer ?? throw new InvalidOperationException("Could not map GPU image.");
         try
         {
             mapped.Order(ByteOrder.NativeOrder());
-            using var floats = mapped.AsFloatBuffer();
-            var data = new float[b.Length];
-            floats.Get(data);
+            var data = new byte[b.Length];
+            mapped.Get(data);
             return data;
         }
         finally
@@ -169,10 +166,10 @@ internal sealed class OpenGLResidentPictureContext : ResidentPictureContext
     protected override ResidentBuffer Dispatch(ResidentBuffer source, ResidentBuffer second, float[] parameters, int count)
     {
         BeginSubmission();
-        var output = RentBuffer(checked((int)parameters[3] * (int)parameters[4] * (parameters[14] > 0 ? 5 : 4)));
+        var output = RentBuffer(checked((int)parameters[3] * (int)parameters[4] * ResidentPixel.Size));
         try
         {
-            using var p = UploadBuffer(parameters);
+            using var p = UploadBuffer(ResidentPixel.PackParameters(parameters));
             Invoke(() =>
             {
                 GLES31.GlUseProgram(program);

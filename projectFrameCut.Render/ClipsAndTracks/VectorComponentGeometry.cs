@@ -394,9 +394,9 @@ public partial class VectorComponentWrapperClip : IClip
             // Return a transparent placeholder
             return targetPPB.Value switch
             {
-                8 => Picture8bpp.GenerateSolidColor(w, h, 0, 0, 0, 0f),
-                16 => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, 0f),
-                _ => Picture8bpp.GenerateSolidColor(w, h, 0, 0, 0, 0f),
+                8 => Picture8bpp.GenerateSolidColor(w, h, 0, 0, 0, Half.Zero),
+                16 => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, Half.Zero),
+                _ => Picture8bpp.GenerateSolidColor(w, h, 0, 0, 0, Half.Zero),
             };
         }
 

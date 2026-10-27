@@ -17,6 +17,7 @@ public enum IsolationValueKind
     [ProtoEnum] Color = 9,
     [ProtoEnum] Position = 10,
     [ProtoEnum] VectorPicture = 11,
+    [ProtoEnum] Half = 12,
 }
 
 [ProtoContract]
@@ -32,10 +33,13 @@ public sealed class IsolationValue
     [ProtoMember(8)] public long Y { get; set; }
     [ProtoMember(9)] public long Width { get; set; }
     [ProtoMember(10)] public long Height { get; set; }
-    [ProtoMember(11)] public float Alpha { get; set; }
+    [ProtoIgnore] public Half Alpha { get; set; }
+    [ProtoMember(11)] private ushort AlphaBits { get => BitConverter.HalfToUInt16Bits(Alpha); set => Alpha = BitConverter.UInt16BitsToHalf(value); }
     [ProtoMember(12)] public bool HasAlpha { get; set; }
     [ProtoMember(13)] public float Rotation { get; set; }
     [ProtoMember(14)] public List<IsolationVectorElement> VectorElements { get; set; } = [];
+    [ProtoIgnore] public Half HalfValue { get; set; }
+    [ProtoMember(15)] private ushort HalfBits { get => BitConverter.HalfToUInt16Bits(HalfValue); set => HalfValue = BitConverter.UInt16BitsToHalf(value); }
 }
 
 [ProtoContract]
@@ -124,6 +128,7 @@ public sealed class IsolationPluginDescriptor
 [ProtoContract]
 public sealed class IsolationEffectImplementationCatalogItem
 {
+    [ProtoMember(3)] public int PictureDataFormat { get; set; }
     [ProtoMember(1)] public string TypeName { get; set; } = string.Empty;
     [ProtoMember(2)] public int ImplementType { get; set; }
 }
@@ -380,6 +385,7 @@ public sealed class IsolationCreateProviderRequest
 [ProtoContract]
 public sealed class IsolationFieldDescriptor
 {
+    [ProtoMember(15)] public int DataFormat { get; set; }
     [ProtoMember(1)] public string Id { get; set; } = string.Empty;
     [ProtoMember(2)] public string TypeName { get; set; } = string.Empty;
     [ProtoMember(3)] public string FromPlugin { get; set; } = string.Empty;
@@ -436,6 +442,7 @@ public sealed class IsolationProviderState
 [ProtoContract]
 public sealed class IsolationBuildProviderRequest
 {
+    [ProtoMember(2)] public int PictureDataFormat { get; set; }
     [ProtoMember(1)] public IsolationProviderState Provider { get; set; } = new();
 }
 
@@ -489,6 +496,7 @@ public sealed class IsolationFieldTypeState
 [ProtoContract]
 public sealed class IsolationResolveFieldTypesRequest
 {
+    [ProtoMember(5)] public Dictionary<string, int> InputDataFormats { get; set; } = [];
     [ProtoMember(1)] public long ObjectId { get; set; }
     [ProtoMember(2)] public IsolationFieldTypeState State { get; set; } = new();
     [ProtoMember(3)] public Dictionary<string, IsolationFieldTypeState> BoundProviders { get; set; } = [];
@@ -498,6 +506,8 @@ public sealed class IsolationResolveFieldTypesRequest
 [ProtoContract]
 public sealed class IsolationResolvedFieldTypes
 {
+    [ProtoMember(3)] public Dictionary<string, int> InputDataFormats { get; set; } = [];
+    [ProtoMember(4)] public Dictionary<string, int> OutputDataFormats { get; set; } = [];
     [ProtoMember(1)] public Dictionary<string, ulong> Inputs { get; set; } = [];
     [ProtoMember(2)] public Dictionary<string, ulong> Outputs { get; set; } = [];
 }
@@ -785,6 +795,8 @@ public sealed class IsolationEffectInvokeRequest
     [ProtoMember(12)] public IsolationEffectMutableState State { get; set; } = new();
     [ProtoMember(13)] public Dictionary<string, IsolationValue> DynamicValues { get; set; } = [];
     [ProtoMember(14)] public List<IsolationVectorElement> VectorElements { get; set; } = [];
+    [ProtoIgnore] public Half HalfValue { get; set; }
+    [ProtoMember(15)] private ushort HalfBits { get => BitConverter.HalfToUInt16Bits(HalfValue); set => HalfValue = BitConverter.UInt16BitsToHalf(value); }
     [ProtoMember(15)] public IsolationPayloadReference? RightAudio { get; set; }
     [ProtoMember(16)] public long SampleOffset { get; set; }
     [ProtoMember(17)] public long DurationSamples { get; set; }

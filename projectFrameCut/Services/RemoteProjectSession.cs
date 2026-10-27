@@ -4,6 +4,7 @@ using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Services;
 
@@ -41,6 +42,7 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
     public HeadlessProjectSnapshot Snapshot { get; private set; }
     public long LastSavedRevision { get; private set; } = -1;
     public bool MonitorChanges => _monitorChanges;
+    public bool UsesLocalArtifacts { get; private init; }
     public string ProjectRoot => Snapshot.ProjectRoot;
     public ProjectJSONStructure Project => Deserialize<ProjectJSONStructure>(Snapshot.ProjectJson);
     public DraftStructureJSON Draft => Deserialize<DraftStructureJSON>(Snapshot.TimelineJson);
@@ -97,13 +99,15 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(snapshot);
+        if (!string.IsNullOrWhiteSpace(snapshot.RenderSession.CacheRoot))
+            ProjectCachePaths.Bind(snapshot.ProjectRoot, snapshot.RenderSession.CacheRoot, Deserialize<ProjectJSONStructure>(snapshot.ProjectJson).ProjectName);
         return new RemoteProjectSession(
             client,
             snapshot,
-            static (artifact, projectRoot, _) => Task.FromResult(ResolveLocalArtifact(artifact, projectRoot)),
+            (artifact, _, _) => Task.FromResult(ResolveLocalArtifact(artifact, snapshot.ProjectRoot)),
             ownsClient: false,
             closeSession: false,
-            monitorChanges: false);
+            monitorChanges: false) { UsesLocalArtifacts = true };
     }
 
     public async Task<string> MaterializeArtifactAsync(

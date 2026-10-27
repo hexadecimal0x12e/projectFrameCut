@@ -195,7 +195,7 @@ namespace projectFrameCut.Render.Text
                 FillR = (ushort)Math.Round(color.Red * 65535),
                 FillG = (ushort)Math.Round(color.Green * 65535),
                 FillB = (ushort)Math.Round(color.Blue * 65535),
-                FillA = (float)color.Alpha,
+                FillA = (Half)color.Alpha,
                 Alignment = horizontalAlignment switch
                 {
                     ClipHorizontalAlignment.Center => TextAlignment.Center,
@@ -208,7 +208,7 @@ namespace projectFrameCut.Render.Text
                 StrokeG = (ushort)Math.Round(strokeColor.Green * 65535),
                 StrokeB = (ushort)Math.Round(strokeColor.Blue * 65535),
                 StrokeThickness = strokeWidth ?? 0f,
-                StrokeA = strokeWidth.HasValue && strokeWidth.Value > 0f ? 1f : 0f,
+                StrokeA = strokeWidth.HasValue && strokeWidth.Value > 0f ? Half.One : Half.Zero,
             };
             entry.SetUseVerticalLayout(useVerticalLayout);
             entry.SetKeepNonCJKTextAsHorizontal(keepNonCJKTextAsHorizontal);

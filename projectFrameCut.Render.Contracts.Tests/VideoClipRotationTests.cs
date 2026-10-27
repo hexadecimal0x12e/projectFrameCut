@@ -130,8 +130,8 @@ public sealed class VideoClipRotationTests
         Assert.AreEqual(5, result.Width);
         Assert.AreEqual(5, result.Height);
         Assert.IsTrue(result.HasAlphaChannel);
-        Assert.AreEqual(0f, ((IPicture<byte>)result).a![0]);
-        Assert.AreEqual(1f, ((IPicture<byte>)result).a![12]);
+        Assert.AreEqual(0f, (float)((IPicture<byte>)result).a![0]);
+        Assert.AreEqual(1f, (float)((IPicture<byte>)result).a![12]);
         var bounds = VideoClipRotation.GetBounds(45, 10, 20, 4, 2);
         Assert.AreEqual(12d, bounds.X + bounds.Width / 2, 1e-9);
         Assert.AreEqual(21d, bounds.Y + bounds.Height / 2, 1e-9);
@@ -140,23 +140,23 @@ public sealed class VideoClipRotationTests
     [TestMethod]
     public void TransparentPixelsDoNotDarkenInterpolatedEdges()
     {
-        using var source = new Picture8bpp(2, 1) { r = [255, 0], a = [1, 0], HasAlphaChannel = true };
+        using var source = new Picture8bpp(2, 1) { r = [255, 0], a = [Half.One, Half.Zero], HasAlphaChannel = true };
         using var result = VideoClipRotation.Rotate(source, 45);
         var picture = (IPicture<byte>)result;
         Assert.IsTrue(picture.a!.Any(a => a > 0 && a < 1));
         for (int i = 0; i < result.Pixels; i++)
-            if (picture.a[i] > 0) Assert.AreEqual((byte)255, picture.r[i]);
+            if ((float)picture.a[i] > 0) Assert.AreEqual((byte)255, picture.r[i]);
     }
 
     [TestMethod]
     public void RotationPreservesHdrBrightnessAndPeak()
     {
-        using var source = HDRPicture16bpp.GenerateSolidColor(3, 2, 65535, 0, 0, null, maximumBrightness: 1200);
-        source.Brightness = [0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f];
+        using var source = HDRPicture16bpp.GenerateSolidColor(3, 2, 65535, 0, 0, null, brightness: Half.One, maximumBrightness: (Half)1200);
+        source.Brightness = [(Half)0.1f, (Half)0.2f, (Half)0.3f, (Half)0.4f, (Half)0.5f, (Half)0.6f];
         using var result = VideoClipRotation.Rotate(source, 90);
         var hdr = (IHDRPicture<ushort>)result;
-        Assert.AreEqual(1200f, hdr.MaximumBrightness);
-        CollectionAssert.AreEqual(new float[] { 0.4f, 0.1f, 0.5f, 0.2f, 0.6f, 0.3f }, hdr.Brightness);
+        Assert.AreEqual(1200f, (float)hdr.MaximumBrightness);
+        CollectionAssert.AreEqual(new Half[] { (Half)0.4f, (Half)0.1f, (Half)0.5f, (Half)0.2f, (Half)0.6f, (Half)0.3f }, hdr.Brightness);
         Assert.IsTrue(hdr.a!.All(a => a == 1));
     }
 
@@ -175,10 +175,10 @@ public sealed class VideoClipRotationTests
             projectRelativeWidth: 20, projectRelativeHeight: 20, transparentBackground: true);
         var alpha = ((IPicture<byte>)result).a;
         Assert.IsNotNull(alpha);
-        Assert.AreEqual(1f, alpha[4 * 20 + 6]);
-        Assert.AreEqual(1f, alpha[7 * 20 + 7]);
-        Assert.AreEqual(0f, alpha[5 * 20 + 5]);
-        Assert.AreEqual(0f, alpha[8 * 20 + 6]);
+        Assert.AreEqual(1f, (float)alpha[4 * 20 + 6]);
+        Assert.AreEqual(1f, (float)alpha[7 * 20 + 7]);
+        Assert.AreEqual(0f, (float)alpha[5 * 20 + 5]);
+        Assert.AreEqual(0f, (float)alpha[8 * 20 + 6]);
     }
 
     [TestMethod]

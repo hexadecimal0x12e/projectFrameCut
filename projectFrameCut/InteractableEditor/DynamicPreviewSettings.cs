@@ -6,6 +6,9 @@ namespace projectFrameCut.InteractableEditor;
 internal static class DynamicPreviewSettings
 {
     public const string TargetPixelsSettingKey = "Edit_DynamicPreviewTargetPixels";
+    public const string CacheSourceFramesSettingKey = "Edit_CacheDecodedPreviewFrames";
+
+    public static bool CacheSourceFrames => SettingsManager.IsBoolSettingTrueOrDefault(CacheSourceFramesSettingKey, true);
 
     public static Dictionary<string, long> TargetResolutionOptions => new()
     {

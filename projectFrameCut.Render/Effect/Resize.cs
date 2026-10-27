@@ -11,8 +11,12 @@ namespace projectFrameCut.Render.Effect
 {
 
 
-    public class ResizeEffect_IPicture : INormalEffect
+    public class ResizeEffect_IPicture : ResizeEffect<IPicture> { }
+
+    public class ResizeEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new ResizeEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -71,7 +75,7 @@ namespace projectFrameCut.Render.Effect
                 preserve = DynamicParam.ToBool(val);
             }
 
-            var effect = new ResizeEffect_IPicture
+            var effect = new ResizeEffect<TPicture>
             {
                 Height = DynamicParam.ToInt32(parameters.GetValueOrDefault("Height")),
                 Width = DynamicParam.ToInt32(parameters.GetValueOrDefault("Width")),
@@ -83,7 +87,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             int resizeWidth = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
             int resizeHeight = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
@@ -102,14 +106,7 @@ namespace projectFrameCut.Render.Effect
                 height = Math.Max(1, height);
             }
 
-            var resizer = new BilinearPictureResizer();
-            return source switch
-            {
-                IHDRPicture<ushort> hdr => resizer.Resize(hdr, width, height, preserveAspectRatio),
-                IPicture<ushort> p16 => resizer.Resize(p16, width, height, preserveAspectRatio),
-                IPicture<byte> p8 => resizer.Resize(p8, width, height, preserveAspectRatio),
-                _ => throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}")
-            };
+            return PictureCalculation<TPicture>.Resize(source, width, height, preserveAspectRatio);
         }
 
     }

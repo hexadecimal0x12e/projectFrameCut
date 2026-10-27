@@ -28,6 +28,8 @@ internal static class MaskPictureSampler
         }
         IPicture result = source switch
         {
+            IHDRPicture<Half> fp => new HDRPictureFP16(width, height) { MaximumBrightness = fp.MaximumBrightness },
+            IPicture<Half> => new PictureFP16(width, height),
             IHDRPicture<ushort> hdr => new HDRPicture16bpp(width, height) { MaximumBrightness = hdr.MaximumBrightness },
             IPicture<ushort> => new Picture16bpp(width, height),
             IPicture<byte> => new Picture8bpp(width, height),
@@ -36,7 +38,8 @@ internal static class MaskPictureSampler
         try
         {
             result.HasAlphaChannel = true;
-            if (source is IPicture<byte> p8) Sample(p8, (IPicture<byte>)result, rect, context);
+            if (source is IPicture<Half> fp) Sample(fp, (IPicture<Half>)result, rect, context);
+            else if (source is IPicture<byte> p8) Sample(p8, (IPicture<byte>)result, rect, context);
             else Sample((IPicture<ushort>)source, (IPicture<ushort>)result, rect, context);
             result.ProcessStack = source.ProcessStack.ToList();
             return result;
@@ -50,10 +53,10 @@ internal static class MaskPictureSampler
     private static void Sample<T>(IPicture<T> source, IPicture<T> result, ClipPositionTuple rect,
         MaskFrameContext context) where T : unmanaged, INumber<T>
     {
-        result.a = new float[result.Pixels];
+        result.a = new Half[result.Pixels];
         double angle = rect.Rotation * Math.PI / 180, cos = Math.Cos(angle), sin = Math.Sin(angle);
-        var hdr = source as IHDRPicture<ushort>;
-        var outputHdr = result as IHDRPicture<ushort>;
+        var hdr = source as IHDRPicture<T>;
+        var outputHdr = result as IHDRPicture<T>;
         double cx = Math.Round((double)rect.TargetX * context.Width / context.ProjectWidth, MidpointRounding.AwayFromZero) + rect.TargetWidth / 2d;
         double cy = Math.Round((double)rect.TargetY * context.Height / context.ProjectHeight, MidpointRounding.AwayFromZero) + rect.TargetHeight / 2d;
         for (int y = 0; y < result.Height; y++)
@@ -67,7 +70,9 @@ internal static class MaskPictureSampler
                 double sx = cx + dx * cos - dy * sin - 0.5;
                 double sy = cy + dx * sin + dy * cos - 0.5;
                 int x0 = (int)Math.Floor(sx), y0 = (int)Math.Floor(sy);
-                double fx = sx - x0, fy = sy - y0, r = 0, g = 0, b = 0, a = 0, brightness = 0;
+                Half fx = (Half)(sx - x0), fy = (Half)(sy - y0);
+                double r = 0, g = 0, b = 0;
+                Half a = Half.Zero, brightness = Half.Zero;
                 for (int j = 0; j < 2; j++)
                 {
                     for (int i = 0; i < 2; i++)
@@ -75,22 +80,22 @@ internal static class MaskPictureSampler
                         int xx = x0 + i, yy = y0 + j;
                         if (xx < 0 || xx >= source.Width || yy < 0 || yy >= source.Height) continue;
                         int index = yy * source.Width + xx;
-                        double w = (i == 0 ? 1 - fx : fx) * (j == 0 ? 1 - fy : fy)
-                            * (source.HasAlphaChannel && source.a is not null ? source.a[index] : 1);
+                        Half w = (i == 0 ? Half.One - fx : fx) * (j == 0 ? Half.One - fy : fy)
+                            * (source.HasAlphaChannel && source.a is not null ? source.a[index] : Half.One);
                         a += w;
-                        r += double.CreateChecked(source.r[index]) * w;
-                        g += double.CreateChecked(source.g[index]) * w;
-                        b += double.CreateChecked(source.b[index]) * w;
+                        r += double.CreateChecked(source.r[index]) * (double)w;
+                        g += double.CreateChecked(source.g[index]) * (double)w;
+                        b += double.CreateChecked(source.b[index]) * (double)w;
                         if (hdr is not null) brightness += hdr.Brightness[index] * w;
                     }
                 }
-                if (a <= 1e-10) continue;
+                if (a <= Half.Zero) continue;
                 int output = y * result.Width + x;
-                result.r[output] = T.CreateSaturating(Math.Round(r / a));
-                result.g[output] = T.CreateSaturating(Math.Round(g / a));
-                result.b[output] = T.CreateSaturating(Math.Round(b / a));
-                result.a[output] = (float)Math.Clamp(a, 0, 1);
-                if (outputHdr is not null) outputHdr.Brightness[output] = (float)(brightness / a);
+                result.r[output] = T.CreateSaturating((typeof(T) == typeof(Half) ? r / (double)a : Math.Round(r / (double)a)));
+                result.g[output] = T.CreateSaturating((typeof(T) == typeof(Half) ? g / (double)a : Math.Round(g / (double)a)));
+                result.b[output] = T.CreateSaturating((typeof(T) == typeof(Half) ? b / (double)a : Math.Round(b / (double)a)));
+                result.a[output] = Half.Clamp(a, Half.Zero, Half.One);
+                if (outputHdr is not null) outputHdr.Brightness[output] = brightness / a;
             }
         }
     }

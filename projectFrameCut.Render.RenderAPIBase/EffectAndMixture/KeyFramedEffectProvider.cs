@@ -90,7 +90,7 @@ public static class KeyFrameStepExtensions
                 throw new ArgumentException($"Invalid option for keyframe field '{id}'.");
             fields[id] = new StaticEffectArgumentField(value, field.FieldType | EffectArgumentFieldType.CannotBeDynamic)
             {
-                Id = id, DefaultValue = field.DefaultValue, MinValue = field.MinValue, MaxValue = field.MaxValue,
+                Id = id, DataFormat = field.DataFormat, DefaultValue = field.DefaultValue, MinValue = field.MinValue, MaxValue = field.MaxValue,
                 PresetOptions = field.PresetOptions, Remarks = field.Remarks,
             };
         }

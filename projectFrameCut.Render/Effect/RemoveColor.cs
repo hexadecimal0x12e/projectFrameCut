@@ -14,8 +14,12 @@ namespace projectFrameCut.Render.Effect
     /// <summary>
     /// The Render-side provider of the RemoveColor effect.
     /// </summary>
-    public class RemoveColorEffect_IPicture : INormalEffect
+    public class RemoveColorEffect_IPicture : RemoveColorEffect<IPicture> { }
+
+    public class RemoveColorEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new RemoveColorEffect<T>();
+
         public bool IsDeterministic => true;
 
 
@@ -75,7 +79,7 @@ namespace projectFrameCut.Render.Effect
             }
 
 
-            var effect = new RemoveColorEffect_IPicture
+            var effect = new RemoveColorEffect<TPicture>
             {
                 R = DynamicParam.ToUShort(parameters.GetValueOrDefault("R")),
                 G = DynamicParam.ToUShort(parameters.GetValueOrDefault("G")),
@@ -89,17 +93,34 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             ushort colorR = DynamicParam.Resolve(Parameters.GetValueOrDefault("R"), R);
             ushort colorG = DynamicParam.Resolve(Parameters.GetValueOrDefault("G"), G);
             ushort colorB = DynamicParam.Resolve(Parameters.GetValueOrDefault("B"), B);
             ushort colorA = DynamicParam.Resolve(Parameters.GetValueOrDefault("A"), A);
             ushort colorTolerance = DynamicParam.Resolve(Parameters.GetValueOrDefault("Tolerance"), Tolerance);
-            var sw = Stopwatch.StartNew();
-            float[] r, g, b, a;
-            if (source is IPicture<ushort> p16)
+            if (source is IPicture<Half> fp)
             {
+                var result = FP16Conversion.FromPicture(fp);
+                result.EnsureAlpha();
+                using (var e = result.Edit())
+                    for (int i = 0; i < result.Pixels; i++)
+                        if (Math.Abs((float)e.Red[i] - colorR / 65535f) <= colorTolerance / 65535f
+                            && Math.Abs((float)e.Green[i] - colorG / 65535f) <= colorTolerance / 65535f
+                            && Math.Abs((float)e.Blue[i] - colorB / 65535f) <= colorTolerance / 65535f)
+                            e.Alpha[i] = Half.Zero;
+                if (result.Width == targetWidth && result.Height == targetHeight) return result;
+                try { return new EffectPictureResizer(ImplementType).ResizePicture(result, targetWidth, targetHeight); }
+                finally { result.Dispose(); }
+            }
+
+            var sw = Stopwatch.StartNew();
+            float[] r, g, b;
+            Half[] a;
+            if (PictureCalculation<TPicture>.Is16 || !PictureCalculation<TPicture>.Is8 && source is IPicture<ushort>)
+            {
+                var p16 = (IPicture<ushort>)(object)source;
                 r = new float[p16.Pixels];
                 g = new float[p16.Pixels];
                 b = new float[p16.Pixels];
@@ -111,16 +132,17 @@ namespace projectFrameCut.Render.Effect
                 }
                 if (p16.a is null)
                 {
-                    a = new float[p16.Pixels];
-                    Array.Fill(a, 1f);
+                    a = new Half[p16.Pixels];
+                    Array.Fill(a, Half.One);
                 }
                 else
                 {
                     a = p16.a;
                 }
             }
-            else if (source is IPicture<byte> p8)
+            else if (PictureCalculation<TPicture>.Is8 || source is IPicture<byte>)
             {
+                var p8 = (IPicture<byte>)(object)source;
                 r = new float[p8.Pixels];
                 g = new float[p8.Pixels];
                 b = new float[p8.Pixels];
@@ -132,8 +154,8 @@ namespace projectFrameCut.Render.Effect
                 }
                 if (p8.a is null)
                 {
-                    a = new float[p8.Pixels];
-                    Array.Fill(a, 1f);
+                    a = new Half[p8.Pixels];
+                    Array.Fill(a, Half.One);
                 }
                 else
                 {
@@ -145,12 +167,13 @@ namespace projectFrameCut.Render.Effect
                 throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
             }
 
-            float[] alpha;
+            Half[] alpha;
             alpha = ComputeRemoveColor(r, g, b, a, colorR, colorG, colorB, colorTolerance, source.Pixels);
 
 
-            if (source is IPicture<ushort> p16_out)
+            if (PictureCalculation<TPicture>.Is16 || !PictureCalculation<TPicture>.Is8 && source is IPicture<ushort>)
             {
+                var p16_out = (IPicture<ushort>)(object)source;
                 var result = new Picture16bpp(p16_out)
                 {
                     r = p16_out.r.ToArray(),
@@ -161,12 +184,12 @@ namespace projectFrameCut.Render.Effect
                 };
                 for (int i = 0; i < result.Pixels; i++)
                 {
-                    if (result.a[i] == 0)
+                    if (result.a[i] == Half.Zero)
                     {
                         result.r[i] = 0;
                         result.g[i] = 0;
                         result.b[i] = 0;
-                        result.a[i] = 0f;
+                        result.a[i] = Half.Zero;
                     }
                 }
                 result.ProcessStack = source.ProcessStack.Concat(new List<PictureProcessStack>
@@ -187,10 +210,11 @@ namespace projectFrameCut.Render.Effect
                     }
                 }).ToList();
 
-                return new EffectPictureResizer(ImplementType).ResizePicture(PictureEffectChannels.PreserveHdr(result, source), targetWidth, targetHeight);
+                return new EffectPictureResizer(ImplementType).ResizePicture((TPicture)PictureEffectChannels.PreserveHdr(result, source), targetWidth, targetHeight);
             }
-            else if (source is IPicture<byte> p8_out)
+            else if (PictureCalculation<TPicture>.Is8 || source is IPicture<byte>)
             {
+                var p8_out = (IPicture<byte>)(object)source;
                 var result = new Picture8bpp(p8_out)
                 {
                     r = p8_out.r.ToArray(),
@@ -201,12 +225,12 @@ namespace projectFrameCut.Render.Effect
                 };
                 for (int i = 0; i < result.Pixels; i++)
                 {
-                    if (result.a[i] == 0)
+                    if (result.a[i] == Half.Zero)
                     {
                         result.r[i] = 0;
                         result.g[i] = 0;
                         result.b[i] = 0;
-                        result.a[i] = 0f;
+                        result.a[i] = Half.Zero;
                     }
                 }
                 sw.Stop();
@@ -227,19 +251,19 @@ namespace projectFrameCut.Render.Effect
                     Elapsed = sw.Elapsed
                 }).ToList();
 
-                return new EffectPictureResizer(ImplementType).ResizePicture(result, targetWidth, targetHeight);
+                return new EffectPictureResizer(ImplementType).ResizePicture((TPicture)(IPicture)result, targetWidth, targetHeight);
             }
             throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
 
         }
 
 
-        private static float[] ComputeRemoveColor(float[] r, float[] g, float[] b, float[] a,
+        private static Half[] ComputeRemoveColor(float[] r, float[] g, float[] b, Half[] a,
             float targetR, float targetG, float targetB, float range, int pixels)
         {
-            var alpha = new float[pixels];
+            var alpha = new Half[pixels];
             for (int i = 0; i < pixels; i++)
-                alpha[i] = Math.Abs(r[i] - targetR) <= range && Math.Abs(g[i] - targetG) <= range && Math.Abs(b[i] - targetB) <= range ? 0f : a[i];
+                alpha[i] = Math.Abs(r[i] - targetR) <= range && Math.Abs(g[i] - targetG) <= range && Math.Abs(b[i] - targetB) <= range ? Half.Zero : a[i];
             return alpha;
         }
     }

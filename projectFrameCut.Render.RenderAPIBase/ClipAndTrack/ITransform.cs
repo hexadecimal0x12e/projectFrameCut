@@ -19,6 +19,13 @@ public interface ITransform : IEffect
         throw new NotSupportedException($"Transform {TypeName} does not support audio.");
 }
 
+public interface ITransform<TPicture> : ITransform where TPicture : IPicture
+{
+    IPicture Render(TPicture left, TPicture? right, float progress, TransformSide side, int width, int height);
+    IPicture ITransform.Render(IPicture left, IPicture? right, float progress, TransformSide side, int width, int height) =>
+        PictureEffectDispatch.Transform(this, left, right, progress, side, width, height);
+}
+
 public abstract class TransformEffectBase : ITransform
 {
     public virtual bool IsDeterministic => true;

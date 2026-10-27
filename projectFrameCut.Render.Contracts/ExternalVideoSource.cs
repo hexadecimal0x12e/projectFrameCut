@@ -136,27 +136,31 @@ public sealed class ExternalVideoSourceReadRequest
 [ProtoContract]
 public sealed class ExternalVideoFrame
 {
+    [ProtoMember(10)] public bool UsesFloat16 { get; set; }
     [ProtoMember(1)] public int Width { get; set; }
     [ProtoMember(2)] public int Height { get; set; }
     [ProtoMember(3)] public int BitsPerChannel { get; set; }
     [ProtoMember(4)] public byte[] Red { get; set; } = [];
     [ProtoMember(5)] public byte[] Green { get; set; } = [];
     [ProtoMember(6)] public byte[] Blue { get; set; } = [];
+    /// <summary>Little-endian IEEE 754 binary16, two bytes per pixel.</summary>
     [ProtoMember(7)] public byte[] Alpha { get; set; } = [];
+    /// <summary>Little-endian IEEE 754 binary16, two bytes per pixel.</summary>
     [ProtoMember(8)] public byte[] Brightness { get; set; } = [];
-    [ProtoMember(9)] public float MaximumBrightness { get; set; }
+    [ProtoIgnore] public Half MaximumBrightness { get; set; }
+    [ProtoMember(9)] private ushort MaximumBrightnessBits { get => BitConverter.HalfToUInt16Bits(MaximumBrightness); set => MaximumBrightness = BitConverter.UInt16BitsToHalf(value); }
 
     public void Validate()
     {
         if (Width <= 0 || Height <= 0 || Width > 65536 || Height > 65536)
             throw new InvalidDataException("External video frame dimensions are invalid.");
-        int bytes = BitsPerChannel switch { 8 => 1, 16 => 2, _ => throw new InvalidDataException("External video frame bit depth must be 8 or 16.") };
+        int bytes = BitsPerChannel switch { 116 when UsesFloat16 => 2, 8 when !UsesFloat16 => 1, 16 when !UsesFloat16 => 2, _ => throw new InvalidDataException("External video frame bit depth must be 8 or 16.") };
         long pixels = checked((long)Width * Height);
         long colorLength = checked(pixels * bytes);
-        long floatLength = checked(pixels * sizeof(float));
+        long halfLength = checked(pixels * sizeof(ushort));
         if (Red.LongLength != colorLength || Green.LongLength != colorLength || Blue.LongLength != colorLength
-            || Alpha.LongLength != 0 && Alpha.LongLength != floatLength
-            || Brightness.LongLength != 0 && Brightness.LongLength != floatLength)
+            || Alpha.LongLength != 0 && Alpha.LongLength != halfLength
+            || Brightness.LongLength != 0 && Brightness.LongLength != halfLength)
             throw new InvalidDataException("External video frame plane lengths are invalid.");
     }
 }

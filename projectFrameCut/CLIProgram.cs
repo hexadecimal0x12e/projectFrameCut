@@ -867,6 +867,8 @@ namespace projectFrameCut
                     if (pair.Length == 2) switches[pair[0].TrimStart('-', '/')] = pair[1];
                 }
 
+                if (switches.TryGetValue("projectCacheRoot", out var projectCacheRoot)) ProjectCachePaths.Configure(projectCacheRoot);
+
                 var dataRoot = switches.TryGetValue("dataRoot", out var specifiedDataRoot)
                     ? Path.GetFullPath(specifiedDataRoot)
                     : switches.TryGetValue("assetDbFile", out var db)
@@ -876,7 +878,7 @@ namespace projectFrameCut
                     return RunRpcRenderAsync(switches, dataRoot, rpcOptions).GetAwaiter().GetResult();
 
                 ConfigureHardwareAcceleration(switches);
-                InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
+                InitializeCliRenderRuntime(dataRoot, switches);
                 return RunRenderPipelineAsync(switches, cancellationToken: default).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException) { return 255; }
@@ -887,10 +889,25 @@ namespace projectFrameCut
             }
         }
 
-        private static void InitializeCliRenderRuntime(string dataRoot, string ffmpegRoot = "")
+        private static void InitializeCliRenderRuntime(string dataRoot, ConcurrentDictionary<string, string> switches)
         {
-            InitializeRenderRuntime(dataRoot, ffmpegRoot);
+            InitializeRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
 #if WINDOWS || LINUX || HEADLESS
+            if (switches.ContainsKey("acceleratorDeviceName") || switches.ContainsKey("acceleratorDeviceNames") || switches.ContainsKey("multiAccelerator"))
+            {
+                var accelerators = AcceleratorsManager.GetConfiguration();
+                if (switches.TryGetValue("acceleratorDeviceName", out var main))
+                    accelerators.MainAcceleratorName = main;
+                if (switches.TryGetValue("acceleratorDeviceNames", out var names))
+                    accelerators.RenderingAcceleratorNames = names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (switches.TryGetValue("multiAccelerator", out var multi))
+                {
+                    if (!bool.TryParse(multi, out var enabled))
+                        throw new ArgumentException("-multiAccelerator must be true or false.");
+                    accelerators.EnableMultiAccel = enabled;
+                }
+                AcceleratorsManager.ConfigureDevices(accelerators.MainAcceleratorName, accelerators.RenderingAcceleratorNames, accelerators.EnableMultiAccel);
+            }
             AcceleratorsManager.IsRendering = true;
             if (!AcceleratorsManager.Accelerators.Any())
                 throw new InvalidOperationException("No valid rendering accelerator is available.");
@@ -930,6 +947,10 @@ namespace projectFrameCut
             var jsonOptions = new JsonSerializerOptions { NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
             var projectFile = File.Exists(Path.Combine(projectRoot, "project.pjfc")) ? "project.pjfc" : "project.json";
             var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(projectRoot, projectFile)), jsonOptions) ?? new();
+            if (switches.TryGetValue("projectCacheDirectory", out var cacheDirectory)) ProjectCachePaths.Bind(projectRoot, cacheDirectory, project.ProjectName);
+            else ProjectCachePaths.Initialize(projectRoot, project.ProjectName);
+            if (!switches.ContainsKey("temp_path")) tempPath = ProjectCachePaths.GetTemporaryRoot(projectRoot, tempPath);
+            Directory.CreateDirectory(tempPath);
             bool useHdr = project.Properties.TryGetValue("EnableHDR", out var enableHdrText)
                 && bool.TryParse(enableHdrText, out var enableHdr)
                 && enableHdr;
@@ -1005,7 +1026,7 @@ namespace projectFrameCut
             IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
             {
                 IVideoWriter writer = useHdr
-                    ? new HDRVideoWriter { PreferHardwareAcceleration = preferHdrHardware }
+                    ? new HDRVideoWriterFP16 { PreferHardwareAcceleration = preferHdrHardware }
                     : PluginManager.CreateVideoWriter(output[4]);
                 writer.Width = width;
                 writer.Height = height;
@@ -1027,20 +1048,24 @@ namespace projectFrameCut
                 bool writeToVoid = false,
                 int chunkIndex = 0,
                 int chunkCount = 1,
-                bool intermediateChunk = false)
+                bool intermediateChunk = false,
+                RenderClipSession? clipSession = null,
+                AudioSampleSource? audioSamples = null)
             {
-                var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
-                var audioTracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline, false).ToList();
-                SoundTrackMetadata.AddMissingLegacyTracks(clips, audioTracks, message => Log(message, "warn"), initialize: false);
+                var clips = clipSession?.Clips ?? DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+                var audioTracks = clipSession is null ? DraftImportAndExportHelper.JSONToISoundTracks(timeline, false).ToList() : new List<ISoundTrack>();
+                if (clipSession is null)
+                    SoundTrackMetadata.AddMissingLegacyTracks(clips, audioTracks, message => Log(message, "warn"), initialize: false);
                 if (clips.Length == 0) throw new InvalidOperationException("No video clips in the project.");
-                foreach (var clip in clips) clip.ReInit(bpp);
+                if (clipSession is null)
+                    foreach (var clip in clips) clip.ReInit(bpp);
                 if (!writeToVoid)
                     Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Environment.CurrentDirectory);
                 var builder = writeToVoid
                     ? null
                     : new VideoBuilder(CreateConfiguredWriter(path, intermediateChunk))
                     {
-                        EnablePreview = !chunkOptions.Enabled || chunkOptions.Parallelism == 1,
+                        EnablePreview = true,
                         minFrameCountToGeneratePreview = 60,
                         PreviewPath = switches.GetValueOrDefault("preview_path"),
                         StartFrame = startFrame,
@@ -1049,11 +1074,14 @@ namespace projectFrameCut
                         DoGCAfterEachWrite = gcOption > 0,
                         DisposeFrameAfterEachWrite = true
                     };
+                if (builder is not null)
+                    builder.DiskCacheDirectory = Path.Combine(ProjectCachePaths.GetTemporaryRoot(projectRoot, MauiProgram.CachePath), "RenderingCache");
                 var renderer = new Renderer
                 {
                     builder = builder,
                     Clips = clips,
-                    AudioSamples = new AudioSampleSource(clips, audioTracks.ToArray(), fps, 96000),
+                    ClipSession = clipSession,
+                    AudioSamples = audioSamples ?? new AudioSampleSource(clips, audioTracks.ToArray(), fps, 96000),
                     TargetWidth = width,
                     TargetHeight = height,
                     ProjectRelativeWidth = project.RelativeWidth,
@@ -1112,7 +1140,8 @@ namespace projectFrameCut
                 }
                 finally
                 {
-                    foreach (var clip in clips) clip.Dispose();
+                    if (clipSession is null)
+                        foreach (var clip in clips) clip.Dispose();
                     renderer.builder = null;
                     foreach (var track in audioTracks) track.Dispose();
                     Console.WriteLine();
@@ -1142,20 +1171,44 @@ namespace projectFrameCut
                 {
                     if (completedChunkCleanup.TryRemove(segment.Index, out var cleanup)) cleanup();
                 };
-                await coordinator.RenderPendingChunksAsync(
-                    (segment, chunkPath, chunkThreads, report, token) =>
-                        RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, report, chunkIndex: segment.Index, chunkCount: coordinator.ChunkCount, intermediateChunk: true),
-                    state =>
-                    {
-                        double value = state.GlobalProgress * (target == "all" ? 0.8 : 0.85);
-                        progress?.Invoke(value, state.EstimatedRemaining, state.FramesPerSecond);
-                        if (lastChunkCount != state.ChunkCount)
+                RenderClipSession? clipSession = null;
+                List<ISoundTrack> chunkAudioTracks = [];
+                AudioSampleSource? chunkAudioSamples = null;
+                try
+                {
+                    await coordinator.RenderPendingChunksAsync(
+                        async (segment, chunkPath, chunkThreads, report, token) =>
                         {
-                            lastChunkCount = state.ChunkCount;
-                            Console.WriteLine($"Rendering finished {state.ChunkCount} chunk(s).");
-                        }
-                    },
-                    consoleCancellation.Token).ConfigureAwait(false);
+                            if (clipSession is null)
+                            {
+                                var allClips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp);
+                                clipSession = new RenderClipSession(allClips.Where(c => c.ClipType != ClipMode.AudioClip).ToArray());
+                                foreach (var clip in allClips.Where(c => c.ClipType == ClipMode.AudioClip)) clip.Dispose();
+                                chunkAudioTracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline, false).ToList();
+                                SoundTrackMetadata.AddMissingLegacyTracks(clipSession.Clips, chunkAudioTracks, message => Log(message, "warn"), initialize: false);
+                                chunkAudioSamples = new AudioSampleSource(clipSession.Clips, chunkAudioTracks.ToArray(), fps, 96000);
+                            }
+                            await RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, report,
+                                chunkIndex: segment.Index, chunkCount: coordinator.ChunkCount, intermediateChunk: true,
+                                clipSession: clipSession, audioSamples: chunkAudioSamples).ConfigureAwait(false);
+                        },
+                        state =>
+                        {
+                            double value = state.GlobalProgress * (target == "all" ? 0.8 : 0.85);
+                            progress?.Invoke(value, state.EstimatedRemaining, state.FramesPerSecond);
+                            if (lastChunkCount != state.ChunkCount)
+                            {
+                                lastChunkCount = state.ChunkCount;
+                                Console.WriteLine($"Rendering finished {state.ChunkCount} chunk(s).");
+                            }
+                        },
+                        consoleCancellation.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    clipSession?.Dispose();
+                    foreach (var track in chunkAudioTracks) track.Dispose();
+                }
                 stageChanged?.Invoke("MergeChunks");
                 IClip[] audioClips = [];
                 List<ISoundTrack> tracks = [];
@@ -1247,9 +1300,6 @@ namespace projectFrameCut
             bool enabled = bool.TryParse(switches.GetValueOrDefault("chunkRender", "false"), out var chunkRender) && chunkRender;
             bool resume = !bool.TryParse(switches.GetValueOrDefault("chunkResume", "true"), out var chunkResume) || chunkResume;
             bool keepFiles = bool.TryParse(switches.GetValueOrDefault("chunkKeepFiles", "false"), out var chunkKeepFiles) && chunkKeepFiles;
-            int parallelism = int.TryParse(switches.GetValueOrDefault("chunkParallelism", "1"), out var parsedParallelism)
-                ? Math.Max(1, parsedParallelism)
-                : 1;
             uint? frames = null;
             double? seconds = null;
             if (switches.TryGetValue("chunkFrames", out var chunkFramesText))
@@ -1274,7 +1324,6 @@ namespace projectFrameCut
                 Enabled = enabled,
                 ChunkFrames = frames,
                 ChunkSeconds = seconds,
-                Parallelism = parallelism,
                 Resume = resume,
                 KeepChunkFiles = keepFiles
             };
@@ -1341,7 +1390,7 @@ namespace projectFrameCut
 
             var exitCode = await service.RunAsync(async (progress, stageChanged, hashPreparationProgress, cancellationToken) =>
             {
-                InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
+                InitializeCliRenderRuntime(dataRoot, switches);
                 return await RunRenderPipelineAsync(switches, cancellationToken, progress, stageChanged, hashPreparationProgress).ConfigureAwait(false);
             }).ConfigureAwait(false);
 
@@ -1760,8 +1809,13 @@ namespace projectFrameCut
             PluginManager.ProjectPluginUnloader = ProjectPluginService.UnloadProjectPluginsAsync;
             if (!PluginManager.Inited)
             {
-                try { GlobalPluginHelper.PluginsDataRootPath = dataRoot; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
-                try { GlobalPluginHelper.CacheRootPath = AppCachePath; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
+                if (GlobalPluginHelper.PluginsDataRootPath is null)
+                    GlobalPluginHelper.PluginsDataRootPath = Path.Combine(dataRoot, "Plugins");
+                if (GlobalPluginHelper.CacheRootPath is null)
+                    GlobalPluginHelper.CacheRootPath = AppCachePath;
+                if (GlobalPluginHelper.PluginGetter is null)
+                    PluginManager.InitGlobalGetter();
+                Log($"[Render] Plugin data directory: '{GlobalPluginHelper.PluginsDataRootPath}'.");
                 PluginManager.Init(
                 [
                     new InternalPluginBase(),
@@ -2347,9 +2401,12 @@ Usage:
                 [-allowWorkerOversubscription=true|false] (default: true)
                 [-reuseDynamicPreviewCache=true|false]
                 [--incrementalRendering=true|false]
+                [--projectCacheRoot=<cache folder for all projects>]
                 [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
+                [-acceleratorDeviceName=<name>] [-multiAccelerator=true|false]
+                [-acceleratorDeviceNames=<name1,name2,...>]
                 [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
-                [-chunkParallelism=<number>] [-chunkResume=true|false]
+                [-chunkResume=true|false]
                   chunkResume also restores deferred composition when chunkRender=false.
                 [-chunkKeepFiles=true|false]
                 [--allowExternalSources=all|<ImportId,ImportId,...>]

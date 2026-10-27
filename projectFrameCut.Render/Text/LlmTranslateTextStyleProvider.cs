@@ -184,11 +184,11 @@ namespace projectFrameCut.Render.Text
             ushort fillR = (ushort)Math.Round(color.Red * 65535);
             ushort fillG = (ushort)Math.Round(color.Green * 65535);
             ushort fillB = (ushort)Math.Round(color.Blue * 65535);
-            float fillA = (float)color.Alpha;
+            Half fillA = color.Alpha;
             ushort transR = (ushort)Math.Round(translationColor.Red * 65535);
             ushort transG = (ushort)Math.Round(translationColor.Green * 65535);
             ushort transB = (ushort)Math.Round(translationColor.Blue * 65535);
-            float transA = (float)translationColor.Alpha;
+            Half transA = translationColor.Alpha;
 
             var sourceEntry = new TextEntry
             {

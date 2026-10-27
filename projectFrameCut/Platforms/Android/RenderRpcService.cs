@@ -91,6 +91,7 @@ public sealed class RenderRpcService : Service
         if (string.IsNullOrWhiteSpace(socketPath) || string.IsNullOrWhiteSpace(token)) return;
 
         var dataRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraDataRoot);
+        projectFrameCut.Shared.ProjectCachePaths.Configure(intent.GetStringExtra(projectFrameCut.Shared.ProjectCachePaths.EnvironmentKey));
         if (string.IsNullOrWhiteSpace(dataRoot)) dataRoot = MauiProgram.BasicDataPath;
         var ffmpegRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraFfmpegRoot) ?? string.Empty;
         var processIdPath = intent.GetStringExtra(AndroidRenderWorkerController.ExtraProcessIdPath);

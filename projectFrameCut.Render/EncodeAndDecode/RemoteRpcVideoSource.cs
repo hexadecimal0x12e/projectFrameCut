@@ -26,7 +26,7 @@ public class RemoteRpcVideoSource : IVideoSource
     }
 
     public virtual string TypeName => DecoderTypeName;
-    public int? ResultBitPerPixel => _descriptor?.HasKnownResultBitsPerPixel == true ? _descriptor.ResultBitsPerPixel : null;
+    public int? ResultBitPerPixel => IPicture.PicturePixelMode.Float16Picture;
     public bool AllowCachingResult => _descriptor?.AllowCachingResult ?? false;
     public string[] PreferredExtension => _descriptor?.PreferredExtensions.ToArray() ?? [];
     public uint Index { get; set; }
@@ -191,63 +191,37 @@ public class RemoteRpcVideoSource : IVideoSource
 
     internal static IPicture ToPicture(ExternalVideoFrame frame)
     {
-        if (frame.BitsPerChannel == 8)
-        {
-            var picture = new Picture8bpp(frame.Width, frame.Height);
-            frame.Red.CopyTo(picture.r, 0);
-            frame.Green.CopyTo(picture.g, 0);
-            frame.Blue.CopyTo(picture.b, 0);
-            ApplyAlpha(frame, picture);
-            return picture;
-        }
-        var result = new Picture16bpp(frame.Width, frame.Height);
-        Buffer.BlockCopy(frame.Red, 0, result.r, 0, frame.Red.Length);
-        Buffer.BlockCopy(frame.Green, 0, result.g, 0, frame.Green.Length);
-        Buffer.BlockCopy(frame.Blue, 0, result.b, 0, frame.Blue.Length);
-        ApplyAlpha(frame, result);
+        frame.Validate();
+        return PictureFP16.FromOwnedChannels(frame.Width, frame.Height, ReadColor(frame.Red, frame), ReadColor(frame.Green, frame), ReadColor(frame.Blue, frame),
+            frame.Alpha.Length > 0 ? ReadHalfPlane(frame.Alpha) : null);
+    }
+
+    protected internal static HDRPictureFP16 ToHdr(ExternalVideoFrame frame)
+    {
+        frame.Validate();
+        int n = checked(frame.Width * frame.Height);
+        return HDRPictureFP16.FromOwnedChannels(frame.Width, frame.Height, ReadColor(frame.Red, frame), ReadColor(frame.Green, frame), ReadColor(frame.Blue, frame),
+            frame.Alpha.Length > 0 ? ReadHalfPlane(frame.Alpha) : null,
+            frame.Brightness.Length > 0 ? ReadHalfPlane(frame.Brightness) : Enumerable.Repeat(Half.One, n).ToArray(),
+            Half.IsFinite(frame.MaximumBrightness) && frame.MaximumBrightness > Half.Zero ? frame.MaximumBrightness : (Half)1000);
+    }
+
+    private static Half[] ReadColor(byte[] data, ExternalVideoFrame frame)
+    {
+        if (frame.UsesFloat16) return ReadHalfPlane(data);
+        var result = new Half[checked(frame.Width * frame.Height)];
+        for (int i = 0; i < result.Length; i++) result[i] = (Half)(frame.BitsPerChannel == 8 ? data[i] / 255f
+            : System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(i * 2, 2)) / 65535f);
         return result;
     }
 
-    protected internal static HDRPicture16bpp ToHdr(ExternalVideoFrame frame)
-    {
-        var result = new HDRPicture16bpp(frame.Width, frame.Height)
-        {
-            MaximumBrightness = float.IsFinite(frame.MaximumBrightness) && frame.MaximumBrightness > 0 ? frame.MaximumBrightness : 1000f,
-        };
-        if (frame.BitsPerChannel == 8)
-        {
-            for (int i = 0; i < result.Pixels; i++)
-            {
-                result.r[i] = (ushort)(frame.Red[i] * 257);
-                result.g[i] = (ushort)(frame.Green[i] * 257);
-                result.b[i] = (ushort)(frame.Blue[i] * 257);
-            }
-        }
-        else
-        {
-            Buffer.BlockCopy(frame.Red, 0, result.r, 0, frame.Red.Length);
-            Buffer.BlockCopy(frame.Green, 0, result.g, 0, frame.Green.Length);
-            Buffer.BlockCopy(frame.Blue, 0, result.b, 0, frame.Blue.Length);
-        }
-        ApplyAlpha(frame, result);
-        if (frame.Brightness.Length > 0) Buffer.BlockCopy(frame.Brightness, 0, result.Brightness, 0, frame.Brightness.Length);
-        else Array.Fill(result.Brightness, 1f);
-        return result;
-    }
-
-    private static void ApplyAlpha(ExternalVideoFrame frame, IPicture picture)
-    {
-        if (frame.Alpha.Length == 0) return;
-        var alpha = new float[checked(frame.Width * frame.Height)];
-        Buffer.BlockCopy(frame.Alpha, 0, alpha, 0, frame.Alpha.Length);
-        if (picture is Picture8bpp p8) { p8.a = alpha; p8.HasAlphaChannel = true; }
-        else if (picture is Picture16bpp p16) { p16.a = alpha; p16.HasAlphaChannel = true; }
-    }
+    private static Half[] ReadHalfPlane(byte[] bytes) =>
+        System.Runtime.InteropServices.MemoryMarshal.Cast<byte, Half>(bytes).ToArray();
 }
 
 public sealed class RemoteRpcHdrVideoSource(ExternalVideoSourceReference source) : RemoteRpcVideoSource(source), IHDRVideoSource
 {
-    public HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false) => ToHdr(ReadFrame(new()
+    public HDRPictureFP16 GetHDRFrame(uint targetFrame, bool hasAlpha = false) => ToHdr(ReadFrame(new()
     {
         State = State(),
         TargetFrame = targetFrame,
@@ -255,7 +229,7 @@ public sealed class RemoteRpcHdrVideoSource(ExternalVideoSourceReference source)
         HasAlpha = hasAlpha,
     }));
 
-    public HDRPicture16bpp GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false) => ToHdr(ReadFrame(new()
+    public HDRPictureFP16 GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false) => ToHdr(ReadFrame(new()
     {
         State = State(),
         TargetFrame = targetFrame,

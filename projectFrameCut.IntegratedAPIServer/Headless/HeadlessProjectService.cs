@@ -480,7 +480,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
                 ProjectRoot = session.Workspace.ProjectRoot,
                 ProjectJson = projectJson,
                 TimelineJson = timelineJson,
-                ProxyRoot = Path.Combine(session.Workspace.ProjectRoot, "proxy"),
+                ProxyRoot = string.Empty,
                 Assets = assets,
                 ProjectWidth = session.Workspace.ProjectInfo.RelativeWidth,
                 ProjectHeight = session.Workspace.ProjectInfo.RelativeHeight,

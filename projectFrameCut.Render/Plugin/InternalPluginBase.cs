@@ -186,10 +186,9 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, IVideoSource> VideoSourceProvider =>
         new Dictionary<string, (Func<bool>, IVideoSource)>
         {
-            { "DecoderContextHW", (HWAccelDecodeOptionGetter, new DecoderContextHW()) },
-            { "DecoderContext8Bit", (AlwaysTrue, new DecoderContext8Bit())},
-            { "DecoderContext16Bit", (AlwaysTrue, new DecoderContext16Bit()) },
-            { "HDRDecoderContext", (AlwaysTrue, new HDRDecoderContext())},
+            { "DecoderContextHWFP16", (HWAccelDecodeOptionGetter, new DecoderContextHWFP16()) },
+            { "DecoderContextFP16", (AlwaysTrue, new DecoderContextFP16()) },
+            { "HDRDecoderContextFP16", (AlwaysTrue, new HDRDecoderContextFP16())},
             { "AlphaBrightnessDecoderContext", (AlwaysTrue, new AlphaBrightnessDecoderContext()) },
             { "HttpDecoderContext", (AlwaysTrue, new HttpDecoderContext()) },
             { "FFmpegDeviceDecoderContext", (AlwaysTrue, new FFmpegDeviceDecoderContext()) },
@@ -243,9 +242,9 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider =>
         new Dictionary<string, (Func<bool>, Func<string, IVideoWriter>)>
         {
-            { "VideoWriterHWAccel", ((() => HWAccelEncodeOptionGetter() && !(OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())), new((_) => new VideoWriterHWAccel())) },
-            { "VideoWriter", (AlwaysTrue, new((_) => new VideoWriter())) },
-            { "HDRVideoWriter", (AlwaysTrue, new((_) => new HDRVideoWriter())) },
+            { "VideoWriterHWAccelFP16", ((() => HWAccelEncodeOptionGetter() && !(OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())), new((_) => new VideoWriterHWAccelFP16())) },
+            { "VideoWriterFP16", (AlwaysTrue, new((_) => new VideoWriterFP16())) },
+            { "HDRVideoWriterFP16", (AlwaysTrue, new((_) => new HDRVideoWriterFP16())) },
             { "AlphaBrightnessVideoWriter", (AlwaysTrue, new((_) => new AlphaBrightnessVideoWriter())) },
             { "BlackHoleWriter", (AlwaysTrue, new((_) => new BlackholeVideoWriter())) }
         }.ComputeCondition();

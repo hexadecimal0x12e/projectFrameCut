@@ -21,6 +21,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.InteractableEditor;
 
 
 namespace projectFrameCut.LivePreview
@@ -60,6 +61,7 @@ namespace projectFrameCut.LivePreview
         public IRenderClient? RpcClient { get; set; }
         public Func<RenderArtifact, CancellationToken, Task<string>>? ArtifactResolver { get; set; }
         public string? RenderProjectRoot { get; set; }
+        public string? LocalProjectRoot { get; set; }
         public string? RenderProxyRoot { get; set; }
         public IReadOnlyList<AssetPathEntry>? RemoteAssets { get; set; }
         public int ProjectRelativeWidth { get; set; }
@@ -71,7 +73,7 @@ namespace projectFrameCut.LivePreview
         private readonly SemaphoreSlim _updateDraftGate = new(1, 1);
         private readonly TaskCompletionSource _backendReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private HashSet<Guid> _cacheableClipIds = [];
-        public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
+        public string ProjectRoot => LocalProjectRoot ?? (string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty);
         public string ProjectName { get; set; } = "Untitled Project";
         public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Required;
         public bool IsFrameRendered(uint frameIndex)
@@ -414,6 +416,7 @@ namespace projectFrameCut.LivePreview
             {
                 SessionId = RenderSessionId,
                 ProjectRoot = RenderProjectRoot ?? ProjectRoot,
+                CacheRoot = RpcClient is null ? ProjectCachePaths.GetRoot(ProjectRoot) : string.Empty,
                 AllowedExternalSources = ProjectExternalSourceService.GetApprovals(RenderProjectRoot ?? ProjectRoot),
                 ProjectJson = ProjectJson,
                 TimelineJson = JsonSerializer.Serialize(json),
@@ -433,6 +436,8 @@ namespace projectFrameCut.LivePreview
             // project gets a dedicated backend bound to it.
             if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot, projectName: ProjectName);
             var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
+            if (RpcClient is null && !string.IsNullOrWhiteSpace(session.CacheRoot))
+                ProjectCachePaths.Bind(ProjectRoot, session.CacheRoot, ProjectName);
             if (_dynamicPreviewSnapshotHash != session.SnapshotHash)
             {
                 _dynamicPreviewFrameStores.Clear();
@@ -464,7 +469,7 @@ namespace projectFrameCut.LivePreview
                     foreach (var artifact in response.Artifacts)
                     {
                         var path = await ResolveArtifactPathAsync(artifact, cancellationToken).ConfigureAwait(false);
-                        var localPath = Path.Combine(ProjectRoot, "thumbs", "perClip", clipId.ToString(), "timeline", Path.GetFileName(artifact.ProjectRelativePath));
+                        var localPath = Path.Combine(ProjectCachePaths.GetRoot(ProjectRoot), "thumbs", "perClip", clipId.ToString(), "timeline", Path.GetFileName(artifact.ProjectRelativePath));
                         if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(localPath), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                         {
                             Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
@@ -509,6 +514,7 @@ namespace projectFrameCut.LivePreview
                 ProjectHeight = projectHeight,
                 PreferredPixelFormat = PreviewPixelFormat.PngImage,
                 UsePreviewMetadata = true,
+                DisableSourceFrameCache = !DynamicPreviewSettings.CacheSourceFrames,
                 VectorClipJson = vectorClipJson,
             }, token).ConfigureAwait(false);
             if (artifact.PixelFormat != PreviewPixelFormat.EncodedImage)
@@ -540,8 +546,9 @@ namespace projectFrameCut.LivePreview
                         FrameIndex = frameIndex, CanvasWidth = canvasWidth, CanvasHeight = canvasHeight,
                         ProjectWidth = projectWidth, ProjectHeight = projectHeight,
                         PreferredPixelFormat = target, VectorClipJson = vectorClipJson, UsePreviewMetadata = true,
+                        DisableSourceFrameCache = !DynamicPreviewSettings.CacheSourceFrames,
                     }, token).ConfigureAwait(false);
-                    if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
+                    if (artifact.PixelFormat is not (PreviewPixelFormat.VfdPicture or PreviewPixelFormat.PreviewFrame))
                         throw new InvalidDataException($"The render backend returned unsupported preview format {artifact.PixelFormat}.");
                     try
                     {
@@ -666,7 +673,7 @@ namespace projectFrameCut.LivePreview
 
         private string GetMaterializedPreviewRoot()
             => Path.Combine(
-                string.IsNullOrWhiteSpace(ProjectRoot) ? MauiProgram.CachePath : Path.Combine(ProjectRoot, "thumbs"),
+                string.IsNullOrWhiteSpace(ProjectRoot) ? MauiProgram.CachePath : Path.Combine(ProjectCachePaths.GetRoot(ProjectRoot), "thumbs"),
                 "unCacheablePerClip",
                 RenderSessionId.ToString("N"));
 

@@ -78,14 +78,14 @@ public abstract class BaseShapeComponent : IVectorComponent
             Parameters.GetUShort("StrokeR", ushort.MaxValue),
             Parameters.GetUShort("StrokeG", ushort.MaxValue),
             Parameters.GetUShort("StrokeB", ushort.MaxValue),
-            Parameters.GetFloat("StrokeA", 1f),
+            (Half)Parameters.GetFloat("StrokeA", 1f),
             Parameters.GetFloat("Thickness", 2f));
 
         shape = shape.WithFill(
             Parameters.GetUShort("FillR", 0),
             Parameters.GetUShort("FillG", 0),
             Parameters.GetUShort("FillB", 0),
-            Parameters.GetFloat("FillA", 1f));
+            (Half)Parameters.GetFloat("FillA", 1f));
 
         shape.RelativeX = Parameters.GetFloat("RelativeX", 0.5f);
         shape.RelativeY = Parameters.GetFloat("RelativeY", 0.5f);

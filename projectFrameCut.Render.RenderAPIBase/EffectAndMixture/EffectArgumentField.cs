@@ -26,6 +26,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public EffectArgumentFieldType FieldType { get; }
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        public object? DataFormat => null;
+
         /// <summary>
         /// The default value of the settable field, used to initialize the field's value when creating a new effect bundle.
         /// </summary>
@@ -305,6 +308,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Determine the type of the field, which is used to determine how to process the field.
         /// </summary>
         public required EffectArgumentFieldType FieldType { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public object? DataFormat { get; set; }
 
         /// <summary>
         /// The value of the static effect argument field. This property is required and must be set when creating an instance of <see cref="StaticEffectArgumentField{T}"/>.
@@ -344,6 +349,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string FromPlugin { get; set; } = string.Empty;
         public bool IsDynamic { get; set; } = false;
         public EffectArgumentFieldType FieldType { get; set; } = EffectArgumentFieldType.Unknown;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public object? DataFormat { get; set; }
         public string DefaultValue { get; set; } = string.Empty;
         public string MinValue { get; set; } = string.Empty;
         public string MaxValue { get; set; } = string.Empty;

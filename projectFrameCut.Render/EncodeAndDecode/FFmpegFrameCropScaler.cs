@@ -11,7 +11,7 @@ internal readonly record struct VideoFrameRegion(
 /// </summary>
 internal static unsafe class FFmpegFrameCropScaler
 {
-    internal unsafe delegate TResult PixelReader<TResult>(byte* data, int stride, int width, int height);
+    internal unsafe delegate TResult PixelReader<TResult>(AVFrame* frame);
 
     public static TResult Scale<TResult>(AVFrame* source, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
         int targetWidth, int targetHeight, AVPixelFormat targetFormat, PixelReader<TResult> reader)
@@ -62,11 +62,12 @@ internal static unsafe class FFmpegFrameCropScaler
             if (scaler == null)
                 throw new InvalidOperationException("FFmpeg failed to create the crop/scale conversion context.");
 
+            FFmpegFP16FrameCodec.ConfigureDecoderColorspace(scaler, source);
             int scaledRows = FFmpegHelper.ScaleFrame(scaler, cropped, output);
             if (scaledRows != targetHeight)
                 throw new InvalidDataException($"FFmpeg crop/scale produced {scaledRows}/{targetHeight} rows.");
 
-            return reader(output->data[0], output->linesize[0], targetWidth, targetHeight);
+            return reader(output);
         }
         finally
         {

@@ -1,3 +1,4 @@
+using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -13,7 +14,6 @@ public sealed class ChunkRenderOptions
     public bool Enabled { get; init; }
     public uint? ChunkFrames { get; init; }
     public double? ChunkSeconds { get; init; }
-    public int Parallelism { get; init; } = 1;
     public bool Resume { get; init; } = true;
     public bool KeepChunkFiles { get; init; }
 }
@@ -69,7 +69,7 @@ public sealed class ChunkRenderCoordinator
         _renderSignature = renderSignature;
         _totalRenderThreads = Math.Max(1, totalRenderThreads);
         _options = options;
-        _cacheRoot = EnsureContainedPath(Path.Combine(_projectRoot, "thumbs", "render-chunks"), _projectRoot);
+        _cacheRoot = ProjectCachePaths.ResolvePath(_projectRoot, "thumbs/render-chunks");
     }
 
     public string JobDirectory { get; private set; } = string.Empty;
@@ -162,53 +162,47 @@ public sealed class ChunkRenderCoordinator
         {
             progress?.Invoke(CreateProgress(reused.Index, 1, reused: true));
         }
-        if (pending.Length == 0) return;
-
-        int parallelism = Math.Clamp(_options.Parallelism, 1, Math.Min(pending.Length, _totalRenderThreads));
-        int threadsPerChunk = Math.Max(1, _totalRenderThreads / parallelism);
-        await Parallel.ForEachAsync(
-            pending,
-            new ParallelOptions { MaxDegreeOfParallelism = parallelism, CancellationToken = cancellationToken },
-            async (entry, token) =>
+        foreach (var entry in pending)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string outputPath = ResolveChunkPath(entry.RelativePath);
+            try
             {
-                string outputPath = ResolveChunkPath(entry.RelativePath);
-                try
-                {
-                    await UpdateEntryAsync(entry, ChunkStatus.Rendering, null, token).ConfigureAwait(false);
-                    if (File.Exists(outputPath)) File.Delete(outputPath);
-                    var segment = new ChunkRenderSegment(entry.Index, entry.StartFrame, entry.Duration, entry.RelativePath);
-                    await renderChunk(
-                        segment,
-                        outputPath,
-                        threadsPerChunk,
-                        (value, _, _) =>
-                        {
-                            var state = CreateProgress(entry.Index, value, reused: false);
-                            progress?.Invoke(state);
-                        },
-                        token).ConfigureAwait(false);
-                    token.ThrowIfCancellationRequested();
-                    if (!File.Exists(outputPath) || new FileInfo(outputPath).Length == 0)
-                        throw new InvalidDataException($"Chunk {entry.Index} did not produce a valid output file.");
+                await UpdateEntryAsync(entry, ChunkStatus.Rendering, null, cancellationToken).ConfigureAwait(false);
+                if (File.Exists(outputPath)) File.Delete(outputPath);
+                var segment = new ChunkRenderSegment(entry.Index, entry.StartFrame, entry.Duration, entry.RelativePath);
+                await renderChunk(
+                    segment,
+                    outputPath,
+                    _totalRenderThreads,
+                    (value, _, _) =>
+                    {
+                        var state = CreateProgress(entry.Index, value, reused: false);
+                        progress?.Invoke(state);
+                    },
+                    cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!File.Exists(outputPath) || new FileInfo(outputPath).Length == 0)
+                    throw new InvalidDataException($"Chunk {entry.Index} did not produce a valid output file.");
 
-                    entry.FileSize = new FileInfo(outputPath).Length;
-                    entry.Sha256 = await ComputeFileHashAsync(outputPath, token).ConfigureAwait(false);
-                    await UpdateEntryAsync(entry, ChunkStatus.Completed, null, token).ConfigureAwait(false);
-                    var completed = CreateProgress(entry.Index, 1, reused: false);
-                    progress?.Invoke(completed);
-                    OnChunkCompleted?.Invoke(segment);
-                }
-                catch (OperationCanceledException)
-                {
-                    await UpdateEntryAsync(entry, ChunkStatus.Pending, "Cancelled", CancellationToken.None).ConfigureAwait(false);
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    await UpdateEntryAsync(entry, ChunkStatus.Failed, ex.Message, CancellationToken.None).ConfigureAwait(false);
-                    throw;
-                }
-            }).ConfigureAwait(false);
+                entry.FileSize = new FileInfo(outputPath).Length;
+                entry.Sha256 = await ComputeFileHashAsync(outputPath, cancellationToken).ConfigureAwait(false);
+                await UpdateEntryAsync(entry, ChunkStatus.Completed, null, cancellationToken).ConfigureAwait(false);
+                var completed = CreateProgress(entry.Index, 1, reused: false);
+                progress?.Invoke(completed);
+                OnChunkCompleted?.Invoke(segment);
+            }
+            catch (OperationCanceledException)
+            {
+                await UpdateEntryAsync(entry, ChunkStatus.Pending, "Cancelled", CancellationToken.None).ConfigureAwait(false);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                await UpdateEntryAsync(entry, ChunkStatus.Failed, ex.Message, CancellationToken.None).ConfigureAwait(false);
+                throw;
+            }
+        }
     }
 
     public async Task<string> MergeAsync(

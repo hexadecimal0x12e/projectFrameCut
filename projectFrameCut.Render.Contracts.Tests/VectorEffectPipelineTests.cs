@@ -213,13 +213,13 @@ public sealed class VectorEffectPipelineTests
         using var clip = new VectorCanvasClip { Id = Guid.NewGuid(), Name = "vector", Duration = 5 };
         clip.EffectsInstances = [new VectorEffect { Apply = (_, _) => throw new InvalidOperationException("Native effect ran after rasterization.") },
             new FadeOpacityEffect_IPicture { Opacity = 0.5f }, new FixedPosition { Index = 1 }];
-        using var source = Picture8bpp.GenerateSolidColor(2, 2, 255, 0, 0, 1);
+        using var source = Picture8bpp.GenerateSolidColor(2, 2, 255, 0, 0, Half.One);
         var frame = new OneFrame(2, clip, source, resolveEffects: false);
         Assert.AreEqual(2, frame.Effects.Length);
         using var output = Timeline.MixtureLayers([frame], 2, 4, 2, 8, transparentBackground: true);
         var pixels = (IPicture<byte>)output;
-        Assert.AreEqual(0f, pixels.a![0], 0.001f);
-        Assert.AreEqual(0.5f, pixels.a![2], 0.001f);
+        Assert.AreEqual(0f, (float)pixels.a![0], 0.001f);
+        Assert.AreEqual(0.5f, (float)pixels.a![2], 0.001f);
     }
 
     [TestMethod]

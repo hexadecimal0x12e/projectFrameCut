@@ -56,11 +56,11 @@ public class SubtitleClip : TextClip, IClip
         Channel("FillR", ushort.MaxValue, d => d.Style.FillR);
         Channel("FillG", ushort.MaxValue, d => d.Style.FillG);
         Channel("FillB", ushort.MaxValue, d => d.Style.FillB);
-        Number("FillA", 1, d => d.Style.FillA, 0, 1);
+        Number("FillA", 1, d => (float)d.Style.FillA, 0, 1);
         Channel("StrokeR", 0, d => d.Style.StrokeR);
         Channel("StrokeG", 0, d => d.Style.StrokeG);
         Channel("StrokeB", 0, d => d.Style.StrokeB);
-        Number("StrokeA", 1, d => d.Style.StrokeA, 0, 1);
+        Number("StrokeA", 1, d => (float)d.Style.StrokeA, 0, 1);
         Number("StrokeThickness", 2, d => d.Style.StrokeThickness, 0);
         Number("X", 0, d => d.Style.X);
         Number("Y", 0, d => d.Style.Y);
@@ -102,11 +102,11 @@ public class SubtitleClip : TextClip, IClip
                 case "FillR": data.Style.FillR = Convert.ToUInt16(value); break;
                 case "FillG": data.Style.FillG = Convert.ToUInt16(value); break;
                 case "FillB": data.Style.FillB = Convert.ToUInt16(value); break;
-                case "FillA": data.Style.FillA = Convert.ToSingle(value); break;
+                case "FillA": data.Style.FillA = (Half)Convert.ToSingle(value); break;
                 case "StrokeR": data.Style.StrokeR = Convert.ToUInt16(value); break;
                 case "StrokeG": data.Style.StrokeG = Convert.ToUInt16(value); break;
                 case "StrokeB": data.Style.StrokeB = Convert.ToUInt16(value); break;
-                case "StrokeA": data.Style.StrokeA = Convert.ToSingle(value); break;
+                case "StrokeA": data.Style.StrokeA = (Half)Convert.ToSingle(value); break;
                 case "StrokeThickness": data.Style.StrokeThickness = Convert.ToSingle(value); break;
                 case "X": data.Style.X = Convert.ToSingle(value); break;
                 case "Y": data.Style.Y = Convert.ToSingle(value); break;

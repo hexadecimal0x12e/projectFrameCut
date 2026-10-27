@@ -61,14 +61,14 @@ public sealed class EffectImplementationRegistryTests
         var mixture = (IMixture)registry.Create("ClassicOverlayMixture", EffectImplementType.IPicture, EffectImplementType.HwAcceleration,
             new() { ["AccuracyMode"] = accuracy });
         var bottom = new Picture8bpp(1, 1) { r = [100], g = [0], b = [0] };
-        var top = new Picture8bpp(1, 1) { r = [200], g = [0], b = [0], a = [0.5f], HasAlphaChannel = true };
+        var top = new Picture8bpp(1, 1) { r = [200], g = [0], b = [0], a = [(Half)0.5f], HasAlphaChannel = true };
         var output = (IPicture<byte>)mixture.Mix(bottom, top, IPicture.PicturePixelMode.BytePicture);
         Assert.AreEqual((byte)150, output.r[0]);
-        Assert.AreEqual(1f, output.a![0]);
-        var hdrBottom = HDRPicture16bpp.GenerateSolidColor(1, 1, 10000, 0, 0, 1, 0.8f, 1000);
-        var hdrTop = HDRPicture16bpp.GenerateSolidColor(1, 1, 20000, 0, 0, 0.5f, 0.2f, 1000);
+        Assert.AreEqual(1f, (float)output.a![0]);
+        var hdrBottom = HDRPicture16bpp.GenerateSolidColor(1, 1, 10000, 0, 0, Half.One, (Half)0.8f, (Half)1000);
+        var hdrTop = HDRPicture16bpp.GenerateSolidColor(1, 1, 20000, 0, 0, (Half)0.5f, (Half)0.2f, (Half)1000);
         var hdrOutput = (IHDRPicture<ushort>)mixture.Mix(hdrBottom, hdrTop, IPicture.PicturePixelMode.UShortPicture);
-        Assert.AreEqual(0.5f, hdrOutput.Brightness[0], 0.00001f);
+        Assert.AreEqual(0.5f, (float)hdrOutput.Brightness[0], 0.00001f);
     }
 
     [TestMethod]
@@ -77,7 +77,7 @@ public sealed class EffectImplementationRegistryTests
         var registry = new EffectImplementationRegistry();
         registry.Register("cpu", new InternalPluginBase().EffectImplementationProvider);
         var bottom = new Picture8bpp(2, 1) { r = [100, 80], g = [0, 0], b = [0, 0] };
-        var top = new Picture8bpp(2, 1) { r = [255, 0], g = [0, 0], b = [0, 0], a = [1, 0], HasAlphaChannel = true };
+        var top = new Picture8bpp(2, 1) { r = [255, 0], g = [0, 0], b = [0, 0], a = [Half.One, Half.Zero], HasAlphaChannel = true };
         foreach (var type in new[] { "Add", "Subtract", "Multiply", "Screen", "OverlayBlend", "Darken", "Lighten", "Difference" })
         {
             var mixture = (IMixture)registry.Create(type + "Mixture", EffectImplementType.IPicture, EffectImplementType.HwAcceleration, []);
@@ -156,12 +156,12 @@ public sealed class EffectImplementationRegistryTests
         var registry = new EffectImplementationRegistry();
         registry.Register("cpu", new InternalPluginBase().EffectImplementationProvider);
         var place = (INormalEffect)registry.Create("Place", EffectImplementType.IPicture, EffectImplementType.HwAcceleration, new() { ["StartX"] = 1, ["StartY"] = 0 });
-        var source = HDRPicture16bpp.GenerateSolidColor(1, 1, 12000, 0, 0, 0.5f, 0.8f, 1000);
+        var source = HDRPicture16bpp.GenerateSolidColor(1, 1, 12000, 0, 0, (Half)0.5f, (Half)0.8f, (Half)1000);
         var output = (IHDRPicture<ushort>)place.Render(source, 2, 1);
-        Assert.AreEqual(0f, output.a![0]);
-        Assert.AreEqual(0.5f, output.a[1]);
+        Assert.AreEqual(0f, (float)output.a![0]);
+        Assert.AreEqual(0.5f, (float)output.a[1]);
         Assert.AreEqual((ushort)12000, output.r[1]);
-        Assert.AreEqual(0.8f, output.Brightness[1]);
+        Assert.AreEqual((float)(Half)0.8f, (float)output.Brightness[1]);
         Assert.AreEqual("DifferenceMixture", registry.Create("BlendModeMixture", EffectImplementType.IPicture, EffectImplementType.HwAcceleration, new() { ["MixtureType"] = "Difference" }).TypeName);
         Assert.IsInstanceOfType<RemoveColorEffect_IPicture>(registry.Create("RemoveColor", EffectImplementType.IPicture, EffectImplementType.HwAcceleration,
             new() { ["R"] = (ushort)0, ["G"] = (ushort)0, ["B"] = (ushort)0, ["A"] = (ushort)65535, ["Tolerance"] = (ushort)0 }));

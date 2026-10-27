@@ -232,7 +232,6 @@ public partial class RenderSettingPage : ContentPage
                 p => p.AddPicker("render_chunkSizeMode", SettingLocalizedResources.Render_ChunkRender_SizeMode, ChunkSizeModeMapping.Keys.ToArray(), ChunkSizeModeMapping.ReverseLookup(GetSetting("render_chunkSizeMode", "frames"), SettingLocalizedResources.Render_ChunkRender_SizeMode_Frames), null)
                 .AddEntry("render_chunkFrames", SettingLocalizedResources.Render_ChunkRender_Frames, GetSetting("render_chunkFrames", "3600"), SettingLocalizedResources.Render_ChunkRender_Frames_Desc, c => c.Keyboard = Keyboard.Numeric)
                 .AddEntry("render_chunkSeconds", SettingLocalizedResources.Render_ChunkRender_Seconds, GetSetting("render_chunkSeconds", "60"), SettingLocalizedResources.Render_ChunkRender_Seconds_Desc, c => c.Keyboard = Keyboard.Numeric)
-                .AddEntry("render_chunkParallelism", SettingLocalizedResources.Render_ChunkRender_Parallelism, GetSetting("render_chunkParallelism", "1"), SettingLocalizedResources.Render_ChunkRender_Parallelism_Desc, c => c.Keyboard = Keyboard.Numeric)
                 .AddCheckbox("render_chunkKeepFiles", SettingLocalizedResources.Render_ChunkRender_KeepFiles, IsBoolSettingTrue("render_chunkKeepFiles"))
                 .AddSeparator()
                 .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric))

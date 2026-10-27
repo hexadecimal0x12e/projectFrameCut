@@ -457,7 +457,7 @@ namespace projectFrameCut.Services
 
         public static Dictionary<string, string> FailedLoadPlugin = new();
 
-        private static void CleanupOrphanPluginPayloads(IEnumerable<PluginItem> items)
+        private static void CleanupOrphanPluginPayloads(IEnumerable<PluginItem> items, IEnumerable<IPluginBase> internalPlugins)
         {
             var pluginsRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins");
             if (!Directory.Exists(pluginsRoot)) return;
@@ -466,6 +466,8 @@ namespace projectFrameCut.Services
                 .Select(item => item.Id)
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            pluginIds.UnionWith(internalPlugins.Select(plugin => plugin.PluginID));
+            pluginIds.Add("__Cache__");
 
             foreach (var path in Directory.EnumerateFileSystemEntries(pluginsRoot))
             {
@@ -494,14 +496,14 @@ namespace projectFrameCut.Services
             }
         }
 
-        public static List<IPluginBase> LoadUserPlugins(Func<string, string>? legacyPemGetter = null)
+        public static List<IPluginBase> LoadUserPlugins(Func<string, string>? legacyPemGetter = null, IEnumerable<IPluginBase>? internalPlugins = null)
         {
             List<IPluginBase> plugins = new();
             var itemsPath = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
             var items = File.Exists(itemsPath)
                 ? JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(itemsPath)) ?? new()
                 : [];
-            CleanupOrphanPluginPayloads(items);
+            CleanupOrphanPluginPayloads(items, internalPlugins ?? PluginManager.LoadedPlugins.Values);
             if (!File.Exists(itemsPath)) return plugins;
             bool someRemoved = false;
             foreach (var item in items.Where(c => c.ShouldRemove))

@@ -1,3 +1,4 @@
+using projectFrameCut.Shared;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
@@ -52,7 +53,7 @@ public sealed partial class RenderBackendService
                 Guard = GetPreviewHashGuard(session, GetVisualClips(session.Clips)),
                 Timeline.ProcessEffectFromCanvas,
                 request.CanvasWidth, request.CanvasHeight, request.ProjectWidth, request.ProjectHeight, request.FrameRate,
-                request.PreferredPixelFormat, request.UsePreviewMetadata, request.MaxParallelWorkers,
+                request.PreferredPixelFormat, request.UsePreviewMetadata, request.DisableSourceFrameCache, request.MaxParallelWorkers,
                 request.AllowWorkerOversubscription, request.RenderAheadFrames, request.EnableThreadAffinity,
                 request.WorkerCPUCoreIndexs, request.EnableMemoryBudget, request.MaxBufferedBytes,
             });
@@ -534,8 +535,7 @@ public sealed partial class RenderBackendService
             Log($"[DynamicPreview] Clip-owned workers, limit={_workerLimit}, maximum={workers}, oversubscription={_request.AllowWorkerOversubscription}, packaging workers={state.PackagingWorkers.Length}, lookahead={_renderAheadFrames}, pending frames<={state.PendingFrameLimit}, memory budget={_request.EnableMemoryBudget}. Effect implementations: {EffectHelper.GetImplementationSummary(_renderClips)}.");
         }
 
-        private IPicture.PicturePixelMode PixelMode => _request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
-            ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+        private IPicture.PicturePixelMode PixelMode => IPicture.PicturePixelMode.Float16Picture;
 
         private static void RunClipJobs(DynamicPreviewState state, DynamicPreviewClipWorker worker)
         {
@@ -784,10 +784,11 @@ public sealed partial class RenderBackendService
                 var identity = FrameHashHelper.CanPersistClipHash(_renderClips, clip, job.Context.Options, token)
                     && _owner.TryGetPreparedPreviewHash(_session, clip, job.Frame, job.Context.Options, out var preparedHash)
                     ? preparedHash : FrameHashHelper.GetClipHash(_renderClips, clip, job.Frame, job.Context.Options, token);
-                using var cache = new PreviewFrameCache(id => Path.Combine(_session.ProjectRoot, "thumbs", "perClip", id.ToString(), "dynamic"),
+                using var cache = new PreviewFrameCache(id => Path.Combine(ProjectCachePaths.GetRoot(_session.ProjectRoot), "thumbs", "perClip", id.ToString(), "dynamic"),
                     job.Frame, _request.CanvasWidth, _request.CanvasHeight, _request.ProjectWidth, _request.ProjectHeight,
-                    PixelMode == IPicture.PicturePixelMode.UShortPicture, false, token, keepHwAccelPicture: true,
-                    findSource: key => _owner.FindPreviewSource(_session.ProjectRoot, key), metadataOnly: true);
+                    _request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb, false, token, keepHwAccelPicture: true,
+                    findSource: key => _owner.FindPreviewSource(_session.ProjectRoot, key), metadataOnly: true,
+                    cacheSourceFrames: !_request.DisableSourceFrameCache);
                 pending = cache.Prepare(clip, _renderClips,
                     FrameHashHelper.HashValue(new { Identity = identity.Hash, _session.CacheNamespace }), identity.CanReuse,
                     _owner._artifacts.ResolveProjectPath(_session.ProjectRoot, $"thumbs/unCacheablePerClip/{_session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd2m"),
@@ -818,9 +819,9 @@ public sealed partial class RenderBackendService
                 var cached = preview.CompleteInfo();
                 if (!cached.Persistent) _state.TemporaryFrames.Add(cached.Path);
                 cacheHit = cached.CacheHit;
-                entry.ProjectRelativePath = Path.GetRelativePath(_session.ProjectRoot, cached.Path).Replace(Path.DirectorySeparatorChar, '/');
+                entry.ProjectRelativePath = ProjectCachePaths.GetRelativePath(_session.ProjectRoot, cached.Path);
                 entry.Width = cached.Info.Width; entry.Height = cached.Info.Height;
-                entry.PreviewContainer = "vfd2m"; entry.PreviewEffectHash = cached.Info.EffectHash;
+                entry.PreviewContainer = PreviewFrameContainer.GetContainer(cached.Path); entry.PreviewEffectHash = cached.Info.EffectHash;
                 if (cached.Persistent)
                     _owner.TrackPreviewCacheAccess(_session.ProjectRoot, entry.ProjectRelativePath, job.ClipId, job.Render.Frame,
                         $"project:{_request.ProjectWidth}x{_request.ProjectHeight};canvas:{_request.CanvasWidth}x{_request.CanvasHeight};output:{entry.Width}x{entry.Height};format:{(cached.Info.ScRgb ? "scrgb16" : "png")}");

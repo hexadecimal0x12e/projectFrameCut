@@ -10,15 +10,25 @@ namespace projectFrameCut.Render.Rendering;
 
 public static class PreviewFrameContainer
 {
+    public const string ViewExtension = ".pfcv";
+    public const string ViewContainer = "pfcv";
     private static readonly VfdV2PictureEncoder encoder = new(VfdCompression.Zstandard, zstandardLevel: 1);
     private static readonly object[] gates = Enumerable.Range(0, 1024).Select(_ => new object()).ToArray();
 
     public static object Gate(string path) => gates[(uint)StringComparer.OrdinalIgnoreCase.GetHashCode(GetSourceKey(Path.GetFullPath(path))) % (uint)gates.Length];
 
+    public static bool IsPreviewContainer(string path)
+        => Path.GetExtension(path).Equals(".vfd2m", StringComparison.OrdinalIgnoreCase)
+            || Path.GetExtension(path).Equals(ViewExtension, StringComparison.OrdinalIgnoreCase);
+
+    public static string GetContainer(string path)
+        => Path.GetExtension(path).Equals(ViewExtension, StringComparison.OrdinalIgnoreCase) ? ViewContainer : "vfd2m";
+
     internal static string GetSourceKey(string path)
     {
         string name = Path.GetFileNameWithoutExtension(path);
-        if (!name.StartsWith("dynamic_vfd2m_", StringComparison.Ordinal)) return path;
+        if (!name.StartsWith("dynamic_vfd2m_", StringComparison.Ordinal)
+            && !name.StartsWith("dynamic_pfcv_", StringComparison.Ordinal)) return path;
         int index = name.LastIndexOf('_');
         return name.Length - index - 1 == 67 && name.AsSpan(index + 1).StartsWith("fh-", StringComparison.Ordinal)
             ? path[..(path.Length - Path.GetFileName(path).Length)] + name[..index] + Path.GetExtension(path) : path;
@@ -98,7 +108,13 @@ public static class PreviewFrameContainer
 
     private static long ReadMetadataLength(Stream stream)
     {
-        SeekMetadata(stream);
+        Span<byte> magic = stackalloc byte[4];
+        stream.ReadExactly(magic);
+        if (!magic.SequenceEqual("PFCV"u8))
+        {
+            stream.Seek(-magic.Length, SeekOrigin.Current);
+            SeekMetadata(stream);
+        }
         using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
         long length = reader.ReadInt64();
         if (length < 0 || length > int.MaxValue || length > stream.Length - stream.Position - 4)
@@ -134,7 +150,7 @@ public static class PreviewFrameContainer
             throw new InvalidDataException("Invalid VFD2M source header.");
         header[9] = 0;
         using var source = new HeaderStream(header.ToArray(), stream);
-        if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(source, out IPicture? picture) || picture is null)
+        if (!PictureExtensions.SharedVfdPictureDecoder.TryLoadFP16(source, out var picture) || picture is null)
             throw new InvalidDataException("Invalid cached preview source.");
         return picture;
     }
@@ -142,6 +158,32 @@ public static class PreviewFrameContainer
     public static void Save(string path, IPicture source, PreviewFrameData data, CancellationToken token)
     {
         lock (Gate(path)) Write(path, source, data, token);
+    }
+
+    public static void SaveView(string path, PreviewFrameData data, CancellationToken token)
+    {
+        lock (Gate(path))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            string temp = Path.Combine(Path.GetDirectoryName(path)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                using var metadata = CreateMetadata(data);
+                token.ThrowIfCancellationRequested();
+                using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536))
+                using (var writer = new BinaryWriter(output, System.Text.Encoding.UTF8, leaveOpen: true))
+                {
+                    writer.Write("PFCV"u8);
+                    writer.Write(metadata.Length);
+                    using var checkedMetadata = new CheckedReadStream(metadata, metadata.Length);
+                    checkedMetadata.CopyTo(output, 65536);
+                    writer.Write(checkedMetadata.Checksum);
+                }
+                token.ThrowIfCancellationRequested();
+                File.Move(temp, path, overwrite: true);
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
     }
 
     public static void ReplaceMetadata(string path, IPicture source, PreviewFrameData data, CancellationToken token)

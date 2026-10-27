@@ -6,6 +6,8 @@ using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
+using projectFrameCut.InteractableEditor;
 
 namespace projectFrameCut.LivePreview;
 
@@ -49,6 +51,7 @@ public partial class LivePreviewer
                     EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
                     MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
                     UsePreviewMetadata = true,
+                    DisableSourceFrameCache = !DynamicPreviewSettings.CacheSourceFrames,
                     PreferredPixelFormat = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled
                         ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
                 }, token).AsTask();
@@ -278,7 +281,8 @@ internal sealed class DynamicPreviewCache
                 SessionId = Session.SessionId, ClipId = entry.ClipId, FrameIndex = entry.FrameIndex,
                 CanvasWidth = _canvasWidth, CanvasHeight = _canvasHeight, ProjectWidth = _projectWidth, ProjectHeight = _projectHeight,
                 PreferredPixelFormat = Session.PixelFormat,
-                UsePreviewMetadata = entry.PreviewContainer == "vfd2m",
+                UsePreviewMetadata = entry.PreviewContainer is "vfd2m" or PreviewFrameContainer.ViewContainer,
+                DisableSourceFrameCache = entry.PreviewContainer == PreviewFrameContainer.ViewContainer,
             }, _cancellation.Token).AsTask().GetAwaiter().GetResult();
             if (entry.PreviewEffectHash.Length > 0 && artifact.PreviewEffectHash != entry.PreviewEffectHash)
                 throw new InvalidDataException("The playback preview no longer matches its timeline snapshot.");
@@ -346,13 +350,7 @@ internal sealed class DynamicPreviewCache
     }
 
     private string ResolveProjectPath(string relativePath)
-    {
-        var path = Path.GetFullPath(Path.Combine(_projectRoot, relativePath));
-        if (Path.IsPathRooted(relativePath) || !path.StartsWith(_projectRoot,
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-            throw new InvalidDataException("Dynamic preview cache path escapes the project root.");
-        return path;
-    }
+        => ProjectCachePaths.ResolvePath(_projectRoot, relativePath);
 
     private void LogIndexError(SqliteException error)
     {

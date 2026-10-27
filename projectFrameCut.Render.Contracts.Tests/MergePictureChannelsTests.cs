@@ -13,9 +13,9 @@ public sealed class MergePictureChannelsTests
     [TestMethod]
     public void SplitAndMergeSdrPreservesRgbAndAlphaWithoutSharingBuffers()
     {
-        using var source = Picture8bpp.GenerateSolidColor(2, 1, 51, 102, 153, 0.25f);
+        using var source = Picture8bpp.GenerateSolidColor(2, 1, 51, 102, 153, (Half)0.25f);
         source.r[1] = 255;
-        source.a![1] = 0.75f;
+        source.a![1] = (Half)0.75f;
         var channels = new SplitPictureChannelsEffect().ComputeOutputs(new() { Input = source });
         try
         {
@@ -29,9 +29,9 @@ public sealed class MergePictureChannelsTests
             CollectionAssert.AreEqual(source.b, picture.b);
             CollectionAssert.AreEqual(source.a, picture.a);
             picture.r[0] = 0;
-            picture.a![0] = 0;
+            picture.a![0] = Half.Zero;
             Assert.AreEqual((byte)51, ((IPicture<byte>)channels["R"]!).r[0]);
-            Assert.AreEqual(0.25f, ((IPicture<byte>)channels["A"]!).a![0]);
+            Assert.AreEqual(0.25f, (float)((IPicture<byte>)channels["A"]!).a![0]);
             Assert.AreEqual((byte)51, source.r[0]);
         }
         finally
@@ -43,9 +43,9 @@ public sealed class MergePictureChannelsTests
     [TestMethod]
     public void SplitAndMergeHdrThroughGraphPreservesEveryChannel()
     {
-        using var source = HDRPicture16bpp.GenerateSolidColor(2, 1, 12000, 34000, 56000, 0.3f, 0.2f, 1400f);
+        using var source = HDRPicture16bpp.GenerateSolidColor(2, 1, 12000, 34000, 56000, (Half)0.3f, (Half)0.2f, (Half)1400f);
         source.r[1] = 65535;
-        source.Brightness[1] = 0.85f;
+        source.Brightness[1] = (Half)0.85f;
         var split = new SplitPictureChannelsEffectProvider();
         IEffectProvider merge = new InternalPluginBase().EffectProviderProvider["MergePictureChannels"]();
         split.SetMainInputSource(IEffectProvider.InputAnchorGUID);
@@ -64,7 +64,7 @@ public sealed class MergePictureChannelsTests
         CollectionAssert.AreEqual(source.b, picture.b);
         CollectionAssert.AreEqual(source.a, picture.a);
         CollectionAssert.AreEqual(source.Brightness, picture.Brightness);
-        Assert.AreEqual(source.MaximumBrightness, picture.MaximumBrightness);
+        Assert.AreEqual((float)source.MaximumBrightness, (float)picture.MaximumBrightness);
         Assert.IsFalse(source.Disposed);
     }
 
@@ -88,8 +88,8 @@ public sealed class MergePictureChannelsTests
         using var brightness = Picture8bpp.GenerateSolidColor(1, 1, 128, 128, 128, null);
         fields["__Brightness__"] = brightness;
         using var hdr = (HDRPicture16bpp)effect.ComputeOutputs(new() { Parameters = fields })["Picture"]!;
-        Assert.AreEqual(128f / 255, hdr.Brightness[0], 0.00001f);
-        Assert.AreEqual(203f, hdr.MaximumBrightness);
+        Assert.AreEqual((float)(Half)(128f / 255), (float)hdr.Brightness[0], 0.00001f);
+        Assert.AreEqual(203f, (float)hdr.MaximumBrightness);
     }
 
     [TestMethod]

@@ -17,7 +17,7 @@ public sealed class EmptyVideoSource : IVideoSource
     }
 
     public string TypeName => nameof(EmptyVideoSource);
-    public int? ResultBitPerPixel => 8;
+    public int? ResultBitPerPixel => IPicture.PicturePixelMode.Float16Picture;
     public string[] PreferredExtension => [];
     public uint Index { get; set; }
     public long TotalFrames => long.MinValue;
@@ -52,7 +52,7 @@ public sealed class EmptyVideoSource : IVideoSource
     {
         ObjectDisposedException.ThrowIf(Disposed, this);
         Index = targetFrame == uint.MaxValue ? targetFrame : targetFrame + 1;
-        return Picture8bpp.GenerateSolidColor(Width, Height, 0, 0, 0, 0);
+        return PictureFP16.GenerateSolidColor(Width, Height, Half.Zero, Half.Zero, Half.Zero, Half.Zero);
     }
 
     public void Dispose() => Disposed = true;

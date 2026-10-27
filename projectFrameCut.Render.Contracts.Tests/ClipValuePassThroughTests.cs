@@ -105,7 +105,7 @@ public sealed class ClipValuePassThroughTests
             DynamicEffectGraph.CopyPicture);
         if (alreadyPublished) VectorPictureEffectProcessing.Process(clip, new VectorPicture(), 2, width: 2, height: 1);
         Assert.AreEqual(0, ClipValuePassThrough.Validate(clip, [clip]).Count);
-        using var raster = Picture8bpp.GenerateSolidColor(2, 1, 1, 2, 3, 1);
+        using var raster = Picture8bpp.GenerateSolidColor(2, 1, 1, 2, 3, Half.One);
         using var result = clip.EffectsInstances!.OfType<DynamicEffectGraph>().Single()
             .Evaluate(raster, clip, 2, 2, 1, 2, 1, new(0, 0, 2, 1, false)).Picture;
         Assert.AreEqual(2f, actual);
@@ -190,7 +190,7 @@ public sealed class ClipValuePassThroughTests
             picture.r[0] = 0;
         });
         using var target = Clip(1, input, consumer);
-        using var picture = Picture8bpp.GenerateSolidColor(2, 1, 52, 0, 0, 0.4f);
+        using var picture = Picture8bpp.GenerateSolidColor(2, 1, 52, 0, 0, (Half)0.4f);
         using var context = new ClipValueFrameContext([source, target], 1, _ => Assert.Fail("Already published."), DynamicEffectGraph.CopyPicture);
         context.Publish(source, 1, output.Id, picture);
         var graph = target.EffectsInstances!.OfType<DynamicEffectGraph>().Single();
@@ -208,7 +208,7 @@ public sealed class ClipValuePassThroughTests
         using var source = Clip(2, output);
         var input = Input(source, output);
         using var target = Clip(1, input);
-        var picture = HDRPicture16bpp.GenerateSolidColor(2, 1, 12000, 34000, 56000, 0.3f, 0.2f, 1400f);
+        var picture = HDRPicture16bpp.GenerateSolidColor(2, 1, 12000, 34000, 56000, (Half)0.3f, (Half)0.2f, (Half)1400f);
         IHDRPicture<ushort> snapshot;
         using (var context = new ClipValueFrameContext([source, target], 0, _ => Assert.Fail(), DynamicEffectGraph.CopyPicture))
         {
@@ -216,9 +216,9 @@ public sealed class ClipValuePassThroughTests
             picture.Dispose();
             snapshot = (IHDRPicture<ushort>)context.Read(target, 0, input);
             Assert.AreEqual((ushort)12000, snapshot.r[0]);
-            Assert.AreEqual(0.3f, snapshot.a![0]);
-            Assert.AreEqual(0.2f, snapshot.Brightness[0]);
-            Assert.AreEqual(1400f, snapshot.MaximumBrightness);
+            Assert.AreEqual((float)(Half)0.3f, (float)snapshot.a![0]);
+            Assert.AreEqual((float)(Half)0.2f, (float)snapshot.Brightness[0]);
+            Assert.AreEqual(1400f, (float)snapshot.MaximumBrightness);
             Assert.IsFalse(snapshot.Disposed);
         }
         Assert.IsTrue(snapshot.Disposed);
@@ -304,8 +304,8 @@ public sealed class ClipValuePassThroughTests
         var input = Input(source, output);
         using var target = Clip(1, input);
         var graph = source.EffectsInstances!.OfType<DynamicEffectGraph>().Single();
-        using var proper = Picture8bpp.GenerateSolidColor(2, 1, 20, 0, 0, 1);
-        using var neighbor = Picture8bpp.GenerateSolidColor(2, 1, 90, 0, 0, 1);
+        using var proper = Picture8bpp.GenerateSolidColor(2, 1, 20, 0, 0, Half.One);
+        using var neighbor = Picture8bpp.GenerateSolidColor(2, 1, 90, 0, 0, Half.One);
         using var context = new ClipValueFrameContext([source, target], 0, _ =>
         {
             using var owner = ClipValueFrameContext.Current!.EnterClip(source.Id, independent: true);
@@ -358,14 +358,14 @@ public sealed class ClipValuePassThroughTests
         IPicture? produced = null;
         var value = new Provider(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture, _ =>
         {
-            produced = Picture8bpp.GenerateSolidColor(2, 1, 35, 0, 0, 0.2f);
+            produced = Picture8bpp.GenerateSolidColor(2, 1, 35, 0, 0, (Half)0.2f);
             cancellation.Cancel();
             return produced;
         });
         value.SetMainInputSource(IEffectProvider.InputAnchorGUID);
         var output = Output(value, EffectArgumentFieldType.IPicture);
         using var source = Clip(2, value, output);
-        using var picture = Picture8bpp.GenerateSolidColor(2, 1, 0, 0, 0, 1);
+        using var picture = Picture8bpp.GenerateSolidColor(2, 1, 0, 0, 0, Half.One);
         using (var context = new ClipValueFrameContext([source], 0, _ => Assert.Fail(), DynamicEffectGraph.CopyPicture))
         {
             var graph = source.EffectsInstances!.OfType<DynamicEffectGraph>().Single();

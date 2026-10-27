@@ -32,8 +32,12 @@ public sealed class OscilloscopeEffectProvider : EffectProviderBase
     protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 }
 
-public sealed class OscilloscopeEffect : INormalEffect
+public class OscilloscopeEffect : OscilloscopeEffect<IPicture> { }
+
+public class OscilloscopeEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
 {
+    public IEffect WithPictureType<T>() where T : IPicture => new OscilloscopeEffect<T>();
+
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public string TypeName => "Oscilloscope";
     public string Name { get; set; } = "Oscilloscope";
@@ -48,9 +52,9 @@ public sealed class OscilloscopeEffect : INormalEffect
     public int RelativeHeight { get; set; }
     public Dictionary<string, object> Parameters { get; set; } = new();
 
-    public IEffect WithParameters(Dictionary<string, object> parameters) => new OscilloscopeEffect { Parameters = parameters };
+    public IEffect WithParameters(Dictionary<string, object> parameters) => new OscilloscopeEffect<TPicture> { Parameters = parameters };
 
-    public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+    public IPicture Render(TPicture source, int targetWidth, int targetHeight)
     {
         var audio = DynamicParam.Resolve<IAudioSamples<float>?>(Parameters.GetValueOrDefault("AudioSample"), null)
             ?? throw new InvalidOperationException("Oscilloscope requires an AudioSample input.");
@@ -65,7 +69,10 @@ public sealed class OscilloscopeEffect : INormalEffect
         if (!float.IsFinite(gain) || gain < 0) throw new ArgumentOutOfRangeException("Gain");
         int width = Math.Max(1, targetWidth), height = Math.Max(1, targetHeight);
         int lineWidth = Math.Clamp(DynamicParam.Resolve(Parameters.GetValueOrDefault("LineWidth"), 2), 1, Math.Max(width, height));
-        IPicture output = source switch
+        IPicture output = source is IPicture<Half> fp ? FP16Raster.CreateLike(fp, width, height) : PictureCalculation<TPicture>.IsHdr ? new HDRPicture16bpp(width, height) { MaximumBrightness = ((IHDRPicture<ushort>)(object)source).MaximumBrightness }
+            : PictureCalculation<TPicture>.Is16 ? new Picture16bpp(width, height)
+            : PictureCalculation<TPicture>.Is8 ? new Picture8bpp(width, height)
+            : source switch
         {
             IHDRPicture<ushort> hdr => new HDRPicture16bpp(width, height) { MaximumBrightness = hdr.MaximumBrightness },
             IPicture<ushort> => new Picture16bpp(width, height),
@@ -74,7 +81,8 @@ public sealed class OscilloscopeEffect : INormalEffect
         };
         try
         {
-            if (output is IPicture<byte> p8)
+            if (output is IPicture<Half> f) Draw(f, audio, gain, lineWidth, (Half)(color.r / 65535f), (Half)(color.g / 65535f), (Half)(color.b / 65535f), color.a);
+            else if (output is IPicture<byte> p8)
                 Draw(p8, audio, gain, lineWidth, (byte)(color.r / 257), (byte)(color.g / 257), (byte)(color.b / 257), color.a);
             else Draw((IPicture<ushort>)output, audio, gain, lineWidth, color.r, color.g, color.b, color.a);
             return output;
@@ -86,15 +94,15 @@ public sealed class OscilloscopeEffect : INormalEffect
         }
     }
 
-    private static void Draw<T>(IPicture<T> picture, IAudioSamples<float> audio, float gain, int lineWidth, T red, T green, T blue, float alpha)
+    private static void Draw<T>(IPicture<T> picture, IAudioSamples<float> audio, float gain, int lineWidth, T red, T green, T blue, Half alpha)
     {
         picture.HasAlphaChannel = true;
-        picture.a = new float[picture.Pixels];
+        picture.a = new Half[picture.Pixels];
         var r = picture.r;
         var g = picture.g;
         var b = picture.b;
         var a = picture.a;
-        var hdr = picture as IHDRPicture<ushort>;
+        var hdr = picture as IHDRPicture<T>;
         for (int channel = 0; channel < Math.Min(2, audio.channelCount); channel++)
         {
             var samples = audio.GetSamples(channel);
@@ -139,8 +147,8 @@ public sealed class OscilloscopeEffect : INormalEffect
                         r[index] = red;
                         g[index] = green;
                         b[index] = blue;
-                        a[index] = Math.Clamp(alpha, 0, 1);
-                        if (hdr is not null) hdr.Brightness[index] = 203f / Math.Max(1, hdr.MaximumBrightness);
+                        a[index] = Half.Clamp(alpha, Half.Zero, Half.One);
+                        if (hdr is not null) hdr.Brightness[index] = (Half)203 / Half.Max(Half.One, hdr.MaximumBrightness);
                     }
                 }
             }

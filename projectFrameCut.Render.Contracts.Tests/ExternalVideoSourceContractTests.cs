@@ -57,7 +57,7 @@ public sealed class ExternalVideoSourceContractTests
             Red = new byte[4],
             Green = new byte[4],
             Blue = new byte[4],
-            Alpha = new byte[16],
+            Alpha = new byte[8],
         }.Validate();
 
         new ExternalVideoFrame
@@ -68,9 +68,9 @@ public sealed class ExternalVideoSourceContractTests
             Red = new byte[8],
             Green = new byte[8],
             Blue = new byte[8],
-            Alpha = new byte[16],
-            Brightness = new byte[16],
-            MaximumBrightness = 1000,
+            Alpha = new byte[8],
+            Brightness = new byte[8],
+            MaximumBrightness = (Half)1000,
         }.Validate();
     }
 

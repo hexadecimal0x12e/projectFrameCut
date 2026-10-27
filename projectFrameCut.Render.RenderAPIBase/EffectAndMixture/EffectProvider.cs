@@ -101,6 +101,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             (isInput ? context.State.Fields : context.State.Outputs).TryGetValue(fieldId, out var field)
                 ? field.FieldType : EffectArgumentFieldType.Any;
 
+        public virtual object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            isInput ? PictureDataFormats.Resolve(this, fieldId, true, context)
+                : context.State.Outputs.GetValueOrDefault(fieldId)?.DataFormat;
+
         /// <summary>
         /// Persisted binding configuration. Input field ids store their sources,
         /// and <c>__Output__</c> stores the final-output marker.
@@ -139,6 +143,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Value-provider effects are built here too; their output is described by <see cref="OutField"/>.
         /// </remarks>
         public IEffect[] Build();
+
+        public virtual IEffect[] Build<TPicture>() where TPicture : IPicture => Build();
 
         /// <summary>
         /// Restore the <see cref="IEffect"/> instance from the <paramref name="parameters"/> param dictionary with a specific implementation type.

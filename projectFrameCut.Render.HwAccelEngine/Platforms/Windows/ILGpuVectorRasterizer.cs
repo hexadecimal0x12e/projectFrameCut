@@ -1,4 +1,6 @@
 using ILGPU;
+using Half = System.Half;
+using GpuHalf = ILGPU.Half;
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using projectFrameCut.Drawing.Base.Picture;
@@ -6,13 +8,14 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 
 namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
 {
     /// <summary>
     /// ILGPU-based vector rasterizer. Converts flattened GPU primitives to a raster
-    /// <see cref="Picture16bpp"/> via a per-pixel compute kernel.
+    /// <see cref="PictureFP16"/> via a per-pixel compute kernel.
     /// </summary>
     internal static class ILGpuVectorRasterizer
     {
@@ -32,6 +35,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             if (accel == null)
                 throw new InvalidOperationException("No ILGPU accelerator available for vector rasterization.");
 
+            if (accel is ILGPU.Runtime.OpenCL.CLAccelerator cl && !cl.Capabilities.Float16)
+                throw new NotSupportedException($"OpenCL device '{accel.Name}' requires cl_khr_fp16 for Half channels.");
+
             int pc = primitives.Count;
             int pixels = width * height;
 
@@ -49,7 +55,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                 primData[i * FloatsPerPrimitive + 0] = p.R;
                 primData[i * FloatsPerPrimitive + 1] = p.G;
                 primData[i * FloatsPerPrimitive + 2] = p.B;
-                primData[i * FloatsPerPrimitive + 3] = p.A;
+                primData[i * FloatsPerPrimitive + 3] = BitConverter.Int32BitsToSingle(BitConverter.HalfToUInt16Bits(p.A));
                 primData[i * FloatsPerPrimitive + 4] = p.D0;
                 primData[i * FloatsPerPrimitive + 5] = p.D1;
                 primData[i * FloatsPerPrimitive + 6] = p.D2;
@@ -79,10 +85,10 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             using var dTileOffsets = accel.Allocate1D(bins.TileOffsets);
             using var dTileIndices = accel.Allocate1D(bins.TileIndices);
 
-            using var dOutR = accel.Allocate1D<float>(pixels);
-            using var dOutG = accel.Allocate1D<float>(pixels);
-            using var dOutB = accel.Allocate1D<float>(pixels);
-            using var dOutA = accel.Allocate1D<float>(pixels);
+            using var dOutR = accel.Allocate1D<GpuHalf>(pixels);
+            using var dOutG = accel.Allocate1D<GpuHalf>(pixels);
+            using var dOutB = accel.Allocate1D<GpuHalf>(pixels);
+            using var dOutA = accel.Allocate1D<GpuHalf>(pixels);
 
             // --- Load & launch kernel ---
             var kernel = GetOrCreateKernel(accel);
@@ -112,13 +118,12 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             var rFloat = dOutR.GetAsArray1D();
             var gFloat = dOutG.GetAsArray1D();
             var bFloat = dOutB.GetAsArray1D();
-            var aFloat = dOutA.GetAsArray1D();
+            var aOut = MemoryMarshal.Cast<GpuHalf, Half>(dOutA.GetAsArray1D().AsSpan()).ToArray();
 
-            // --- Convert float[0..65535] back to ushort ---
-            var rOut = new ushort[pixels];
-            var gOut = new ushort[pixels];
-            var bOut = new ushort[pixels];
-            var aOut = new float[pixels];
+            // Read normalized Half channels.
+            var rOut = new Half[pixels];
+            var gOut = new Half[pixels];
+            var bOut = new Half[pixels];
 
             // Convert & scan for alpha in parallel — this was previously a
             // single-threaded loop that could take a noticeable chunk of the
@@ -126,16 +131,15 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             int alphaFlag = 0;
             Parallel.For(0, pixels, i =>
             {
-                rOut[i] = ClampUshort(rFloat[i]);
-                gOut[i] = ClampUshort(gFloat[i]);
-                bOut[i] = ClampUshort(bFloat[i]);
-                aOut[i] = aFloat[i];
-                if (aOut[i] < 1f) Volatile.Write(ref alphaFlag, 1);
+                rOut[i] = (Half)(float)rFloat[i];
+                gOut[i] = (Half)(float)gFloat[i];
+                bOut[i] = (Half)(float)bFloat[i];
+                if (aOut[i] < Half.One) Volatile.Write(ref alphaFlag, 1);
             });
             var hasAlpha = alphaFlag != 0;
             Logger.LogDiagnostic($"Rasterization operation done within {sw.Elapsed}.");
 
-            return new Picture16bpp(width, height)
+            return new PictureFP16(width, height)
             {
                 r = rOut,
                 g = gOut,
@@ -156,21 +160,20 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         /// early-out is exact: primitives below a fully opaque pixel cannot
         /// contribute anything.
         /// </summary>
-        private const float AlphaSaturatedEpsilon = 1e-6f;
 
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Accelerator,
             Action<Index1D,
                 ArrayView<int>, ArrayView<float>, ArrayView<float>,
                 int, int, int,
                 ArrayView<int>, ArrayView<int>, int, int,
-                ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>>
+                ArrayView<GpuHalf>, ArrayView<GpuHalf>, ArrayView<GpuHalf>, ArrayView<GpuHalf>>>
             KernelCache = new();
 
         private static Action<Index1D,
             ArrayView<int>, ArrayView<float>, ArrayView<float>,
             int, int, int,
             ArrayView<int>, ArrayView<int>, int, int,
-            ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>
+            ArrayView<GpuHalf>, ArrayView<GpuHalf>, ArrayView<GpuHalf>, ArrayView<GpuHalf>>
         GetOrCreateKernel(Accelerator accel)
         {
             return KernelCache.GetValue(accel, static acc =>
@@ -185,10 +188,10 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                     ArrayView<int> tileIndices, // flat primitive indices per tile
                     int tilesX,
                     int tileSize,
-                    ArrayView<float> outR,
-                    ArrayView<float> outG,
-                    ArrayView<float> outB,
-                    ArrayView<float> outA) =>
+                    ArrayView<GpuHalf> outR,
+                    ArrayView<GpuHalf> outG,
+                    ArrayView<GpuHalf> outB,
+                    ArrayView<GpuHalf> outA) =>
                 {
                     int x = i % w;
                     int y = i / w;
@@ -196,7 +199,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                     float cy = y + 0.5f;
 
                     // Accumulated premultiplied colour + coverage.
-                    float accR = 0f, accG = 0f, accB = 0f, accA = 0f;
+                    float accR = 0f, accG = 0f, accB = 0f;
+                    GpuHalf accA = (GpuHalf)0f;
 
                     // Only test primitives that overlap this pixel's tile
                     // instead of every primitive in the scene.
@@ -222,9 +226,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                         float sr = primData[dataBase + 0];
                         float sg = primData[dataBase + 1];
                         float sb = primData[dataBase + 2];
-                        float sa = primData[dataBase + 3];
+                        GpuHalf sa = primData.Cast<GpuHalf>()[(dataBase + 3) * 2];
 
-                        if (sa <= 0f) continue;
+                        if (sa <= (GpuHalf)0f) continue;
 
                         // Cheap per-primitive bounding-box cull. Primitives
                         // that don't cover the current pixel are skipped
@@ -335,24 +339,25 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                         // "Under" compositing: this primitive is behind
                         // everything accumulated so far, so it only fills the
                         // remaining transparent coverage.
-                        float contrib = sa * (1f - accA);
-                        accR += sr * contrib;
-                        accG += sg * contrib;
-                        accB += sb * contrib;
+                        GpuHalf contrib = sa * ((GpuHalf)1f - accA);
+                        accR += sr * (float)contrib;
+                        accG += sg * (float)contrib;
+                        accB += sb * (float)contrib;
                         accA += contrib;
 
                         // Early-out: coverage saturated — primitives below
                         // this one cannot contribute anything.
-                        if (accA >= 1f - AlphaSaturatedEpsilon) break;
+                        if (accA >= (GpuHalf)1f) break;
                     }
 
-                    float pr, pg, pb, pa;
+                    float pr, pg, pb;
+                    GpuHalf pa;
                     if (transparentBg != 0)
                     {
                         // Un-premultiply to straight alpha.
-                        if (accA > 1e-6f)
+                        if (accA > (GpuHalf)0f)
                         {
-                            pr = accR / accA; pg = accG / accA; pb = accB / accA;
+                            pr = accR / (float)accA; pg = accG / (float)accA; pb = accB / (float)accA;
                         }
                         else
                         {
@@ -363,16 +368,16 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                     else
                     {
                         // Composite over the opaque white background.
-                        float rem = 1f - accA;
-                        pr = accR + 65535f * rem;
-                        pg = accG + 65535f * rem;
-                        pb = accB + 65535f * rem;
-                        pa = 1f;
+                        GpuHalf rem = (GpuHalf)1f - accA;
+                        pr = accR + 65535f * (float)rem;
+                        pg = accG + 65535f * (float)rem;
+                        pb = accB + 65535f * (float)rem;
+                        pa = (GpuHalf)1f;
                     }
 
-                    outR[i] = pr;
-                    outG[i] = pg;
-                    outB[i] = pb;
+                    outR[i] = (GpuHalf)(pr / 65535f);
+                    outG[i] = (GpuHalf)(pg / 65535f);
+                    outB[i] = (GpuHalf)(pb / 65535f);
                     outA[i] = pa;
                 }));
         }

@@ -1,3 +1,4 @@
+using projectFrameCut.Shared;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
@@ -7,17 +8,24 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
 {
     public static class HwAccelEffectHelper
     {
-        public static IPicture WithBrightness(IPicture result, IPicture source, float[]? brightness = null) => PictureEffectChannels.PreserveHdr(result, source, brightness);
+        public static IPicture WithBrightness(IPicture result, IPicture source, Half[]? brightness = null) =>
+            PictureEffectChannels.PreserveHdr(result, source, brightness);
+
+        public static IPicture MapBrightness(IPicture result, IPicture source, Func<Half[], Half[]> map) =>
+            WithBrightness(result, source, source is IHDRPicture<ushort> hdr ? map(hdr.Brightness) : null);
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static (float[] r, float[] g, float[] b, float[] a, bool sourceHasAlpha) ExtractFloatChannels(IPicture source)
+        public static (float[] r, float[] g, float[] b, Half[] a, bool sourceHasAlpha) ExtractFloatChannels(IPicture source)
         {
+            if (source is IPicture<Half> fp)
+                return (fp.r.Select(v => (float)v).ToArray(), fp.g.Select(v => (float)v).ToArray(), fp.b.Select(v => (float)v).ToArray(),
+                    fp.HasAlphaChannel && fp.a is not null ? fp.a.ToArray() : Enumerable.Repeat(Half.One, fp.Pixels).ToArray(), fp.HasAlphaChannel);
             if (source is IPicture<ushort> p16)
             {
                 int pixels = p16.Pixels;
                 var rOut = GC.AllocateUninitializedArray<float>(pixels);
                 var gOut = GC.AllocateUninitializedArray<float>(pixels);
                 var bOut = GC.AllocateUninitializedArray<float>(pixels);
-                var aOut = GC.AllocateUninitializedArray<float>(pixels);
+                var aOut = GC.AllocateUninitializedArray<Half>(pixels);
                 var srcR = p16.r;
                 var srcG = p16.g;
                 var srcB = p16.b;
@@ -37,7 +45,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
                 }
                 else
                 {
-                    aOut.AsSpan().Fill(1f);
+                    aOut.AsSpan().Fill(Half.One);
                 }
 
                 return (rOut, gOut, bOut, aOut, hasAlpha);
@@ -49,7 +57,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
                 var rOut = GC.AllocateUninitializedArray<float>(pixels);
                 var gOut = GC.AllocateUninitializedArray<float>(pixels);
                 var bOut = GC.AllocateUninitializedArray<float>(pixels);
-                var aOut = GC.AllocateUninitializedArray<float>(pixels);
+                var aOut = GC.AllocateUninitializedArray<Half>(pixels);
                 var srcR = p8.r;
                 var srcG = p8.g;
                 var srcB = p8.b;
@@ -69,7 +77,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
                 }
                 else
                 {
-                    aOut.AsSpan().Fill(1f);
+                    aOut.AsSpan().Fill(Half.One);
                 }
 
                 return (rOut, gOut, bOut, aOut, hasAlpha);
@@ -79,9 +87,17 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static IPicture BuildPicture(IPicture source, int width, int height, float[] r, float[] g, float[] b, float[] a, bool keepAlpha)
+        public static IPicture BuildPicture(IPicture source, int width, int height, float[] r, float[] g, float[] b, Half[] a, bool keepAlpha)
         {
             int pixels = width * height;
+            if (source is IPicture<Half> fp)
+            {
+                var result = FP16Raster.CreateLike(fp, width, height, keepAlpha);
+                result.r = r.Select(PictureFP16.Unit).ToArray(); result.g = g.Select(PictureFP16.Unit).ToArray(); result.b = b.Select(PictureFP16.Unit).ToArray();
+                result.a = keepAlpha ? a.Select(v => PictureFP16.Unit((float)v)).ToArray() : null;
+                result.HasAlphaChannel = keepAlpha;
+                return result;
+            }
             if (source.BitPerPixel == 16)
             {
                 var picture = new Picture16bpp(width, height)
@@ -104,9 +120,9 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
                 picture.b = bOut;
                 if (keepAlpha)
                 {
-                    var aOut = GC.AllocateUninitializedArray<float>(pixels);
+                    var aOut = GC.AllocateUninitializedArray<Half>(pixels);
                     for (int i = 0; i < pixels; i++)
-                        aOut[i] = Math.Clamp(a[i], 0f, 1f);
+                        aOut[i] = HalfChannelMath.Clamp(a[i]);
                     picture.a = aOut;
                 }
 
@@ -135,9 +151,9 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
                 picture.b = bOut;
                 if (keepAlpha)
                 {
-                    var aOut = GC.AllocateUninitializedArray<float>(pixels);
+                    var aOut = GC.AllocateUninitializedArray<Half>(pixels);
                     for (int i = 0; i < pixels; i++)
-                        aOut[i] = Math.Clamp(a[i], 0f, 1f);
+                        aOut[i] = HalfChannelMath.Clamp(a[i]);
                     picture.a = aOut;
                 }
 

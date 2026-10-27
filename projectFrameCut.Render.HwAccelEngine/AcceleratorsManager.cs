@@ -168,11 +168,18 @@ namespace projectFrameCut.Render.HwAccelEngine
         }
 
         // Settings and workers resolve the same selection without creating local accelerators.
-        public static AcceleratorsStore GetConfiguration(AcceleratorDeviceInfo[] devices)
+        public static AcceleratorsStore GetConfiguration(AcceleratorDeviceInfo[]? devices = null)
         {
             lock (InitializationLock)
             {
                 var store = ReadConfiguration();
+                if (devices is null)
+                    return new AcceleratorsStore
+                    {
+                        MainAcceleratorName = store?.MainAcceleratorName ?? "",
+                        RenderingAcceleratorNames = store?.RenderingAcceleratorNames?.ToArray() ?? [],
+                        EnableMultiAccel = store?.EnableMultiAccel ?? false
+                    };
                 var main = devices.FirstOrDefault(d => d.Name == store?.MainAcceleratorName)
                     ?? devices.FirstOrDefault(d => d.Type != "CPU");
                 var names = store is { EnableMultiAccel: true } && store.RenderingAcceleratorNames.Length > 0
@@ -369,6 +376,7 @@ namespace projectFrameCut.Render.HwAccelEngine
                     EnableMultiAccel = enableMultiAccel
                 };
             }
+            Logger.Log($"[AcceleratorsManager] Using accelerator configuration: main={mainDeviceName}, rendering={string.Join(", ", renderingDeviceNames)}, multi={enableMultiAccel}.");
         }
 
         public static void ReleaseResources()

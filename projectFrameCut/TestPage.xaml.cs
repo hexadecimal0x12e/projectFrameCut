@@ -225,8 +225,8 @@ public partial class TestPage : ContentPage
                     ShaderSource = ShaderAlphaSrc,
                     Inputs = new float[][]
                     {
-                    srcA.a,
-                    srcB.a
+                    PackAlpha(srcA.a),
+                    PackAlpha(srcB.a)
                     },
                     HeightRequest = 120, // ȷ���з���߶ȴ���Surface
                     HorizontalOptions = LayoutOptions.Fill,
@@ -285,7 +285,7 @@ public partial class TestPage : ContentPage
                 ComputeView.Add(alphaGlView);
 
                 outA = await tcsA.Task; // ������UI�̼߳���
-                Debug.WriteLine($"Alpha computation completed, avg :{outA.Average()} first 5 distincted result:{string.Join(',', outA.Distinct().Take(5))}");
+                Debug.WriteLine($"Alpha computation completed, avg :{MemoryMarshal.Cast<float, Half>(outA.AsSpan()).Slice(0, srcA.Pixels).ToArray().Average(a => (float)a)} first 5 distincted result:{string.Join(',', outA.Distinct().Take(5))}");
 
             } //A
 
@@ -299,9 +299,9 @@ public partial class TestPage : ContentPage
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
                     {
-                        srcA.a,
+                        PackAlpha(srcA.a),
                         srcA.r.Select(Convert.ToSingle).ToArray(),
-                        srcB.a,
+                        PackAlpha(srcB.a),
                         srcB.r.Select(Convert.ToSingle).ToArray()
                     },
                     HeightRequest = 120, // ȷ���з���߶ȴ���Surface
@@ -381,9 +381,9 @@ public partial class TestPage : ContentPage
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
                     {
-                        srcA.a,
+                        PackAlpha(srcA.a),
                         srcA.g.Select(Convert.ToSingle).ToArray(),
-                        srcB.a,
+                        PackAlpha(srcB.a),
                         srcB.g.Select(Convert.ToSingle).ToArray()
                     },
                     HeightRequest = 120, // ȷ���з���߶ȴ���Surface
@@ -462,9 +462,9 @@ public partial class TestPage : ContentPage
                     ShaderSource = ShaderColorSrc,
                     Inputs = new float[][]
                     {
-                        srcA.a,
+                        PackAlpha(srcA.a),
                         srcA.b.Select(Convert.ToSingle).ToArray(),
-                        srcB.a,
+                        PackAlpha(srcB.a),
                         srcB.b.Select(Convert.ToSingle).ToArray()
                     },
                     HeightRequest = 120, // ȷ���з���߶ȴ���Surface
@@ -541,7 +541,7 @@ public partial class TestPage : ContentPage
                 r = uOutR,
                 g = uOutG,
                 b = uOutB,
-                a = outA,
+                a = MemoryMarshal.Cast<float, Half>(outA.AsSpan()).Slice(0, srcA.Pixels).ToArray(),
                 HasAlphaChannel = true
             };
 
@@ -579,31 +579,43 @@ public partial class TestPage : ContentPage
 #endif
     }
 
+    private static float[] PackAlpha(Half[] source)
+    {
+        var buffer = new float[source.Length];
+        source.AsSpan().CopyTo(MemoryMarshal.Cast<float, Half>(buffer.AsSpan()));
+        return buffer;
+    }
+
     public string ShaderAlphaSrc =
         $$"""
-        {{"#"}}version 310 es            
+        {{"#"}}version 310 es
+        {{"#"}}extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+        {{"#"}}extension GL_EXT_shader_16bit_storage : require
+        precision highp float;
+        precision highp int;
         layout(local_size_x = 256) in;
 
         // ���룺a, aAlpha, b, bAlpha
-        layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
-        layout(std430, binding = 1) buffer BAlphaBuffer { float bAlpha[]; };
+        layout(std430, binding = 0) buffer AAlphaBuffer { float16_t aAlpha[]; };
+        layout(std430, binding = 1) buffer BAlphaBuffer { float16_t bAlpha[]; };
 
-        layout(std430, binding = 6) buffer CAlphaBuffer { float cAlpha[]; };
+        layout(std430, binding = 6) buffer CAlphaBuffer { float16_t cAlpha[]; };
 
         void main() {
             uint i = gl_GlobalInvocationID.x;
+            if (i >= uint(aAlpha.length() / 2)) return;
 
-            float aA = aAlpha[i];
-            float bA = bAlpha[i];
+            float16_t aA = aAlpha[i];
+            float16_t bA = bAlpha[i];
 
-            if (aA == 1.0) {
-                cAlpha[i] = 1.0;
-            } else if (aA <= 0.05) {
+            if (aA == float16_t(1.0)) {
+                cAlpha[i] = float16_t(1.0);
+            } else if (aA <= float16_t(0.05)) {
                 cAlpha[i] = bA;
             } else {
-                float outA = aA + bA * (1.0 - aA);
-                if (outA < 1e-6) {
-                    cAlpha[i] = 0.0;
+                float16_t outA = aA + bA * (float16_t(1.0) - aA);
+                if (outA < float16_t(1e-6)) {
+                    cAlpha[i] = float16_t(0.0);
                 } else {
                     cAlpha[i] = outA;
                 }
@@ -613,13 +625,17 @@ public partial class TestPage : ContentPage
 
     public string ShaderColorSrc =
         $$"""
-        {{"#"}}version 310 es            
+        {{"#"}}version 310 es
+        {{"#"}}extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+        {{"#"}}extension GL_EXT_shader_16bit_storage : require
+        precision highp float;
+        precision highp int;
         layout(local_size_x = 256) in;
 
-        layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+        layout(std430, binding = 0) buffer AAlphaBuffer { float16_t aAlpha[]; };
         layout(std430, binding = 1) buffer ABuffer { float a []; };
         
-        layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+        layout(std430, binding = 2) buffer BAlphaBuffer { float16_t bAlpha []; };
         layout(std430, binding = 3) buffer BBuffer { float b []; };
         
         layout(std430, binding = 6) buffer CAlphaBuffer { float c []; };
@@ -627,29 +643,30 @@ public partial class TestPage : ContentPage
         void main()
         {
             uint i = gl_GlobalInvocationID.x;
+            if (i >= uint(a.length())) return;
 
-            float aA = aAlpha[i];
-            float bA = bAlpha[i];
+            float16_t aA = aAlpha[i];
+            float16_t bA = bAlpha[i];
 
-            if (aA == 1.0)
+            if (aA == float16_t(1.0))
             {
                 c[i] = a[i];
             }
-            else if (aA <= 0.05)
+            else if (aA <= float16_t(0.05))
             {
                 c[i] = b[i];
             }
             else
             {
-                float outA = aA + bA * (1.0 - aA);
-                if (outA < 1e-6)
+                float16_t outA = aA + bA * (float16_t(1.0) - aA);
+                if (outA < float16_t(1e-6))
                 {
                     c[i] = 0.0;
                 }
                 else
                 {
-                    float aC = a[i] * aA / outA;
-                    float bC = b[i] * bA * (1.0 - aA) / outA;
+                    float aC = a[i] * float(aA) / float(outA);
+                    float bC = b[i] * float(bA * (float16_t(1.0) - aA)) / float(outA);
                     float outC = aC + bC;
                     outC = clamp(outC, 0.0, 65535.0); // ushort.MaxValue
                     c[i] = outC;
@@ -665,8 +682,8 @@ public partial class TestPage : ContentPage
     {
         try
         {
-            var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
-            var w = new HDRVideoWriter
+            var f = HDRPictureFP16.GenerateSolidColor(2560, 1440, (Half).5f, (Half).5f, (Half).5f, Half.One, Half.One, (Half)10000);
+            var w = new HDRVideoWriterFP16
             {
                 OutputPath = Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
                 Width = 2560,
@@ -682,14 +699,14 @@ public partial class TestPage : ContentPage
                 FillR = 65535,
                 FillG = 65535,
                 FillB = 65535,
-                FillA = 1f,
+                FillA = Half.One,
                 FontName = "Arial",
                 X = 50,
                 Y = 50,
                 FontSize = 120,
                 Text = "",
             };
-            f.Brightness = new float[f.Pixels];
+            f.Brightness = new Half[f.Pixels];
             for (int idx = 0; idx < f.Pixels; idx++)
             {
                 int x = idx % f.Width;
@@ -699,11 +716,11 @@ public partial class TestPage : ContentPage
                     float distanceToCenter = MathF.Abs(x - center);
                     float normalized = center > 0 ? distanceToCenter / center : 1f;
                     // Center stays darkest; both sides brighten smoothly.
-                    f.Brightness[idx] = MathF.Pow(normalized, 0.6f);
+                    f.Brightness[idx] = (Half)MathF.Pow(normalized, 0.6f);
                 }
                 else
                 {
-                    f.Brightness[idx] = 1f;
+                    f.Brightness[idx] = Half.One;
                 }
             }
             f.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
@@ -711,12 +728,12 @@ public partial class TestPage : ContentPage
             for (int i = 0; i < 1; i++)
             {
                 c.TextEntries = [te with { Text = $"Frame {i}" }];
-                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, 16);
+                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, IPicture.PicturePixelMode.Float16Picture);
                 textFrame.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-                var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
+                var t = HDRPictureFP16.ToHDRPictureBySignal(textFrame, 5000);
                 Log(t.GetDiagnosticsInfo());
                 t.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-                var r = ClassicOverlayMixture.Default.Mix(f, t, 16);
+                var r = ClassicOverlayMixture.Default.Mix(f, t, IPicture.PicturePixelMode.Float16Picture);
                 r.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
@@ -731,13 +748,13 @@ public partial class TestPage : ContentPage
 
     private async void HDRTestButton2_Clicked(object sender, EventArgs e)
     {
-        var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
-        f.Brightness = new float[f.Pixels];
+        var f = HDRPictureFP16.GenerateSolidColor(2560, 1440, (Half).5f, (Half).5f, (Half).5f, Half.One, Half.One, (Half)10000);
+        f.Brightness = new Half[f.Pixels];
         for (int idx = 0; idx < f.Pixels; idx++)
         {
-            f.Brightness[idx] = Random.Shared.NextSingle();
+            f.Brightness[idx] = (Half)Random.Shared.NextSingle();
         }
-        var fThrowBrightness = new Picture16bpp(f)
+        var fThrowBrightness = new PictureFP16(f)
         {
             r = f.r,
             g = f.g,
@@ -747,7 +764,7 @@ public partial class TestPage : ContentPage
         fThrowBrightness.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fNormalizeBrigtnessToRGB = f.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
         fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var fReplaceAlpha = new Picture16bpp(f)
+        var fReplaceAlpha = new PictureFP16(f)
         {
             r = f.r,
             g = f.g,
@@ -755,15 +772,15 @@ public partial class TestPage : ContentPage
             a = f.Brightness
         };
         fReplaceAlpha.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
+        var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new PictureFP16(f)
         {
-            r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
-            g = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
-            b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
-            a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
-        }, 16);
+            r = Enumerable.Repeat(Half.Zero, f.Pixels).ToArray(),
+            g = Enumerable.Repeat(Half.Zero, f.Pixels).ToArray(),
+            b = Enumerable.Repeat(Half.Zero, f.Pixels).ToArray(),
+            a = f.Brightness.Select(c => Half.Clamp(Half.One - c, Half.Zero, Half.One)).ToArray()
+        }, IPicture.PicturePixelMode.Float16Picture);
         fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-        var w = new HDRVideoWriter
+        var w = new HDRVideoWriterFP16
         {
             OutputPath = Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
             Width = 2560,
@@ -787,10 +804,10 @@ public partial class TestPage : ContentPage
             if (!uint.TryParse(await DisplayPromptAsync(Localized._Info, "input frame index", initialValue: "0", keyboard: Keyboard.Numeric) ?? "", out var idx)) return;
             if (await DisplayAlertAsync(Title, "Use HDR?", "yes", "no"))
             {
-                var src = new HDRDecoderContext(vidFile);
+                var src = new HDRDecoderContextFP16(vidFile);
                 src.Initialize();
-                var frame = src.GetFrame(idx);
-                if (frame is not HDRPicture16bpp h)
+                IPicture frame = src.GetHDRFrame(idx);
+                if (frame is not HDRPictureFP16 h)
                 {
                     await DisplayAlertAsync(Title, "Failed to decode HDR frame, got non-HDR picture.", "ok");
                     return;
@@ -878,7 +895,7 @@ public partial class TestPage : ContentPage
         if (string.IsNullOrWhiteSpace(vidFile)) return;
         var outputPath = Path.Combine(MauiProgram.CachePath, $"reencode-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4");
         var src = PluginManager.CreateVideoSource(vidFile);
-        var dest = new VideoWriterHWAccel
+        var dest = new VideoWriterHWAccelFP16
         {
             CodecName = "libx264",
             FramePerSecond = (int)src.Fps,

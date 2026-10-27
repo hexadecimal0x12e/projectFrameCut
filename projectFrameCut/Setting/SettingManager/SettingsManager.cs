@@ -24,6 +24,9 @@ namespace projectFrameCut.Setting.SettingManager
                 else if (value is null) value = new();
                 else throw new ArgumentNullException(nameof(Settings), "Settings has been already inited.");
 
+                projectFrameCut.Shared.ProjectCachePaths.Configure(Environment.GetEnvironmentVariable(projectFrameCut.Shared.ProjectCachePaths.EnvironmentKey)
+                    ?? settings.GetValueOrDefault(projectFrameCut.Shared.ProjectCachePaths.SettingKey, string.Empty));
+
                 if (!MauiProgram.CmdlineArgs.Contains("--noSettings") || Environment.GetEnvironmentVariables().Contains("PJFC_DISABLE_SETTING_SAVE"))
                 {
                     StartBackgroundSave();
@@ -40,6 +43,8 @@ namespace projectFrameCut.Setting.SettingManager
             settings = File.Exists(path)
                 ? new(JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path)) ?? [])
                 : new();
+            projectFrameCut.Shared.ProjectCachePaths.Configure(Environment.GetEnvironmentVariable(projectFrameCut.Shared.ProjectCachePaths.EnvironmentKey)
+                ?? settings.GetValueOrDefault(projectFrameCut.Shared.ProjectCachePaths.SettingKey, string.Empty));
             Log($"Loaded {settings.Count} settings for the render runtime from '{path}'.");
         }
 

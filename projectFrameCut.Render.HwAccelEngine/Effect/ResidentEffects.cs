@@ -8,6 +8,19 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect;
 
 internal static class ResidentEffectResult
 {
+    internal static IPicture Download(IPicture picture)
+    {
+        if (picture is not IHwAccelPicture gpu) return picture;
+        using (gpu) return gpu.Download();
+    }
+
+    internal static IPicture Mix(IMixture effect, IPicture bottom, IPicture top, IPicture.PicturePixelMode mode)
+    {
+        using var resized = top.Width != bottom.Width || top.Height != bottom.Height
+            ? EffectPictureProcessing.Resize(top, bottom.Width, bottom.Height, false) : null;
+        return Download(EffectPictureProcessing.Mix(effect, bottom, resized ?? top, mode, 0, 0, bottom.Width, bottom.Height));
+    }
+
     internal static IHwAccelPicture Render(IEffect effect, EffectExecutionContext context, Func<IHwAccelPicture> render)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
@@ -93,8 +106,8 @@ public partial class FadeOpacityEffect_HwAccel : IHwAccelPictureEffect
         ObjectDisposedException.ThrowIf(disposed, this);
         return ResidentEffectResult.Render(this, context, () =>
         {
-            float opacity = Math.Clamp(DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity), 0, 1);
-            return ResidentPictureOperations.Run(source, ResidentOperation.Opacity, [opacity], alpha: source.HasAlphaChannel || opacity < 1);
+            Half opacity = Half.Clamp((Half)DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity), Half.Zero, Half.One);
+            return ResidentPictureOperations.Run(source, ResidentOperation.Opacity, [(float)opacity], alpha: source.HasAlphaChannel || opacity < Half.One);
         });
     }
 }
@@ -107,11 +120,11 @@ public partial class ColorAdjustmentEffect_HwAccel : IHwAccelPictureEffect
         ObjectDisposedException.ThrowIf(disposed, this);
         return ResidentEffectResult.Render(this, context, () =>
         {
-            float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
-            float[] p = [DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness), DynamicParam.Resolve(Parameters.GetValueOrDefault("Contrast"), Contrast), DynamicParam.Resolve(Parameters.GetValueOrDefault("Saturation"), Saturation), DynamicParam.Resolve(Parameters.GetValueOrDefault("Hue"), Hue), DynamicParam.Resolve(Parameters.GetValueOrDefault("Gamma"), Gamma), DynamicParam.Resolve(Parameters.GetValueOrDefault("Vibrance"), Vibrance), DynamicParam.Resolve(Parameters.GetValueOrDefault("Temperature"), Temperature), DynamicParam.Resolve(Parameters.GetValueOrDefault("Invert"), Invert) ? 1 : 0, DynamicParam.Resolve(Parameters.GetValueOrDefault("Grayscale"), Grayscale), opacity];
+            Half opacity = Half.Clamp((Half)DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity), Half.Zero, Half.One);
+            float[] p = [DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness), DynamicParam.Resolve(Parameters.GetValueOrDefault("Contrast"), Contrast), DynamicParam.Resolve(Parameters.GetValueOrDefault("Saturation"), Saturation), DynamicParam.Resolve(Parameters.GetValueOrDefault("Hue"), Hue), DynamicParam.Resolve(Parameters.GetValueOrDefault("Gamma"), Gamma), DynamicParam.Resolve(Parameters.GetValueOrDefault("Vibrance"), Vibrance), DynamicParam.Resolve(Parameters.GetValueOrDefault("Temperature"), Temperature), DynamicParam.Resolve(Parameters.GetValueOrDefault("Invert"), Invert) ? 1 : 0, DynamicParam.Resolve(Parameters.GetValueOrDefault("Grayscale"), Grayscale), (float)opacity];
             if (p[0] == 1 && p[1] == 1 && p[2] == 1 && p[3] == 0 && p[4] == 1 && p[5] == 0 && p[6] == 0 && p[7] == 0 && p[8] == 0 && p[9] == 1)
                 return source.Retain();
-            return ResidentPictureOperations.Run(source, ResidentOperation.ColorAdjustment, p, alpha: source.HasAlphaChannel || opacity < 1);
+            return ResidentPictureOperations.Run(source, ResidentOperation.ColorAdjustment, p, alpha: source.HasAlphaChannel || opacity < Half.One);
         });
     }
 }
@@ -252,7 +265,7 @@ public partial class ClassicOverlayMixture_HwAccel : IHwAccelMixture
     {
         using var scope = nativeLock.EnterScope();
         ObjectDisposedException.ThrowIf(disposed, this);
-        return ResidentEffectResult.Render(this, new() { CancellationToken = ValueProviderFrameContext.CancellationToken }, () => ResidentPictureOperations.Mix(bottom, top, 0, pixelMode, x, y, width, height));
+        return ResidentEffectResult.Render(this, new() { CancellationToken = ValueProviderFrameContext.CancellationToken }, () => ResidentPictureOperations.Mix(bottom, top, 0, pixelMode, x, y, width, height, UseApproximatePath));
     }
 }
 
@@ -342,7 +355,7 @@ public sealed partial class FadeTransform_HwAccel : IHwAccelTransform
     {
         using var scope = nativeLock.EnterScope();
         ObjectDisposedException.ThrowIf(disposed, this);
-        return ResidentEffectResult.Render(this, new() { CancellationToken = ValueProviderFrameContext.CancellationToken }, () => ResidentPictureOperations.Run(left, ResidentOperation.Opacity, [Math.Clamp(side == TransformSide.Left ? progress : 1 - progress, 0, 1)], alpha: true));
+        return ResidentEffectResult.Render(this, new() { CancellationToken = ValueProviderFrameContext.CancellationToken }, () => ResidentPictureOperations.Run(left, ResidentOperation.Opacity, [(float)Half.Clamp(side == TransformSide.Left ? (Half)progress : Half.One - (Half)progress, Half.Zero, Half.One)], alpha: true));
     }
 }
 

@@ -71,6 +71,7 @@ internal static class IsolationFieldTypeCodec
     private static IsolationFieldDescriptor WriteField(EffectArgumentFieldDescriptor field) => new()
     {
         Id = field.Id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = (ulong)field.FieldType,
+        DataFormat = field.DataFormat is PictureDataFormat f ? (int)f : 0,
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinimumValue = field.MinValue,
         MaximumValue = field.MaxValue, PresetOptions = field.PresetOptions?.ToList() ?? [], Remarks = field.Remarks ?? "",
     };
@@ -78,6 +79,7 @@ internal static class IsolationFieldTypeCodec
     private static EffectArgumentFieldDescriptor ReadField(IsolationFieldDescriptor field) => new()
     {
         Id = field.Id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = (EffectArgumentFieldType)field.FieldType,
+        DataFormat = field.DataFormat == 0 ? null : (PictureDataFormat)field.DataFormat,
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinValue = field.MinimumValue,
         MaxValue = field.MaximumValue, PresetOptions = field.PresetOptions.ToArray(), Remarks = field.Remarks,
     };

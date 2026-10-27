@@ -1,390 +1,64 @@
-using FFmpeg.AutoGen;
 using projectFrameCut.Render.RenderAPIBase.Sources;
-using projectFrameCut.Shared;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Text.RegularExpressions;
-using static projectFrameCut.Shared.Logger;
 
-namespace projectFrameCut.Render.EncodeAndDecode
+namespace projectFrameCut.Render.EncodeAndDecode;
+
+public sealed class HttpDecoderContext : IVideoSource<Half>
 {
-    public sealed unsafe class HttpDecoderContext : IVideoSource
+    public static bool Enabled { get; set; } = true;
+    public static bool AllowBeDeterministic { get; set; } = true;
+
+    private readonly string? _url;
+    private DecoderContextFP16? _decoder;
+
+    public HttpDecoderContext() { }
+    public HttpDecoderContext(string url)
     {
-        /// <summary>
-        /// HTTP 解码器全局开关。由主程序在安全设置中控制（Security_RemoteContent_EnableHttpDecoder）。
-        /// 关闭时所有 HttpDecoderContext 构造将立即失败。
-        /// </summary>
-        public static bool Enabled { get; set; } = true;
+        _url = url;
+        Initialize();
+    }
 
-        public static bool AllowBeDeterministic { get; set; } = true;
+    public HttpDecoderContext(Stream source, long length, bool leaveOpen = false)
+    {
+        if (!leaveOpen) source.Dispose();
+        throw new NotSupportedException("HttpDecoderContext only supports HTTP URLs.");
+    }
 
-        private readonly string _url;
-        private AVFormatContext* _fmt = null;
-        private AVCodecContext* _codec = null;
-        private long _totalFrames;
-        private SwsContext* _sws = null;
-        private AVPacket* _pkt = null;
-        private AVFrame* _frm = null;
-        private AVFrame* _rgb = null;
-        private byte* _rgbBuffer = null;
-        private bool _eof = false;
+    private DecoderContextFP16 Decoder => _decoder ?? throw new InvalidOperationException("The HTTP decoder is not initialized.");
+    public string TypeName => nameof(HttpDecoderContext);
+    public string[] PreferredExtension => [];
+    public bool IsDeterministic => AllowBeDeterministic;
+    public bool AllowCachingResult => false;
+    public int? ResultBitPerPixel => IPicture.PicturePixelMode.Float16Picture;
+    public bool Disposed { get; private set; }
+    public bool Initialized => _decoder?.Initialized == true;
+    public long TotalFrames => _decoder?.TotalFrames ?? -1;
+    public double Fps => _decoder?.Fps ?? 0;
+    public int Width => _decoder?.Width ?? 0;
+    public int Height => _decoder?.Height ?? 0;
+    public uint Index { get => _decoder?.Index ?? 0; set => Decoder.Index = value; }
+    public bool EnableLock { get => _decoder?.EnableLock ?? true; set => Decoder.EnableLock = value; }
+    public bool StrictMode { get => _decoder?.StrictMode ?? false; set => Decoder.StrictMode = value; }
 
-        private int _videoStreamIndex = -1;
-        private int _width = -1;
-        private int _height = -1;
-        private double _fps = 0.0;
-        private int _currentFrameNumber = 0;
-        private bool flushSent = false;
+    public void Initialize()
+    {
+        ObjectDisposedException.ThrowIf(Disposed, this);
+        if (string.IsNullOrWhiteSpace(_url) || Initialized) return;
+        if (!Enabled)
+            throw new InvalidOperationException("HTTP decoder is disabled by security policy (Security_RemoteContent_EnableHttpDecoder).");
+        _decoder = new DecoderContextFP16(_url, true);
+    }
 
-        public bool Disposed { get; private set; }
-        public bool Initialized { get; private set; } = false;
+    public IVideoSource CreateNew(string newSource) => new HttpDecoderContext(newSource);
+    public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new HttpDecoderContext(source, length, leaveOpen);
+    public IPicture<Half> GetFrame(uint targetFrame) => Decoder.GetFrame(targetFrame);
+    public IPicture<Half> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight)
+        => Decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight);
+    public IPicture<Half> GetFrame(uint targetFrame, int targetWidth, int targetHeight) => Decoder.GetFrame(targetFrame, targetWidth, targetHeight);
 
-        public long TotalFrames => _totalFrames;
-
-        public double Fps => _fps;
-
-        public int Width => _width;
-
-        public int Height => _height;
-
-        public uint Index { get; set; } = 0;
-        public string[] PreferredExtension => []; //no extension to avoid auto-matching
-        public string TypeName => "HttpDecoderContext";
-        public bool IsDeterministic => AllowBeDeterministic;
-        public int? ResultBitPerPixel => 8;
-        public bool AllowCachingResult => false;
-
-        public bool EnableLock { get; set; } = false;
-        public bool StrictMode { get; set; }
-        private Lock locker = new();
-
-        public HttpDecoderContext()
-        {
-            _url = null!;
-        }
-
-        public HttpDecoderContext(string url)
-        {
-            if (!Enabled)
-                throw new InvalidOperationException("HTTP decoder is disabled by security policy (Security_RemoteContent_EnableHttpDecoder).");
-
-            if (!string.IsNullOrWhiteSpace(url))
-            {
-                _url = url;
-                Initialize();
-            }
-        }
-
-        public HttpDecoderContext(Stream source, long length, bool leaveOpen = false)
-        {
-            if (!leaveOpen) source.Dispose();
-            throw new NotSupportedException("HttpDecoderContext only supports HTTP URLs.");
-        }
-
-        public IVideoSource CreateNew(string newSource) => new HttpDecoderContext(newSource);
-        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new HttpDecoderContext(source, length, leaveOpen);
-
-        public void Initialize()
-        {
-            if (_url is null || Initialized) return;
-
-            try
-            {
-                _fmt = ffmpeg.avformat_alloc_context();
-                if (_fmt == null) throw new InvalidOperationException("Failed to alloc a context for the Renderer.");
-
-                fixed (AVFormatContext** fmtPtr = &_fmt)
-                {
-                    // Open input from URL
-                    var averr = ffmpeg.avformat_open_input(fmtPtr, _url, null, null);
-                    if (averr != 0)
-                    {
-                        FFmpegHelper.DetectWhyCannotOpenVideo(_url, averr);
-                    }
-                }
-
-                if (ffmpeg.avformat_find_stream_info(_fmt, null) != 0)
-                    throw new InvalidDataException($"Failed to retrieve stream info from '{_url}'.");
-
-                for (int i = 0; i < _fmt->nb_streams; i++)
-                {
-                    if (_fmt->streams[i]->codecpar->codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO)
-                    {
-                        _videoStreamIndex = i;
-                        break;
-                    }
-                }
-
-                if (_videoStreamIndex < 0)
-                    throw new InvalidDataException($"No video stream found in '{_url}'.");
-
-                AVCodecParameters* par = _fmt->streams[_videoStreamIndex]->codecpar;
-                AVCodec* codec = ffmpeg.avcodec_find_decoder(par->codec_id);
-                if (codec == null)
-                    throw new NotSupportedException("No suitable decoder found.");
-
-                _codec = ffmpeg.avcodec_alloc_context3(codec);
-                if (_codec == null) throw new InvalidOperationException("Failed to alloc codec context.");
-
-                ffmpeg.avcodec_parameters_to_context(_codec, par);
-                if (ffmpeg.avcodec_open2(_codec, codec, null) < 0)
-                    throw new NotSupportedException("Failed to open decoder.");
-
-                _pkt = ffmpeg.av_packet_alloc();
-                _frm = ffmpeg.av_frame_alloc();
-                _rgb = ffmpeg.av_frame_alloc();
-                if (_pkt == null || _frm == null || _rgb == null)
-                    throw new OutOfMemoryException($"Failed to allocate memory for processing '{_url}'.");
-
-                _width = _codec->width;
-                _height = _codec->height;
-
-                AVRational fr = _codec->framerate;
-                if (fr.num == 0 || fr.den == 0)
-                    fr = _fmt->streams[_videoStreamIndex]->avg_frame_rate;
-                if (fr.num == 0 || fr.den == 0)
-                    fr = _fmt->streams[_videoStreamIndex]->r_frame_rate;
-
-                _fps = fr.den != 0 ? ffmpeg.av_q2d(fr) : 0.0;
-
-                if (_width <= 0 || _height <= 0)
-                    throw new InvalidDataException($"Invalid video dimensions from '{_url}'.");
-
-                long nbFrames = (long)_fmt->streams[_videoStreamIndex]->nb_frames;
-                if (nbFrames <= 0)
-                {
-                    long duration = _fmt->streams[_videoStreamIndex]->duration;
-                    AVRational tb = _fmt->streams[_videoStreamIndex]->time_base;
-                    if (duration > 0 && tb.num > 0 && tb.den > 0 && _fps > 0)
-                    {
-                        double seconds = duration * ffmpeg.av_q2d(tb);
-                        nbFrames = (long)Math.Round(seconds * _fps);
-                        if (nbFrames < 0) nbFrames = -1;
-                    }
-                    else
-                    {
-                        nbFrames = -1;
-                    }
-                }
-                _totalFrames = nbFrames > 0 ? nbFrames : -1;
-
-                _sws = ffmpeg.sws_getContext(
-                    _width, _height, _codec->pix_fmt,
-                    _width, _height, AVPixelFormat.AV_PIX_FMT_BGR24,
-                    4, null, null, null); // 4 = SWS_BICUBIC
-
-                if (_sws == null)
-                    throw new InvalidOperationException("Failed to alloc sws context.");
-
-                int bufferSize = ffmpeg.av_image_get_buffer_size(AVPixelFormat.AV_PIX_FMT_BGR24, _width, _height, 1);
-                if (bufferSize <= 0) throw new OutOfMemoryException("Failed to calculate buffer size.");
-
-                _rgbBuffer = (byte*)ffmpeg.av_malloc((ulong)bufferSize);
-                if (_rgbBuffer == null) throw new OutOfMemoryException("Failed to allocate RGB buffer.");
-
-                byte_ptrArray4 tmpData = default;
-                int_array4 tmpLinesize = default;
-
-                int fillRet = ffmpeg.av_image_fill_arrays(
-                    ref tmpData,
-                    ref tmpLinesize,
-                    _rgbBuffer,
-                    AVPixelFormat.AV_PIX_FMT_BGR24,
-                    _width,
-                    _height,
-                    1);
-                if (fillRet < 0) throw new InvalidOperationException("av_image_fill_arrays failed.");
-
-                for (uint i = 0; i < 4; i++)
-                {
-                    _rgb->data[i] = tmpData[i];
-                    _rgb->linesize[i] = tmpLinesize[i];
-                }
-
-                _rgb->format = (int)AVPixelFormat.AV_PIX_FMT_BGR24;
-                _rgb->width = _width;
-                _rgb->height = _height;
-
-                _currentFrameNumber = 0;
-                _eof = false;
-
-                Log($"[HttpDecoderContext] Successfully initialized decoder for {_url}");
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Init HttpDecoderContext", this);
-                Dispose();
-                throw;
-            }
-            finally
-            {
-                Initialized = true;
-            }
-        }
-
-        [DebuggerNonUserCode()]
-        public IPicture GetFrame(uint targetFrame)
-        {
-            if (EnableLock) locker.Enter();
-
-            if (targetFrame < _currentFrameNumber)
-            {
-                // Try seeking for HTTP stream; might fail depending on protocol/server
-                int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                if (seekRet < 0)
-                {
-                    var msg = $"[HttpDecoderContext] Seek backward failed for {_url} (code {seekRet}). HTTP stream seek not supported.";
-                    Log(msg, "warn");
-                    // For HTTP streams, seek failure is often expected. Throw to prevent format context corruption.
-                    if (EnableLock) locker.Exit();
-                    throw new InvalidOperationException(msg);
-                }
-                ffmpeg.avcodec_flush_buffers(_codec);
-                _currentFrameNumber = 0;
-                _eof = false;
-                flushSent = false;
-            }
-
-            while (true)
-            {
-                if (!_eof)
-                {
-                    int readRet = ffmpeg.av_read_frame(_fmt, _pkt);
-                    if (readRet < 0)
-                    {
-                        _eof = true;
-                    }
-                    else
-                    {
-                        if (_pkt->stream_index == _videoStreamIndex)
-                        {
-                            ffmpeg.avcodec_send_packet(_codec, _pkt);
-                        }
-                        ffmpeg.av_packet_unref(_pkt);
-                    }
-                }
-                else if (!flushSent)
-                {
-                    ffmpeg.avcodec_send_packet(_codec, null);
-                    flushSent = true;
-                }
-
-                while (true)
-                {
-                    ffmpeg.av_frame_unref(_frm);
-                    int ret = ffmpeg.avcodec_receive_frame(_codec, _frm);
-                    if (ret == 0)
-                    {
-                        if (_currentFrameNumber++ == targetFrame)
-                        {
-                            goto found;
-                        }
-                        continue;
-                    }
-                    else if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN))
-                    {
-                        break; // Need more input
-                    }
-                    else if (ret == ffmpeg.AVERROR_EOF)
-                    {
-                        if (_totalFrames < _currentFrameNumber)
-                        {
-                            goto not_found;
-                        }
-                        break;
-                    }
-                    else
-                    {
-                        // Error
-                        break;
-                    }
-                }
-
-                if (_eof && flushSent)
-                {
-                    // If we reached EOF and flushed everything, and still didn't find the frame
-                    // Check if we are close enough to consider it done or fail
-                    goto not_found;
-                }
-            }
-
-        not_found:
-            if (EnableLock) locker.Exit();
-            if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
-            {
-                Log($"[HttpDecoderContext] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                return GetFrame(targetFrame - 1);
-            }
-            double fps = _fps > 0 ? _fps : 1.0;
-            double seconds = targetFrame / fps;
-            throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_url}'.");
-
-        found:
-            Index++;
-            FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
-            if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _url, targetFrame);
-        }
-
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, string filePath = "", uint frameIdx = 0)
-        {
-            var size = width * height;
-            var result = new Picture8bpp(width, height)
-            {
-                Tag = string.IsNullOrWhiteSpace(filePath)
-                    ? (frameIdx == 0 ? null : $"frame #{frameIdx}")
-                    : $"{filePath} frame #{frameIdx}",
-                r = new byte[size],
-                g = new byte[size],
-                b = new byte[size],
-            };
-            result.ProcessStack = new List<PictureProcessStack>
-            { 
-                new PictureProcessStack 
-                { 
-                    OperationDisplayName = $"From video '{filePath}', frame #{frameIdx}",
-                    Operator = typeof(DecoderContext16Bit), 
-                    ProcessingFuncStackTrace = new StackTrace(true) 
-                } 
-            };
-            int idx, baseIndex, offset, x, y;
-            byte* srcRow;
-            for (y = 0; y < height; y++)
-            {
-                srcRow = data + y * stride;
-                baseIndex = y * width;
-                for (x = 0; x < width; x++)
-                {
-                    idx = baseIndex + x;
-                    offset = x * 3;
-                    result.r[idx] = srcRow[offset + 2];
-                    result.g[idx] = srcRow[offset + 1];
-                    result.b[idx] = srcRow[offset + 0];
-                }
-            }
-
-            return result;
-        }
-
-        public void Dispose()
-        {
-            if (Disposed) return;
-            Disposed = true;
-
-            if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
-            if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
-            if (_frm != null) { AVFrame* tmp = _frm; _frm = null; ffmpeg.av_frame_free(&tmp); }
-            if (_pkt != null) { AVPacket* tmp = _pkt; _pkt = null; ffmpeg.av_packet_free(&tmp); }
-            if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
-            if (_codec != null) { AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); }
-            if (_fmt != null) { AVFormatContext* tmp = _fmt; _fmt = null; ffmpeg.avformat_close_input(&tmp); }
-        }
-
-        ~HttpDecoderContext()
-        {
-            Dispose();
-        }
-
+    public void Dispose()
+    {
+        if (Disposed) return;
+        Disposed = true;
+        _decoder?.Dispose();
     }
 }

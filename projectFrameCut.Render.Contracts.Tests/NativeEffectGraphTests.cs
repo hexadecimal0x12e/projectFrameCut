@@ -177,7 +177,7 @@ public sealed class NativeEffectGraphTests
         Assert.AreEqual(1, effects.OfType<IVectorPictureEffect>().Count());
         var graph = effects.OfType<DynamicEffectGraph>().Single();
         ((IDisposable)effects.OfType<IVectorPictureEffect>().Single()).Dispose();
-        using var input = Picture8bpp.GenerateSolidColor(2, 1, 1, 2, 3, 1);
+        using var input = Picture8bpp.GenerateSolidColor(2, 1, 1, 2, 3, Half.One);
         using var output = graph.Evaluate(input, clip, 102, 2, 1, 2, 1, new(0, 0, 2, 1, false)).Picture;
         Assert.AreEqual(2, output.Width);
         Assert.IsFalse(picture.LastEffect!.Disposed);

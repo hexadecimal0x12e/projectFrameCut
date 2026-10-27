@@ -23,10 +23,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
             if (disposed)
                 return;
             disposed = true;
-            ReleaseNativeResources();
         }
 
-        partial void ReleaseNativeResources();
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
@@ -48,9 +46,18 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         };
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
-            { "Height", "int" },
-            { "Width", "int" },
-            { "PreserveAspectRatio", "bool" },
+            {
+                "Height",
+                "int"
+            },
+            {
+                "Width",
+                "int"
+            },
+            {
+                "PreserveAspectRatio",
+                "bool"
+            },
         };
         public string TypeName => "Resize";
 
@@ -84,103 +91,6 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
-        {
-            try
-            {
-                using var scope = nativeLock.EnterScope();
-                ObjectDisposedException.ThrowIf(disposed, this);
-                var sw = Stopwatch.StartNew();
-                int resizeWidth = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
-                int resizeHeight = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
-                bool preserveAspectRatio = DynamicParam.Resolve(Parameters.GetValueOrDefault("PreserveAspectRatio"), PreserveAspectRatio);
-                int width = resizeWidth;
-                int height = resizeHeight;
-                if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
-                {
-                    width = Math.Max(1, (int)Math.Round((double)resizeWidth * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
-                    height = Math.Max(1, (int)Math.Round((double)resizeHeight * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
-                }
-                else
-                {
-                    width = Math.Max(1, width);
-                    height = Math.Max(1, height);
-                }
-
-                int destWidth = width;
-                int destHeight = height;
-                if (preserveAspectRatio)
-                {
-                    double sourceRatio = (double)source.Width / source.Height;
-                    double targetRatio = (double)width / height;
-                    if (sourceRatio > targetRatio)
-                    {
-                        destHeight = (int)Math.Round(width / sourceRatio, MidpointRounding.AwayFromZero);
-                    }
-                    else
-                    {
-                        destWidth = (int)Math.Round(height * sourceRatio, MidpointRounding.AwayFromZero);
-                    }
-
-                    destWidth = Math.Max(1, destWidth);
-                    destHeight = Math.Max(1, destHeight);
-                }
-
-                float[] r, g, b, a;
-                if (source is IPicture<ushort> p16)
-                {
-                    r = p16.r.Select(Convert.ToSingle).ToArray();
-                    g = p16.g.Select(Convert.ToSingle).ToArray();
-                    b = p16.b.Select(Convert.ToSingle).ToArray();
-                    a = p16.a ?? Enumerable.Repeat(1f, p16.Pixels).ToArray();
-                }
-                else if (source is IPicture<byte> p8)
-                {
-                    r = p8.r.Select(Convert.ToSingle).ToArray();
-                    g = p8.g.Select(Convert.ToSingle).ToArray();
-                    b = p8.b.Select(Convert.ToSingle).ToArray();
-                    a = p8.a ?? Enumerable.Repeat(1f, p8.Pixels).ToArray();
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Source pixel type is not supported.");
-                }
-
-                IPicture result;
-                if (source.BitPerPixel == 16)
-                {
-                    var r16 = ComputeResizeUshort(r, g, b, a, source.Width, source.Height, destWidth, destHeight);
-                    var p = new Picture16bpp(destWidth, destHeight);
-                    p.r = r16.R;
-                    p.g = r16.G;
-                    p.b = r16.B;
-                    p.a = source.HasAlphaChannel ? r16.A : null;
-                    p.HasAlphaChannel = source.HasAlphaChannel;
-                    result = p;
-                }
-                else
-                {
-                    var r8 = ComputeResizeByte(r, g, b, a, source.Width, source.Height, destWidth, destHeight);
-                    var p = new Picture8bpp(destWidth, destHeight);
-                    p.r = r8.R;
-                    p.g = r8.G;
-                    p.b = r8.B;
-                    p.a = source.HasAlphaChannel ? r8.A : null;
-                    p.HasAlphaChannel = source.HasAlphaChannel;
-                    result = p;
-                }
-
-                result.Tag = source.Tag;
-                result = HwAccelEffectHelper.WithBrightness(result, source, source is IHDRPicture<ushort> hdr ? ComputeResizeFloat(hdr.Brightness, hdr.Brightness, hdr.Brightness, a, source.Width, source.Height, destWidth, destHeight).R : null);
-                sw.Stop();
-                result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack { Elapsed = sw.Elapsed, OperationDisplayName = $"Resize (GPU)", Operator = typeof(ResizeEffect_HwAccel), ProcessingFuncStackTrace = new StackTrace(true), Properties = new Dictionary<string, object> { { "Width", destWidth }, { "Height", destHeight }, { "PreserveAspectRatio", preserveAspectRatio } } }).ToList();
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Execute Resize effect", "HwAccelEngine");
-                throw;
-            }
-        }
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight) => ResidentEffectResult.Download(EffectPictureProcessing.Render(this, source, targetWidth, targetHeight));
     }
 }

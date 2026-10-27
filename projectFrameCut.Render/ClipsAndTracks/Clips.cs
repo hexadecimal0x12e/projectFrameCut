@@ -84,8 +84,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             IPicture result = targetPPB.Value switch
             {
-                16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), R, G, B, A),
-                8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+                116 => PictureFP16.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (Half)(R / 65535f), (Half)(G / 65535f), (Half)(B / 65535f), (Half?)A),
+                16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), R, G, B, (Half?)A),
+                8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), (Half?)A),
                 _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
             };
             result.CanBeDisposed = false;
@@ -93,7 +94,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
-            => Picture16bpp.GenerateSolidColor(EffectiveOutputWidth, EffectiveOutputHeight, R, G, B, A);
+            => PictureFP16.GenerateSolidColor(EffectiveOutputWidth, EffectiveOutputHeight, (Half)(R / 65535f), (Half)(G / 65535f), (Half)(B / 65535f), (Half?)A);
 
         public SolidColorClip()
         {

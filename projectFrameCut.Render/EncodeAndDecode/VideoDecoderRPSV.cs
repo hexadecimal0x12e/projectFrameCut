@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -10,17 +10,13 @@ using System.Text;
 namespace projectFrameCut.Render.EncodeAndDecode
 {
     [Obsolete("No longer maintained and will be removed in API v10. Use RPC Source, or assembly-based external source instead.")]
-    internal class RawPictureSequenceStreamVideoDecoderContext : IVideoSource
+    internal class RawPictureSequenceStreamVideoDecoderContext : IVideoSource<Half>
     {
         public bool IsDeterministic => false;
 
         private bool _disposed;
 
-        public int? ResultBitPerPixel => BytesPerPixel switch
-        {
-            BytesPerPixelMode.Byte => 8,
-            _ => 16 //we'll convert 32-bit data to 16-bit, so the result is always 16-bit or 8-bit.
-        };
+        public int? ResultBitPerPixel => IPicture.PicturePixelMode.Float16Picture;
 
         public string[] PreferredExtension => [];
 
@@ -55,6 +51,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             UShort = 0b01,
             /// <summary>32-bit per pixel (values 0-4294967295)</summary>
             UInt = 0b10,
+            Float16 = 0b11,
         }
 
         /// <summary>
@@ -186,7 +183,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _disposed = true;
         }
 
-        public IPicture GetFrame(uint targetFrame)
+        public IPicture<Half> GetFrame(uint targetFrame)
         {
             ObjectDisposedException.ThrowIf(_disposed, typeof(RawPictureSequenceStreamVideoDecoderContext));
 
@@ -244,6 +241,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 0b00 => 1,  // 8-bit
                 0b01 => 2,  // 16-bit
                 0b10 => 4,  // 32-bit
+                0b11 => 2,  // FP16
                 _ => throw new NotSupportedException($"Unsupported bytes per pixel bits: {bppBits}")
             };
 
@@ -286,18 +284,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (!AreByteArraysEqual(calculatedChecksum, receivedChecksum))
                     throw new InvalidOperationException("Checksum verification failed.");
             }
-            if (bytesPerPixel == 1)
-            {
-                return CreatePictureFromData8bpp(pixelData, response.FrameWidth, response.FrameHeight, bytesPerPixel, alphaBits, response.FrameNumber);
-
-            }
-            else
-            {
-                return CreatePictureFromData16bpp(pixelData, response.FrameWidth, response.FrameHeight, bytesPerPixel, alphaBits, response.FrameNumber);
-
-
-            }
-            // Parse pixel data and create Picture
+            return CreatePictureFromData(pixelData, response.FrameWidth, response.FrameHeight,
+                bytesPerPixel, bppBits, alphaBits, response.FrameNumber);
         }
 
         public void Initialize()
@@ -379,113 +367,54 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return true;
         }
 
-        private Picture16bpp CreatePictureFromData16bpp(byte[] pixelData, ushort width, ushort height,
-                                               int bytesPerPixel, byte alphaBits, uint frameNumber)
+        private static PictureFP16 CreatePictureFromData(byte[] data, ushort width, ushort height,
+            int bytesPerPixel, byte colorBits, byte alphaBits, uint frameNumber)
         {
-            int totalPixels = width * height;
-            var picture = new Picture16bpp(width, height)
-            {
-                Tag = $"frame #{frameNumber}"
-            };
-
+            int pixels = checked(width * height);
+            Half[] red = new Half[pixels], green = new Half[pixels], blue = new Half[pixels];
             int offset = 0;
-
-            for (int i = 0; i < totalPixels; i++)
+            for (int i = 0; i < pixels; i++)
             {
-                // Read R channel
-                picture.r[i] = ReadColorValue16bpp(pixelData, offset, bytesPerPixel);
-                offset += bytesPerPixel;
-
-                // Read G channel
-                picture.g[i] = ReadColorValue16bpp(pixelData, offset, bytesPerPixel);
-                offset += bytesPerPixel;
-
-                // Read B channel
-                picture.b[i] = ReadColorValue16bpp(pixelData, offset, bytesPerPixel);
-                offset += bytesPerPixel;
+                red[i] = ReadColorValue(data, offset, colorBits);
+                green[i] = ReadColorValue(data, offset + bytesPerPixel, colorBits);
+                blue[i] = ReadColorValue(data, offset + bytesPerPixel * 2, colorBits);
+                offset += bytesPerPixel * 3;
             }
-
-            // Preserve alpha when the RPSV receive mode explicitly requests it.
-            if (alphaBits != 0b000)
-            {
-                picture.a = new float[totalPixels];
-                picture.HasAlphaChannel = true;
-
-                for (int i = 0; i < totalPixels; i++)
+            Half[]? alpha = alphaBits == 0 ? null : new Half[pixels];
+            if (alpha is not null)
+                for (int i = 0; i < pixels; i++)
                 {
-                    picture.a[i] = ReadAlphaValue(pixelData, offset, alphaBits);
+                    alpha[i] = PictureFP16.Unit((float)ReadAlphaValue(data, offset, alphaBits));
                     offset += GetAlphaSize(alphaBits);
                 }
-            }
-
+            var picture = PictureFP16.FromOwnedChannels(width, height, red, green, blue, alpha);
+            picture.Tag = $"frame #{frameNumber}";
             return picture;
         }
 
-        private ushort ReadColorValue16bpp(byte[] data, int offset, int bytesPerPixel)
+        private static Half ReadColorValue(byte[] data, int offset, byte colorBits) => colorBits switch
         {
-            return bytesPerPixel switch
-            {
-                2 => BitConverter.ToUInt16(data, offset),
-                4 => (ushort)(BitConverter.ToUInt32(data, offset) >> 16), // 32-bit -> 16-bit
-                _ => throw new NotSupportedException($"Unsupported bytes per pixel: {bytesPerPixel}")
-            };
-        }
-        private Picture8bpp CreatePictureFromData8bpp(byte[] pixelData, ushort width, ushort height,
-                                               int bytesPerPixel, byte alphaBits, uint frameNumber)
-        {
-            int totalPixels = width * height;
-            var picture = new Picture8bpp(width, height)
-            {
-                Tag = $"frame #{frameNumber}"
-            };
+            0b00 => (Half)(data[offset] / 255f),
+            0b01 => (Half)(BitConverter.ToUInt16(data, offset) / 65535f),
+            0b10 => (Half)(BitConverter.ToUInt32(data, offset) / 4294967295f),
+            0b11 => BitConverter.ToHalf(data, offset),
+            _ => throw new NotSupportedException($"Unsupported RGB mode: {colorBits}"),
+        };
 
-            int offset = 0;
-
-            for (int i = 0; i < totalPixels; i++)
-            {
-                // Read R channel
-                picture.r[i] = pixelData[offset];
-                offset += bytesPerPixel;
-
-                // Read G channel
-                picture.g[i] = pixelData[offset];
-                offset += bytesPerPixel;
-
-                // Read B channel
-                picture.b[i] = pixelData[offset];
-                offset += bytesPerPixel;
-            }
-
-            // Preserve alpha when the RPSV receive mode explicitly requests it.
-            if (alphaBits != 0b000)
-            {
-                picture.a = new float[totalPixels];
-                picture.HasAlphaChannel = true;
-
-                for (int i = 0; i < totalPixels; i++)
-                {
-                    picture.a[i] = ReadAlphaValue(pixelData, offset, alphaBits);
-                    offset += GetAlphaSize(alphaBits);
-                }
-            }
-
-            return picture;
-        }
-
-        private float ReadAlphaValue(byte[] data, int offset, byte alphaBits)
+        private static Half ReadAlphaValue(byte[] data, int offset, byte alphaBits)
         {
             return alphaBits switch
             {
-                0b001 => data[offset] / 255f,
-                0b010 => BitConverter.ToUInt16(data, offset) / 65535f,
-                0b011 => BitConverter.ToUInt32(data, offset) / 4294967295f,
-                0b110 => (float)BitConverter.ToHalf(data, offset),
-                0b111 => BitConverter.ToSingle(data, offset),
+                0b001 => (Half)(data[offset] / 255f),
+                0b010 => HalfChannelMath.FromUInt16(BitConverter.ToUInt16(data, offset)),
+                0b011 => (Half)(BitConverter.ToUInt32(data, offset) / 4294967295f),
+                0b110 => BitConverter.ToHalf(data, offset),
+                0b111 => (Half)BitConverter.ToSingle(data, offset),
                 _ => throw new NotSupportedException($"Unsupported alpha mode: {alphaBits}")
             };
         }
 
-        private int GetAlphaSize(byte alphaBits)
+        private static int GetAlphaSize(byte alphaBits)
         {
             return alphaBits switch
             {

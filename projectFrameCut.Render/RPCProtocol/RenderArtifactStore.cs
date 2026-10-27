@@ -1,5 +1,6 @@
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
@@ -21,28 +22,7 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
     private readonly ConcurrentDictionary<string, object> _commitGates = new(StringComparer.OrdinalIgnoreCase);
 
     public string ResolveProjectPath(string projectRoot, string projectRelativePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
-        ArgumentException.ThrowIfNullOrWhiteSpace(projectRelativePath);
-
-        var canonicalRoot = Path.GetFullPath(projectRoot)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        var normalizedRelative = projectRelativePath.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(normalizedRelative))
-        {
-            throw new ArgumentException("Artifact paths must be relative to the project root.", nameof(projectRelativePath));
-        }
-
-        var fullPath = Path.GetFullPath(Path.Combine(canonicalRoot, normalizedRelative));
-        var pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (!fullPath.StartsWith(canonicalRoot, pathComparison))
-        {
-            throw new UnauthorizedAccessException("Artifact path escapes the project root.");
-        }
-
-        return fullPath;
-    }
+        => ProjectCachePaths.ResolvePath(projectRoot, projectRelativePath);
 
     public string CreateTemporaryPath(string finalPath)
     {

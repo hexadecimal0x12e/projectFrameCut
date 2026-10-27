@@ -10,21 +10,21 @@ public unsafe partial class VulkanComputeView
     private sealed class ResidentStorage(VulkanComputeView view, BufferResource buffer) : ResidentBuffer
     {
         internal readonly BufferResource Buffer = buffer;
-        internal override int Length => checked((int)(Buffer.Size / sizeof(float)));
+        internal override int Length => checked((int)(Buffer.Size));
         internal override void Destroy()
         {
             lock (view._sync) view.DestroyBuffer(Buffer);
         }
     }
 
-    internal ResidentBuffer AllocateResident(int count, float[]? values = null)
+    internal ResidentBuffer AllocateResident(int count, byte[]? values = null)
     {
         lock (_sync)
         {
             var createInfo = new BufferCreateInfo
             {
                 SType = StructureType.BufferCreateInfo,
-                Size = checked((ulong)count * sizeof(float)),
+                Size = checked((ulong)count),
                 Usage = (BufferUsageFlags)StorageBufferUsageFlag,
                 SharingMode = SharingMode.Exclusive,
             };
@@ -47,7 +47,7 @@ public unsafe partial class VulkanComputeView
                     Check(_vk.MapMemory(_device, memory, 0, createInfo.Size, MemoryMapFlags.None, &mapped), "upload resident image");
                     try
                     {
-                        fixed (float* data = values)
+                        fixed (byte* data = values)
                             System.Buffer.MemoryCopy(data, mapped, createInfo.Size, createInfo.Size);
                     }
                     finally
@@ -71,7 +71,7 @@ public unsafe partial class VulkanComputeView
     private readonly List<ResidentCommand> residentCommands = [];
     private sealed record ResidentCommand(DescriptorPool Pool, CommandBuffer Command, Fence Fence);
 
-    internal void WriteResident(ResidentBuffer storage, float[] values)
+    internal void WriteResident(ResidentBuffer storage, byte[] values)
     {
         lock (_sync)
         {
@@ -80,8 +80,8 @@ public unsafe partial class VulkanComputeView
             Check(_vk.MapMemory(_device, buffer.Memory, 0, buffer.Size, MemoryMapFlags.None, &mapped), "upload resident image");
             try
             {
-                fixed (float* data = values)
-                    System.Buffer.MemoryCopy(data, mapped, buffer.Size, checked((ulong)values.Length * sizeof(float)));
+                fixed (byte* data = values)
+                    System.Buffer.MemoryCopy(data, mapped, buffer.Size, checked((ulong)values.Length));
             }
             finally { _vk.UnmapMemory(_device, buffer.Memory); }
         }
@@ -125,17 +125,17 @@ public unsafe partial class VulkanComputeView
         }
     }
 
-    internal float[] ReadResident(ResidentBuffer storage)
+    internal byte[] ReadResident(ResidentBuffer storage)
     {
         lock (_sync)
         {
             var buffer = ((ResidentStorage)storage).Buffer;
-            var result = new float[checked((int)(buffer.Size / sizeof(float)))];
+            var result = new byte[checked((int)buffer.Size)];
             void* mapped = null;
             Check(_vk.MapMemory(_device, buffer.Memory, 0, buffer.Size, MemoryMapFlags.None, &mapped), "download resident image");
             try
             {
-                fixed (float* data = result)
+                fixed (byte* data = result)
                     System.Buffer.MemoryCopy(mapped, data, buffer.Size, buffer.Size);
             }
             finally
@@ -246,15 +246,15 @@ internal sealed class VulkanResidentPictureContext : ResidentPictureContext
     }
 
     protected override ResidentBuffer CreateBuffer(int length) => view.AllocateResident(length);
-    protected override void WriteBuffer(ResidentBuffer buffer, float[] values) => view.WriteResident(buffer, values);
-    protected override float[] Read(ResidentBuffer buffer) => view.ReadResident(buffer);
+    protected override void WriteBuffer(ResidentBuffer buffer, byte[] values) => view.WriteResident(buffer, values);
+    protected override byte[] Read(ResidentBuffer buffer) => view.ReadResident(buffer);
     protected override ResidentBuffer Dispatch(ResidentBuffer source, ResidentBuffer second, float[] parameters, int count)
     {
         BeginSubmission();
-        var output = RentBuffer(checked((int)parameters[3] * (int)parameters[4] * (parameters[14] > 0 ? 5 : 4)));
+        var output = RentBuffer(checked((int)parameters[3] * (int)parameters[4] * ResidentPixel.Size));
         try
         {
-            using var p = UploadBuffer(parameters);
+            using var p = UploadBuffer(ResidentPixel.PackParameters(parameters));
             view.DispatchResident(source, second, p, output, count);
             return output;
         }

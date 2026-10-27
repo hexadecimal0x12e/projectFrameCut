@@ -30,6 +30,36 @@ public sealed class ChunkRenderCoordinatorTests
     }
 
     [TestMethod]
+    public async Task PendingChunksRenderInOrderWithTheFullThreadBudget()
+    {
+        string projectRoot = CreateProjectDirectory();
+        try
+        {
+            var coordinator = CreateCoordinator(projectRoot, totalFrames: 10, chunkFrames: 4);
+            await coordinator.InitializeAsync();
+            var rendered = new List<int>();
+            var threads = new List<int>();
+            int active = 0;
+            await coordinator.RenderPendingChunksAsync(async (segment, path, maxThreads, report, token) =>
+            {
+                Assert.AreEqual(1, Interlocked.Increment(ref active));
+                rendered.Add(segment.Index);
+                threads.Add(maxThreads);
+                await Task.Yield();
+                await WriteDummyChunkAsync(segment, path, maxThreads, report, token);
+                Interlocked.Decrement(ref active);
+            });
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 2 }, rendered);
+            CollectionAssert.AreEqual(new[] { 8, 8, 8 }, threads);
+        }
+        finally
+        {
+            Directory.Delete(projectRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
     public async Task ResumeRendersOnlyMissingOrCorruptChunks()
     {
         string projectRoot = CreateProjectDirectory();
@@ -82,7 +112,6 @@ public sealed class ChunkRenderCoordinatorTests
             {
                 Enabled = true,
                 ChunkFrames = chunkFrames,
-                Parallelism = 2,
                 Resume = true,
                 KeepChunkFiles = true
             });

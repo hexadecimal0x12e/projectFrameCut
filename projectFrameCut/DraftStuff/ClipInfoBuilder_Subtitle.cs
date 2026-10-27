@@ -104,7 +104,7 @@ public partial class ClipInfoBuilder
             preview.Content = Markdown2XAML.ConvertText(markdown.Text ?? "", new()
             {
                 BodyFontSize = 22,
-                TextColor = new Color(data.Style.FillR / 65535f, data.Style.FillG / 65535f, data.Style.FillB / 65535f, data.Style.FillA)
+                TextColor = new Color(data.Style.FillR / 65535f, data.Style.FillG / 65535f, data.Style.FillB / 65535f, (float)data.Style.FillA)
             });
         }
 
@@ -254,8 +254,8 @@ public partial class ClipInfoBuilder
         style.AddEntry("x", "X", data.Style.X.ToString(CultureInfo.InvariantCulture), "0");
         style.AddEntry("y", "Y", data.Style.Y.ToString(CultureInfo.InvariantCulture), "0");
         style.AddPicker("align", PPLocalizedResources.TextOption_HorizonOption, Enum.GetNames<TextAlignment>(), data.Style.Alignment.ToString());
-        style.AddCollapsibleSection(PPLocalizedResources.TextOption_Color, b => AddColor(b, "fill", new Color(data.Style.FillR / 65535f, data.Style.FillG / 65535f, data.Style.FillB / 65535f, data.Style.FillA)));
-        style.AddCollapsibleSection(PPLocalizedResources.TextOption_Stroke, b => AddColor(b, "outline", new Color(data.Style.StrokeR / 65535f, data.Style.StrokeG / 65535f, data.Style.StrokeB / 65535f, data.Style.StrokeA)));
+        style.AddCollapsibleSection(PPLocalizedResources.TextOption_Color, b => AddColor(b, "fill", new Color(data.Style.FillR / 65535f, data.Style.FillG / 65535f, data.Style.FillB / 65535f, (float)data.Style.FillA)));
+        style.AddCollapsibleSection(PPLocalizedResources.TextOption_Stroke, b => AddColor(b, "outline", new Color(data.Style.StrokeR / 65535f, data.Style.StrokeG / 65535f, data.Style.StrokeB / 65535f, (float)data.Style.StrokeA)));
         style.PropertyChanged += (_, e) =>
         {
             if (!SaveCurrent()) return;
@@ -276,11 +276,11 @@ public partial class ClipInfoBuilder
                     case "align": data.Style.Alignment = Enum.Parse<TextAlignment>(e.Value!.ToString()!); break;
                     case "fill" when e.Value is Color c:
                         data.Style.FillR = (ushort)Math.Round(c.Red * ushort.MaxValue); data.Style.FillG = (ushort)Math.Round(c.Green * ushort.MaxValue);
-                        data.Style.FillB = (ushort)Math.Round(c.Blue * ushort.MaxValue); data.Style.FillA = c.Alpha;
+                        data.Style.FillB = (ushort)Math.Round(c.Blue * ushort.MaxValue); data.Style.FillA = (Half)c.Alpha;
                         break;
                     case "outline" when e.Value is Color outline:
                         data.Style.StrokeR = (ushort)Math.Round(outline.Red * ushort.MaxValue); data.Style.StrokeG = (ushort)Math.Round(outline.Green * ushort.MaxValue);
-                        data.Style.StrokeB = (ushort)Math.Round(outline.Blue * ushort.MaxValue); data.Style.StrokeA = outline.Alpha;
+                        data.Style.StrokeB = (ushort)Math.Round(outline.Blue * ushort.MaxValue); data.Style.StrokeA = (Half)outline.Alpha;
                         break;
                     default: return;
                 }

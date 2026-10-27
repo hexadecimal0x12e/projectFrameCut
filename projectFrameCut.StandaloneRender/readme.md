@@ -190,13 +190,10 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
 
 - **`-chunkRender=<true|false>`**
   启用分块渲染。默认：`false`。分块缓存保存在`<项目目录>/thumbs/render-chunks/<任务指纹>/`。
-  分块使用高码率、速度优先的中间编码；全部完成后由内置视频解码器逐帧读取，并写入目标配置的VideoWriter。
+  分块按顺序渲染并复用片段资源；全部完成后通过 FFmpeg 合并编码数据包，按需同时合成音频。
 
 - **`-chunkFrames=<number>`** / **`-chunkSeconds=<number>`**
   按帧数或秒数设置分块大小，两者只能指定一个。启用分块但均未指定时默认每块60秒。
-
-- **`-chunkParallelism=<number>`**
-  同时渲染的分块数量。默认：`1`（串行）。
 
 - **`-chunkResume=<true|false>`**
   校验并复用已经完成的分块，同时控制延迟合成的断点续渲。默认：`true`，不要求开启分块渲染。

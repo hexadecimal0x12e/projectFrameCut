@@ -9,8 +9,12 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class SharpenEffect_IPicture : INormalEffect
+    public class SharpenEffect_IPicture : SharpenEffect<IPicture> { }
+
+    public class SharpenEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new SharpenEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -45,7 +49,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            var effect = new SharpenEffect_IPicture
+            var effect = new SharpenEffect<TPicture>
             {
                 Amount = DynamicParam.ToFloat(parameters.GetValueOrDefault("Amount")),
             };
@@ -55,10 +59,10 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             float amount = DynamicParam.Resolve(Parameters.GetValueOrDefault("Amount"), Amount);
-            return PictureEffectChannels.PreserveHdr(SharpenEffect.Process(source, amount), source);
+            return PictureEffectChannels.PreserveHdr(PictureCalculation<TPicture>.Sharpen(source, amount), source);
         }
     }
 

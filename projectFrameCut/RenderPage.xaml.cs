@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Shared;
 using System;
@@ -69,6 +69,7 @@ public enum PostRenderAction
 
 public partial class RenderPage : ContentPage
 {
+    private string RenderCacheDirectory => ProjectCachePaths.GetTemporaryRoot(_workingPath, Path.Combine(MauiProgram.DataPath, "RenderCache"));
     public string _workingPath;
     ProjectJSONStructure _project;
     DraftStructureJSON _draft;
@@ -524,7 +525,7 @@ public partial class RenderPage : ContentPage
         }
         try
         {
-            var cacheDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
+            var cacheDir = RenderCacheDirectory;
             Directory.CreateDirectory(cacheDir);
             await PrepareUIForRender();
 
@@ -734,12 +735,13 @@ public partial class RenderPage : ContentPage
         SetSubProg("PrepareDraft");
         _currentCliRenderStage = string.Empty;
         var chunkOptions = GetConfiguredChunkRenderOptions((int)Math.Round(double.Parse(vm.Framerate, CultureInfo.InvariantCulture)));
-        _activeCliPreviewPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-preview-{Guid.NewGuid():N}");
+        _activeCliPreviewPath = Path.Combine(RenderCacheDirectory, $"render-preview-{Guid.NewGuid():N}");
         _activeCliPreviewStateToken = null;
         _cliStatusRequestTimedOut = false;
         var jobId = RenderRpcBootstrap.StartCliRender(new CliRenderProcessOptions
         {
             ProjectRoot = _workingPath,
+            CacheRoot = ProjectCachePaths.Initialize(_workingPath, _project.ProjectName),
             AllowedExternalSources = ProjectExternalSourceService.GetApprovals(_workingPath),
             ProjectName = _project.ProjectName ?? Path.GetFileName(_workingPath),
             OutputPath = resultPath,
@@ -764,11 +766,10 @@ public partial class RenderPage : ContentPage
             ChunkRender = chunkOptions.Enabled && !writeToVoid,
             ChunkFrames = chunkOptions.ChunkFrames,
             ChunkSeconds = chunkOptions.ChunkSeconds,
-            ChunkParallelism = chunkOptions.Parallelism,
             ChunkResume = chunkOptions.Resume,
             ChunkKeepFiles = chunkOptions.KeepChunkFiles,
             Background = _backgroundRenderRequested,
-            TempPath = Path.Combine(MauiProgram.DataPath, "RenderCache"),
+            TempPath = RenderCacheDirectory,
             PreviewPath = _activeCliPreviewPath,
             UseHwAccelDecoder = SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true),
             UseHwAccelEncoder = useHardwareAcceleration,
@@ -994,7 +995,7 @@ public partial class RenderPage : ContentPage
                         "12bit" => "AV_PIX_FMT_YUV420P10LE",
                         _ => "AV_PIX_FMT_GBRP16LE"
                     };
-                    var voidOutputPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-void-{Guid.NewGuid():N}.tmp");
+                    var voidOutputPath = Path.Combine(RenderCacheDirectory, $"render-void-{Guid.NewGuid():N}.tmp");
                     await RenderProjectViaCliAsync(vm, voidOutputPath, encoderSelection.Encoder, fmt, encoderSelection.UseHardwareAcceleration, writeToVoid: true);
                     return;
                 }
@@ -1128,9 +1129,9 @@ public partial class RenderPage : ContentPage
         }
 
         if (available.Contains(requested) || available.Count == 0)
-            return (requested, IsHardwareEncoder(requested) && (!hdr || HDRVideoWriter.CanUseHardwareHdrEncoder(requested)));
+            return (requested, IsHardwareEncoder(requested) && (!hdr || HDRVideoWriterFP16.CanUseHardwareHdrEncoder(requested)));
 
-        return (requested, IsHardwareEncoder(requested) && (!hdr || HDRVideoWriter.CanUseHardwareHdrEncoder(requested)));
+        return (requested, IsHardwareEncoder(requested) && (!hdr || HDRVideoWriterFP16.CanUseHardwareHdrEncoder(requested)));
     }
 
     private static HashSet<string> GetAvailableVideoEncoders()
@@ -1169,12 +1170,12 @@ public partial class RenderPage : ContentPage
             foreach (var suffix in suffixes)
             {
                 var candidate = root + suffix;
-                if (available.Contains(candidate) && (!requireHdr || HDRVideoWriter.CanUseHardwareHdrEncoder(candidate))) return candidate;
+                if (available.Contains(candidate) && (!requireHdr || HDRVideoWriterFP16.CanUseHardwareHdrEncoder(candidate))) return candidate;
             }
         }
         return available.FirstOrDefault(c => IsHardwareEncoder(c)
             && GetCodecFamily(c) == family
-            && (!requireHdr || HDRVideoWriter.CanUseHardwareHdrEncoder(c)));
+            && (!requireHdr || HDRVideoWriterFP16.CanUseHardwareHdrEncoder(c)));
     }
 
     private static string[] GetHardwareEncoderSuffixes()
@@ -1309,8 +1310,6 @@ public partial class RenderPage : ContentPage
 #elif iDevices
 
 #elif WINDOWS
-            // AcceleratorsManager was initialized during plugin load.
-            // The configured accelerators (from accels.json) are ready to use.
             AcceleratorsManager.IsRendering = true;
             if (!AcceleratorsManager.Accelerators.Any()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
@@ -1368,8 +1367,7 @@ public partial class RenderPage : ContentPage
                             BlockWrite = true,
                             EnableDiskCacheRouting = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", true),
                             DiskCacheMaxFrameCount = SettingsManager.GetSettingAs("render_MaxDiskBufferCount", 500, 500),
-                            DiskCacheThreshold = SettingsManager.GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7),
-                            DiskCacheDirectory = Path.Combine(MauiProgram.CachePath, "RenderingCache")
+                            DiskCacheThreshold = SettingsManager.GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7)
                         };
                         break;
                     case "null":
@@ -1410,8 +1408,8 @@ public partial class RenderPage : ContentPage
                 else
                 {
                     var writerType = ProjectUsesHDR
-                        ? "HDRVideoWriter"
-                        : encoderSelection.UseHardwareAcceleration ? "VideoWriterHWAccel" : "VideoWriter";
+                        ? "HDRVideoWriterFP16"
+                        : encoderSelection.UseHardwareAcceleration ? "VideoWriterHWAccelFP16" : "VideoWriterFP16";
                     builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, writerType)
                     {
                         EnablePreview = true,
@@ -1425,6 +1423,8 @@ public partial class RenderPage : ContentPage
             }
 
 
+            if (builder is not null)
+                builder.DiskCacheDirectory = Path.Combine(ProjectCachePaths.GetTemporaryRoot(_workingPath, MauiProgram.CachePath), "RenderingCache");
             if (!vm.UseAlphaBrightnessPackage) builder?.Writer?.Metadata = metadata ?? new();
 
             Renderer renderer = new Renderer
@@ -1537,7 +1537,7 @@ public partial class RenderPage : ContentPage
                 {
                     if (File.Exists(p))
                     {
-                        cover = new Picture8bpp(p);
+                        cover = PictureFP16.Load(p);
                         Log($"Loaded cover image from {_project.ThumbPath}");
                     }
                     else
@@ -1917,7 +1917,7 @@ public partial class RenderPage : ContentPage
 #if WINDOWS
         var outputPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
 #else
-        var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
+        var outputDir = RenderCacheDirectory;
         var projectName = string.IsNullOrWhiteSpace(_project.ProjectName) ? "project" : _project.ProjectName;
         var outputPath = Path.Combine(outputDir, $"{projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
 #endif
@@ -1973,7 +1973,7 @@ public partial class RenderPage : ContentPage
         var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav", MauiProgram.DataPath);
         if (string.IsNullOrWhiteSpace(resultPath)) return;
 #else
-        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+        string resultPath = Path.Combine(RenderCacheDirectory, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
 #endif
         try
         {
@@ -2032,13 +2032,14 @@ public partial class RenderPage : ContentPage
         {
             SessionId = _renderRpcSessionId,
             ProjectRoot = _workingPath,
+            CacheRoot = ProjectCachePaths.Initialize(_workingPath, _project.ProjectName),
             AllowedExternalSources = ProjectExternalSourceService.GetApprovals(_workingPath),
             ProjectJson = JsonSerializer.Serialize(_project, DraftPage.DraftJSONOption),
             TimelineJson = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption),
             ProjectWidth = Math.Max(1, _project.RelativeWidth),
             ProjectHeight = Math.Max(1, _project.RelativeHeight),
             FrameRate = Math.Max(1, (int)_project.TargetFrameRate),
-            ProxyRoot = Path.Combine(_workingPath, "proxy"),
+            ProxyRoot = ProjectCachePaths.ResolvePath(_workingPath, "proxy"),
             Assets = Asset.AssetDatabase.Assets.Select(static item => new AssetPathEntry { AssetId = item.Key, Path = item.Value.Path ?? string.Empty }).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
         }, _cts.Token);
         try
@@ -2075,7 +2076,7 @@ public partial class RenderPage : ContentPage
         var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
         if (string.IsNullOrWhiteSpace(resultPath)) return;
 #else
-        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+        string resultPath = Path.Combine(RenderCacheDirectory, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
 #endif
         try
         {
@@ -2128,7 +2129,7 @@ public partial class RenderPage : ContentPage
         var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv", MauiProgram.DataPath);
         if (string.IsNullOrWhiteSpace(resultPath)) return;
 #else
-        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
+        string resultPath = Path.Combine(RenderCacheDirectory, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
 #endif
         try
         {
@@ -2168,7 +2169,7 @@ public partial class RenderPage : ContentPage
         var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv", MauiProgram.DataPath);
         if (string.IsNullOrWhiteSpace(resultPath)) return;
 #else
-        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
+        string resultPath = Path.Combine(RenderCacheDirectory, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
 #endif
         try
         {
@@ -2288,6 +2289,9 @@ public partial class RenderPage : ContentPage
         var args = new List<string>
         {
             $"-project={_workingPath}",
+            $"--dataRoot={MauiProgram.BasicDataPath}",
+            $"--projectCacheRoot={ProjectCachePaths.RedirectRoot}",
+            $"--projectCacheDirectory={ProjectCachePaths.Initialize(_workingPath, _project.ProjectName)}",
             $"-output={outputPath}",
             $"-output_options={width},{height},{fps},{pixelFormat},{encoder}",
             $"-assetDbFile={Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json")}",
@@ -2313,22 +2317,14 @@ public partial class RenderPage : ContentPage
         args.Add($"-chunkRender={chunkOptions.Enabled}");
         if (chunkOptions.ChunkFrames is uint chunkFrames) args.Add($"-chunkFrames={chunkFrames}");
         if (chunkOptions.ChunkSeconds is double chunkSeconds) args.Add($"-chunkSeconds={chunkSeconds.ToString(CultureInfo.InvariantCulture)}");
-        args.Add($"-chunkParallelism={chunkOptions.Parallelism}");
         args.Add($"-chunkResume={chunkOptions.Resume}");
         args.Add($"-chunkKeepFiles={chunkOptions.KeepChunkFiles}");
 
-#if WINDOWS
-        args.Add($"-multiAccelerator={AcceleratorsManager.IsMultiAccelEnabled}");
-
-        if (AcceleratorsManager.IsMultiAccelEnabled && AcceleratorsManager.AcceleratorsForRendering.Length > 0)
-        {
-            args.Add($"-acceleratorDeviceNames={string.Join(",", AcceleratorsManager.AcceleratorsForRendering.Select(a => a.Name))}");
-        }
-        else if (AcceleratorsManager.DefaultAccelerator is not null)
-        {
-            args.Add($"-acceleratorDeviceName={AcceleratorsManager.DefaultAccelerator.Name}");
-        }
-
+#if WINDOWS || LINUX
+        var accelerators = AcceleratorsManager.GetConfiguration();
+        args.Add($"-multiAccelerator={accelerators.EnableMultiAccel}");
+        args.Add($"-acceleratorDeviceName={accelerators.MainAcceleratorName}");
+        args.Add($"-acceleratorDeviceNames={string.Join(",", accelerators.RenderingAcceleratorNames)}");
 #endif
 
         return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
@@ -2355,7 +2351,6 @@ public partial class RenderPage : ContentPage
             Enabled = enabled,
             ChunkFrames = frames,
             ChunkSeconds = seconds,
-            Parallelism = Math.Max(1, SettingsManager.GetSettingAs("render_chunkParallelism", 1, 1)),
             Resume = SettingsManager.IsBoolSettingTrueOrDefault("render_chunkResume", true),
             KeepChunkFiles = SettingsManager.IsBoolSettingTrue("render_chunkKeepFiles")
         };

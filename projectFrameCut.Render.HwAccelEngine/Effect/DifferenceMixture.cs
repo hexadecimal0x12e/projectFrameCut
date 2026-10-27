@@ -27,39 +27,9 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
             if (disposed)
                 return;
             disposed = true;
-            ReleaseNativeResources();
         }
 
-        public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB)
-        {
-            using var scope = nativeLock.EnterScope();
-            ObjectDisposedException.ThrowIf(disposed, this);
-            try
-            {
-                return base.Mix(basePicture, topPicture, targetPPB);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex, "Execute DifferenceMixture_HwAccel", "HwAccelEngine");
-                throw;
-            }
-        }
-
-        public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight)
-        {
-            using var scope = nativeLock.EnterScope();
-            ObjectDisposedException.ThrowIf(disposed, this);
-            try
-            {
-                return base.Mix(basePicture, topPicture, targetPPB, topStartX, topStartY, targetWidth, targetHeight);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex, "Execute DifferenceMixture_HwAccel", "HwAccelEngine");
-                throw;
-            }
-        }
-
-        partial void ReleaseNativeResources();
+        public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB) => ResidentEffectResult.Mix(this, basePicture, topPicture, targetPPB);
+        public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight) => ResidentEffectResult.Download(EffectPictureProcessing.Mix(this, basePicture, topPicture, targetPPB, topStartX, topStartY, targetWidth, targetHeight));
     }
 }

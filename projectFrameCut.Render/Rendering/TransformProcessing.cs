@@ -87,8 +87,8 @@ public static class TransformProcessing
     public static bool IsCanvasFrame(IPicture frame) => CanvasFrames.TryGetValue(frame, out _);
     public static void MarkCanvasFrame(IPicture frame) => CanvasFrames.GetValue(frame, static _ => new object());
 
-    private static IPicture CopyPicture(IPicture picture) => picture is IHwAccelPicture gpu ? gpu.Retain() : picture is IHDRPicture<ushort> hdr
-        ? new HDRPicture16bpp(hdr.Width, hdr.Height)
+    private static IPicture CopyPicture(IPicture picture) => picture is IHwAccelPicture gpu ? gpu.Retain() : picture is IHDRPicture<Half> hdr
+        ? new HDRPictureFP16(hdr.Width, hdr.Height)
         {
             r = hdr.r.Take(hdr.Pixels).ToArray(), g = hdr.g.Take(hdr.Pixels).ToArray(), b = hdr.b.Take(hdr.Pixels).ToArray(),
             a = hdr.HasAlphaChannel ? hdr.a?.Take(hdr.Pixels).ToArray() : null, HasAlphaChannel = hdr.HasAlphaChannel,
@@ -186,7 +186,7 @@ public static class TransformProcessing
 
     public static bool TryRender(IClip clip, IReadOnlyList<IClip> clips, uint frameIndex, int width, int height,
         int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, out IPicture? result,
-        int sdrBrightness = 203, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null,
+        int sdrBrightness = 0, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null,
         ClipArgumentFrameCache? argumentFrames = null, bool keepHwAccelPicture = false)
     {
         using var gpuScope = HwAccelPictureScope.Current is null ? new HwAccelPictureScope() : null;
@@ -324,7 +324,7 @@ public static class TransformProcessing
                 : EffectPictureProcessing.Resize(source, width, height, false);
             if (!ReferenceEquals(resized, source)) source.Dispose();
             source = resized;
-            if (pixelMode == IPicture.PicturePixelMode.UShortPicture && source is not IHDRPicture<ushort> and not IHwAccelPicture { IsHdr: true })
+            if (sdrBrightness > 0 && source is not IHDRPicture<Half> and not IHwAccelPicture { IsHdr: true })
             {
                 var hdr = EffectPictureProcessing.ToHdr(source, Brightness(clip, sdrBrightness));
                 if (!ReferenceEquals(hdr, source)) source.Dispose();
@@ -345,7 +345,7 @@ public static class TransformProcessing
         clip.ExtraData.TryGetValue("HDRBrightness", out var value) && int.TryParse(value.ToString(), out var brightness) ? brightness : fallback;
 
     private static IPicture RenderInput(IClip clip, uint frame, int width, int height, int projectWidth, int projectHeight,
-        IPicture.PicturePixelMode pixelMode, int sdrBrightness = 203, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null,
+        IPicture.PicturePixelMode pixelMode, int sdrBrightness = 0, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null,
         ClipArgumentFrameCache? argumentFrames = null)
     {
         uint clamped = ClampFrame(clip, frame);
@@ -362,17 +362,15 @@ public static class TransformProcessing
                 projectWidth, projectHeight, applyTransforms: false, initializeClips: false, argumentFrames: argumentFrames).ToArray();
         try
         {
-            if (pixelMode == IPicture.PicturePixelMode.UShortPicture)
-            {
+            if (sdrBrightness > 0)
                 for (int i = 0; i < frames.Length; i++)
                 {
-                    if (frames[i].Clip is null or IHDRPicture<ushort> or IHwAccelPicture { IsHdr: true }) continue;
+                    if (frames[i].Clip is null or IHDRPicture<Half> or IHwAccelPicture { IsHdr: true }) continue;
                     var source = frames[i].Clip;
                     var hdr = EffectPictureProcessing.ToHdr(source, Brightness(clip, sdrBrightness));
                     frames[i] = new OneFrame(clamped, clip, hdr, resolveEffects: false);
                     if (!ReferenceEquals(source, hdr)) source.Dispose();
                 }
-            }
             var result = Timeline.MixtureLayers(frames, clamped, width, height, (int)pixelMode, autoCenterImplicitClip: autoCenterImplicitClip,
                 projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight, transparentBackground: true, disposeIntermediateFrames: true, keepHwAccelPicture: true);
             return frames.Any(item => ReferenceEquals(item.Clip, result)) ? CopyPicture(result) : result;

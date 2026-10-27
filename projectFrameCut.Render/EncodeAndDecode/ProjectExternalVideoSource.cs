@@ -65,8 +65,8 @@ public class ProjectExternalVideoSource : RemoteRpcVideoSource
 
 public sealed class ProjectExternalHdrVideoSource(ExternalVideoSourceReference source, ProjectExternalSourceHost host) : ProjectExternalVideoSource(source, host), IHDRVideoSource
 {
-    public HDRPicture16bpp GetHDRFrame(uint frame, bool hasAlpha = false) => ToHdr(ReadFrame(new() { TargetFrame = frame, RequestHdr = true, HasAlpha = hasAlpha }));
-    public HDRPicture16bpp GetHDRFrame(uint frame, int x, int y, int width, int height, int targetWidth, int targetHeight, bool hasAlpha = false) =>
+    public HDRPictureFP16 GetHDRFrame(uint frame, bool hasAlpha = false) => ToHdr(ReadFrame(new() { TargetFrame = frame, RequestHdr = true, HasAlpha = hasAlpha }));
+    public HDRPictureFP16 GetHDRFrame(uint frame, int x, int y, int width, int height, int targetWidth, int targetHeight, bool hasAlpha = false) =>
         ToHdr(ReadFrame(new() { TargetFrame = frame, SourceX = x, SourceY = y, SourceWidth = width, SourceHeight = height,
             TargetWidth = targetWidth, TargetHeight = targetHeight, UseRegion = true, RequestHdr = true, HasAlpha = hasAlpha }));
 }

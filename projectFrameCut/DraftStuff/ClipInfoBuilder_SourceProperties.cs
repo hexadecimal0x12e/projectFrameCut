@@ -97,6 +97,7 @@ public partial class ClipInfoBuilder
 
         string currentVideoDecoderId = ReadStringValue(clip.ExtraData?.GetValueOrDefault("TargetDecoder")
             ?? clip.ExtraData?.GetValueOrDefault("targetdecoder"), "auto");
+        currentVideoDecoderId = PluginManager.NormalizeVideoDecoderName(currentVideoDecoderId);
         if (string.IsNullOrWhiteSpace(currentVideoDecoderId))
         {
             currentVideoDecoderId = "auto";
@@ -105,10 +106,9 @@ public partial class ClipInfoBuilder
         var videoDecoderOptionLabelToId = new Dictionary<string, string>
         {
             [PPLocalizedResources.General_VideoCodec_TargetMode_Auto] = "auto",
-            [PPLocalizedResources.General_VideoCodec_TargetMode_8bpp] = "DecoderContext8Bit",
-            [PPLocalizedResources.General_VideoCodec_TargetMode_8bppHWaccel] = "DecoderContextHW",
-            [PPLocalizedResources.General_VideoCodec_TargetMode_16bpp] = "DecoderContext16Bit",
-            [PPLocalizedResources.General_VideoCodec_TargetMode_hdr] = "HDRDecoderContext",
+            ["FP16"] = "DecoderContextFP16",
+            ["FP16 (HW)"] = "DecoderContextHWFP16",
+            ["FP16 HDR"] = "HDRDecoderContextFP16",
         };
         var allVideoDecoderOptionLabelToId = new Dictionary<string, string>(videoDecoderOptionLabelToId)
         {
@@ -126,16 +126,8 @@ public partial class ClipInfoBuilder
             }
 
             var decoder = targetVideoClip?.Decoder;
-            string format;
-            if (decoder is IHDRVideoSource || decoder is null && externalSource.SupportsHdr)
-                format = PPLocalizedResources.General_VideoCodec_TargetMode_hdr;
-            else
-                format = (decoder?.ResultBitPerPixel ?? (externalSource.HasKnownResultBitsPerPixel ? externalSource.ResultBitsPerPixel : 0)) switch
-                {
-                    8 => PPLocalizedResources.General_VideoCodec_TargetMode_8bpp,
-                    16 => PPLocalizedResources.General_VideoCodec_TargetMode_16bpp,
-                    _ => Localized._Unknown
-                };
+            string format = decoder is IHDRVideoSource { HasHdrContent: true } || decoder is null && externalSource.SupportsHdr
+                ? "FP16 HDR" : "FP16";
             return externalSource.SupportsAlpha ? $"{format} \u00B7 Alpha" : format;
         }
 
@@ -153,7 +145,7 @@ public partial class ClipInfoBuilder
             .AppendWhen(!(clip.SourcePath?.StartsWith("#") ?? false),
                 c => c.AddPicker("videoTargetDecoderMode", PPLocalizedResources.General_VideoCodec_TargetMode,
                         videoDecoderOptionLabelToId.Keys.ToArray(), selectedVideoDecoderLabel)
-                    .AppendWhen(targetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext),
+                    .AppendWhen(targetVideoClip?.Decoder is IHDRVideoSource { HasHdrContent: true },
                         p => p.AddSlider("hdrBrightnessOffset", PPLocalizedResources.General_VideoCodec_HDRBrightnessOffset,
                             -1, 1, targetVideoClip?.HDRBrightnessOffset ?? 0, eventCallMode: SliderUpdateEventCallMode.OnMouseUp)),
                 c => c.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode,

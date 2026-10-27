@@ -70,7 +70,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
 
-        public string TargetDecoder { get; set; } = string.Empty;
+        private string _targetDecoder = string.Empty;
+        public string TargetDecoder
+        {
+            get => _targetDecoder;
+            set => _targetDecoder = PluginManager.NormalizeVideoDecoderName(value);
+        }
         public double HDRBrightnessOffset { get; set; } = 0;
 
         [JsonIgnore()]
@@ -121,17 +126,20 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);
                 var (sourceX, sourceY, sourceWidth, sourceHeight) = GetSourceRegion(decoder.Width, decoder.Height);
                 IPicture result;
-                if (decoder is IHDRVideoSource h)
+                if (decoder is IHDRVideoSource { HasHdrContent: true } h)
                 {
                     result = h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
                             targetWidth, targetHeight, hasAlpha: true)
-                        .SetBrightnessOffset(HDRBrightnessOffset)
+                        .SetBrightnessOffset((Half)HDRBrightnessOffset)
                         .ToBitPerPixel(targetPPB);
                 }
                 else
                 {
                     result = decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
-                        targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                        targetWidth, targetHeight);
+                    EffectPictureProcessing.RequireFP16(result, $"Video source {decoder.TypeName}, clip {Name}/{Id}");
+                    if (result is HDRPictureFP16 hdr) hdr.SetBrightnessOffset((Half)HDRBrightnessOffset);
+                    if (targetPPB != IPicture.PicturePixelMode.Float16Picture) result = result.ToBitPerPixel(targetPPB);
                 }
 
                 // Only publish the position after a successful decode. Decoder.Index is a request

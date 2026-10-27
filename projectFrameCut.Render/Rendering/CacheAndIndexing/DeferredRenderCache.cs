@@ -1,3 +1,4 @@
+using projectFrameCut.Shared;
 using projectFrameCut.Drawing.Base.ReadWriteConvert;
 using Microsoft.Data.Sqlite;
 using System.Collections.Concurrent;
@@ -68,7 +69,7 @@ internal sealed class DeferredRenderCache : IDisposable
         this.encoder = encoder;
         string root = string.IsNullOrWhiteSpace(projectRoot)
             ? Path.Combine(Path.GetTempPath(), "projectFrameCut", "render-deferred", Guid.NewGuid().ToString("N"))
-            : Path.Combine(Path.GetFullPath(projectRoot), "incrementalRendering");
+            : ProjectCachePaths.ResolvePath(projectRoot, "incrementalRendering");
         fingerprint = signature ?? Guid.NewGuid().ToString("N");
         string jobs = Path.Combine(root, fingerprint);
         Directory.CreateDirectory(jobs);
@@ -272,9 +273,10 @@ internal sealed class DeferredRenderCache : IDisposable
             token.ThrowIfCancellationRequested();
             stream.Position = 0;
             if (!readPicture || !info.HasPicture) return true;
-            if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out picture) || picture is null) return false;
+            if (!PictureExtensions.SharedVfdPictureDecoder.TryLoadFP16(stream, out var fp) || fp is null) return false;
+            picture = fp;
             if (picture.Width == info.Width && picture.Height == info.Height && (int)picture.BitPerPixel == info.Bits
-                && (picture is IHDRPicture<ushort>) == info.Hdr) return true;
+                && (picture is IHDRPicture<Half>) == info.Hdr) return true;
             picture.Dispose();
             picture = null;
             return false;
@@ -305,7 +307,7 @@ internal sealed class DeferredRenderCache : IDisposable
                     token.ThrowIfCancellationRequested();
                     switch (picture)
                     {
-                        case IHDRPicture<ushort> hdr: encoder.Save(hdr, output); break;
+                        case IPicture<Half> fp: encoder.Save(fp, output); break;
                         case IPicture<ushort> p16: encoder.Save(p16, output); break;
                         case IPicture<byte> p8: encoder.Save(p8, output); break;
                         case null: break;

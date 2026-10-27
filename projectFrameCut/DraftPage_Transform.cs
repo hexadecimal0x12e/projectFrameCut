@@ -197,6 +197,7 @@ public partial class DraftPage
         {
             SessionId = Guid.NewGuid(),
             ProjectRoot = previewer.RenderProjectRoot ?? previewer.ProjectRoot,
+            CacheRoot = previewer.RpcClient is null ? ProjectCachePaths.GetRoot(previewer.ProjectRoot) : string.Empty,
             ProjectJson = JsonSerializer.Serialize(ProjectInfo, DraftJSONOption),
             TimelineJson = JsonSerializer.Serialize(new DraftStructureJSON { Clips = clips }, DraftJSONOption),
             ProxyRoot = string.Empty,

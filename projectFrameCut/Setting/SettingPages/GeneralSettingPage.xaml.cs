@@ -5,6 +5,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Asset;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -104,6 +105,10 @@ public partial class GeneralSettingPage : ContentPage
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
 #endif
             .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_ProjectCache_Title, SettingLocalizedResources.General_ProjectCache_Description, 20, 12))
+            .AddText(new Label { Text = $"{SettingLocalizedResources.General_ProjectCache_Path}: {(GetSetting(ProjectCachePaths.SettingKey, string.Empty) is { Length: > 0 } cacheRoot ? cacheRoot : SettingLocalizedResources.General_ProjectCache_Default)}", FontSize = 12 })
+            .AddButton("selectProjectCache", SettingLocalizedResources.General_ProjectCache_Select)
+            .AddButton("resetProjectCache", SettingLocalizedResources.General_ProjectCache_Reset)
             .AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage()))
             .ListenToChanges(SettingInvoker);
         Content = rootPPB.BuildWithScrollView();
@@ -116,6 +121,20 @@ public partial class GeneralSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "selectProjectCache":
+                    var cachePath = await FileSystemService.PickFolderAsync();
+                    if (string.IsNullOrWhiteSpace(cachePath)) return;
+                    cachePath = Path.GetFullPath(cachePath);
+                    await Task.Run(() => ProjectCachePaths.VerifyWritable(cachePath));
+                    WriteSetting(ProjectCachePaths.SettingKey, cachePath);
+                    Log($"Project cache redirection set to '{cachePath}'; applies after restart.");
+                    needReboot = true;
+                    goto done;
+                case "resetProjectCache":
+                    WriteSetting(ProjectCachePaths.SettingKey, string.Empty);
+                    Log("Project cache redirection reset; applies after restart.");
+                    needReboot = true;
+                    goto done;
 #if WINDOWS
                 case "userDataSelectButton":
                     {
@@ -466,6 +485,7 @@ public partial class GeneralSettingPage : ContentPage
         }
         catch (Exception ex)
         {
+            Log(ex, "Update general settings", this);
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

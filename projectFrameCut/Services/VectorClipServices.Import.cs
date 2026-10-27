@@ -194,11 +194,11 @@ public static partial class VectorClipServices
             ["StrokeR"] = (float)seg.StrokeR,
             ["StrokeG"] = (float)seg.StrokeG,
             ["StrokeB"] = (float)seg.StrokeB,
-            ["StrokeA"] = seg.StrokeA,
+            ["StrokeA"] = (float)seg.StrokeA,
             ["FillR"] = (float)seg.FillR,
             ["FillG"] = (float)seg.FillG,
             ["FillB"] = (float)seg.FillB,
-            ["FillA"] = seg.FillA,
+            ["FillA"] = (float)seg.FillA,
             ["Thickness"] = seg.Thickness,
         };
     }

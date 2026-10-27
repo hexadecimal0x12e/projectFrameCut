@@ -4,33 +4,169 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect;
 
 internal static class ResidentShaders
 {
-    internal static string OpenGL => "#version 310 es\nprecision highp float;\nprecision highp int;\n" + Glsl;
-    internal static string Vulkan => "#version 450\n" + Glsl;
+    internal static string OpenGL => "#version 310 es\n" + Extensions + "precision highp float;\nprecision highp int;\n" + Glsl;
+    internal static string Vulkan => "#version 450\n" + Extensions + Glsl;
+    private const string Extensions = "#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require\n#extension GL_EXT_shader_16bit_storage : require\n";
     private const string Glsl = """
 layout(local_size_x = 256) in;
-layout(std430, binding = 0) readonly buffer SourceBuffer { float src[]; };
-layout(std430, binding = 1) readonly buffer SecondBuffer { float second[]; };
+struct ResidentKernelPixel { float16_t Red; float16_t Green; float16_t Blue; float16_t Alpha; float16_t Brightness; float16_t Padding; };
+layout(std430, binding = 0) readonly buffer SourceBuffer { ResidentKernelPixel src[]; };
+layout(std430, binding = 1) readonly buffer SecondBuffer { ResidentKernelPixel second[]; };
 layout(std430, binding = 2) readonly buffer ParameterBuffer { float p[]; };
-layout(std430, binding = 3) writeonly buffer ResultBuffer { float dst[]; };
+layout(std430, binding = 3) writeonly buffer ResultBuffer { ResidentKernelPixel dst[]; };
 float FMin(float a, float b) { return min(a, b); }
 float FMax(float a, float b) { return max(a, b); }
 int IMin(int a, int b) { return min(a, b); }
 int IMax(int a, int b) { return max(a, b); }
-    // GLSL ES requires explicit conversions between integer coordinates and floats.
-    float Read(int data, int i) { return data == 0 ? src[i] : second[i]; }
-    float Clamp(float value, float low, float high)
+float16_t HalfParameter(int index) { return unpackFloat2x16(floatBitsToUint(p[index])).x; }
+    float V(float16_t value) { return float(value); }
+    float Read(int data, int i, int c)
     {
-        return value < low ? low : value > high ? high : value;
+        return c == 0 ? V((data == 0 ? src[i].Red : second[i].Red)) : c == 1 ? V((data == 0 ? src[i].Green : second[i].Green)) : V((data == 0 ? src[i].Blue : second[i].Blue));
     }
 
+    float16_t ReadHalf(int data, int i, int c)
+    {
+        return c == 3 ? (data == 0 ? src[i].Alpha : second[i].Alpha) : (data == 0 ? src[i].Brightness : second[i].Brightness);
+    }
+
+    void Store(int i, int c, float value)
+    {
+        if (c == 0)
+            dst[i].Red = float16_t(value);
+        else if (c == 1)
+            dst[i].Green = float16_t(value);
+        else
+            dst[i].Blue = float16_t(value);
+    }
+
+    void StoreHalf(int i, int c, float16_t value)
+    {
+        if (c == 3)
+            dst[i].Alpha = value;
+        else
+            dst[i].Brightness = value;
+    }
+
+    float Clamp(float value, float low, float high) { return value < low ? low : value > high ? high : value; }
+    float16_t ClampHalf(float16_t value) { return value < float16_t(0.0) ? float16_t(0.0) : value > float16_t(1.0) ? float16_t(1.0) : value; }
     float Sample(int data, int w, int h, int c, float x, float y)
     {
         if (x < 0.0 || y < 0.0 || x >= float(w) || y >= float(h))
             return 0.0;
         int x0 = int(x), y0 = int(y), x1 = IMin(x0 + 1, w - 1), y1 = IMin(y0 + 1, h - 1);
         float fx = x - float(x0), fy = y - float(y0);
-        int offset = c * w * h;
-        return Read(data, offset + y0 * w + x0) * (1.0 - fx) * (1.0 - fy) + Read(data, offset + y0 * w + x1) * fx * (1.0 - fy) + Read(data, offset + y1 * w + x0) * (1.0 - fx) * fy + Read(data, offset + y1 * w + x1) * fx * fy;
+        return Read(data, y0 * w + x0, c) * (1.0 - fx) * (1.0 - fy) + Read(data, y0 * w + x1, c) * fx * (1.0 - fy) + Read(data, y1 * w + x0, c) * (1.0 - fx) * fy + Read(data, y1 * w + x1, c) * fx * fy;
+    }
+
+    float16_t SampleHalf(int data, int w, int h, int c, float x, float y)
+    {
+        if (x < 0.0 || y < 0.0 || x >= float(w) || y >= float(h))
+            return float16_t(0.0);
+        int x0 = int(x), y0 = int(y), x1 = IMin(x0 + 1, w - 1), y1 = IMin(y0 + 1, h - 1);
+        float16_t fx = float16_t(x - float(x0)), fy = float16_t(y - float(y0));
+        return ReadHalf(data, y0 * w + x0, c) * (float16_t(1.0) - fx) * (float16_t(1.0) - fy) + ReadHalf(data, y0 * w + x1, c) * fx * (float16_t(1.0) - fy) + ReadHalf(data, y1 * w + x0, c) * (float16_t(1.0) - fx) * fy + ReadHalf(data, y1 * w + x1, c) * fx * fy;
+    }
+
+    float SamplePremultiplied(int data, int w, int h, int c, float x, float y)
+    {
+        int x0 = int(floor(x)), y0 = int(floor(y));
+        float16_t fx = float16_t(x - float(x0)), fy = float16_t(y - float(y0)), alpha = float16_t(0.0);
+        float color = 0.0;
+        for (int j = 0; j < 2; j++)
+            for (int k = 0; k < 2; k++)
+            {
+                int px = x0 + k, py = y0 + j;
+                if (px < 0 || py < 0 || px >= w || py >= h)
+                    continue;
+                int i = py * w + px;
+                float16_t weight = (k == 0 ? float16_t(1.0) - fx : fx) * (j == 0 ? float16_t(1.0) - fy : fy) * ReadHalf(data, i, 3);
+                alpha += weight;
+                color += Read(data, i, c) * float(weight);
+            }
+
+        return alpha > float16_t(0.0) ? color / float(alpha) : 0.0;
+    }
+
+    float16_t SampleHalfPremultiplied(int data, int w, int h, int c, float x, float y)
+    {
+        int x0 = int(floor(x)), y0 = int(floor(y));
+        float16_t fx = float16_t(x - float(x0)), fy = float16_t(y - float(y0)), alpha = float16_t(0.0), brightness = float16_t(0.0);
+        for (int j = 0; j < 2; j++)
+            for (int k = 0; k < 2; k++)
+            {
+                int px = x0 + k, py = y0 + j;
+                if (px < 0 || py < 0 || px >= w || py >= h)
+                    continue;
+                int i = py * w + px;
+                float16_t weight = (k == 0 ? float16_t(1.0) - fx : fx) * (j == 0 ? float16_t(1.0) - fy : fy) * ReadHalf(data, i, 3);
+                alpha += weight;
+                brightness += ReadHalf(data, i, 4) * weight;
+            }
+
+        return c == 3 ? alpha : alpha > float16_t(0.0) ? brightness / alpha : float16_t(0.0);
+    }
+
+    float16_t Luminance(int data, int w, int h, float x, float y, float maximum)
+    {
+        return ClampHalf(float16_t(Sample(data, w, h, 0, x, y) / maximum) * float16_t(0.2627) + float16_t(Sample(data, w, h, 1, x, y) / maximum) * float16_t(0.6780) + float16_t(Sample(data, w, h, 2, x, y) / maximum) * float16_t(0.0593));
+    }
+
+    float16_t Channel(int i, int c, float sx, float sy)
+    {
+        int op = int(p[0]), sw = int(p[1]), sh = int(p[2]), w = int(p[3]), tw = int(p[7]), th = int(p[8]);
+        float x = float(i % w), y = float(i / w);
+        float16_t value = c == 4 && p[12] < 0.5 ? float16_t(1.0) : op == 3 && p[17] > 0.0 ? SampleHalfPremultiplied(0, sw, sh, c, sx, sy) : SampleHalf(0, sw, sh, c, sx, sy);
+        if (op == 9 && c == 3)
+            value *= HalfParameter(15);
+        if (op == 10 && c == 3)
+            value *= HalfParameter(24);
+        if (op == 11 && c == 3)
+        {
+            float scale = 65535.0 / p[5];
+            if (abs(V(src[i].Red) * scale - p[15]) <= p[18] && abs(V(src[i].Green) * scale - p[16]) <= p[18] && abs(V(src[i].Blue) * scale - p[17]) <= p[18])
+                value = float16_t(0.0);
+        }
+
+        if (op == 12)
+        {
+            float tx = x - p[15], ty = y - p[16];
+            float16_t ba = SampleHalf(0, sw, sh, 3, x, y), ta = SampleHalf(1, tw, th, 3, tx, ty);
+            float16_t weight = ba * (float16_t(1.0) - ta), alpha = ta + weight;
+            float16_t bottom = value, top = c == 4 && p[13] < 0.5 ? float16_t(1.0) : SampleHalf(1, tw, th, c, tx, ty);
+            if (c == 4)
+            {
+                if (p[12] < 0.5)
+                    bottom = Luminance(0, sw, sh, x, y, p[5]);
+                if (p[13] < 0.5)
+                    top = Luminance(1, tw, th, tx, ty, p[9]);
+            }
+
+            if (int(p[17]) == 0 && p[18] > 0.0 && ta <= float16_t(0.05))
+                value = c == 3 ? ba : bottom;
+            else if (int(p[17]) == 0 && p[18] > 0.0 && ta >= float16_t(0.999))
+                value = c == 3 ? float16_t(1.0) : top;
+            else
+                value = c == 3 ? alpha : alpha > float16_t(0.0) ? (top * ta + bottom * weight) / alpha : float16_t(0.0);
+        }
+
+        if (op == 13)
+        {
+            float16_t progress = HalfParameter(15);
+            float16_t la = SampleHalf(0, sw, sh, 3, x, y) * (float16_t(1.0) - progress), ra = SampleHalf(1, tw, th, 3, x, y) * progress;
+            float16_t alpha = la + ra, left = value, right = c == 4 && p[13] < 0.5 ? float16_t(1.0) : SampleHalf(1, tw, th, c, x, y);
+            if (c == 4)
+            {
+                left *= HalfParameter(10) / HalfParameter(16);
+                right *= HalfParameter(11) / HalfParameter(16);
+            }
+
+            value = c == 3 ? alpha : alpha > float16_t(0.0) ? (left * la + right * ra) / alpha : float16_t(0.0);
+        }
+
+        if (op == 14 && c == 4)
+            value = Luminance(0, sw, sh, x, y, p[5]);
+        return c == 3 ? ClampHalf(value) : value;
     }
 
     float Hue(float p, float q, float t)
@@ -40,27 +176,6 @@ int IMax(int a, int b) { return max(a, b); }
         if (t > 1.0)
             t -= 1.0;
         return t < 1.0 / 6.0 ? p + (q - p) * 6.0 * t : t < 0.5 ? q : t < 2.0 / 3.0 ? p + (q - p) * (2.0 / 3.0 - t) * 6.0 : p;
-    }
-
-    float SamplePremultiplied(int data, int w, int h, int c, float x, float y)
-    {
-        int x0 = int(floor(x)), y0 = int(floor(y));
-        float fx = x - float(x0), fy = y - float(y0), alpha = 0.0, color = 0.0;
-        for (int j = 0; j < 2; j++)
-        {
-            for (int k = 0; k < 2; k++)
-            {
-                int px = x0 + k, py = y0 + j;
-                if (px < 0 || py < 0 || px >= w || py >= h)
-                    continue;
-                int i = py * w + px;
-                float weight = (k == 0 ? 1.0 - fx : fx) * (j == 0 ? 1.0 - fy : fy) * Read(data, w * h * 3 + i);
-                alpha += weight;
-                color += Read(data, c * w * h + i) * weight;
-            }
-        }
-
-        return c == 3 ? alpha : alpha > 1e-10 ? color / alpha : 0.0;
     }
 
     float Adjust(float rr, float gg, float bb, int c)
@@ -165,32 +280,62 @@ int IMax(int a, int b) { return max(a, b); }
         if (i >= threads) return;
         int channels = p[14] > 0.0 ? 5 : 4;
         float maxOut = p[6];
-        int sn = sw * sh, n = w * h, tw = int(p[7]), th = int(p[8]);
+        int tw = int(p[7]), th = int(p[8]);
         if (op == 5 || op == 6)
         {
             int lines = op == 5 ? h : w, c = i / lines, line = i % lines;
-            int length = op == 5 ? w : h, step = op == 5 ? 1 : w, start = c * n + (op == 5 ? line * w : line);
+            int length = op == 5 ? w : h, step = op == 5 ? 1 : w, start = op == 5 ? line * w : line;
             int radius = int(p[15]), count = 0;
-            float sum = 0.0;
+            if (c >= 3)
+            {
+                float16_t sum = float16_t(0.0), weight = float16_t(1.0 / (2.0 * float(radius) + 1.0));
+                for (int k = 0; k <= radius && k < length; k++)
+                {
+                    sum += ReadHalf(0, start + k * step, c) * weight;
+                    count++;
+                }
+
+                for (int j = 0; j < length; j++)
+                {
+                    StoreHalf(start + j * step, c, c == 4 ? ReadHalf(0, start + j * step, c) : ClampHalf(sum / float16_t(float(count) / (2.0 * float(radius) + 1.0))));
+                    if (channels == 4)
+                        StoreHalf(start + j * step, 4, float16_t(1.0));
+                    if (j - radius >= 0)
+                    {
+                        sum -= ReadHalf(0, start + (j - radius) * step, c) * weight;
+                        count--;
+                    }
+
+                    if (j + radius + 1 < length)
+                    {
+                        sum += ReadHalf(0, start + (j + radius + 1) * step, c) * weight;
+                        count++;
+                    }
+                }
+
+                return;
+            }
+
+            float total = 0.0;
             for (int k = 0; k <= radius && k < length; k++)
             {
-                sum += src[start + k * step];
+                total += Read(0, start + k * step, c);
                 count++;
             }
 
             for (int j = 0; j < length; j++)
             {
-                float v = c == 4 ? src[start + j * step] : sum / float(count);
-                dst[start + j * step] = op == 6 && c < 3 ? float(int(Clamp(v, 0.0, maxOut))) : v;
+                float value = total / float(count);
+                Store(start + j * step, c, Clamp(value, 0.0, maxOut));
                 if (j - radius >= 0)
                 {
-                    sum -= src[start + (j - radius) * step];
+                    total -= Read(0, start + (j - radius) * step, c);
                     count--;
                 }
 
                 if (j + radius + 1 < length)
                 {
-                    sum += src[start + (j + radius + 1) * step];
+                    total += Read(0, start + (j + radius + 1) * step, c);
                     count++;
                 }
             }
@@ -199,188 +344,268 @@ int IMax(int a, int b) { return max(a, b); }
         }
 
         int x = i % w, y = i / w;
-        float fx = float(x), fy = float(y), fw = float(w), fh = float(h), fsw = float(sw), fsh = float(sh);
-        for (int c = 0; c < channels; c++)
+        float fx = float(x), fy = float(y), fw = float(w), fh = float(h), fsw = float(sw), fsh = float(sh), sx = fx, sy = fy;
+        if (op == 1)
         {
-            float sx = fx, sy = fy, value = 0.0;
-            if (op == 1)
-            {
-                sx = Clamp((fx + 0.5) * fsw / fw - 0.5, 0.0, fsw - 1.0);
-                sy = Clamp((fy + 0.5) * fsh / fh - 0.5, 0.0, fsh - 1.0);
-            }
+            sx = Clamp((fx + 0.5) * fsw / fw - 0.5, 0.0, fsw - 1.0);
+            sy = Clamp((fy + 0.5) * fsh / fh - 0.5, 0.0, fsh - 1.0);
+        }
 
-            if (op == 2)
-            {
-                sx = p[17] * (fx - fw / 2.0) - p[18] * (fy - fh / 2.0) + p[15] + fw / 2.0;
-                sy = p[18] * (fx - fw / 2.0) + p[17] * (fy - fh / 2.0) + p[16] + fh / 2.0;
-            }
+        if (op == 2)
+        {
+            sx = p[17] * (fx - fw / 2.0) - p[18] * (fy - fh / 2.0) + p[15] + fw / 2.0;
+            sy = p[18] * (fx - fw / 2.0) + p[17] * (fy - fh / 2.0) + p[16] + fh / 2.0;
+        }
 
-            if (op == 3)
-            {
-                sx = p[15] * (fx + p[17] - fw / 2.0) - p[16] * (fy + p[17] - fh / 2.0) + fsw / 2.0 - p[17];
-                sy = p[16] * (fx + p[17] - fw / 2.0) + p[15] * (fy + p[17] - fh / 2.0) + fsh / 2.0 - p[17];
-            }
+        if (op == 3)
+        {
+            sx = p[15] * (fx + p[17] - fw / 2.0) - p[16] * (fy + p[17] - fh / 2.0) + fsw / 2.0 - p[17];
+            sy = p[16] * (fx + p[17] - fw / 2.0) + p[15] * (fy + p[17] - fh / 2.0) + fsh / 2.0 - p[17];
+        }
 
-            if (op == 4)
-            {
-                sx = p[15] > 0.0 ? fsw - 1.0 - fx : fx;
-                sy = p[16] > 0.0 ? fsh - 1.0 - fy : fy;
-            }
+        if (op == 4)
+        {
+            sx = p[15] > 0.0 ? fsw - 1.0 - fx : fx;
+            sy = p[16] > 0.0 ? fsh - 1.0 - fy : fy;
+        }
 
-            if (op == 15)
-            {
-                sx = fx - p[15];
-                sy = fy - p[16];
-            }
+        if (op == 15)
+        {
+            sx = fx - p[15];
+            sy = fy - p[16];
+        }
 
-            if (c == 4 && p[12] < 0.5)
-                value = 1.0;
-            else
-                value = op == 3 && p[17] > 0.0 ? SamplePremultiplied(0, sw, sh, c, sx, sy) : Sample(0, sw, sh, c, sx, sy);
-            if ((op == 0 || op == 14) && c < 3)
+        for (int c = 0; c < 3; c++)
+        {
+            float value = op == 3 && p[17] > 0.0 ? SamplePremultiplied(0, sw, sh, c, sx, sy) : Sample(0, sw, sh, c, sx, sy);
+            if (op == 0 || op == 14)
                 value = p[5] > maxOut ? floor(value / 257.0) : value * (maxOut / p[5]);
-            if (op == 7 && c < 3)
+            if (op == 7)
             {
-                float avg = (Sample(0, sw, sh, c, float(IMax(x - 1, 0)), fy) + Sample(0, sw, sh, c, float(IMin(x + 1, sw - 1)), fy) + Sample(0, sw, sh, c, fx, float(IMax(y - 1, 0))) + Sample(0, sw, sh, c, fx, float(IMin(y + 1, sh - 1)))) * 0.25;
-                value += p[15] * (value - avg);
+                float average = (Sample(0, sw, sh, c, float(IMax(x - 1, 0)), fy) + Sample(0, sw, sh, c, float(IMin(x + 1, sw - 1)), fy) + Sample(0, sw, sh, c, fx, float(IMax(y - 1, 0))) + Sample(0, sw, sh, c, fx, float(IMin(y + 1, sh - 1)))) * 0.25;
+                value += p[15] * (value - average);
             }
 
-            if (op == 8 && c < 3)
+            if (op == 8)
             {
-                float dx = (fx - fsw * 0.5) / (fsw * 0.5), dy = (fy - fsh * 0.5) / (fsh * 0.5);
-                float dist = sqrt(dx * dx + dy * dy);
-                if (dist > p[16])
+                float dx = (fx - fsw * 0.5) / (fsw * 0.5), dy = (fy - fsh * 0.5) / (fsh * 0.5), distance = sqrt(dx * dx + dy * dy);
+                if (distance > p[16])
                 {
-                    float t = FMin((dist - p[16]) / (1.0 - p[16]), 1.0);
+                    float t = FMin((distance - p[16]) / (1.0 - p[16]), 1.0);
                     value *= 1.0 - t * t * p[15];
                 }
             }
 
-            if (op == 9 && c == 3)
-                value *= p[15];
-            if (op == 10 && c < 3)
-                value = Adjust(src[i], src[sn + i], src[sn * 2 + i], c);
-            if (op == 10 && c == 3)
-                value *= p[24];
-            if (op == 11 && c < 4)
+            if (op == 10)
+                value = Adjust(V(src[i].Red), V(src[i].Green), V(src[i].Blue), c);
+            if (op == 11)
             {
                 float scale = 65535.0 / p[5];
-                bool remove = abs(src[i] * scale - p[15]) <= p[18] && abs(src[sn + i] * scale - p[16]) <= p[18] && abs(src[sn * 2 + i] * scale - p[17]) <= p[18];
-                if (remove || src[sn * 3 + i] == 0.0)
+                if (abs(V(src[i].Red) * scale - p[15]) <= p[18] && abs(V(src[i].Green) * scale - p[16]) <= p[18] && abs(V(src[i].Blue) * scale - p[17]) <= p[18] || src[i].Alpha == float16_t(0.0))
                     value = 0.0;
             }
 
             if (op == 12)
             {
                 float tx = fx - p[15], ty = fy - p[16];
-                float ba = Sample(0, sw, sh, 3, fx, fy), ta = Sample(1, tw, th, 3, tx, ty);
-                float a = ta + ba * (1.0 - ta), bottom = value, top = c == 4 && p[13] < 0.5 ? 1.0 : Sample(1, tw, th, c, tx, ty);
-                if (c < 3)
-                {
-                    bottom = float(int(bottom * maxOut / p[5]));
-                    top *= maxOut / p[9];
-                }
-
-                if (c == 4)
-                {
-                    if (p[12] < 0.5)
-                        bottom = Clamp((0.2627 * Sample(0, sw, sh, 0, fx, fy) + 0.6780 * Sample(0, sw, sh, 1, fx, fy) + 0.0593 * Sample(0, sw, sh, 2, fx, fy)) / p[5], 0.0, 1.0);
-                    if (p[13] < 0.5)
-                        top = Clamp((0.2627 * Sample(1, tw, th, 0, tx, ty) + 0.6780 * Sample(1, tw, th, 1, tx, ty) + 0.0593 * Sample(1, tw, th, 2, tx, ty)) / p[9], 0.0, 1.0);
-                }
-
-                float blend = top;
+                float16_t ba = SampleHalf(0, sw, sh, 3, fx, fy), ta = SampleHalf(1, tw, th, 3, tx, ty), weight = ba * (float16_t(1.0) - ta), alpha = ta + weight;
+                float bottom = value * maxOut / p[5], top = Sample(1, tw, th, c, tx, ty) * maxOut / p[9], blend = top;
                 int mode = int(p[17]);
-                if (c < 3)
-                {
-                    if (mode == 1)
-                        blend = FMin(top + bottom, maxOut);
-                    if (mode == 2)
-                        blend = FMax(bottom - top, 0.0);
-                    if (mode == 3)
-                        blend = top * bottom / maxOut;
-                    if (mode == 4)
-                        blend = maxOut - (maxOut - top) * (maxOut - bottom) / maxOut;
-                    if (mode == 5)
-                        blend = bottom < maxOut * 0.5 ? 2.0 * top * bottom / maxOut : maxOut - 2.0 * (maxOut - top) * (maxOut - bottom) / maxOut;
-                    if (mode == 6)
-                        blend = FMin(top, bottom);
-                    if (mode == 7)
-                        blend = FMax(top, bottom);
-                    if (mode == 8)
-                        blend = abs(bottom - top);
-                }
-
-                value = c == 3 ? a : a > 1e-6 ? (blend * ta + bottom * ba * (1.0 - ta)) / a : 0.0;
-                if (mode == 0 && ta <= 0.05)
-                    value = c == 3 ? ba : bottom;
-                if (mode == 0 && ta >= 0.999)
-                    value = c == 3 ? 1.0 : top;
+                if (mode == 1)
+                    blend = FMin(top + bottom, maxOut);
+                if (mode == 2)
+                    blend = FMax(bottom - top, 0.0);
+                if (mode == 3)
+                    blend = top * bottom / maxOut;
+                if (mode == 4)
+                    blend = maxOut - (maxOut - top) * (maxOut - bottom) / maxOut;
+                if (mode == 5)
+                    blend = bottom < maxOut * 0.5 ? 2.0 * top * bottom / maxOut : maxOut - 2.0 * (maxOut - top) * (maxOut - bottom) / maxOut;
+                if (mode == 6)
+                    blend = FMin(top, bottom);
+                if (mode == 7)
+                    blend = FMax(top, bottom);
+                if (mode == 8)
+                    blend = abs(bottom - top);
+                if (mode == 0 && p[18] > 0.0 && ta <= float16_t(0.05))
+                    value = bottom;
+                else if (mode == 0 && p[18] > 0.0 && ta >= float16_t(0.999))
+                    value = top;
+                else
+                    value = alpha > float16_t(1e-6) ? (blend * float(ta) + bottom * float(weight)) / float(alpha) : 0.0;
             }
 
             if (op == 13)
             {
-                float la = Sample(0, sw, sh, 3, fx, fy) * (1.0 - p[15]);
-                float ra = Sample(1, tw, th, 3, fx, fy) * p[15], a = la + ra;
-                float l = value, r = c == 4 && p[13] < 0.5 ? 1.0 : Sample(1, tw, th, c, fx, fy);
-                if (c < 3)
-                {
-                    l *= maxOut / p[5];
-                    r *= maxOut / p[9];
-                }
-
-                if (c == 4)
-                {
-                    l *= p[10] / p[16];
-                    r *= p[11] / p[16];
-                }
-
-                value = c == 3 ? a : a > 0.0 ? (l * la + r * ra) / a : 0.0;
+                float16_t progress = HalfParameter(15), la = SampleHalf(0, sw, sh, 3, fx, fy) * (float16_t(1.0) - progress), ra = SampleHalf(1, tw, th, 3, fx, fy) * progress, alpha = la + ra;
+                float left = value * maxOut / p[5], right = Sample(1, tw, th, c, fx, fy) * maxOut / p[9];
+                value = alpha > float16_t(0.0) ? (left * float(la) + right * float(ra)) / float(alpha) : 0.0;
             }
 
-            if (op == 14 && c == 4)
-                value = Clamp((0.2627 * src[i] + 0.6780 * src[sn + i] + 0.0593 * src[sn * 2 + i]) / p[5], 0.0, 1.0);
-            if (c < 3)
-            {
-                if (op == 1 || op == 2)
-                    value += 0.5;
-                if (op == 13 || op == 3 && p[17] > 0.0)
-                {
-                    float low = floor(value), fraction = value - low;
-                    value = fraction > 0.5 || fraction == 0.5 && int(low) % 2 != 0 ? low + 1.0 : low;
-                }
-
-                value = float(int(Clamp(value, 0.0, maxOut)));
-            }
-
-            if (c == 3)
-                value = Clamp(value, 0.0, 1.0);
-            dst[c * n + i] = value;
+            Store(i, c, Clamp(value, 0.0, maxOut));
         }
+
+        StoreHalf(i, 3, Channel(i, 3, sx, sy));
+        StoreHalf(i, 4, channels == 5 ? Channel(i, 4, sx, sy) : float16_t(1.0));
     }
 """;
     internal const string Metal = """
 #include <metal_stdlib>
 using namespace metal;
+struct ResidentKernelPixel { half Red; half Green; half Blue; half Alpha; half Brightness; half Padding; };
 float FMin(float a, float b) { return min(a, b); }
 float FMax(float a, float b) { return max(a, b); }
 int IMin(int a, int b) { return min(a, b); }
 int IMax(int a, int b) { return max(a, b); }
-    // GLSL ES requires explicit conversions between integer coordinates and floats.
-    float Read(device const float* data, int i) { return data[i]; }
-    float Clamp(float value, float low, float high)
+half HalfParameter(device const float* p, int index) { return reinterpret_cast<device const half*>(p)[index * 2]; }
+    float V(half value) { return float(value); }
+    float Read(device const ResidentKernelPixel* data, int i, int c)
     {
-        return value < low ? low : value > high ? high : value;
+        return c == 0 ? V(data[i].Red) : c == 1 ? V(data[i].Green) : V(data[i].Blue);
     }
 
-    float Sample(device const float* data, int w, int h, int c, float x, float y)
+    half ReadHalf(device const ResidentKernelPixel* data, int i, int c)
+    {
+        return c == 3 ? data[i].Alpha : data[i].Brightness;
+    }
+
+    void Store(device ResidentKernelPixel* dst, int i, int c, float value)
+    {
+        if (c == 0)
+            dst[i].Red = half(value);
+        else if (c == 1)
+            dst[i].Green = half(value);
+        else
+            dst[i].Blue = half(value);
+    }
+
+    void StoreHalf(device ResidentKernelPixel* dst, int i, int c, half value)
+    {
+        if (c == 3)
+            dst[i].Alpha = value;
+        else
+            dst[i].Brightness = value;
+    }
+
+    float Clamp(float value, float low, float high) { return value < low ? low : value > high ? high : value; }
+    half ClampHalf(half value) { return value < half(0.0f) ? half(0.0f) : value > half(1.0f) ? half(1.0f) : value; }
+    float Sample(device const ResidentKernelPixel* data, int w, int h, int c, float x, float y)
     {
         if (x < 0.0f || y < 0.0f || x >= float(w) || y >= float(h))
             return 0.0f;
         int x0 = int(x), y0 = int(y), x1 = IMin(x0 + 1, w - 1), y1 = IMin(y0 + 1, h - 1);
         float fx = x - float(x0), fy = y - float(y0);
-        int offset = c * w * h;
-        return Read(data, offset + y0 * w + x0) * (1.0f - fx) * (1.0f - fy) + Read(data, offset + y0 * w + x1) * fx * (1.0f - fy) + Read(data, offset + y1 * w + x0) * (1.0f - fx) * fy + Read(data, offset + y1 * w + x1) * fx * fy;
+        return Read(data, y0 * w + x0, c) * (1.0f - fx) * (1.0f - fy) + Read(data, y0 * w + x1, c) * fx * (1.0f - fy) + Read(data, y1 * w + x0, c) * (1.0f - fx) * fy + Read(data, y1 * w + x1, c) * fx * fy;
+    }
+
+    half SampleHalf(device const ResidentKernelPixel* data, int w, int h, int c, float x, float y)
+    {
+        if (x < 0.0f || y < 0.0f || x >= float(w) || y >= float(h))
+            return half(0.0f);
+        int x0 = int(x), y0 = int(y), x1 = IMin(x0 + 1, w - 1), y1 = IMin(y0 + 1, h - 1);
+        half fx = half(x - float(x0)), fy = half(y - float(y0));
+        return ReadHalf(data, y0 * w + x0, c) * (half(1.0f) - fx) * (half(1.0f) - fy) + ReadHalf(data, y0 * w + x1, c) * fx * (half(1.0f) - fy) + ReadHalf(data, y1 * w + x0, c) * (half(1.0f) - fx) * fy + ReadHalf(data, y1 * w + x1, c) * fx * fy;
+    }
+
+    float SamplePremultiplied(device const ResidentKernelPixel* data, int w, int h, int c, float x, float y)
+    {
+        int x0 = int(floor(x)), y0 = int(floor(y));
+        half fx = half(x - float(x0)), fy = half(y - float(y0)), alpha = half(0.0f);
+        float color = 0.0f;
+        for (int j = 0; j < 2; j++)
+            for (int k = 0; k < 2; k++)
+            {
+                int px = x0 + k, py = y0 + j;
+                if (px < 0 || py < 0 || px >= w || py >= h)
+                    continue;
+                int i = py * w + px;
+                half weight = (k == 0 ? half(1.0f) - fx : fx) * (j == 0 ? half(1.0f) - fy : fy) * ReadHalf(data, i, 3);
+                alpha += weight;
+                color += Read(data, i, c) * float(weight);
+            }
+
+        return alpha > half(0.0f) ? color / float(alpha) : 0.0f;
+    }
+
+    half SampleHalfPremultiplied(device const ResidentKernelPixel* data, int w, int h, int c, float x, float y)
+    {
+        int x0 = int(floor(x)), y0 = int(floor(y));
+        half fx = half(x - float(x0)), fy = half(y - float(y0)), alpha = half(0.0f), brightness = half(0.0f);
+        for (int j = 0; j < 2; j++)
+            for (int k = 0; k < 2; k++)
+            {
+                int px = x0 + k, py = y0 + j;
+                if (px < 0 || py < 0 || px >= w || py >= h)
+                    continue;
+                int i = py * w + px;
+                half weight = (k == 0 ? half(1.0f) - fx : fx) * (j == 0 ? half(1.0f) - fy : fy) * ReadHalf(data, i, 3);
+                alpha += weight;
+                brightness += ReadHalf(data, i, 4) * weight;
+            }
+
+        return c == 3 ? alpha : alpha > half(0.0f) ? brightness / alpha : half(0.0f);
+    }
+
+    half Luminance(device const ResidentKernelPixel* data, int w, int h, float x, float y, float maximum)
+    {
+        return ClampHalf(half(Sample(data, w, h, 0, x, y) / maximum) * half(0.2627f) + half(Sample(data, w, h, 1, x, y) / maximum) * half(0.6780f) + half(Sample(data, w, h, 2, x, y) / maximum) * half(0.0593f));
+    }
+
+    half Channel(device const ResidentKernelPixel* src, device const ResidentKernelPixel* second, device const float* p, int i, int c, float sx, float sy)
+    {
+        int op = int(p[0]), sw = int(p[1]), sh = int(p[2]), w = int(p[3]), tw = int(p[7]), th = int(p[8]);
+        float x = float(i % w), y = float(i / w);
+        half value = c == 4 && p[12] < 0.5f ? half(1.0f) : op == 3 && p[17] > 0.0f ? SampleHalfPremultiplied(src, sw, sh, c, sx, sy) : SampleHalf(src, sw, sh, c, sx, sy);
+        if (op == 9 && c == 3)
+            value *= HalfParameter(p, 15);
+        if (op == 10 && c == 3)
+            value *= HalfParameter(p, 24);
+        if (op == 11 && c == 3)
+        {
+            float scale = 65535.0f / p[5];
+            if (abs(V(src[i].Red) * scale - p[15]) <= p[18] && abs(V(src[i].Green) * scale - p[16]) <= p[18] && abs(V(src[i].Blue) * scale - p[17]) <= p[18])
+                value = half(0.0f);
+        }
+
+        if (op == 12)
+        {
+            float tx = x - p[15], ty = y - p[16];
+            half ba = SampleHalf(src, sw, sh, 3, x, y), ta = SampleHalf(second, tw, th, 3, tx, ty);
+            half weight = ba * (half(1.0f) - ta), alpha = ta + weight;
+            half bottom = value, top = c == 4 && p[13] < 0.5f ? half(1.0f) : SampleHalf(second, tw, th, c, tx, ty);
+            if (c == 4)
+            {
+                if (p[12] < 0.5f)
+                    bottom = Luminance(src, sw, sh, x, y, p[5]);
+                if (p[13] < 0.5f)
+                    top = Luminance(second, tw, th, tx, ty, p[9]);
+            }
+
+            if (int(p[17]) == 0 && p[18] > 0.0f && ta <= half(0.05f))
+                value = c == 3 ? ba : bottom;
+            else if (int(p[17]) == 0 && p[18] > 0.0f && ta >= half(0.999f))
+                value = c == 3 ? half(1.0f) : top;
+            else
+                value = c == 3 ? alpha : alpha > half(0.0f) ? (top * ta + bottom * weight) / alpha : half(0.0f);
+        }
+
+        if (op == 13)
+        {
+            half progress = HalfParameter(p, 15);
+            half la = SampleHalf(src, sw, sh, 3, x, y) * (half(1.0f) - progress), ra = SampleHalf(second, tw, th, 3, x, y) * progress;
+            half alpha = la + ra, left = value, right = c == 4 && p[13] < 0.5f ? half(1.0f) : SampleHalf(second, tw, th, c, x, y);
+            if (c == 4)
+            {
+                left *= HalfParameter(p, 10) / HalfParameter(p, 16);
+                right *= HalfParameter(p, 11) / HalfParameter(p, 16);
+            }
+
+            value = c == 3 ? alpha : alpha > half(0.0f) ? (left * la + right * ra) / alpha : half(0.0f);
+        }
+
+        if (op == 14 && c == 4)
+            value = Luminance(src, sw, sh, x, y, p[5]);
+        return c == 3 ? ClampHalf(value) : value;
     }
 
     float Hue(float p, float q, float t)
@@ -390,27 +615,6 @@ int IMax(int a, int b) { return max(a, b); }
         if (t > 1.0f)
             t -= 1.0f;
         return t < 1.0f / 6.0f ? p + (q - p) * 6.0f * t : t < 0.5f ? q : t < 2.0f / 3.0f ? p + (q - p) * (2.0f / 3.0f - t) * 6.0f : p;
-    }
-
-    float SamplePremultiplied(device const float* data, int w, int h, int c, float x, float y)
-    {
-        int x0 = int(floor(x)), y0 = int(floor(y));
-        float fx = x - float(x0), fy = y - float(y0), alpha = 0.0f, color = 0.0f;
-        for (int j = 0; j < 2; j++)
-        {
-            for (int k = 0; k < 2; k++)
-            {
-                int px = x0 + k, py = y0 + j;
-                if (px < 0 || py < 0 || px >= w || py >= h)
-                    continue;
-                int i = py * w + px;
-                float weight = (k == 0 ? 1.0f - fx : fx) * (j == 0 ? 1.0f - fy : fy) * Read(data, w * h * 3 + i);
-                alpha += weight;
-                color += Read(data, c * w * h + i) * weight;
-            }
-        }
-
-        return c == 3 ? alpha : alpha > 1e-10f ? color / alpha : 0.0f;
     }
 
     float Adjust(float rr, float gg, float bb, int c, device const float* p)
@@ -507,7 +711,7 @@ int IMax(int a, int b) { return max(a, b); }
         return c == 0 ? r : c == 1 ? g : b;
     }
 
-    kernel void resident_compute(device const float* src [[buffer(0)]], device const float* second [[buffer(1)]], device const float* p [[buffer(2)]], device float* dst [[buffer(3)]], uint index [[thread_position_in_grid]])
+    kernel void resident_compute(device const ResidentKernelPixel* src [[buffer(0)]], device const ResidentKernelPixel* second [[buffer(1)]], device const float* p [[buffer(2)]], device ResidentKernelPixel* dst [[buffer(3)]], uint index [[thread_position_in_grid]])
     {
         int i = int(index);
         int op = int(p[0]), sw = int(p[1]), sh = int(p[2]), w = int(p[3]), h = int(p[4]);
@@ -515,32 +719,62 @@ int IMax(int a, int b) { return max(a, b); }
         if (i >= threads) return;
         int channels = p[14] > 0.0f ? 5 : 4;
         float maxOut = p[6];
-        int sn = sw * sh, n = w * h, tw = int(p[7]), th = int(p[8]);
+        int tw = int(p[7]), th = int(p[8]);
         if (op == 5 || op == 6)
         {
             int lines = op == 5 ? h : w, c = i / lines, line = i % lines;
-            int length = op == 5 ? w : h, step = op == 5 ? 1 : w, start = c * n + (op == 5 ? line * w : line);
+            int length = op == 5 ? w : h, step = op == 5 ? 1 : w, start = op == 5 ? line * w : line;
             int radius = int(p[15]), count = 0;
-            float sum = 0.0f;
+            if (c >= 3)
+            {
+                half sum = half(0.0f), weight = half(1.0f / (2.0f * float(radius) + 1.0f));
+                for (int k = 0; k <= radius && k < length; k++)
+                {
+                    sum += ReadHalf(src, start + k * step, c) * weight;
+                    count++;
+                }
+
+                for (int j = 0; j < length; j++)
+                {
+                    StoreHalf(dst, start + j * step, c, c == 4 ? ReadHalf(src, start + j * step, c) : ClampHalf(sum / half(float(count) / (2.0f * float(radius) + 1.0f))));
+                    if (channels == 4)
+                        StoreHalf(dst, start + j * step, 4, half(1.0f));
+                    if (j - radius >= 0)
+                    {
+                        sum -= ReadHalf(src, start + (j - radius) * step, c) * weight;
+                        count--;
+                    }
+
+                    if (j + radius + 1 < length)
+                    {
+                        sum += ReadHalf(src, start + (j + radius + 1) * step, c) * weight;
+                        count++;
+                    }
+                }
+
+                return;
+            }
+
+            float total = 0.0f;
             for (int k = 0; k <= radius && k < length; k++)
             {
-                sum += src[start + k * step];
+                total += Read(src, start + k * step, c);
                 count++;
             }
 
             for (int j = 0; j < length; j++)
             {
-                float v = c == 4 ? src[start + j * step] : sum / float(count);
-                dst[start + j * step] = op == 6 && c < 3 ? float(int(Clamp(v, 0.0f, maxOut))) : v;
+                float value = total / float(count);
+                Store(dst, start + j * step, c, Clamp(value, 0.0f, maxOut));
                 if (j - radius >= 0)
                 {
-                    sum -= src[start + (j - radius) * step];
+                    total -= Read(src, start + (j - radius) * step, c);
                     count--;
                 }
 
                 if (j + radius + 1 < length)
                 {
-                    sum += src[start + (j + radius + 1) * step];
+                    total += Read(src, start + (j + radius + 1) * step, c);
                     count++;
                 }
             }
@@ -549,164 +783,109 @@ int IMax(int a, int b) { return max(a, b); }
         }
 
         int x = i % w, y = i / w;
-        float fx = float(x), fy = float(y), fw = float(w), fh = float(h), fsw = float(sw), fsh = float(sh);
-        for (int c = 0; c < channels; c++)
+        float fx = float(x), fy = float(y), fw = float(w), fh = float(h), fsw = float(sw), fsh = float(sh), sx = fx, sy = fy;
+        if (op == 1)
         {
-            float sx = fx, sy = fy, value = 0.0f;
-            if (op == 1)
-            {
-                sx = Clamp((fx + 0.5f) * fsw / fw - 0.5f, 0.0f, fsw - 1.0f);
-                sy = Clamp((fy + 0.5f) * fsh / fh - 0.5f, 0.0f, fsh - 1.0f);
-            }
+            sx = Clamp((fx + 0.5f) * fsw / fw - 0.5f, 0.0f, fsw - 1.0f);
+            sy = Clamp((fy + 0.5f) * fsh / fh - 0.5f, 0.0f, fsh - 1.0f);
+        }
 
-            if (op == 2)
-            {
-                sx = p[17] * (fx - fw / 2.0f) - p[18] * (fy - fh / 2.0f) + p[15] + fw / 2.0f;
-                sy = p[18] * (fx - fw / 2.0f) + p[17] * (fy - fh / 2.0f) + p[16] + fh / 2.0f;
-            }
+        if (op == 2)
+        {
+            sx = p[17] * (fx - fw / 2.0f) - p[18] * (fy - fh / 2.0f) + p[15] + fw / 2.0f;
+            sy = p[18] * (fx - fw / 2.0f) + p[17] * (fy - fh / 2.0f) + p[16] + fh / 2.0f;
+        }
 
-            if (op == 3)
-            {
-                sx = p[15] * (fx + p[17] - fw / 2.0f) - p[16] * (fy + p[17] - fh / 2.0f) + fsw / 2.0f - p[17];
-                sy = p[16] * (fx + p[17] - fw / 2.0f) + p[15] * (fy + p[17] - fh / 2.0f) + fsh / 2.0f - p[17];
-            }
+        if (op == 3)
+        {
+            sx = p[15] * (fx + p[17] - fw / 2.0f) - p[16] * (fy + p[17] - fh / 2.0f) + fsw / 2.0f - p[17];
+            sy = p[16] * (fx + p[17] - fw / 2.0f) + p[15] * (fy + p[17] - fh / 2.0f) + fsh / 2.0f - p[17];
+        }
 
-            if (op == 4)
-            {
-                sx = p[15] > 0.0f ? fsw - 1.0f - fx : fx;
-                sy = p[16] > 0.0f ? fsh - 1.0f - fy : fy;
-            }
+        if (op == 4)
+        {
+            sx = p[15] > 0.0f ? fsw - 1.0f - fx : fx;
+            sy = p[16] > 0.0f ? fsh - 1.0f - fy : fy;
+        }
 
-            if (op == 15)
-            {
-                sx = fx - p[15];
-                sy = fy - p[16];
-            }
+        if (op == 15)
+        {
+            sx = fx - p[15];
+            sy = fy - p[16];
+        }
 
-            if (c == 4 && p[12] < 0.5f)
-                value = 1.0f;
-            else
-                value = op == 3 && p[17] > 0.0f ? SamplePremultiplied(src, sw, sh, c, sx, sy) : Sample(src, sw, sh, c, sx, sy);
-            if ((op == 0 || op == 14) && c < 3)
+        for (int c = 0; c < 3; c++)
+        {
+            float value = op == 3 && p[17] > 0.0f ? SamplePremultiplied(src, sw, sh, c, sx, sy) : Sample(src, sw, sh, c, sx, sy);
+            if (op == 0 || op == 14)
                 value = p[5] > maxOut ? floor(value / 257.0f) : value * (maxOut / p[5]);
-            if (op == 7 && c < 3)
+            if (op == 7)
             {
-                float avg = (Sample(src, sw, sh, c, float(IMax(x - 1, 0)), fy) + Sample(src, sw, sh, c, float(IMin(x + 1, sw - 1)), fy) + Sample(src, sw, sh, c, fx, float(IMax(y - 1, 0))) + Sample(src, sw, sh, c, fx, float(IMin(y + 1, sh - 1)))) * 0.25f;
-                value += p[15] * (value - avg);
+                float average = (Sample(src, sw, sh, c, float(IMax(x - 1, 0)), fy) + Sample(src, sw, sh, c, float(IMin(x + 1, sw - 1)), fy) + Sample(src, sw, sh, c, fx, float(IMax(y - 1, 0))) + Sample(src, sw, sh, c, fx, float(IMin(y + 1, sh - 1)))) * 0.25f;
+                value += p[15] * (value - average);
             }
 
-            if (op == 8 && c < 3)
+            if (op == 8)
             {
-                float dx = (fx - fsw * 0.5f) / (fsw * 0.5f), dy = (fy - fsh * 0.5f) / (fsh * 0.5f);
-                float dist = sqrt(dx * dx + dy * dy);
-                if (dist > p[16])
+                float dx = (fx - fsw * 0.5f) / (fsw * 0.5f), dy = (fy - fsh * 0.5f) / (fsh * 0.5f), distance = sqrt(dx * dx + dy * dy);
+                if (distance > p[16])
                 {
-                    float t = FMin((dist - p[16]) / (1.0f - p[16]), 1.0f);
+                    float t = FMin((distance - p[16]) / (1.0f - p[16]), 1.0f);
                     value *= 1.0f - t * t * p[15];
                 }
             }
 
-            if (op == 9 && c == 3)
-                value *= p[15];
-            if (op == 10 && c < 3)
-                value = Adjust(src[i], src[sn + i], src[sn * 2 + i], c, p);
-            if (op == 10 && c == 3)
-                value *= p[24];
-            if (op == 11 && c < 4)
+            if (op == 10)
+                value = Adjust(V(src[i].Red), V(src[i].Green), V(src[i].Blue), c, p);
+            if (op == 11)
             {
                 float scale = 65535.0f / p[5];
-                bool remove = abs(src[i] * scale - p[15]) <= p[18] && abs(src[sn + i] * scale - p[16]) <= p[18] && abs(src[sn * 2 + i] * scale - p[17]) <= p[18];
-                if (remove || src[sn * 3 + i] == 0.0f)
+                if (abs(V(src[i].Red) * scale - p[15]) <= p[18] && abs(V(src[i].Green) * scale - p[16]) <= p[18] && abs(V(src[i].Blue) * scale - p[17]) <= p[18] || src[i].Alpha == half(0.0f))
                     value = 0.0f;
             }
 
             if (op == 12)
             {
                 float tx = fx - p[15], ty = fy - p[16];
-                float ba = Sample(src, sw, sh, 3, fx, fy), ta = Sample(second, tw, th, 3, tx, ty);
-                float a = ta + ba * (1.0f - ta), bottom = value, top = c == 4 && p[13] < 0.5f ? 1.0f : Sample(second, tw, th, c, tx, ty);
-                if (c < 3)
-                {
-                    bottom = float(int(bottom * maxOut / p[5]));
-                    top *= maxOut / p[9];
-                }
-
-                if (c == 4)
-                {
-                    if (p[12] < 0.5f)
-                        bottom = Clamp((0.2627f * Sample(src, sw, sh, 0, fx, fy) + 0.6780f * Sample(src, sw, sh, 1, fx, fy) + 0.0593f * Sample(src, sw, sh, 2, fx, fy)) / p[5], 0.0f, 1.0f);
-                    if (p[13] < 0.5f)
-                        top = Clamp((0.2627f * Sample(second, tw, th, 0, tx, ty) + 0.6780f * Sample(second, tw, th, 1, tx, ty) + 0.0593f * Sample(second, tw, th, 2, tx, ty)) / p[9], 0.0f, 1.0f);
-                }
-
-                float blend = top;
+                half ba = SampleHalf(src, sw, sh, 3, fx, fy), ta = SampleHalf(second, tw, th, 3, tx, ty), weight = ba * (half(1.0f) - ta), alpha = ta + weight;
+                float bottom = value * maxOut / p[5], top = Sample(second, tw, th, c, tx, ty) * maxOut / p[9], blend = top;
                 int mode = int(p[17]);
-                if (c < 3)
-                {
-                    if (mode == 1)
-                        blend = FMin(top + bottom, maxOut);
-                    if (mode == 2)
-                        blend = FMax(bottom - top, 0.0f);
-                    if (mode == 3)
-                        blend = top * bottom / maxOut;
-                    if (mode == 4)
-                        blend = maxOut - (maxOut - top) * (maxOut - bottom) / maxOut;
-                    if (mode == 5)
-                        blend = bottom < maxOut * 0.5f ? 2.0f * top * bottom / maxOut : maxOut - 2.0f * (maxOut - top) * (maxOut - bottom) / maxOut;
-                    if (mode == 6)
-                        blend = FMin(top, bottom);
-                    if (mode == 7)
-                        blend = FMax(top, bottom);
-                    if (mode == 8)
-                        blend = abs(bottom - top);
-                }
-
-                value = c == 3 ? a : a > 1e-6f ? (blend * ta + bottom * ba * (1.0f - ta)) / a : 0.0f;
-                if (mode == 0 && ta <= 0.05f)
-                    value = c == 3 ? ba : bottom;
-                if (mode == 0 && ta >= 0.999f)
-                    value = c == 3 ? 1.0f : top;
+                if (mode == 1)
+                    blend = FMin(top + bottom, maxOut);
+                if (mode == 2)
+                    blend = FMax(bottom - top, 0.0f);
+                if (mode == 3)
+                    blend = top * bottom / maxOut;
+                if (mode == 4)
+                    blend = maxOut - (maxOut - top) * (maxOut - bottom) / maxOut;
+                if (mode == 5)
+                    blend = bottom < maxOut * 0.5f ? 2.0f * top * bottom / maxOut : maxOut - 2.0f * (maxOut - top) * (maxOut - bottom) / maxOut;
+                if (mode == 6)
+                    blend = FMin(top, bottom);
+                if (mode == 7)
+                    blend = FMax(top, bottom);
+                if (mode == 8)
+                    blend = abs(bottom - top);
+                if (mode == 0 && p[18] > 0.0f && ta <= half(0.05f))
+                    value = bottom;
+                else if (mode == 0 && p[18] > 0.0f && ta >= half(0.999f))
+                    value = top;
+                else
+                    value = alpha > half(1e-6f) ? (blend * float(ta) + bottom * float(weight)) / float(alpha) : 0.0f;
             }
 
             if (op == 13)
             {
-                float la = Sample(src, sw, sh, 3, fx, fy) * (1.0f - p[15]);
-                float ra = Sample(second, tw, th, 3, fx, fy) * p[15], a = la + ra;
-                float l = value, r = c == 4 && p[13] < 0.5f ? 1.0f : Sample(second, tw, th, c, fx, fy);
-                if (c < 3)
-                {
-                    l *= maxOut / p[5];
-                    r *= maxOut / p[9];
-                }
-
-                if (c == 4)
-                {
-                    l *= p[10] / p[16];
-                    r *= p[11] / p[16];
-                }
-
-                value = c == 3 ? a : a > 0.0f ? (l * la + r * ra) / a : 0.0f;
+                half progress = HalfParameter(p, 15), la = SampleHalf(src, sw, sh, 3, fx, fy) * (half(1.0f) - progress), ra = SampleHalf(second, tw, th, 3, fx, fy) * progress, alpha = la + ra;
+                float left = value * maxOut / p[5], right = Sample(second, tw, th, c, fx, fy) * maxOut / p[9];
+                value = alpha > half(0.0f) ? (left * float(la) + right * float(ra)) / float(alpha) : 0.0f;
             }
 
-            if (op == 14 && c == 4)
-                value = Clamp((0.2627f * src[i] + 0.6780f * src[sn + i] + 0.0593f * src[sn * 2 + i]) / p[5], 0.0f, 1.0f);
-            if (c < 3)
-            {
-                if (op == 1 || op == 2)
-                    value += 0.5f;
-                if (op == 13 || op == 3 && p[17] > 0.0f)
-                {
-                    float low = floor(value), fraction = value - low;
-                    value = fraction > 0.5f || fraction == 0.5f && int(low) % 2 != 0 ? low + 1.0f : low;
-                }
-
-                value = float(int(Clamp(value, 0.0f, maxOut)));
-            }
-
-            if (c == 3)
-                value = Clamp(value, 0.0f, 1.0f);
-            dst[c * n + i] = value;
+            Store(dst, i, c, Clamp(value, 0.0f, maxOut));
         }
+
+        StoreHalf(dst, i, 3, Channel(src, second, p, i, 3, sx, sy));
+        StoreHalf(dst, i, 4, channels == 5 ? Channel(src, second, p, i, 4, sx, sy) : half(1.0f));
     }
 """;
 }

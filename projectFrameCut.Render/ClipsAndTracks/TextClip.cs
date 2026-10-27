@@ -298,8 +298,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 hash.Add(e.X);
                 hash.Add(e.Y);
                 hash.Add(e.Rotation);
-                hash.Add(e.FillR); hash.Add(e.FillG); hash.Add(e.FillB); hash.Add(e.FillA);
-                hash.Add(e.StrokeR); hash.Add(e.StrokeG); hash.Add(e.StrokeB); hash.Add(e.StrokeA);
+                hash.Add(e.FillR); hash.Add(e.FillG); hash.Add(e.FillB); hash.Add((float)e.FillA);
+                hash.Add(e.StrokeR); hash.Add(e.StrokeG); hash.Add(e.StrokeB); hash.Add((float)e.StrokeA);
                 hash.Add(e.StrokeThickness);
                 hash.Add(e.CharacterSpacing);
                 hash.Add(e.WordSpacing);

@@ -68,10 +68,10 @@ public sealed class CompositionTests
     [DataRow(16, 16)]
     public void AlphaEdgesAndVectorTailsMatchAcrossPixelFormats(int inputBits, int outputBits)
     {
-        float[] alpha = Enumerable.Range(0, 67).Select(i => (i % 7) switch
+        Half[] alpha = Enumerable.Range(0, 67).Select(i => (i % 7) switch
         {
             0 => 0f, 1 => 0.05f, 2 => 0.5f, 3 => 1f, 4 => float.NaN, 5 => -1f, _ => float.PositiveInfinity
-        }).ToArray();
+        }).Select(x => (Half)x).ToArray();
         using IPicture bottom = inputBits == 8 ? Picture8bpp.GenerateSolidColor(67, 1, 100, 100, 100, null)
             : Picture16bpp.GenerateSolidColor(67, 1, 25700, 25700, 25700, null);
         using IPicture top = inputBits == 8
@@ -83,7 +83,7 @@ public sealed class CompositionTests
             int expected = i % 7 == 2 ? 150 : i % 7 == 3 ? 200 : 100;
             if (outputBits == 8) Assert.AreEqual(expected, ((IPicture<byte>)output).r[i]);
             else Assert.AreEqual(expected * 257, ((IPicture<ushort>)output).r[i]);
-            Assert.AreEqual(1f, outputBits == 8 ? ((IPicture<byte>)output).a![i] : ((IPicture<ushort>)output).a![i]);
+            Assert.AreEqual(1f, outputBits == 8 ? (float)((IPicture<byte>)output).a![i] : (float)((IPicture<ushort>)output).a![i]);
         }
     }
 
@@ -92,12 +92,12 @@ public sealed class CompositionTests
     [DataRow(true)]
     public void HdrBrightnessUsesTheComposedBrightnessRatherThanAlpha(bool inherited)
     {
-        using var bottom = HDRPicture16bpp.GenerateSolidColor(65, 1, 10000, 0, 0, 1, 0.8f, 1000);
-        using var top = HDRPicture16bpp.GenerateSolidColor(65, 1, 20000, 0, 0, 0.5f, 0.2f, 1000);
+        using var bottom = HDRPicture16bpp.GenerateSolidColor(65, 1, 10000, 0, 0, Half.One, (Half)0.8f, (Half)1000);
+        using var top = HDRPicture16bpp.GenerateSolidColor(65, 1, 20000, 0, 0, (Half)0.5f, (Half)0.2f, (Half)1000);
         using var output = (inherited ? new InheritedOverlay() : new ClassicOverlayMixture()).Mix(bottom, top, 16);
         var hdr = (IHDRPicture<ushort>)output;
         foreach (float value in hdr.Brightness) Assert.AreEqual(0.5f, value, 0.00001f);
-        Assert.AreEqual(1000f, hdr.MaximumBrightness);
+        Assert.AreEqual(1000f, (float)hdr.MaximumBrightness);
     }
 
     [TestMethod]
@@ -117,8 +117,8 @@ public sealed class CompositionTests
     [TestMethod]
     public void InheritedBlendHooksReceiveBoundedBatchesWithoutDroppingPixels()
     {
-        using var bottom = Picture8bpp.GenerateSolidColor(257, 257, 100, 100, 100, 1);
-        using var top = Picture8bpp.GenerateSolidColor(257, 257, 200, 200, 200, 0.5f);
+        using var bottom = Picture8bpp.GenerateSolidColor(257, 257, 100, 100, 100, Half.One);
+        using var top = Picture8bpp.GenerateSolidColor(257, 257, 200, 200, 200, (Half)0.5f);
         var mixture = new CountingOverlay();
         using var output = mixture.Mix(bottom, top, 8);
         Assert.AreEqual(3 * 257 * 257, mixture.ProcessedPixels);
@@ -133,13 +133,13 @@ public sealed class CompositionTests
         public int ProcessedPixels { get; private set; }
         public int MaxBatchPixels { get; private set; }
 
-        protected override (byte[] Color, float[] Alpha) ApproximateOverlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        protected override (byte[] Color, Half[] Alpha) ApproximateOverlay8(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount)
         {
             Record(pixelCount);
             return base.ApproximateOverlay8(top, bottom, topAlpha, bottomAlpha, pixelCount);
         }
 
-        protected override (byte[] Color, float[] Alpha) Overlay8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        protected override (byte[] Color, Half[] Alpha) Overlay8(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int pixelCount)
         {
             Record(pixelCount);
             return base.Overlay8(top, bottom, topAlpha, bottomAlpha, pixelCount);

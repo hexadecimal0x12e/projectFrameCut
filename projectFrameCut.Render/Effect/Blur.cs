@@ -8,8 +8,12 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class BlurEffect_IPicture : INormalEffect
+    public class BlurEffect_IPicture : BlurEffect<IPicture> { }
+
+    public class BlurEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new BlurEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -51,17 +55,17 @@ namespace projectFrameCut.Render.Effect
             {
                 sigma = DynamicParam.ToFloat(val);
             }
-            var effect = new BlurEffect_IPicture { Sigma = sigma };
+            var effect = new BlurEffect<TPicture> { Sigma = sigma };
             effect.Parameters = parameters;
             return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             float sigma = DynamicParam.Resolve(Parameters.GetValueOrDefault("Sigma"), Sigma);
-            return PictureEffectChannels.PreserveHdr(BlurEffect.Process(source, sigma), source);
+            return PictureEffectChannels.PreserveHdr(PictureCalculation<TPicture>.Blur(source, sigma), source);
         }
     }
 

@@ -1,3 +1,4 @@
+using projectFrameCut.Render.Effect;
 using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -12,18 +13,29 @@ internal enum CompositionMode
 
 internal static class PictureCompositor
 {
-    internal delegate (Array Color, float[] Alpha) ChannelBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int count);
+    internal delegate (Array Color, Half[] Alpha) ChannelBlend(float[] top, float[] bottom, Half[] topAlpha, Half[] bottomAlpha, int count);
+    internal delegate (Half[] Color, Half[] Alpha) HalfChannelBlend(Half[] top, Half[] bottom, Half[] topAlpha, Half[] bottomAlpha, int count);
 
-    internal static IPicture Mix(IPicture bottom, IPicture top, IPicture.PicturePixelMode pixelMode,
-        int x, int y, int width, int height, CompositionMode mode, ChannelBlend? blend = null, ChannelBlend? blendBrightness = null)
+    internal static IPicture Mix<TPicture>(TPicture bottom, TPicture top, IPicture.PicturePixelMode pixelMode,
+        int x, int y, int width, int height, CompositionMode mode, ChannelBlend? blend = null, HalfChannelBlend? blendBrightness = null) where TPicture : IPicture
     {
-        var b = new Channels(bottom);
-        var t = new Channels(top);
+        if (bottom is IPicture<Half> fpBottom && top is IPicture<Half> fpTop)
+        {
+            if (blend is not null) throw new NotSupportedException($"Integer channel blend {blend.Method.DeclaringType?.FullName} cannot process FP16 pictures.");
+            return projectFrameCut.Drawing.Processing.Composing.FP16Composer.Compose(fpBottom, fpTop, mode switch
+            {
+                CompositionMode.Normal => projectFrameCut.Drawing.Processing.Composing.BlendMode.Overlay,
+                CompositionMode.Overlay => projectFrameCut.Drawing.Processing.Composing.BlendMode.OverlayBlend,
+                _ => Enum.Parse<projectFrameCut.Drawing.Processing.Composing.BlendMode>(mode.ToString()),
+            }, x, y, width, height);
+        }
+        var b = Channels.From(bottom);
+        var t = Channels.From(top);
         int pixels = checked(width * height);
         bool alpha = bottom.HasAlphaChannel || top.HasAlphaChannel || bottom.Width != width || bottom.Height != height;
         bool hdr = (int)pixelMode != 8 && (!b.Brightness.IsEmpty || !t.Brightness.IsEmpty);
-        float peak = b.Brightness.IsEmpty ? t.MaximumBrightness : t.Brightness.IsEmpty
-            ? b.MaximumBrightness : Math.Max(b.MaximumBrightness, t.MaximumBrightness);
+        Half peak = b.Brightness.IsEmpty ? t.MaximumBrightness : t.Brightness.IsEmpty
+            ? b.MaximumBrightness : Half.Max(b.MaximumBrightness, t.MaximumBrightness);
 
         int left = Math.Clamp(x, 0, width);
         int upper = Math.Clamp(y, 0, height);
@@ -37,8 +49,8 @@ internal static class PictureCompositor
         bool readBase = blend is null && !covered && left == 0 && upper == 0 && right == width && lower == height
             && bottom.Width == width && bottom.Height == height && (int)bottom.BitPerPixel == (int)pixelMode;
         var background = readBase ? b : default;
-        float[]? a = alpha ? new float[pixels] : null;
-        float[]? brightness = hdr ? new float[pixels] : null;
+        Half[]? a = alpha ? new Half[pixels] : null;
+        Half[]? brightness = hdr ? new Half[pixels] : null;
         if ((int)pixelMode == 8)
         {
             var r = new byte[pixels];
@@ -62,7 +74,7 @@ internal static class PictureCompositor
     }
 
     private static void FillBase<T>(Channels source, int sourceWidth, int sourceHeight, int width, int height,
-        T[] r, T[] g, T[] b, float[]? alpha, float[]? brightness) where T : unmanaged
+        T[] r, T[] g, T[] b, Half[]? alpha, Half[]? brightness) where T : unmanaged
     {
         int copyWidth = Math.Min(sourceWidth, width);
         int copyHeight = Math.Min(sourceHeight, height);
@@ -76,14 +88,14 @@ internal static class PictureCompositor
     }
 
     private static void Copy<T>(Channels source, int src, int dst, int count,
-        T[] r, T[] g, T[] b, float[]? alpha, float[]? brightness) where T : unmanaged
+        T[] r, T[] g, T[] b, Half[]? alpha, Half[]? brightness) where T : unmanaged
     {
         CopyColor(source.R8, source.R16, src, r.AsSpan(dst, count));
         CopyColor(source.G8, source.G16, src, g.AsSpan(dst, count));
         CopyColor(source.B8, source.B16, src, b.AsSpan(dst, count));
         if (alpha is not null)
         {
-            if (source.Alpha.IsEmpty) alpha.AsSpan(dst, count).Fill(1f);
+            if (source.Alpha.IsEmpty) alpha.AsSpan(dst, count).Fill(Half.One);
             else SIMDAlphaProcessor.ClampAlphaOffset(source.Alpha, alpha, src, dst, count);
         }
         if (brightness is not null)
@@ -91,19 +103,8 @@ internal static class PictureCompositor
             if (!source.Brightness.IsEmpty)
                 SIMDAlphaProcessor.ClampAlphaOffset(source.Brightness, brightness, src, dst, count);
             else
-            {
-                int i = 0;
-                int readWidth = source.R8.IsEmpty ? Vector<ushort>.Count : Vector<byte>.Count;
-                for (; i <= count - readWidth; i += Vector<float>.Count)
-                {
-                    var value = (Load(source.R8, source.R16, src + i) * new Vector<float>(0.2627f)
-                        + Load(source.G8, source.G16, src + i) * new Vector<float>(0.6780f)
-                        + Load(source.B8, source.B16, src + i) * new Vector<float>(0.0593f)) / new Vector<float>(65535f);
-                    Vector.Min(value, Vector<float>.One).CopyTo(brightness, dst + i);
-                }
-                for (; i < count; i++)
+                for (int i = 0; i < count; i++)
                     brightness[dst + i] = EstimateBrightness(source.ReadRed(src + i), source.ReadGreen(src + i), source.ReadBlue(src + i));
-            }
         }
     }
 
@@ -136,8 +137,8 @@ internal static class PictureCompositor
     }
 
     private static void Compose<T>(Channels top, int topWidth, int x, int y, int width,
-        int left, int upper, int right, int lower, T[] r, T[] g, T[] b, float[]? alpha,
-        float[]? brightness, CompositionMode mode, ChannelBlend? blend, ChannelBlend? blendBrightness, Channels bottom) where T : unmanaged
+        int left, int upper, int right, int lower, T[] r, T[] g, T[] b, Half[]? alpha,
+        Half[]? brightness, CompositionMode mode, ChannelBlend? blend, HalfChannelBlend? blendBrightness, Channels bottom) where T : unmanaged
     {
         if (right <= left || lower <= upper) return;
         if (blend is not null && (mode != CompositionMode.Normal || !top.Alpha.IsEmpty))
@@ -158,8 +159,8 @@ internal static class PictureCompositor
     }
 
     private static void BlendLegacy<T>(Channels top, int topWidth, int x, int y, int width,
-        int left, int upper, int right, int lower, T[] r, T[] g, T[] b, float[]? alpha,
-        float[]? brightness, CompositionMode mode, ChannelBlend blend, ChannelBlend? blendBrightness) where T : unmanaged
+        int left, int upper, int right, int lower, T[] r, T[] g, T[] b, Half[]? alpha,
+        Half[]? brightness, CompositionMode mode, ChannelBlend blend, HalfChannelBlend? blendBrightness) where T : unmanaged
     {
         // Keep existing channel overrides, with bounded scratch space regardless of frame size.
         int capacity = Math.Min(65536, checked((right - left) * (lower - upper)));
@@ -172,14 +173,14 @@ internal static class PictureCompositor
                 int src = (row - y) * topWidth + left - x, dst = row * width + left;
                 for (int col = left; col < right; col++, src++, dst++)
                 {
-                    float ta = top.Alpha.IsEmpty ? 1f : Clamp01(top.Alpha[src]);
-                    if (ta <= (mode == CompositionMode.Normal ? 0.05f : 0f)) continue;
+                    Half ta = top.Alpha.IsEmpty ? Half.One : Clamp01(top.Alpha[src]);
+                    if (ta <= (mode == CompositionMode.Normal ? (Half)0.05f : Half.Zero)) continue;
                     float tr = top.ReadRed(src), tg = top.ReadGreen(src), tb = top.ReadBlue(src);
-                    if (mode == CompositionMode.Normal && ta >= 0.999f)
+                    if (mode == CompositionMode.Normal && ta >= (Half)0.999f)
                     {
                         r[dst] = ToPixel<T>(tr); g[dst] = ToPixel<T>(tg); b[dst] = ToPixel<T>(tb);
-                        if (alpha is not null) alpha[dst] = 1f;
-                        if (brightness is not null) brightness[dst] = top.Brightness.IsEmpty ? EstimateBrightness(tr, tg, tb) : Clamp01(top.Brightness[src]);
+                        if (alpha is not null) alpha[dst] = Half.One;
+                        if (brightness is not null) brightness[dst] = (Half)(top.Brightness.IsEmpty ? EstimateBrightness(tr, tg, tb) : Clamp01(top.Brightness[src]));
                         continue;
                     }
                     buffers ??= new BlendBuffers(capacity, brightness is not null);
@@ -189,7 +190,7 @@ internal static class PictureCompositor
                     buffers.BottomG[count] = FromPixel(g[dst]);
                     buffers.BottomB[count] = FromPixel(b[dst]);
                     buffers.TopA[count] = ta;
-                    buffers.BottomA[count] = alpha is null ? 1f : alpha[dst];
+                    buffers.BottomA[count] = alpha is null ? Half.One : alpha[dst];
                     if (brightness is not null)
                     {
                         buffers.TopBrightness![count] = top.Brightness.IsEmpty ? EstimateBrightness(tr, tg, tb) : Clamp01(top.Brightness[src]);
@@ -210,8 +211,8 @@ internal static class PictureCompositor
         }
     }
 
-    private static void Flush<T>(BlendBuffers buffers, int count, T[] r, T[] g, T[] b, float[]? alpha,
-        float[]? brightness, ChannelBlend blend, ChannelBlend? blendBrightness) where T : unmanaged
+    private static void Flush<T>(BlendBuffers buffers, int count, T[] r, T[] g, T[] b, Half[]? alpha,
+        Half[]? brightness, ChannelBlend blend, HalfChannelBlend? blendBrightness) where T : unmanaged
     {
         var red = blend(buffers.TopR, buffers.BottomR, buffers.TopA, buffers.BottomA, count);
         var green = blend(buffers.TopG, buffers.BottomG, buffers.TopA, buffers.BottomA, count);
@@ -228,15 +229,15 @@ internal static class PictureCompositor
         if (blendBrightness is not null)
         {
             var result = blendBrightness(buffers.TopBrightness!, buffers.BottomBrightness!, buffers.TopA, buffers.BottomA, count);
-            var values = (float[])result.Color;
+            var values = result.Color;
             for (int i = 0; i < count; i++) brightness[buffers.Indices[i]] = Clamp01(values[i]);
         }
         else
             for (int i = 0; i < count; i++)
             {
-                float bw = buffers.BottomA[i] * (1f - buffers.TopA[i]), a = buffers.TopA[i] + bw;
-                brightness[buffers.Indices[i]] = a < 1e-6f ? 0f
-                    : (buffers.TopBrightness![i] * buffers.TopA[i] + buffers.BottomBrightness![i] * bw) / a;
+                Half bw = buffers.BottomA[i] * (Half.One - buffers.TopA[i]), a = buffers.TopA[i] + bw;
+                brightness[buffers.Indices[i]] = (a < (Half)1e-6f ? Half.Zero
+                    : (buffers.TopBrightness![i] * buffers.TopA[i] + buffers.BottomBrightness![i] * bw) / a);
             }
     }
 
@@ -251,8 +252,9 @@ internal static class PictureCompositor
     private sealed class BlendBuffers : IDisposable
     {
         internal readonly int[] Indices;
-        internal readonly float[] TopR, TopG, TopB, BottomR, BottomG, BottomB, TopA, BottomA;
-        internal readonly float[]? TopBrightness, BottomBrightness;
+        internal readonly float[] TopR, TopG, TopB, BottomR, BottomG, BottomB;
+        internal readonly Half[] TopA, BottomA;
+        internal readonly Half[]? TopBrightness, BottomBrightness;
 
         internal BlendBuffers(int count, bool hdr)
         {
@@ -263,12 +265,12 @@ internal static class PictureCompositor
             BottomR = ArrayPool<float>.Shared.Rent(count);
             BottomG = ArrayPool<float>.Shared.Rent(count);
             BottomB = ArrayPool<float>.Shared.Rent(count);
-            TopA = ArrayPool<float>.Shared.Rent(count);
-            BottomA = ArrayPool<float>.Shared.Rent(count);
+            TopA = ArrayPool<Half>.Shared.Rent(count);
+            BottomA = ArrayPool<Half>.Shared.Rent(count);
             if (hdr)
             {
-                TopBrightness = ArrayPool<float>.Shared.Rent(count);
-                BottomBrightness = ArrayPool<float>.Shared.Rent(count);
+                TopBrightness = ArrayPool<Half>.Shared.Rent(count);
+                BottomBrightness = ArrayPool<Half>.Shared.Rent(count);
             }
         }
 
@@ -281,131 +283,64 @@ internal static class PictureCompositor
             ArrayPool<float>.Shared.Return(BottomR);
             ArrayPool<float>.Shared.Return(BottomG);
             ArrayPool<float>.Shared.Return(BottomB);
-            ArrayPool<float>.Shared.Return(TopA);
-            ArrayPool<float>.Shared.Return(BottomA);
-            if (TopBrightness is not null) ArrayPool<float>.Shared.Return(TopBrightness);
-            if (BottomBrightness is not null) ArrayPool<float>.Shared.Return(BottomBrightness);
+            ArrayPool<Half>.Shared.Return(TopA);
+            ArrayPool<Half>.Shared.Return(BottomA);
+            if (TopBrightness is not null) ArrayPool<Half>.Shared.Return(TopBrightness);
+            if (BottomBrightness is not null) ArrayPool<Half>.Shared.Return(BottomBrightness);
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static void BlendRow<T>(Channels top, int src, int dst, int count,
-        T[] r, T[] g, T[] b, float[]? alpha, float[]? brightness, CompositionMode mode, Channels bottom) where T : unmanaged
+        T[] r, T[] g, T[] b, Half[]? alpha, Half[]? brightness, CompositionMode mode, Channels bottom) where T : unmanaged
     {
         if (mode == CompositionMode.Normal && top.Alpha.IsEmpty)
         {
             Copy(top, src, dst, count, r, g, b, alpha, brightness);
             return;
         }
-
-        int i = 0;
         bool readBase = !bottom.R8.IsEmpty || !bottom.R16.IsEmpty;
-        int readWidth = Math.Max(top.R8.IsEmpty ? Vector<ushort>.Count : Vector<byte>.Count, Vector<T>.Count);
-        var zero = Vector<float>.Zero;
-        var one = Vector<float>.One;
-        var minAlpha = new Vector<float>(mode == CompositionMode.Normal ? 0.05f : 0f);
-        var opaqueAlpha = new Vector<float>(0.999f);
-        // RGB shares alpha and weights; widened integer loads and packed stores need no staging arrays.
-        for (; Vector.IsHardwareAccelerated && i <= count - readWidth; i += Vector<float>.Count)
+        for (int i = 0; i < count; i++)
         {
             int s = src + i, d = dst + i;
-            var ta = top.Alpha.IsEmpty ? one : Clamp01(new Vector<float>(top.Alpha.Slice(s)));
-            if (Vector.LessThanOrEqualAll(ta, minAlpha))
-            {
-                if (readBase) Copy(bottom, d, d, Vector<float>.Count, r, g, b, alpha, brightness);
-                continue;
-            }
-            if (mode == CompositionMode.Normal && Vector.GreaterThanOrEqualAll(ta, opaqueAlpha))
-            {
-                Copy(top, s, d, Vector<float>.Count, r, g, b, null, brightness);
-                if (alpha is not null) alpha.AsSpan(d, Vector<float>.Count).Fill(1f);
-                continue;
-            }
-
-            var ba = readBase ? (bottom.Alpha.IsEmpty ? one : Clamp01(new Vector<float>(bottom.Alpha.Slice(d))))
-                : alpha is null ? one : new Vector<float>(alpha, d);
-            var bw = ba * (one - ta);
-            var a = ta + bw;
-            var denominator = Vector.Max(a, new Vector<float>(1e-6f));
-            var tr = Load(top.R8, top.R16, s);
-            var tg = Load(top.G8, top.G16, s);
-            var tb = Load(top.B8, top.B16, s);
-            var br = readBase ? Load(bottom.R8, bottom.R16, d) : Load(r, d);
-            var bg = readBase ? Load(bottom.G8, bottom.G16, d) : Load(g, d);
-            var bb = readBase ? Load(bottom.B8, bottom.B16, d) : Load(b, d);
-            var transparent = Vector.LessThanOrEqual(ta, minAlpha);
-            var opaque = mode == CompositionMode.Normal ? Vector.GreaterThanOrEqual(ta, opaqueAlpha) : Vector<int>.Zero;
-            Store(r, d, SelectColor(mode, tr, br, ta, bw, a, transparent, opaque));
-            Store(g, d, SelectColor(mode, tg, bg, ta, bw, a, transparent, opaque));
-            Store(b, d, SelectColor(mode, tb, bb, ta, bw, a, transparent, opaque));
-            if (alpha is not null)
-                Vector.ConditionalSelect(transparent, ba, Vector.ConditionalSelect(opaque, one,
-                    Vector.ConditionalSelect(Vector.GreaterThanOrEqual(a, new Vector<float>(1e-6f)), a, zero))).CopyTo(alpha, d);
-            if (brightness is not null)
-            {
-                var tBrightness = top.Brightness.IsEmpty
-                    ? (tr * new Vector<float>(0.2627f) + tg * new Vector<float>(0.6780f) + tb * new Vector<float>(0.0593f)) / new Vector<float>(65535f)
-                    : Clamp01(new Vector<float>(top.Brightness.Slice(s)));
-                var bBrightness = readBase
-                    ? bottom.Brightness.IsEmpty
-                        ? (br * new Vector<float>(0.2627f) + bg * new Vector<float>(0.6780f) + bb * new Vector<float>(0.0593f)) / new Vector<float>(65535f)
-                        : Clamp01(new Vector<float>(bottom.Brightness.Slice(d)))
-                    : new Vector<float>(brightness, d);
-                Vector.ConditionalSelect(transparent, bBrightness, Vector.ConditionalSelect(opaque, tBrightness,
-                    Vector.ConditionalSelect(Vector.GreaterThanOrEqual(a, new Vector<float>(1e-6f)),
-                        (tBrightness * ta + bBrightness * bw) / denominator, zero))).CopyTo(brightness, d);
-            }
-        }
-
-        for (; i < count; i++)
-        {
-            int s = src + i, d = dst + i;
-            float ta = top.Alpha.IsEmpty ? 1f : Clamp01(top.Alpha[s]);
-            if (ta <= (mode == CompositionMode.Normal ? 0.05f : 0f))
+            Half ta = top.Alpha.IsEmpty ? Half.One : Clamp01(top.Alpha[s]);
+            if (ta <= (mode == CompositionMode.Normal ? (Half)0.05f : Half.Zero))
             {
                 if (readBase) Copy(bottom, d, d, 1, r, g, b, alpha, brightness);
                 continue;
             }
             float tr = top.ReadRed(s), tg = top.ReadGreen(s), tb = top.ReadBlue(s);
-            if (mode == CompositionMode.Normal && ta >= 0.999f)
+            if (mode == CompositionMode.Normal && ta >= (Half)0.999f)
             {
                 r[d] = ToPixel<T>(tr);
                 g[d] = ToPixel<T>(tg);
                 b[d] = ToPixel<T>(tb);
-                if (alpha is not null) alpha[d] = 1f;
+                if (alpha is not null) alpha[d] = Half.One;
                 if (brightness is not null) brightness[d] = top.Brightness.IsEmpty ? EstimateBrightness(tr, tg, tb) : Clamp01(top.Brightness[s]);
                 continue;
             }
-            float ba = readBase ? (bottom.Alpha.IsEmpty ? 1f : Clamp01(bottom.Alpha[d])) : alpha is null ? 1f : alpha[d];
-            float bw = ba * (1f - ta), a = ta + bw;
-            if (a < 1e-6f)
+            Half ba = readBase ? (bottom.Alpha.IsEmpty ? Half.One : Clamp01(bottom.Alpha[d])) : alpha is null ? Half.One : alpha[d];
+            Half bw = ba * (Half.One - ta), a = ta + bw;
+            if (a < (Half)1e-6f)
             {
                 r[d] = g[d] = b[d] = default;
-                if (alpha is not null) alpha[d] = 0f;
-                if (brightness is not null) brightness[d] = 0f;
+                if (alpha is not null) alpha[d] = Half.Zero;
+                if (brightness is not null) brightness[d] = Half.Zero;
                 continue;
             }
             float br = readBase ? bottom.ReadRed(d) : FromPixel(r[d]);
             float bg = readBase ? bottom.ReadGreen(d) : FromPixel(g[d]);
             float bb = readBase ? bottom.ReadBlue(d) : FromPixel(b[d]);
-            r[d] = ToPixel<T>((BlendColor(mode, tr, br) * ta + br * bw) / a);
-            g[d] = ToPixel<T>((BlendColor(mode, tg, bg) * ta + bg * bw) / a);
-            b[d] = ToPixel<T>((BlendColor(mode, tb, bb) * ta + bb * bw) / a);
+            r[d] = ToPixel<T>((BlendColor(mode, tr, br) * (float)ta + br * (float)bw) / (float)a);
+            g[d] = ToPixel<T>((BlendColor(mode, tg, bg) * (float)ta + bg * (float)bw) / (float)a);
+            b[d] = ToPixel<T>((BlendColor(mode, tb, bb) * (float)ta + bb * (float)bw) / (float)a);
             if (alpha is not null) alpha[d] = a;
             if (brightness is not null)
             {
-                float bBrightness = readBase ? bottom.Brightness.IsEmpty ? EstimateBrightness(br, bg, bb) : Clamp01(bottom.Brightness[d]) : brightness[d];
-                brightness[d] = ((top.Brightness.IsEmpty ? EstimateBrightness(tr, tg, tb) : Clamp01(top.Brightness[s])) * ta + bBrightness * bw) / a;
+                Half previous = readBase ? bottom.Brightness.IsEmpty ? EstimateBrightness(br, bg, bb) : Clamp01(bottom.Brightness[d]) : brightness[d];
+                brightness[d] = ((top.Brightness.IsEmpty ? EstimateBrightness(tr, tg, tb) : Clamp01(top.Brightness[s])) * ta + previous * bw) / a;
             }
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Vector<float> SelectColor(CompositionMode mode, Vector<float> top, Vector<float> bottom,
-        Vector<float> ta, Vector<float> bw, Vector<float> a, Vector<int> transparent, Vector<int> opaque) =>
-        Vector.ConditionalSelect(transparent, bottom, Vector.ConditionalSelect(opaque, top,
-            Vector.ConditionalSelect(Vector.GreaterThanOrEqual(a, new Vector<float>(1e-6f)),
-                (BlendColor(mode, top, bottom) * ta + bottom * bw) / Vector.Max(a, new Vector<float>(1e-6f)), Vector<float>.Zero)));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float BlendColor(CompositionMode mode, float top, float bottom) => mode switch
@@ -420,58 +355,6 @@ internal static class PictureCompositor
         CompositionMode.Difference => Math.Abs(top - bottom),
         _ => top
     };
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Vector<float> BlendColor(CompositionMode mode, Vector<float> top, Vector<float> bottom)
-    {
-        var max = new Vector<float>(65535f);
-        return mode switch
-        {
-            CompositionMode.Add => Vector.Min(top + bottom, max),
-            CompositionMode.Subtract => Vector.Max(bottom - top, Vector<float>.Zero),
-            CompositionMode.Multiply => top * bottom / max,
-            CompositionMode.Screen => max - (max - top) * (max - bottom) / max,
-            CompositionMode.Overlay => Vector.ConditionalSelect(Vector.LessThan(bottom, new Vector<float>(32768f)),
-                new Vector<float>(2f) * top * bottom / max, max - new Vector<float>(2f) * (max - top) * (max - bottom) / max),
-            CompositionMode.Darken => Vector.Min(top, bottom),
-            CompositionMode.Lighten => Vector.Max(top, bottom),
-            CompositionMode.Difference => Vector.Abs(top - bottom),
-            _ => top
-        };
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Vector<float> Load(ReadOnlySpan<byte> bytes, ReadOnlySpan<ushort> words, int index)
-    {
-        if (!bytes.IsEmpty)
-        {
-            Vector.Widen(new Vector<byte>(bytes.Slice(index)), out var lo, out _);
-            Vector.Widen(lo, out var values, out _);
-            return Vector.ConvertToSingle(values) * new Vector<float>(257f);
-        }
-        Vector.Widen(new Vector<ushort>(words.Slice(index)), out var wide, out _);
-        return Vector.ConvertToSingle(wide);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Vector<float> Load<T>(T[] channel, int index) where T : unmanaged => typeof(T) == typeof(byte)
-        ? Load(MemoryMarshal.Cast<T, byte>(channel.AsSpan()), default, index)
-        : Load(default, MemoryMarshal.Cast<T, ushort>(channel.AsSpan()), index);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Store<T>(T[] channel, int index, Vector<float> values) where T : unmanaged
-    {
-        values = Vector.Min(Vector.Max(values, Vector<float>.Zero), new Vector<float>(65535f));
-        if (typeof(T) == typeof(byte)) values /= new Vector<float>(257f);
-        var words = Vector.Narrow(Vector.AsVectorUInt32(Vector.ConvertToInt32(values)), Vector<uint>.Zero);
-        if (typeof(T) == typeof(byte))
-        {
-            var bytes = Vector.Narrow(words, Vector<ushort>.Zero);
-            Unsafe.CopyBlockUnaligned(ref Unsafe.As<T, byte>(ref channel[index]), ref Unsafe.As<Vector<byte>, byte>(ref bytes), (uint)Vector<float>.Count);
-        }
-        else
-            Unsafe.CopyBlockUnaligned(ref Unsafe.As<T, byte>(ref channel[index]), ref Unsafe.As<Vector<ushort>, byte>(ref words), (uint)(Vector<float>.Count * sizeof(ushort)));
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float FromPixel<T>(T value) where T : unmanaged => typeof(T) == typeof(byte)
@@ -489,45 +372,55 @@ internal static class PictureCompositor
         return Unsafe.As<ushort, T>(ref u);
     }
 
-    private static float Clamp01(float value) => float.IsFinite(value) ? Math.Clamp(value, 0f, 1f) : 0f;
-    private static Vector<float> Clamp01(Vector<float> value) => Vector.ConditionalSelect(
-        Vector.LessThanOrEqual(Vector.Abs(value), new Vector<float>(float.MaxValue)),
-        Vector.Min(Vector.Max(value, Vector<float>.Zero), Vector<float>.One), Vector<float>.Zero);
-    private static float EstimateBrightness(float r, float g, float b) => Clamp01((0.2627f * r + 0.6780f * g + 0.0593f * b) / 65535f);
+    private static Half Clamp01(Half value) => HalfChannelMath.Clamp(value);
+    private static Half EstimateBrightness(float r, float g, float b) => HalfChannelMath.Luminance(r, g, b, 65535f);
 
     private readonly ref struct Channels
     {
         internal readonly ReadOnlySpan<byte> R8, G8, B8;
         internal readonly ReadOnlySpan<ushort> R16, G16, B16;
-        internal readonly ReadOnlySpan<float> Alpha, Brightness;
-        internal readonly float MaximumBrightness;
+        internal readonly ReadOnlySpan<Half> Alpha, Brightness;
+        internal readonly Half MaximumBrightness;
 
-        internal Channels(IPicture picture)
+        internal static Channels From<TPicture>(TPicture picture) where TPicture : IPicture
+        {
+            if (PictureCalculation<TPicture>.Is8) return new Channels((IPicture<byte>)(object)picture);
+            if (PictureCalculation<TPicture>.Is16) return new Channels((IPicture<ushort>)(object)picture);
+            return new Channels(picture);
+        }
+
+        private Channels(IPicture<byte> picture) : this((IPicture)picture, true) { }
+        private Channels(IPicture<ushort> picture) : this((IPicture)picture, false) { }
+
+        internal Channels(IPicture picture) : this(picture, picture is IPicture<byte>) { }
+
+        private Channels(IPicture picture, bool is8)
         {
             ObjectDisposedException.ThrowIf(picture.Disposed, picture);
             int pixels = checked(picture.Width * picture.Height);
             bool valid;
-            if (picture is IPicture<byte> p8)
+            if (is8)
             {
+                var p8 = (IPicture<byte>)picture;
                 var read = new PictureReadChannels<byte>(p8);
                 R8 = read.Red; G8 = read.Green; B8 = read.Blue;
                 Alpha = picture.HasAlphaChannel ? read.Alpha : default;
                 valid = R8.Length == pixels && G8.Length == pixels && B8.Length == pixels;
             }
-            else if (picture is IPicture<ushort> p16)
+            else
             {
+                var p16 = picture as IPicture<ushort> ?? throw new NotSupportedException($"Unsupported composition picture type: {picture.GetType().Name}.");
                 var read = new PictureReadChannels<ushort>(p16);
                 R16 = read.Red; G16 = read.Green; B16 = read.Blue;
                 Alpha = picture.HasAlphaChannel ? read.Alpha : default;
                 valid = R16.Length == pixels && G16.Length == pixels && B16.Length == pixels;
                 if (picture is IHDRPicture<ushort> hdr)
                 {
-                    ReadOnlySpan<float> brightness = picture is IReadOnlyPictureChannels<ushort> shared ? shared.ReadBrightness : hdr.Brightness;
+                    ReadOnlySpan<Half> brightness = picture is IReadOnlyPictureChannels<ushort> shared ? shared.ReadBrightness : hdr.Brightness;
                     if (brightness.Length == pixels) Brightness = brightness;
-                    MaximumBrightness = float.IsFinite(hdr.MaximumBrightness) && hdr.MaximumBrightness > 0 ? hdr.MaximumBrightness : 1000f;
+                    MaximumBrightness = Half.IsFinite(hdr.MaximumBrightness) && hdr.MaximumBrightness > Half.Zero ? hdr.MaximumBrightness : (Half)1000;
                 }
             }
-            else throw new NotSupportedException($"Unsupported composition picture type: {picture.GetType().Name}.");
 
             if (!valid || picture.Width <= 0 || picture.Height <= 0 || picture.Pixels != pixels
                 || picture.HasAlphaChannel && Alpha.Length != pixels)

@@ -323,6 +323,14 @@ namespace projectFrameCut.Render.Plugin
             return CreateEffect(stru, stru.ImplementType);
         }
 
+        public static string NormalizeVideoDecoderName(string? name) => name switch
+        {
+            "DecoderContext8Bit" or "DecoderContext16Bit" => nameof(DecoderContextFP16),
+            "DecoderContextHW" => nameof(DecoderContextHWFP16),
+            "HDRDecoderContext" => nameof(HDRDecoderContextFP16),
+            _ => name ?? string.Empty,
+        };
+
         public static IVideoSource CreateVideoSource(string filePath, IPicture.PicturePixelMode? PreferredTargetPPB = null)
         {
             if (ProjectExternalVideoSource.IsPath(filePath)) return ProjectExternalVideoSource.Open(filePath);
@@ -331,7 +339,7 @@ namespace projectFrameCut.Render.Plugin
             {
                 var part = filePath.Substring(1).Split(',', 2);
                 if (part.Length != 2) throw new ArgumentException($"Invalid specified video decoder path '{filePath}'.", nameof(filePath));
-                var decoder = part[0];
+                var decoder = NormalizeVideoDecoderName(part[0]);
                 var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
                 if (supportedPlugin is null) throw new NotSupportedException($"The specificed video decoder '{decoder}' was not found for the file '{filePath}'.");
                 return supportedPlugin.VideoSourceProvider[decoder].CreateNew(part[1]);
@@ -394,6 +402,13 @@ namespace projectFrameCut.Render.Plugin
         public static IVideoWriter CreateVideoWriter(string codec)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(codec);
+            codec = codec switch
+            {
+                "VideoWriter" => nameof(VideoWriterFP16),
+                "VideoWriterHWAccel" => nameof(VideoWriterHWAccelFP16),
+                "HDRVideoWriter" => nameof(HDRVideoWriterFP16),
+                _ => codec,
+            };
             var codecCandidates = GetVideoWriterCodecCandidates(codec);
 
             foreach (var plugin in LoadedPlugins.Values)

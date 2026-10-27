@@ -196,7 +196,7 @@ internal static class ProjectModeEditingService
             FillR = OptionalUInt16(arguments, "fillR") ?? ushort.MaxValue,
             FillG = OptionalUInt16(arguments, "fillG") ?? ushort.MaxValue,
             FillB = OptionalUInt16(arguments, "fillB") ?? ushort.MaxValue,
-            FillA = OptionalSingle(arguments, "fillA") ?? 1f,
+            FillA = (Half)(OptionalSingle(arguments, "fillA") ?? 1f),
         };
         clip.MetaData![TextEntriesKey] = new List<TextEntry> { entry };
         return AddClip(workspace, clip);

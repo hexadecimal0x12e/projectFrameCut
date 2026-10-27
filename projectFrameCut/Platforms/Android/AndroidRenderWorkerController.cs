@@ -100,6 +100,7 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
         intent.PutExtra(ExtraSocketPath, socketPath);
         intent.PutExtra(ExtraToken, token);
         intent.PutExtra(ExtraDataRoot, dataRoot);
+        intent.PutExtra(projectFrameCut.Shared.ProjectCachePaths.EnvironmentKey, projectFrameCut.Shared.ProjectCachePaths.RedirectRoot);
         intent.PutExtra(ExtraProjectRoot, projectRoot ?? string.Empty);
         intent.PutExtra(ExtraFfmpegRoot, ffmpegRoot ?? string.Empty);
         intent.PutExtra(ExtraLocale, locale ?? string.Empty);

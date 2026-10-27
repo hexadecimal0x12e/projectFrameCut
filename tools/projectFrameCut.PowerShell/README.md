@@ -121,7 +121,7 @@ Disconnect-ProjectFrameCut
 ```powershell
 Get-ProjectClipProperties -ClipId $clip.ClipId
 Set-ProjectClipProperties -ClipId $clip.ClipId -ClipColor '#FF6699CC' -AudioVolume 0.5
-Set-ProjectClipProperties -ClipId $clip.ClipId -TargetDecoder HDRDecoderContext -HDRBrightnessOffset 0.2
+Set-ProjectClipProperties -ClipId $clip.ClipId -TargetDecoder HDRDecoderContextFP16 -HDRBrightnessOffset 0.2
 $properties = Set-ProjectClipProperties -ClipId $clip.ClipId -DetachAudio -PassThru
 ```
 

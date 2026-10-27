@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using projectFrameCut.Shared;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -35,7 +37,7 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
         using var p = ResidentPictureOperations.Own(source);
         if (p.IsHdr)
             return p.Retain();
-        return Run(p, ResidentOperation.Hdr, p.Width, p.Height, [], bits: 16, hdr: true, peak: Math.Clamp(brightness, 100, 10000));
+        return Run(p, ResidentOperation.Hdr, p.Width, p.Height, [], bits: 16, hdr: true, peak: (Half)Math.Clamp(brightness, 100, 10000));
     }
 
     private HwAccelResourceBudget budget = new();
@@ -47,8 +49,8 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
     private bool closing;
     private System.Runtime.ExceptionServices.ExceptionDispatchInfo? failure;
     protected abstract ResidentBuffer CreateBuffer(int length);
-    protected abstract void WriteBuffer(ResidentBuffer buffer, float[] values);
-    protected abstract float[] Read(ResidentBuffer buffer);
+    protected abstract void WriteBuffer(ResidentBuffer buffer, byte[] values);
+    protected abstract byte[] Read(ResidentBuffer buffer);
     protected abstract ResidentBuffer Dispatch(ResidentBuffer source, ResidentBuffer second, float[] parameters, int count);
     protected abstract void Synchronize();
     protected abstract void Release();
@@ -67,7 +69,7 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
             if (node.Value.Length != length) continue;
             var buffer = node.Value;
             idle.Remove(node);
-            budget.Release((long)length * sizeof(float));
+            budget.Release((long)length);
             buffer.Returned = 0;
             reuses++;
             return buffer;
@@ -78,7 +80,7 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
         return result;
     }
 
-    protected ResidentBuffer UploadBuffer(float[] values)
+    protected ResidentBuffer UploadBuffer(byte[] values)
     {
         var buffer = RentBuffer(values.Length);
         try { WriteBuffer(buffer, values); return buffer; }
@@ -105,7 +107,7 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
             if (submissions > 0)
             {
                 retired.Add(buffer);
-                pendingBytes += (long)buffer.Length * sizeof(float);
+                pendingBytes += (long)buffer.Length;
                 if (pendingBytes >= HwAccelResourceBudget.DefaultBytes) Complete();
             }
             else CacheBuffer(buffer);
@@ -114,13 +116,13 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
 
     private void CacheBuffer(ResidentBuffer buffer)
     {
-        long size = (long)buffer.Length * sizeof(float);
+        long size = (long)buffer.Length;
         if (closing || failure is not null || size > HwAccelResourceBudget.DefaultBytes) { buffer.Destroy(); return; }
         while (!budget.TryReserve(size))
         {
             if (idle.First is not { } oldest) { buffer.Destroy(); return; }
             idle.RemoveFirst();
-            budget.Release((long)oldest.Value.Length * sizeof(float));
+            budget.Release((long)oldest.Value.Length);
             oldest.Value.Destroy();
         }
         idle.AddLast(buffer);
@@ -164,7 +166,7 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
             while (idle.First is { } node)
             {
                 idle.RemoveFirst();
-                budget.Release((long)node.Value.Length * sizeof(float));
+                budget.Release((long)node.Value.Length);
                 node.Value.Destroy();
             }
         }
@@ -226,47 +228,20 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
         var picture = EffectPictureProcessing.Materialize(source);
         try
         {
+            if (picture is not IPicture<Half> fp) throw new NotSupportedException($"Hardware rendering requires FP16, received {picture.GetType().Name}.");
             int n = picture.Pixels;
-            var data = GC.AllocateUninitializedArray<float>(checked(n * (picture is IHDRPicture<ushort> ? 5 : 4)));
-            if (picture is IPicture<byte> p8)
+            var data = GC.AllocateUninitializedArray<byte>(checked(n * ResidentPixel.Size));
+            var pixels = MemoryMarshal.Cast<byte, ResidentPixel>(data.AsSpan());
+            var read = new PictureReadChannels<Half>(fp);
+            ReadOnlySpan<Half> brightness = fp is IReadOnlyPictureChannels<Half> shared ? shared.ReadBrightness : fp is IHDRPicture<Half> hdr ? hdr.Brightness : [];
+            for (int i = 0; i < n; i++)
             {
-                var read = picture as IReadOnlyPictureChannels<byte>;
-                ReadOnlySpan<byte> r = read is null ? p8.r : read.ReadRed;
-                ReadOnlySpan<byte> g = read is null ? p8.g : read.ReadGreen;
-                ReadOnlySpan<byte> b = read is null ? p8.b : read.ReadBlue;
-                for (int i = 0; i < n; i++) { data[i] = r[i]; data[n + i] = g[i]; data[n * 2 + i] = b[i]; }
-                ReadOnlySpan<float> alpha = read is null ? p8.a : read.ReadAlpha;
-                if (picture.HasAlphaChannel && !alpha.IsEmpty)
-                {
-                    if (alpha.Length != n) throw new ArgumentException("Invalid alpha channel length.", nameof(source));
-                    alpha.CopyTo(data.AsSpan(n * 3, n));
-                }
-                else data.AsSpan(n * 3, n).Fill(1f);
+                pixels[i] = new() { Red = read.Red[i], Green = read.Green[i], Blue = read.Blue[i],
+                    Alpha = fp.HasAlphaChannel && !read.Alpha.IsEmpty ? read.Alpha[i] : Half.One,
+                    Brightness = brightness.IsEmpty ? Half.One : brightness[i] };
             }
-            else if (picture is IPicture<ushort> p16)
-            {
-                var read = picture as IReadOnlyPictureChannels<ushort>;
-                ReadOnlySpan<ushort> r = read is null ? p16.r : read.ReadRed;
-                ReadOnlySpan<ushort> g = read is null ? p16.g : read.ReadGreen;
-                ReadOnlySpan<ushort> b = read is null ? p16.b : read.ReadBlue;
-                for (int i = 0; i < n; i++) { data[i] = r[i]; data[n + i] = g[i]; data[n * 2 + i] = b[i]; }
-                ReadOnlySpan<float> alpha = read is null ? p16.a : read.ReadAlpha;
-                if (picture.HasAlphaChannel && !alpha.IsEmpty)
-                {
-                    if (alpha.Length != n) throw new ArgumentException("Invalid alpha channel length.", nameof(source));
-                    alpha.CopyTo(data.AsSpan(n * 3, n));
-                }
-                else data.AsSpan(n * 3, n).Fill(1f);
-                if (picture is IHDRPicture<ushort> hdr)
-                {
-                    ReadOnlySpan<float> brightness = read is null ? hdr.Brightness : read.ReadBrightness;
-                    if (brightness.Length != n) throw new ArgumentException("Invalid brightness channel length.", nameof(source));
-                    brightness.CopyTo(data.AsSpan(n * 4, n));
-                }
-            }
-            else throw new NotSupportedException($"Unsupported picture type: {picture.GetType().Name}");
             lock (Gate)
-                return new ResidentPicture(new Image(this, UploadBuffer(data)), picture.Width, picture.Height, picture.BitPerPixel, picture.HasAlphaChannel, picture is IHDRPicture<ushort>, (picture as IHDRPicture<ushort>)?.MaximumBrightness ?? 203, picture.Tag, picture.ProcessStack.ToList());
+                return new ResidentPicture(new Image(this, UploadBuffer(data)), picture.Width, picture.Height, picture.BitPerPixel, picture.HasAlphaChannel, picture is IHDRPicture<Half>, (picture as IHDRPicture<Half>)?.MaximumBrightness ?? (Half)203, picture.Tag, picture.ProcessStack.ToList());
         }
         finally
         {
@@ -275,14 +250,14 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
         }
     }
 
-    internal ResidentPicture Run(ResidentPicture source, ResidentOperation operation, int width, int height, float[] args, bool? alpha = null, int? bits = null, bool? hdr = null, float? peak = null, ResidentPicture? second = null)
+    internal ResidentPicture Run(ResidentPicture source, ResidentOperation operation, int width, int height, float[] args, bool? alpha = null, int? bits = null, bool? hdr = null, Half? peak = null, ResidentPicture? second = null)
     {
         if (width <= 0 || height <= 0)
             throw new ArgumentOutOfRangeException(nameof(width));
         ObjectDisposedException.ThrowIf(source.Disposed, source);
         if (second is not null && !ReferenceEquals(second.Context, this))
             throw new ArgumentException("Device contexts must match.");
-        bool outputHdr = (bits ?? source.BitPerPixel.Value) == 16 && (hdr ?? source.IsHdr);
+        bool outputHdr = (hdr ?? source.IsHdr);
         int channels = outputHdr ? 5 : 4;
         // Header: operation, dimensions, channel ranges, HDR peaks and HDR flags.
         var parameters = new float[Math.Max(32, 15 + args.Length)];
@@ -291,20 +266,20 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
         parameters[2] = source.Height;
         parameters[3] = width;
         parameters[4] = height;
-        parameters[5] = source.BitPerPixel == 8 ? 255 : 65535;
-        parameters[6] = (bits ?? source.BitPerPixel.Value) == 8 ? 255 : 65535;
+        parameters[5] = 1;
+        parameters[6] = 1;
         parameters[7] = second?.Width ?? source.Width;
         parameters[8] = second?.Height ?? source.Height;
-        parameters[9] = second?.BitPerPixel == 8 ? 255 : 65535;
-        parameters[10] = source.MaximumBrightness;
-        parameters[11] = second?.MaximumBrightness ?? 203;
+        parameters[9] = 1;
+        parameters[10] = (float)source.MaximumBrightness;
+        parameters[11] = (float)(second?.MaximumBrightness ?? (Half)203);
         parameters[12] = source.IsHdr ? 1 : 0;
         parameters[13] = second?.IsHdr == true ? 1 : 0;
         parameters[14] = outputHdr ? 1 : 0;
         args.CopyTo(parameters, 15);
         int count = operation == ResidentOperation.BlurHorizontal ? checked(height * channels) : operation == ResidentOperation.BlurVertical ? checked(width * channels) : checked(width * height);
         lock (Gate)
-            return new(new Image(this, Dispatch(source.Storage.Buffer, second?.Storage.Buffer ?? source.Storage.Buffer, parameters, count)), width, height, bits ?? source.BitPerPixel.Value, alpha ?? source.HasAlphaChannel, outputHdr, peak ?? source.MaximumBrightness, source.Tag, source.ProcessStack.ToList());
+            return new(new Image(this, Dispatch(source.Storage.Buffer, second?.Storage.Buffer ?? source.Storage.Buffer, parameters, count)), width, height, IPicture.PicturePixelMode.Float16Picture, alpha ?? source.HasAlphaChannel, outputHdr, peak ?? source.MaximumBrightness, source.Tag, source.ProcessStack.ToList());
     }
 
     internal sealed class Image
@@ -349,49 +324,38 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
                 {
                     cpu?.Dispose();
                     cpu = null;
-                    float[] data;
+                    byte[] bytes;
                     lock (Context.Gate)
                     {
                         Context.Complete();
-                        data = Context.Read(Buffer);
+                        bytes = Context.Read(Buffer);
                     }
+                    var data = MemoryMarshal.Cast<byte, ResidentPixel>(bytes.AsSpan());
                     int n = source.Pixels;
-                    var alpha = source.HasAlphaChannel ? data.AsSpan(n * 3, n).ToArray() : null;
-                    if (source.BitPerPixel == 8)
+                    var r = GC.AllocateUninitializedArray<Half>(n);
+                    var g = GC.AllocateUninitializedArray<Half>(n);
+                    var b = GC.AllocateUninitializedArray<Half>(n);
+                    var alpha = source.HasAlphaChannel ? GC.AllocateUninitializedArray<Half>(n) : null;
+                    var brightness = source.IsHdr ? GC.AllocateUninitializedArray<Half>(n) : null;
+                    for (int i = 0; i < n; i++)
                     {
-                        var r = GC.AllocateUninitializedArray<byte>(n);
-                        var g = GC.AllocateUninitializedArray<byte>(n);
-                        var b = GC.AllocateUninitializedArray<byte>(n);
-                        for (int i = 0; i < n; i++)
-                        {
-                            r[i] = (byte)Math.Clamp(data[i], 0, 255);
-                            g[i] = (byte)Math.Clamp(data[n + i], 0, 255);
-                            b[i] = (byte)Math.Clamp(data[n * 2 + i], 0, 255);
-                        }
-                        cpu = Picture8bpp.FromOwnedChannels(source.Width, source.Height, r, g, b, alpha);
+                        var p = data[i];
+                        r[i] = p.Red;
+                        g[i] = p.Green;
+                        b[i] = p.Blue;
+                        if (alpha is not null) alpha[i] = p.Alpha;
+                        if (brightness is not null) brightness[i] = p.Brightness;
                     }
-                    else
-                    {
-                        var r = GC.AllocateUninitializedArray<ushort>(n);
-                        var g = GC.AllocateUninitializedArray<ushort>(n);
-                        var b = GC.AllocateUninitializedArray<ushort>(n);
-                        for (int i = 0; i < n; i++)
-                        {
-                            r[i] = (ushort)Math.Clamp(data[i], 0, 65535);
-                            g[i] = (ushort)Math.Clamp(data[n + i], 0, 65535);
-                            b[i] = (ushort)Math.Clamp(data[n * 2 + i], 0, 65535);
-                        }
-                        cpu = source.IsHdr
-                            ? HDRPicture16bpp.FromOwnedChannels(source.Width, source.Height, r, g, b, alpha, data.AsSpan(n * 4, n).ToArray(), source.MaximumBrightness)
-                            : Picture16bpp.FromOwnedChannels(source.Width, source.Height, r, g, b, alpha);
-                    }
+                    cpu = source.IsHdr
+                        ? HDRPictureFP16.FromOwnedChannels(source.Width, source.Height, r, g, b, alpha, brightness!, source.MaximumBrightness)
+                        : PictureFP16.FromOwnedChannels(source.Width, source.Height, r, g, b, alpha);
                 }
 
                 var copy = ((ISharedPicture)cpu).Snapshot();
                 copy.Tag = source.Tag;
                 copy.ProcessStack = source.ProcessStack.ToList();
                 copy.HasAlphaChannel = source.HasAlphaChannel;
-                if (copy is HDRPicture16bpp hdr) hdr.MaximumBrightness = source.MaximumBrightness;
+                if (copy is HDRPictureFP16 hdr) hdr.MaximumBrightness = source.MaximumBrightness;
 
                 return copy;
             }
@@ -440,13 +404,13 @@ internal sealed class ResidentPicture : IHwAccelPicture
     public IPicture.PicturePixelMode BitPerPixel { get; }
     public bool HasAlphaChannel { get; set; }
     public bool IsHdr { get; }
-    public float MaximumBrightness { get; }
+    public Half MaximumBrightness { get; }
     public string Tag { get; set; }
     public List<PictureProcessStack> ProcessStack { get; set; }
     public bool CanBeDisposed { get; set; } = true;
     public bool Disposed => Volatile.Read(ref disposed) != 0;
 
-    internal ResidentPicture(ResidentPictureContext.Image storage, int width, int height, int bits, bool alpha, bool hdr, float peak, string tag, List<PictureProcessStack> stack)
+    internal ResidentPicture(ResidentPictureContext.Image storage, int width, int height, int bits, bool alpha, bool hdr, Half peak, string tag, List<PictureProcessStack> stack)
     {
         Storage = storage;
         this.width = width;
@@ -475,11 +439,9 @@ internal sealed class ResidentPicture : IHwAccelPicture
 
     public IPicture ToBitPerPixel(IPicture.PicturePixelMode bits)
     {
-        if (bits != 8 && bits != 16)
-            throw new NotSupportedException("Hardware pictures support 8-bit or 16-bit color.");
-        if (bits.Value < BitPerPixel.Value && !IPicture.AllowPixelModeDowngrade)
-            throw new InvalidOperationException("Pixel mode downgrade is disabled.");
-        return bits == BitPerPixel ? Retain() : Storage.Context.Run(this, ResidentOperation.Convert, Width, Height, [], bits: bits, hdr: bits == 16 && IsHdr);
+        if (bits == IPicture.PicturePixelMode.Float16Picture) return Retain();
+        using var picture = Download();
+        return picture.ToBitPerPixel(bits);
     }
 
     public object? GetSpecificChannel(IPicture.ChannelId id)

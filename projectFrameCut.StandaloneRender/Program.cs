@@ -144,23 +144,24 @@ namespace projectFrameCut.StandaloneRender
                             $"FPS: {renderer.CurrentFps:N2}, frames: {renderer.CurrentFinished}/{renderer.Duration}");
                     foreach (var p in renderer.GetThreadProgress())
                     {
-                        bool cacheWriter = p.Name == "VFD cache writer";
+                        bool writer = p.Name is "VFD cache writer" or "Render output writer";
                         string name = p.Name switch
                         {
                             "Render scheduler" => "Scheduler",
                             "VFD cache writer" => "VFD writer",
+                            "Render output writer" => "Output writer",
                             "Render worker/compositor" => "Worker/compositor",
                             _ => p.IsCompositor ? "Compositor" : "Worker"
                         };
                         string state = p.State switch
                         {
-                            RenderThreadState.Working => cacheWriter ? "Writing" : p.IsCompositor ? "Working" : "Rendering",
-                            RenderThreadState.Paused => p.IsCompositor || cacheWriter ? "Waiting" : "Paused",
+                            RenderThreadState.Working => writer ? "Writing" : p.IsCompositor ? "Working" : "Rendering",
+                            RenderThreadState.Paused => p.IsCompositor || writer ? "Waiting" : "Paused",
                             RenderThreadState.Completed => "Completed",
                             _ => "Stopped"
                         };
                         string line = $"  {$"{name} #{p.ThreadId}",-30} | {state,-9} | {p.Progress:P1} | frame {p.CurrentFrame?.ToString() ?? "-",10} | avg {p.FramesPerSecond:N2} FPS | {p.CompletedFrames} frames";
-                        if (p.IsCompositor || cacheWriter) compositorLines.Add(line);
+                        if (p.IsCompositor || writer) compositorLines.Add(line);
                         else lines.Add(line);
                     }
                 }
@@ -394,12 +395,14 @@ namespace projectFrameCut.StandaloneRender
                         [-enableThreadAffinity=<true|false>]
                         [-reuseDynamicPreviewCache=<true|false>]
                         [--incrementalRendering=<true|false>]
+                        [--projectCacheRoot=<cache folder for all projects>]
                         [-vfdCompression=<None|Deflate|GZip|Brotli|Zstandard|Lzma2>] (default: Zstandard)
                         [-vfdCompressionLevel=<level>]
                           Zstandard: -131072..22 (default: 1); Lzma2: 1..10 (default: 6).
                           Deflate/GZip/Brotli: Fastest|Optimal|SmallestSize|NoCompression (default: Fastest).
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
+                        [-acceleratorDeviceName=<name>] [-acceleratorDeviceNames=<name1,name2,...>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-GCOptions=0,1,2]
                         [-outputIntermediatePath=<intermediate output path>]
@@ -412,7 +415,7 @@ namespace projectFrameCut.StandaloneRender
                         [-enableDiskCacheRouting=<true|false> or -forceUseDiskCache=<true|false>]
                         [-diskCacheThreshold=<0.1-0.95>] [-diskCacheMaxFrameCount=<number>] [-videoBuilderDiskCacheRoot=<path>]
                         [-chunkRender=<true|false>]
-                        [-chunkFrames=<number> | -chunkSeconds=<number>] [-chunkParallelism=<number>]
+                        [-chunkFrames=<number> | -chunkSeconds=<number>]
                         [-chunkResume=<true|false>] [-chunkKeepFiles=<true|false>]
                           chunkResume also restores deferred composition when chunkRender=false.
                         [-multiStream=<true|false>]
@@ -796,11 +799,14 @@ namespace projectFrameCut.StandaloneRender
                 }
 
                 var multiAccel = bool.TryParse(switches.GetOrAdd("multiAccelerator", "false"), out var ma) ? ma : false;
+                var mainDeviceName = switches.GetValueOrDefault("acceleratorDeviceName", "");
                 if (!multiAccel)
                 {
                     var acceleratorId = int.TryParse(switches.GetOrAdd("acceleratorDeviceId", "-1"), out var result1) ? result1 : -1;
                     var accelType = switches.GetOrAdd("acceleratorType", "auto");
-                    var acc = ILGPUExecutionHelper.PickOneAccel(accelType, acceleratorId, devices);
+                    var acc = string.IsNullOrWhiteSpace(mainDeviceName)
+                        ? ILGPUExecutionHelper.PickOneAccel(accelType, acceleratorId, devices)
+                        : devices.FirstOrDefault(d => d.Name == mainDeviceName);
                     if (acc is null)
                     {
                         Log($"ERROR: Cannot pick accelerator device. Check the configuration.");
@@ -809,6 +815,14 @@ namespace projectFrameCut.StandaloneRender
                     picked.Add(acc);
                     Log($"Selecting accelerator device #{devices.IndexOf(acc)}: {acc.Name} ({acc.AcceleratorType})");
 
+                }
+                else if (switches.TryGetValue("acceleratorDeviceNames", out var names) && !string.IsNullOrWhiteSpace(names))
+                {
+                    picked = names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Distinct()
+                        .Select(name => devices.FirstOrDefault(d => d.Name == name)
+                            ?? throw new ArgumentException($"Accelerator device '{name}' is not available."))
+                        .ToList();
                 }
                 else
                 {
@@ -854,7 +868,10 @@ namespace projectFrameCut.StandaloneRender
                     Log($"Picked accelerator {item.Name} : {item.AcceleratorType}");
                 }
 
-                AcceleratorsManager.ConfigureDevices(picked[0].Name, picked.Select(d => d.Name).ToArray(), multiAccel);
+                var mainDevice = string.IsNullOrWhiteSpace(mainDeviceName) ? picked[0]
+                    : devices.FirstOrDefault(d => d.Name == mainDeviceName)
+                        ?? throw new ArgumentException($"Accelerator device '{mainDeviceName}' is not available.");
+                AcceleratorsManager.ConfigureDevices(mainDevice.Name, picked.Select(d => d.Name).ToArray(), multiAccel);
                 AcceleratorsManager.IsRendering = true;
 
                 if (switches.TryGetValue("PictureResizer", out var c) && c == "hwaccel") Drawing.Processing.Resizing.PictureResizer.Default = new Render.Effect.EffectPictureResizer(EffectImplementType.HwAcceleration);
@@ -1156,6 +1173,10 @@ namespace projectFrameCut.StandaloneRender
                 return 1;
             }
 
+            ProjectCachePaths.Configure(switches.GetValueOrDefault("projectCacheRoot", Environment.GetEnvironmentVariable(ProjectCachePaths.EnvironmentKey) ?? string.Empty));
+            if (switches.TryGetValue("projectCacheDirectory", out var projectCacheDirectory)) ProjectCachePaths.Bind(workingPath, projectCacheDirectory, project.ProjectName);
+            else ProjectCachePaths.Initialize(workingPath, project.ProjectName);
+
             if (File.Exists(Path.Combine(workingPath, "timeline.json")))
             {
                 timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(workingPath, "timeline.json")), savingOpts) ?? new();
@@ -1222,9 +1243,10 @@ namespace projectFrameCut.StandaloneRender
                 int chunkIndex,
                 int chunkCount = 1,
                 Action<double, TimeSpan, double>? rangeProgress = null,
-                bool intermediateChunk = false)
+                bool intermediateChunk = false,
+                RenderClipSession? clipSession = null)
             {
-                var clips = JSONToIClips(timeline, assets, bpp);
+                var clips = clipSession?.Clips ?? JSONToIClips(timeline, assets, bpp);
 
                 switches.TryGetValue("diagReportPath", out var diagReportPath);
                 if (PictureLifecycleTracker.Enabled)
@@ -1234,7 +1256,7 @@ namespace projectFrameCut.StandaloneRender
 
                 var localBuilder = new VideoBuilder(CreateConfiguredWriter(resultPath, intermediateChunk))
                 {
-                    EnablePreview = !chunkOptions.Enabled || chunkOptions.Parallelism == 1,
+                    EnablePreview = true,
                     DoGCAfterEachWrite = GCOption > 0,
                     DisposeFrameAfterEachWrite = true,
                     StartFrame = startFrame,
@@ -1244,7 +1266,8 @@ namespace projectFrameCut.StandaloneRender
                     ForceUseDiskCache = bool.TryParse(switches.GetOrAdd("forceUseDiskCache", "false"), out var forceUseDiskCache) && forceUseDiskCache,
                     DiskCacheMaxPendingFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
                     DiskCacheMaxFrameCount = switches.TryGetValue("diskCacheMaxFrameCount", out var mfcStr) && int.TryParse(mfcStr, out var mfc) ? Math.Max(mfc, 0) : 0,
-                    DiskCacheDirectory = switches.TryGetValue("videoBuilderDiskCacheRoot", out var cacheRoot) && !string.IsNullOrWhiteSpace(cacheRoot) ? cacheRoot : null,
+                    DiskCacheDirectory = switches.TryGetValue("videoBuilderDiskCacheRoot", out var cacheRoot) && !string.IsNullOrWhiteSpace(cacheRoot)
+                        ? cacheRoot : string.IsNullOrWhiteSpace(ProjectCachePaths.RedirectRoot) ? null : ProjectCachePaths.ResolvePath(workingPath, "cache/RenderingCache"),
                 };
 
                 if (localBuilder.EnableDiskCacheRouting && switches.TryGetValue("diskCacheThreshold", out var dctStr)
@@ -1257,6 +1280,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     builder = localBuilder,
                     Clips = clips,
+                    ClipSession = clipSession,
                     ProjectRelativeWidth = project.RelativeWidth,
                     ProjectRelativeHeight = project.RelativeHeight,
                     StartFrame = startFrame,
@@ -1307,15 +1331,15 @@ namespace projectFrameCut.StandaloneRender
                 renderer = localRenderer;
                 activeChunkBuilders[chunkIndex] = localBuilder;
                 activeChunkRenderers[chunkIndex] = localRenderer;
-                long prepareStarted = logFrameTimings ? Stopwatch.GetTimestamp() : 0;
-                localRenderer.PrepareRender(cts.Token);
-                if (logFrameTimings)
-                    Log($"[Render diagnostic] Renderer initialization: {Stopwatch.GetElapsedTime(prepareStarted).TotalMilliseconds:F3} ms", "diag");
                 Stopwatch sw1 = new();
-                Log("Start render...");
-                sw1.Restart();
                 try
                 {
+                    long prepareStarted = logFrameTimings ? Stopwatch.GetTimestamp() : 0;
+                    localRenderer.PrepareRender(cts.Token);
+                    if (logFrameTimings)
+                        Log($"[Render diagnostic] Renderer initialization: {Stopwatch.GetElapsedTime(prepareStarted).TotalMilliseconds:F3} ms", "diag");
+                    Log("Start render...");
+                    sw1.Restart();
                     IPicture? cover = null;
                     try
                     {
@@ -1347,8 +1371,8 @@ namespace projectFrameCut.StandaloneRender
                 catch (Exception ex)
                 {
                     Log(ex, "Render error");
-                    localBuilder.Interrupt();
-                    ReleaseLocalResources();
+                    try { localBuilder.Interrupt(); }
+                    finally { ReleaseLocalResources(); }
                     throw;
                 }
 
@@ -1368,8 +1392,8 @@ namespace projectFrameCut.StandaloneRender
 
                 if (cts.IsCancellationRequested)
                 {
-                    localBuilder.Interrupt();
-                    ReleaseLocalResources();
+                    try { localBuilder.Interrupt(); }
+                    finally { ReleaseLocalResources(); }
                     cts.Token.ThrowIfCancellationRequested();
                 }
 
@@ -1386,13 +1410,15 @@ namespace projectFrameCut.StandaloneRender
                 {
                     if (logFrameTimings)
                         Log($"[Render diagnostic] Encoder finish/dispose: {Stopwatch.GetElapsedTime(finishStarted).TotalMilliseconds:F3} ms", "diag");
-                    ReleaseLocalResources();
+                    try { if (!localBuilder.Disposed) localBuilder.Interrupt(); }
+                    finally { ReleaseLocalResources(); }
                 }
 
                 void ReleaseLocalResources()
                 {
                     Log($"Releasing resources...");
-                    foreach (var item in clips) item?.Dispose();
+                    if (clipSession is null)
+                        foreach (var item in clips) item?.Dispose();
                     localRenderer.builder = null;
                     activeChunkBuilders.TryRemove(chunkIndex, out _);
                     activeChunkRenderers.TryRemove(chunkIndex, out _);
@@ -1421,22 +1447,29 @@ namespace projectFrameCut.StandaloneRender
                 {
                     if (completedChunkCleanup.TryRemove(segment.Index, out var cleanup)) cleanup();
                 };
-                using (var progress = logProgress ? new RenderProgressDisplay(() => activeChunkRenderers.Values.ToArray()) : null)
+                RenderClipSession? clipSession = null;
+                try
                 {
+                    using var progress = logProgress ? new RenderProgressDisplay(() => activeChunkRenderers.Values.ToArray()) : null;
                     progress?.SetProjectProgress(0, TimeSpan.Zero, 0);
                     await coordinator.RenderPendingChunksAsync(
-                        (segment, chunkPath, chunkThreads, report, token) =>
-                            composeVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, segment.Index, coordinator.ChunkCount, report, intermediateChunk: true),
+                        async (segment, chunkPath, chunkThreads, report, token) =>
+                        {
+                            clipSession ??= new RenderClipSession(JSONToIClips(timeline, assets, bpp, initialize: false));
+                            await composeVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, segment.Index,
+                                coordinator.ChunkCount, report, intermediateChunk: true, clipSession: clipSession).ConfigureAwait(false);
+                        },
                         state => progress?.SetProjectProgress(state.GlobalProgress, state.EstimatedRemaining, state.FramesPerSecond),
                         cts.Token).ConfigureAwait(false);
                 }
+                finally { clipSession?.Dispose(); }
                 IClip[] audioClips = [];
                 List<ISoundTrack> tracks = [];
                 try
                 {
                     if (target == "all")
                     {
-                        audioClips = JSONToIClips(timeline, assets, bpp);
+                        audioClips = JSONToIClips(timeline, assets, bpp, initialize: false);
                         tracks = JSONToISoundTracks(timeline, assets).ToList();
                         SoundTrackMetadata.AddMissingLegacyTracks(audioClips.Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip).ToArray(),
                             tracks, message => Log(message, "warn"));
@@ -1692,9 +1725,6 @@ namespace projectFrameCut.StandaloneRender
             bool enabled = bool.TryParse(switches.GetValueOrDefault("chunkRender", "false"), out var chunkRender) && chunkRender;
             bool resume = !bool.TryParse(switches.GetValueOrDefault("chunkResume", "true"), out var chunkResume) || chunkResume;
             bool keepFiles = bool.TryParse(switches.GetValueOrDefault("chunkKeepFiles", "false"), out var chunkKeepFiles) && chunkKeepFiles;
-            int parallelism = int.TryParse(switches.GetValueOrDefault("chunkParallelism", "1"), out var parsedParallelism)
-                ? Math.Max(1, parsedParallelism)
-                : 1;
             uint? frames = null;
             double? seconds = null;
             if (switches.TryGetValue("chunkFrames", out var chunkFramesText))
@@ -1719,7 +1749,6 @@ namespace projectFrameCut.StandaloneRender
                 Enabled = enabled,
                 ChunkFrames = frames,
                 ChunkSeconds = seconds,
-                Parallelism = parallelism,
                 Resume = resume,
                 KeepChunkFiles = keepFiles
             };
@@ -2462,8 +2491,8 @@ namespace projectFrameCut.StandaloneRender
             IVideoSource? source = null;
             try
             {
-                source = multiStream && HDRDecoderContext.IsHdrVideo(sourcePath)
-                    ? new HDRDecoderContext(sourcePath)
+                source = multiStream && HDRDecoderContextFP16.IsHdrVideo(sourcePath)
+                    ? new HDRDecoderContextFP16(sourcePath)
                     : PluginManager.CreateVideoSource(sourcePath);
                 Log($"Created decoder: {source?.TypeName ?? "(null)"}");
             }
@@ -2519,7 +2548,7 @@ namespace projectFrameCut.StandaloneRender
                     Channels = AuxiliaryVideoChannels.Alpha | AuxiliaryVideoChannels.Brightness,
                 }
                 : hwAccelEncode
-                    ? new VideoWriterHWAccel
+                    ? new VideoWriterHWAccelFP16
                     {
                         Width = srcWidth,
                         Height = srcHeight,
@@ -2529,7 +2558,7 @@ namespace projectFrameCut.StandaloneRender
                         OutputPath = outputPath,
                         BitRate = bitRate,
                     }
-                    : new VideoWriter
+                    : new VideoWriterFP16
                     {
                         Width = srcWidth,
                         Height = srcHeight,
@@ -2567,19 +2596,11 @@ namespace projectFrameCut.StandaloneRender
             {
                 try
                 {
-                    using (var frame = multiStream && source is IHDRVideoSource hdrSource
+                    using (var frame = multiStream && source is IHDRVideoSource { HasHdrContent: true } hdrSource
                         ? hdrSource.GetHDRFrame(i, hasAlpha: true)
                         : source.GetFrame(i))
                     {
-                        if (multiStream && frame.BitPerPixel != IPicture.PicturePixelMode.UShortPicture)
-                        {
-                            using var converted = frame.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
-                            writer.Append(converted);
-                        }
-                        else
-                        {
-                            writer.Append(frame);
-                        }
+                        writer.Append(frame);
                         encodedCount++;
                     }
 
@@ -2638,6 +2659,9 @@ namespace projectFrameCut.StandaloneRender
         }
 
         public static IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets, IPicture.PicturePixelMode bpp)
+            => JSONToIClips(json, assets, bpp, initialize: true);
+
+        private static IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets, IPicture.PicturePixelMode bpp, bool initialize)
         {
             var clips = json.Clips;
             if (clips is null || clips.Length == 0)
@@ -2691,7 +2715,7 @@ namespace projectFrameCut.StandaloneRender
                         throw;
                     }
                 }
-                if (clipInstance.ClipType != ClipMode.AudioClip) clipInstance.ReInit(bpp);
+                if (initialize && clipInstance.ClipType != ClipMode.AudioClip) clipInstance.ReInit(bpp);
                 clipsList.Add(clipInstance);
 
             }

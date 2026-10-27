@@ -49,29 +49,29 @@ public sealed class ExternalMaskSourceTests
         var descriptor = RenderRpcSerializer.Clone(provider.MaskSources[0]);
         descriptor.ClientId = Guid.NewGuid();
         var source = new RemoteRpcMaskSource(descriptor, provider.ProcessMaskAsync);
-        using IPicture backdrop = hdr ? new HDRPicture16bpp(2, 1) { MaximumBrightness = 1400, Brightness = [2f, 3f] }
+        using IPicture backdrop = hdr ? new HDRPicture16bpp(2, 1) { MaximumBrightness = (Half)1400, Brightness = [(Half)2f, (Half)3f] }
             : bits == 16 ? new Picture16bpp(2, 1) : new Picture8bpp(2, 1);
         if (backdrop is Picture8bpp p8)
         {
             p8.HasAlphaChannel = true;
-            p8.a = [0.25f, 0.75f];
+            p8.a = [(Half)0.25f, (Half)0.75f];
         }
         else if (backdrop is Picture16bpp p16)
         {
             p16.HasAlphaChannel = true;
-            p16.a = [0.25f, 0.75f];
+            p16.a = [(Half)0.25f, (Half)0.75f];
         }
         using var result = source.Process(backdrop, new Dictionary<string, object> { ["Amount"] = 4f }, 0.5f, CancellationToken.None);
         Assert.AreEqual(0.5f, provider.LastRequest!.Scale);
         Assert.AreEqual(4d, provider.LastRequest.Arguments["Amount"].NumberValue);
-        Assert.AreEqual(0.25f, ((float[])result.GetSpecificChannel(IPicture.ChannelId.Alpha)!)[0]);
+        Assert.AreEqual(0.25f, (float)((Half[])result.GetSpecificChannel(IPicture.ChannelId.Alpha)!)[0]);
         if (result is IPicture<byte> r8) Assert.AreEqual((byte)4, r8.r[0]);
         else Assert.AreEqual((ushort)4, ((IPicture<ushort>)result).r[0]);
         Assert.AreEqual((byte)0, ExternalVideoFrameCodec.Encode(backdrop).Red[0]);
         if (hdr)
         {
-            Assert.AreEqual(1400f, ((IHDRPicture<ushort>)result).MaximumBrightness);
-            CollectionAssert.AreEqual(new[] { 2f, 3f }, ((IHDRPicture<ushort>)result).Brightness);
+            Assert.AreEqual(1400f, (float)((IHDRPicture<ushort>)result).MaximumBrightness);
+            CollectionAssert.AreEqual(new Half[] { (Half)2, (Half)3 }, ((IHDRPicture<ushort>)result).Brightness);
         }
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();

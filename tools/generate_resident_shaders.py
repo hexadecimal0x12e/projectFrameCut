@@ -1,30 +1,20 @@
 from pathlib import Path
 import re
 
-
 root = Path(__file__).resolve().parents[1] / "projectFrameCut.Render.HwAccelEngine"
-source = (root / "Platforms/Windows/ResidentKernel.cs").read_text(encoding="utf-8")
+source = (root / "Platforms/Windows/ResidentKernel.cs").read_text(encoding="utf-8-sig")
 source = source[source.index("    private static int I("):source.rindex("\n}")]
-source = source.replace("    private static int I(float x) => (int)x;\n", "")
-source = source.replace("    private static float F(int x) => x;\n", "")
+for line in ["    private static int I(float x) => (int)x;\n", "    private static float F(int x) => x;\n", "    private static GpuHalf H(float x) => (GpuHalf)x;\n", "    private static GpuHalf HalfParameter(ArrayView<float> p, int index) => p.Cast<GpuHalf>()[index * 2];\n"]:
+    source = source.replace(line, "")
 source = source.replace("private static ", "").replace("internal static ", "")
-source = source.replace("float Read(ArrayView<float> data, int i) => data[i];",
-                        "float Read(ArrayView<float> data, int i) { return data[i]; }")
+source = re.sub(r"(\w+ \w+\([^\n]+\)) => ([^;]+);", r"\1 { return \2; }", source)
 source = re.sub(r"\bI\(", "int(", source)
 source = re.sub(r"\bF\(", "float(", source)
-for old, new in [("MathF.Abs", "abs"), ("MathF.Max", "FMax"), ("MathF.Min", "FMin"),
-                 ("MathF.Pow", "pow"), ("MathF.Sqrt", "sqrt"), ("MathF.Floor", "floor"),
-                 ("Math.Min", "IMin"), ("Math.Max", "IMax")]:
+for old, new in [("MathF.Abs", "abs"), ("MathF.Max", "FMax"), ("MathF.Min", "FMin"), ("MathF.Pow", "pow"), ("MathF.Sqrt", "sqrt"), ("MathF.Floor", "floor"), ("Math.Min", "IMin"), ("Math.Max", "IMax")]:
     source = source.replace(old, new)
-
-
-def float_literal(match):
-    value = match[0][:-1]
-    return value if "." in value or "e" in value.lower() else value + ".0"
-
-
-source = re.sub(r"\b\d+(?:\.\d*)?(?:[eE][+-]?\d+)?f\b", float_literal, source)
+source = re.sub(r"\b\d+(?:\.\d*)?(?:[eE][+-]?\d+)?f\b", lambda m: m[0][:-1] if "." in m[0] or "e" in m[0].lower() else m[0][:-1] + ".0", source)
 source = re.sub(r"\boutput\b", "dst", source)
+source = re.sub(r"\(float\)(\w+)", r"float(\1)", source)
 header = "int op = int(p[0]), sw = int(p[1]), sh = int(p[2]), w = int(p[3]), h = int(p[4]);"
 source = source.replace(header, header + "\n        int threads = op == 5 ? h * (p[14] > 0.0 ? 5 : 4) : op == 6 ? w * (p[14] > 0.0 ? 5 : 4) : w * h;\n        if (i >= threads) return;")
 helpers = """float FMin(float a, float b) { return min(a, b); }
@@ -32,43 +22,55 @@ float FMax(float a, float b) { return max(a, b); }
 int IMin(int a, int b) { return min(a, b); }
 int IMax(int a, int b) { return max(a, b); }
 """
-glsl = source.replace("ArrayView<float> data", "int data")
-glsl = glsl.replace("float Read(int data, int i) { return data[i]; }",
-                    "float Read(int data, int i) { return data == 0 ? src[i] : second[i]; }")
-glsl = glsl.replace(", ArrayView<float> p", "").replace(", c, p)", ", c)")
-glsl = glsl.replace("void Kernel(Index1D index, ArrayView<float> src, ArrayView<float> second, ArrayView<float> dst)", "void main()")
+fields = "HALF Red; HALF Green; HALF Blue; HALF Alpha; HALF Brightness; HALF Padding;"
+view = "ArrayView<ResidentKernelPixel>"
+glsl = source.replace(view + " data", "int data")
+for name in ["Red", "Green", "Blue", "Alpha", "Brightness"]:
+    glsl = glsl.replace("data[i]." + name, "(data == 0 ? src[i]." + name + " : second[i]." + name + ")")
+for name in ["Store", "StoreHalf"]:
+    glsl = glsl.replace(name + "(" + view + " dst, ", name + "(").replace(name + "(dst, ", name + "(")
+glsl = glsl.replace("Channel(" + view + " src, " + view + " second, ArrayView<float> p, ", "Channel(")
+glsl = glsl.replace("Channel(src, second, p, ", "Channel(")
+glsl = glsl.replace(", ArrayView<float> p", "").replace(", c, p)", ", c)").replace("HalfParameter(p, ", "HalfParameter(")
+glsl = glsl.replace("void Kernel(Index1D index, " + view + " src, " + view + " second, " + view + " dst)", "void main()")
 glsl = glsl.replace("int i = index;", "int i = int(gl_GlobalInvocationID.x);")
-glsl = glsl.replace("Sample(src,", "Sample(0,").replace("Sample(second,", "Sample(1,")
-glsl = glsl.replace("SamplePremultiplied(src,", "SamplePremultiplied(0,")
-metal = source.replace("ArrayView<float> data", "device const float* data").replace("ArrayView<float> p", "device const float* p")
-metal = metal.replace("void Kernel(Index1D index, ArrayView<float> src, ArrayView<float> second, ArrayView<float> dst, device const float* p)",
-                      "kernel void resident_compute(device const float* src [[buffer(0)]], device const float* second [[buffer(1)]], device const float* p [[buffer(2)]], device float* dst [[buffer(3)]], uint index [[thread_position_in_grid]])")
+for name in ["Sample", "SampleHalf", "SamplePremultiplied", "SampleHalfPremultiplied", "Read", "ReadHalf", "Luminance"]:
+    glsl = glsl.replace(name + "(src,", name + "(0,").replace(name + "(second,", name + "(1,")
+glsl = re.sub(r"\bGpuHalf\b|\bH(?=\()", "float16_t", glsl)
+glsl = "float16_t HalfParameter(int index) { return unpackFloat2x16(floatBitsToUint(p[index])).x; }\n" + glsl
+metal = source.replace(view + " data", "device const ResidentKernelPixel* data").replace(view + " dst", "device ResidentKernelPixel* dst").replace(view + " src", "device const ResidentKernelPixel* src").replace(view + " second", "device const ResidentKernelPixel* second").replace("ArrayView<float> p", "device const float* p")
+metal = metal.replace("void Kernel(Index1D index, device const ResidentKernelPixel* src, device const ResidentKernelPixel* second, device ResidentKernelPixel* dst, device const float* p)", "kernel void resident_compute(device const ResidentKernelPixel* src [[buffer(0)]], device const ResidentKernelPixel* second [[buffer(1)]], device const float* p [[buffer(2)]], device ResidentKernelPixel* dst [[buffer(3)]], uint index [[thread_position_in_grid]])")
 metal = metal.replace("int i = index;", "int i = int(index);")
+metal = re.sub(r"\bGpuHalf\b|\bH(?=\()", "half", metal)
 metal = re.sub(r"\b\d+\.\d*(?:[eE][+-]?\d+)?\b|\b\d+[eE][+-]?\d+\b", lambda m: m[0] + "f", metal)
+metal = "half HalfParameter(device const float* p, int index) { return reinterpret_cast<device const half*>(p)[index * 2]; }\n" + metal
 buffers = """layout(local_size_x = 256) in;
-layout(std430, binding = 0) readonly buffer SourceBuffer { float src[]; };
-layout(std430, binding = 1) readonly buffer SecondBuffer { float second[]; };
+struct ResidentKernelPixel { FIELDS };
+layout(std430, binding = 0) readonly buffer SourceBuffer { ResidentKernelPixel src[]; };
+layout(std430, binding = 1) readonly buffer SecondBuffer { ResidentKernelPixel second[]; };
 layout(std430, binding = 2) readonly buffer ParameterBuffer { float p[]; };
-layout(std430, binding = 3) writeonly buffer ResultBuffer { float dst[]; };
-"""
+layout(std430, binding = 3) writeonly buffer ResultBuffer { ResidentKernelPixel dst[]; };
+""".replace("FIELDS", fields.replace("HALF", "float16_t"))
 result = '''// <auto-generated>
 // Generated by tools/generate_resident_shaders.py from ResidentKernel.cs.
 namespace projectFrameCut.Render.HwAccelEngine.Effect;
 
 internal static class ResidentShaders
 {
-    internal static string OpenGL => "#version 310 es\\nprecision highp float;\\nprecision highp int;\\n" + Glsl;
-    internal static string Vulkan => "#version 450\\n" + Glsl;
+    internal static string OpenGL => "#version 310 es\\n" + Extensions + "precision highp float;\\nprecision highp int;\\n" + Glsl;
+    internal static string Vulkan => "#version 450\\n" + Extensions + Glsl;
+    private const string Extensions = "#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require\\n#extension GL_EXT_shader_16bit_storage : require\\n";
     private const string Glsl = """
 ''' + buffers + helpers + glsl + '''
 """;
     internal const string Metal = """
 #include <metal_stdlib>
 using namespace metal;
+struct ResidentKernelPixel { ''' + fields.replace("HALF", "half") + ''' };
 ''' + helpers + metal + '''
 """;
 }
 '''
-if "ArrayView" in result or "Index1D" in result or "Math." in result:
+if "ArrayView" in result or "Index1D" in result or "Math." in result or "GpuHalf" in result or "=>" in glsl or "=>" in metal:
     raise ValueError("Untranslated kernel syntax.")
-(root / "Effect/ResidentShaders.cs").write_text(result, encoding="utf-8")
+(root / "Effect/ResidentShaders.cs").write_text(result, encoding="utf-8", newline="\r\n")

@@ -22,6 +22,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public bool IsDynamic => true;
 
         public required EffectArgumentFieldType FieldType { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public object? DataFormat { get; set; }
 
         /// <summary>
         /// The binding source id: a value-provider bundle Guid, or a built-in source

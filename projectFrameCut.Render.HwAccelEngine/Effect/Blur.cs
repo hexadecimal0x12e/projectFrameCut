@@ -23,10 +23,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
             if (disposed)
                 return;
             disposed = true;
-            ReleaseNativeResources();
         }
 
-        partial void ReleaseNativeResources();
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Blur";
@@ -45,7 +43,10 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         };
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
-            { "Sigma", "float" }
+            {
+                "Sigma",
+                "float"
+            }
         };
         public string TypeName => "Blur";
         public string? BindedEffectProvidingSystemID { get; set; }
@@ -74,30 +75,6 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
-        {
-            try
-            {
-                using var scope = nativeLock.EnterScope();
-                ObjectDisposedException.ThrowIf(disposed, this);
-                float sigma = DynamicParam.Resolve(Parameters.GetValueOrDefault("Sigma"), Sigma);
-                if (sigma <= 0)
-                    return source.Clone();
-                var sw = Stopwatch.StartNew();
-                var(r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
-                FourChannelResult computeResult;
-                computeResult = ComputeBlur(r, g, b, a, source.Width, sigma);
-                var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height, computeResult.R, computeResult.G, computeResult.B, computeResult.A, sourceHasAlpha);
-                result = HwAccelEffectHelper.WithBrightness(result, source);
-                sw.Stop();
-                result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack { Elapsed = sw.Elapsed, OperationDisplayName = "Blur (GPU)", Operator = typeof(BlurEffect_HwAccel), ProcessingFuncStackTrace = new StackTrace(true), Properties = new Dictionary<string, object> { { "Sigma", sigma } } }).ToList();
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Execute Blur effect", "HwAccelEngine");
-                throw;
-            }
-        }
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight) => ResidentEffectResult.Download(EffectPictureProcessing.Render(this, source, targetWidth, targetHeight));
     }
 }

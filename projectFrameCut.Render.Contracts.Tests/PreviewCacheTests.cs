@@ -35,7 +35,7 @@ public sealed class PreviewCacheTests
         using var files = new ProjectExternalSourceTests.SourceFiles();
         var root = files.Directory("project");
         var sourcePath = Path.Combine(root, "source.png");
-        using (var picture = Picture8bpp.GenerateSolidColor(32, 32, 255, 0, 0, 1)) picture.SaveToPng(sourcePath);
+        using (var picture = Picture8bpp.GenerateSolidColor(32, 32, 255, 0, 0, Half.One)) picture.SaveToPng(sourcePath);
         var clip = new ClipDraftDTO
         {
             Id = Guid.NewGuid(), Name = "photo", FromPlugin = InternalPluginBase.InternalPluginBaseID,

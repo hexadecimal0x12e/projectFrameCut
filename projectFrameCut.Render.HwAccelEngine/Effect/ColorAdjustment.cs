@@ -23,10 +23,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
             if (disposed)
                 return;
             disposed = true;
-            ReleaseNativeResources();
         }
 
-        partial void ReleaseNativeResources();
         public string Name { get; set; } = "ColorAdjustment";
         public float Brightness { get; init; } = 1f;
         public float Contrast { get; init; } = 1f;
@@ -56,16 +54,46 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         };
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
-            { "Brightness", "float" },
-            { "Contrast", "float" },
-            { "Saturation", "float" },
-            { "Hue", "float" },
-            { "Gamma", "float" },
-            { "Vibrance", "float" },
-            { "Temperature", "float" },
-            { "Invert", "bool" },
-            { "Grayscale", "float" },
-            { "Opacity", "float" }
+            {
+                "Brightness",
+                "float"
+            },
+            {
+                "Contrast",
+                "float"
+            },
+            {
+                "Saturation",
+                "float"
+            },
+            {
+                "Hue",
+                "float"
+            },
+            {
+                "Gamma",
+                "float"
+            },
+            {
+                "Vibrance",
+                "float"
+            },
+            {
+                "Temperature",
+                "float"
+            },
+            {
+                "Invert",
+                "bool"
+            },
+            {
+                "Grayscale",
+                "float"
+            },
+            {
+                "Opacity",
+                "float"
+            }
         };
         public string TypeName => "ColorAdjustment";
         public string? BindedEffectProvidingSystemID { get; set; }
@@ -101,41 +129,6 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-        public IPicture Process(IPicture source)
-        {
-            try
-            {
-                using var scope = nativeLock.EnterScope();
-                ObjectDisposedException.ThrowIf(disposed, this);
-                float brightness = DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness);
-                float contrast = DynamicParam.Resolve(Parameters.GetValueOrDefault("Contrast"), Contrast);
-                float saturation = DynamicParam.Resolve(Parameters.GetValueOrDefault("Saturation"), Saturation);
-                float hue = DynamicParam.Resolve(Parameters.GetValueOrDefault("Hue"), Hue);
-                float gamma = DynamicParam.Resolve(Parameters.GetValueOrDefault("Gamma"), Gamma);
-                float vibrance = DynamicParam.Resolve(Parameters.GetValueOrDefault("Vibrance"), Vibrance);
-                float temperature = DynamicParam.Resolve(Parameters.GetValueOrDefault("Temperature"), Temperature);
-                bool invert = DynamicParam.Resolve(Parameters.GetValueOrDefault("Invert"), Invert);
-                float grayscale = DynamicParam.Resolve(Parameters.GetValueOrDefault("Grayscale"), Grayscale);
-                float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
-                bool allNoop = Math.Abs(brightness - 1f) < float.Epsilon && Math.Abs(contrast - 1f) < float.Epsilon && Math.Abs(saturation - 1f) < float.Epsilon && Math.Abs(hue) < float.Epsilon && Math.Abs(gamma - 1f) < float.Epsilon && Math.Abs(vibrance) < float.Epsilon && Math.Abs(temperature) < float.Epsilon && !invert && Math.Abs(grayscale) < float.Epsilon && Math.Abs(opacity - 1f) < float.Epsilon;
-                if (allNoop)
-                    return source;
-                var sw = Stopwatch.StartNew();
-                float maxVal = source.BitPerPixel == 8 ? 255f : 65535f;
-                var(r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
-                FourChannelResult computeResult;
-                computeResult = ComputeColorAdjustment(r, g, b, a, source.Width, source.Height, brightness, contrast, saturation, hue, gamma, vibrance, temperature, invert, grayscale, opacity, maxVal);
-                var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height, computeResult.R, computeResult.G, computeResult.B, computeResult.A, sourceHasAlpha || opacity < 1f);
-                result = HwAccelEffectHelper.WithBrightness(result, source);
-                sw.Stop();
-                result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack { Elapsed = sw.Elapsed, OperationDisplayName = "ColorAdjustment (GPU)", Operator = typeof(ColorAdjustmentEffect_HwAccel), ProcessingFuncStackTrace = new StackTrace(true), Properties = new Dictionary<string, object> { { "Brightness", brightness }, { "Contrast", contrast }, { "Saturation", saturation }, { "Hue", hue }, { "Gamma", gamma }, { "Vibrance", vibrance }, { "Temperature", temperature }, { "Invert", invert }, { "Grayscale", grayscale }, { "Opacity", opacity } } }).ToList();
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Execute ColorAdjustment effect", "HwAccelEngine");
-                throw;
-            }
-        }
+        public IPicture Process(IPicture source) => ResidentEffectResult.Download(EffectPictureProcessing.Render(this, source, source.Width, source.Height));
     }
 }

@@ -31,24 +31,24 @@ internal sealed class MetalResidentPictureContext : ResidentPictureContext
         return MetalExecutionHelper.Device.CreateComputePipelineState(function, out error) ?? throw new InvalidOperationException(error?.LocalizedDescription);
     }
 
-    protected override ResidentBuffer CreateBuffer(int length) => new Buffer(MetalExecutionHelper.AllocBuffer(length), length);
-    protected override void WriteBuffer(ResidentBuffer buffer, float[] values) => Marshal.Copy(values, 0, ((Buffer)buffer).Data.Contents, values.Length);
-    protected override float[] Read(ResidentBuffer buffer)
+    protected override ResidentBuffer CreateBuffer(int length) => new Buffer(MetalExecutionHelper.Device.CreateBuffer((nuint)length, MTLResourceOptions.StorageModeShared) ?? throw new InvalidOperationException("Could not allocate GPU image."), length);
+    protected override void WriteBuffer(ResidentBuffer buffer, byte[] values) => Marshal.Copy(values, 0, ((Buffer)buffer).Data.Contents, values.Length);
+    protected override byte[] Read(ResidentBuffer buffer)
     {
         var b = (Buffer)buffer;
-        var values = new float[b.Length];
+        var values = new byte[b.Length];
         Marshal.Copy(b.Data.Contents, values, 0, values.Length);
         return values;
     }
 
     protected override ResidentBuffer Dispatch(ResidentBuffer source, ResidentBuffer second, float[] parameters, int count)
     {
-        int length = checked((int)parameters[3] * (int)parameters[4] * (parameters[14] > 0 ? 5 : 4));
+        int length = checked((int)parameters[3] * (int)parameters[4] * ResidentPixel.Size);
         BeginSubmission();
         var output = RentBuffer(length);
         try
         {
-            using var p = UploadBuffer(parameters);
+            using var p = UploadBuffer(ResidentPixel.PackParameters(parameters));
             var cb = queue.CommandBuffer() ?? throw new InvalidOperationException("Could not create picture command buffer.");
             KeepUntilComplete(cb);
             using var encoder = cb.ComputeCommandEncoder ?? throw new InvalidOperationException("Could not create picture compute encoder.");

@@ -112,6 +112,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns></returns>
         public IEffect WithParameters(Dictionary<string, object> parameters);
 
+        public virtual IEffect WithPictureType<TPicture>() where TPicture : IPicture => TypedPictureEffect.Create<TPicture>(this);
+
         /// <summary>
         /// Get the info of this effect. Used in MCP calling in agent.
         /// </summary>

@@ -9,13 +9,13 @@ namespace projectFrameCut.Render.EncodeAndDecode;
 /// <summary>
 /// Reads a projectFrameCut encrypted video without creating a decrypted temporary file.
 /// </summary>
-public sealed class EncryptedVideoDecoderContext : IVideoSource<byte>
+public sealed class EncryptedVideoDecoderContext : IVideoSource<Half>
 {
     public bool IsDeterministic => true;
 
     private readonly string _sourceName;
     private readonly Func<string, byte[]> _keyProvider;
-    private readonly DecoderContext8Bit _decoder;
+    private readonly DecoderContextFP16 _decoder;
 
     public EncryptedVideoDecoderContext(string path, Func<string, byte[]> keyProvider)
     {
@@ -73,18 +73,18 @@ public sealed class EncryptedVideoDecoderContext : IVideoSource<byte>
     public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) =>
         new EncryptedVideoDecoderContext(source, length, _keyProvider, leaveOpen);
 
-    public IPicture<byte> GetFrame(uint targetFrame) => _decoder.GetFrame(targetFrame);
+    public IPicture<Half> GetFrame(uint targetFrame) => _decoder.GetFrame(targetFrame);
 
-    public IPicture<byte> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth,
+    public IPicture<Half> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth,
         int sourceHeight, int targetWidth, int targetHeight) =>
         _decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight);
 
-    public IPicture<byte> GetFrame(uint targetFrame, int targetWidth, int targetHeight) =>
+    public IPicture<Half> GetFrame(uint targetFrame, int targetWidth, int targetHeight) =>
         _decoder.GetFrame(targetFrame, targetWidth, targetHeight);
 
     public void Dispose() => _decoder.Dispose();
 
-    private static DecoderContext8Bit OpenFile(string path, Func<string, byte[]> keyProvider)
+    private static DecoderContextFP16 OpenFile(string path, Func<string, byte[]> keyProvider)
     {
         var source = File.OpenRead(path);
         try
@@ -98,7 +98,7 @@ public sealed class EncryptedVideoDecoderContext : IVideoSource<byte>
         }
     }
 
-    private static DecoderContext8Bit OpenStream(Stream source, long length, string sourceName,
+    private static DecoderContextFP16 OpenStream(Stream source, long length, string sourceName,
         Func<string, byte[]> keyProvider, bool leaveOpen)
     {
         EncryptedReadStream? decrypted = null;
@@ -112,7 +112,7 @@ public sealed class EncryptedVideoDecoderContext : IVideoSource<byte>
             byte[] key = keyProvider(sourceName) ??
                 throw new CryptographicException("The encrypted video key provider returned null.");
             decrypted = new EncryptedReadStream(source, key, leaveOpen);
-            return new DecoderContext8Bit(decrypted, decrypted.Length);
+            return new DecoderContextFP16(decrypted, decrypted.Length);
         }
         catch
         {

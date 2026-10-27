@@ -107,14 +107,14 @@ internal sealed class VectorHandlePreviewView : GraphicsView, IDrawable
         canvas.Scale(dirtyRect.Width / width, dirtyRect.Height / height);
         foreach (var (path, s, closed) in paths)
         {
-            if (closed && s.FillA > 0)
+            if (closed && (float)s.FillA > 0)
             {
-                canvas.FillColor = Color.FromRgba(s.FillR / 65535f, s.FillG / 65535f, s.FillB / 65535f, Math.Clamp(s.FillA, 0, 1));
+                canvas.FillColor = Color.FromRgba(s.FillR / 65535f, s.FillG / 65535f, s.FillB / 65535f, Math.Clamp((float)s.FillA, 0, 1));
                 canvas.FillPath(path, WindingMode.NonZero);
             }
-            if (s.StrokeA > 0 && s.Thickness > 0)
+            if ((float)s.StrokeA > 0 && s.Thickness > 0)
             {
-                canvas.StrokeColor = Color.FromRgba(s.StrokeR / 65535f, s.StrokeG / 65535f, s.StrokeB / 65535f, Math.Clamp(s.StrokeA, 0, 1));
+                canvas.StrokeColor = Color.FromRgba(s.StrokeR / 65535f, s.StrokeG / 65535f, s.StrokeB / 65535f, Math.Clamp((float)s.StrokeA, 0, 1));
                 canvas.StrokeSize = s.Thickness;
                 canvas.DrawPath(path);
             }

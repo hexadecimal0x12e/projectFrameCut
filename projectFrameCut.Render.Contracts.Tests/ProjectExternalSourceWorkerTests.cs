@@ -28,7 +28,7 @@ public sealed class ProjectExternalSourceWorkerTests
         Assert.AreEqual(1, client.MaskSources.Count);
         using var backdrop = new projectFrameCut.Drawing.Base.Picture.HDRPicture16bpp(2, 1)
         {
-            HasAlphaChannel = true, a = [0.5f, 1f], MaximumBrightness = 1200, Brightness = [2f, 3f],
+            HasAlphaChannel = true, a = [(Half)0.5f, Half.One], MaximumBrightness = (Half)1200, Brightness = [(Half)2f, (Half)3f],
         };
         var request = new ExternalMaskSourceProcessRequest
         {
@@ -40,7 +40,7 @@ public sealed class ProjectExternalSourceWorkerTests
         Assert.AreEqual(0.5f, provider.LastRequest!.Scale);
         CollectionAssert.AreEqual(request.Backdrop.Alpha, result.Alpha);
         CollectionAssert.AreEqual(request.Backdrop.Brightness, result.Brightness);
-        Assert.AreEqual(1200f, result.MaximumBrightness);
+        Assert.AreEqual(1200f, (float)result.MaximumBrightness);
         Assert.IsFalse(Directory.EnumerateFiles(Path.Combine(root, "payloads")).Any());
         provider.Fail = true;
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await client.ProcessMaskAsync(request));
@@ -188,11 +188,11 @@ public sealed class ProjectExternalSourceWorkerTests
         Assert.AreEqual(3, provider.LastRead!.SourceX);
         Assert.AreEqual(4, provider.LastRead.SourceY);
         Assert.AreEqual(7u, provider.LastRead.TargetFrame);
-        Assert.AreEqual(0.5f, BitConverter.ToSingle(frame.Alpha));
+        Assert.AreEqual(0.5f, (float)BitConverter.ToHalf(frame.Alpha));
         if (hdr)
         {
-            Assert.AreEqual(1000f, frame.MaximumBrightness);
-            Assert.AreEqual(2f, BitConverter.ToSingle(frame.Brightness));
+            Assert.AreEqual(1000f, (float)frame.MaximumBrightness);
+            Assert.AreEqual(2f, (float)BitConverter.ToHalf(frame.Brightness));
             Assert.AreEqual((ushort)12345, BinaryPrimitives.ReadUInt16LittleEndian(frame.Red));
         }
         else Assert.AreEqual((byte)123, frame.Red[0]);
@@ -301,7 +301,7 @@ public sealed class ProjectExternalSourceWorkerTests
             {
                 Width = request.TargetWidth, Height = request.TargetHeight, BitsPerChannel = bits,
                 Red = red, Green = red.ToArray(), Blue = red.ToArray(),
-                Alpha = request.HasAlpha ? Floats(pixels, 0.5f) : [], Brightness = request.RequestHdr ? Floats(pixels, 2f) : [], MaximumBrightness = 1000,
+                Alpha = request.HasAlpha ? Halves(pixels, (Half)0.5f) : [], Brightness = request.RequestHdr ? Halves(pixels, (Half)2) : [], MaximumBrightness = (Half)1000,
             });
         }
         public ValueTask ReleaseAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default)
@@ -309,10 +309,10 @@ public sealed class ProjectExternalSourceWorkerTests
             if (instances.Remove(request.InstanceId)) Released++;
             return ValueTask.CompletedTask;
         }
-        private static byte[] Floats(int count, float value)
+        private static byte[] Halves(int count, Half value)
         {
-            var bytes = new byte[count * 4];
-            for (var i = 0; i < count; i++) BitConverter.TryWriteBytes(bytes.AsSpan(i * 4), value);
+            var bytes = new byte[count * 2];
+            for (var i = 0; i < count; i++) BitConverter.TryWriteBytes(bytes.AsSpan(i * 2), value);
             return bytes;
         }
     }

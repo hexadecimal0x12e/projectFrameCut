@@ -39,6 +39,9 @@ public sealed class ConditionComputeNodeEffectProvider : EffectProviderBase, IMu
             [FalseOutputKey] = Field(FalseOutputKey, EffectArgumentFieldType.Any, ""),
         };
 
+    public override object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+        isInput ? base.ResolveDataFormat(fieldId, true, context) : context.InputDataFormats.GetValueOrDefault(PrimaryInputAnchorKey);
+
     public override EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context) =>
         isInput && fieldId == ConditionKey ? EffectArgumentFieldType.Boolean
             : context.InputTypes.GetValueOrDefault(PrimaryInputAnchorKey, EffectArgumentFieldType.Any);

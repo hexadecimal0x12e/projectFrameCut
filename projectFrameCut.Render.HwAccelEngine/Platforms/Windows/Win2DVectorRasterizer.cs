@@ -16,7 +16,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
     /// <summary>
     /// Win2D (Direct2D) based vector rasterizer. Draws the vector picture onto an
     /// offscreen <see cref="CanvasRenderTarget"/> using the GPU rasterizer built into
-    /// Direct2D, then reads the pixels back into a <see cref="Picture16bpp"/>.
+    /// Direct2D, then reads the pixels back into a <see cref="PictureFP16"/>.
     /// Preferred over the ILGPU compute path on Windows; callers should fall back to
     /// <see cref="ILGpuVectorRasterizer"/> when this throws.
     /// </summary>
@@ -74,14 +74,14 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                 throw new InvalidOperationException(
                     $"Requested size {width}x{height} exceeds the Direct2D bitmap limit of {device.MaximumBitmapSizeInPixels}px.");
 
-            // Prefer a 16-bit-per-channel target to preserve Picture16bpp precision;
+            // Prefer a 16-bit-per-channel target to preserve PictureFP16 precision;
             // fall back to 8-bit BGRA when the hardware doesn't support it.
             CanvasRenderTarget rt;
             bool sixteenBit;
             try
             {
                 rt = new CanvasRenderTarget(device, width, height, 96f,
-                    DirectXPixelFormat.R16G16B16A16UIntNormalized, CanvasAlphaMode.Premultiplied);
+                    DirectXPixelFormat.R16G16B16A16Float, CanvasAlphaMode.Premultiplied);
                 sixteenBit = true;
             }
             catch (Exception)
@@ -192,8 +192,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         private static Vector4 StraightColor(ushort r, ushort g, ushort b, float a)
             => new(r / 65535f, g / 65535f, b / 65535f, a);
 
-        private static Vector4 StrokeColor(VectorSegment s) => StraightColor(s.StrokeR, s.StrokeG, s.StrokeB, s.StrokeA);
-        private static Vector4 FillColor(VectorSegment s) => StraightColor(s.FillR, s.FillG, s.FillB, s.FillA);
+        private static Vector4 StrokeColor(VectorSegment s) => StraightColor(s.StrokeR, s.StrokeG, s.StrokeB, (float)s.StrokeA);
+        private static Vector4 FillColor(VectorSegment s) => StraightColor(s.FillR, s.FillG, s.FillB, (float)s.FillA);
 
         /// <summary>Solid brush carrying the full 16-bit color precision via ColorHdr.</summary>
         private static CanvasSolidColorBrush Brush(CanvasDrawingSession ds, Vector4 color)
@@ -202,8 +202,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         private static CanvasSolidColorBrush StrokeBrush(CanvasDrawingSession ds, VectorSegment s) => Brush(ds, StrokeColor(s));
         private static CanvasSolidColorBrush FillBrush(CanvasDrawingSession ds, VectorSegment s) => Brush(ds, FillColor(s));
 
-        private static bool HasStroke(VectorSegment s) => s.Thickness > 0f && s.StrokeA > 0f;
-        private static bool HasFill(VectorSegment s) => s.FillA > 0f;
+        private static bool HasStroke(VectorSegment s) => s.Thickness > 0f && s.StrokeA > Half.Zero;
+        private static bool HasFill(VectorSegment s) => s.FillA > Half.Zero;
 
         /// <summary>Round caps/joins to match the distance-to-segment stroke model of the ILGPU/CPU paths.</summary>
         private static readonly CanvasStrokeStyle s_roundStroke = new()
@@ -405,30 +405,30 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         // Pixel read-back
         // -----------------------------------------------------------------
 
-        private static Picture16bpp ReadBack(CanvasRenderTarget rt, int width, int height,
+        private static PictureFP16 ReadBack(CanvasRenderTarget rt, int width, int height,
             bool sixteenBit, bool transparentBackground)
         {
             var bytes = rt.GetPixelBytes();
             int pixels = width * height;
 
-            var outR = new ushort[pixels];
-            var outG = new ushort[pixels];
-            var outB = new ushort[pixels];
-            var outA = transparentBackground ? new float[pixels] : null;
+            var outR = new Half[pixels];
+            var outG = new Half[pixels];
+            var outB = new Half[pixels];
+            var outA = transparentBackground ? new Half[pixels] : null;
 
             if (sixteenBit)
             {
-                // R16G16B16A16UIntNormalized, premultiplied.
+                // RGBA16Float, premultiplied.
                 Parallel.For(0, height, y =>
                 {
                     var span = System.Runtime.InteropServices.MemoryMarshal
-                        .Cast<byte, ushort>(bytes.AsSpan(y * width * 8, width * 8));
+                        .Cast<byte, Half>(bytes.AsSpan(y * width * 8, width * 8));
                     int rowBase = y * width;
                     for (int x = 0; x < width; x++)
                     {
                         int i = rowBase + x;
                         int o = x * 4;
-                        ushort r = span[o + 0], g = span[o + 1], b = span[o + 2], a = span[o + 3];
+                        Half r = span[o + 0], g = span[o + 1], b = span[o + 2], a = span[o + 3];
                         if (outA is null)
                         {
                             // Opaque background: alpha is 1 everywhere.
@@ -436,14 +436,13 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                         }
                         else
                         {
-                            float af = a / 65535f;
-                            outA[i] = af;
-                            if (a > 0)
+                            outA[i] = a;
+                            if (a > Half.Zero)
                             {
                                 // Un-premultiply to straight alpha.
-                                outR[i] = (ushort)Math.Min(65535, r * 65535L / a);
-                                outG[i] = (ushort)Math.Min(65535, g * 65535L / a);
-                                outB[i] = (ushort)Math.Min(65535, b * 65535L / a);
+                                outR[i] = PictureFP16.Unit((float)r / (float)a);
+                                outG[i] = PictureFP16.Unit((float)g / (float)a);
+                                outB[i] = PictureFP16.Unit((float)b / (float)a);
                             }
                         }
                     }
@@ -463,19 +462,19 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                         byte b8 = bytes[o + 0], g8 = bytes[o + 1], r8 = bytes[o + 2], a8 = bytes[o + 3];
                         if (outA is null)
                         {
-                            outR[i] = (ushort)(r8 * 257);
-                            outG[i] = (ushort)(g8 * 257);
-                            outB[i] = (ushort)(b8 * 257);
+                            outR[i] = (Half)(r8 / 255f);
+                            outG[i] = (Half)(g8 / 255f);
+                            outB[i] = (Half)(b8 / 255f);
                         }
                         else
                         {
                             float af = a8 / 255f;
-                            outA[i] = af;
+                            outA[i] = (Half)af;
                             if (a8 > 0)
                             {
-                                outR[i] = (ushort)Math.Min(65535, r8 * 255 * 257 / a8);
-                                outG[i] = (ushort)Math.Min(65535, g8 * 255 * 257 / a8);
-                                outB[i] = (ushort)Math.Min(65535, b8 * 255 * 257 / a8);
+                                outR[i] = PictureFP16.Unit((float)r8 / a8);
+                                outG[i] = PictureFP16.Unit((float)g8 / a8);
+                                outB[i] = PictureFP16.Unit((float)b8 / a8);
                             }
                         }
                     }
@@ -487,11 +486,11 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             {
                 foreach (var a in outA)
                 {
-                    if (a < 1f) { hasAlpha = true; break; }
+                    if (a < Half.One) { hasAlpha = true; break; }
                 }
             }
 
-            return new Picture16bpp(width, height)
+            return new PictureFP16(width, height)
             {
                 r = outR,
                 g = outG,

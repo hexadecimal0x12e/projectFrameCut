@@ -23,7 +23,7 @@ public class SubtitleData
     {
         Text = "", FontName = "HarmonyOS Sans SC", FontSize = 48,
         FillR = ushort.MaxValue, FillG = ushort.MaxValue, FillB = ushort.MaxValue,
-        StrokeA = 1, StrokeThickness = 2, Alignment = TextAlignment.Center
+        StrokeA = Half.One, StrokeThickness = 2, Alignment = TextAlignment.Center
     };
     public float BottomMargin { get; set; } = 60;
 

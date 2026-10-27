@@ -25,7 +25,7 @@ public class RemoteVideoSource : IVideoSource
         => descriptor.SupportsHdr ? new RemoteHdrVideoSource(session, descriptor) : new RemoteVideoSource(session, descriptor);
 
     public string TypeName => _descriptor.TypeName;
-    public int? ResultBitPerPixel => _descriptor.HasKnownResultBitsPerPixel ? _descriptor.ResultBitsPerPixel : null;
+    public int? ResultBitPerPixel => IPicture.PicturePixelMode.Float16Picture;
     public bool AllowCachingResult => _descriptor.AllowCachingResult;
     public string[] PreferredExtension => _descriptor.PreferredExtensions.ToArray();
     public uint Index { get; set; }
@@ -148,11 +148,11 @@ public sealed class RemoteHdrVideoSource : RemoteVideoSource, IHDRVideoSource
     internal RemoteHdrVideoSource(IPluginIsolationSession session, IsolationVideoSourceDescriptor descriptor, IsolationPayloadLease? resource = null)
         : base(session, descriptor, resource) { }
 
-    public HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false)
-        => (HDRPicture16bpp)ReadFrame(new() { State = State(), TargetFrame = targetFrame, RequestHdr = true, HasAlpha = hasAlpha });
+    public HDRPictureFP16 GetHDRFrame(uint targetFrame, bool hasAlpha = false)
+        => (HDRPictureFP16)ReadFrame(new() { State = State(), TargetFrame = targetFrame, RequestHdr = true, HasAlpha = hasAlpha });
 
-    public HDRPicture16bpp GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false)
-        => (HDRPicture16bpp)ReadFrame(new()
+    public HDRPictureFP16 GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false)
+        => (HDRPictureFP16)ReadFrame(new()
         {
             State = State(),
             TargetFrame = targetFrame,

@@ -95,6 +95,7 @@ public sealed class RenderWorkerService : Service
         if (_workers.ContainsKey(socketPath)) return;
 
         var dataRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraDataRoot);
+        projectFrameCut.Shared.ProjectCachePaths.Configure(intent.GetStringExtra(projectFrameCut.Shared.ProjectCachePaths.EnvironmentKey));
         if (string.IsNullOrWhiteSpace(dataRoot)) dataRoot = MauiProgram.BasicDataPath;
         var ffmpegRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraFfmpegRoot) ?? string.Empty;
         var independent = intent.GetBooleanExtra(AndroidRenderWorkerController.ExtraIndependent, false);
@@ -136,6 +137,7 @@ public sealed class RenderWorkerService : Service
         {
             "render",
             $"--project={options.ProjectRoot}",
+            $"--projectCacheDirectory={(string.IsNullOrWhiteSpace(options.CacheRoot) ? projectFrameCut.Shared.ProjectCachePaths.Initialize(options.ProjectRoot, options.ProjectName) : options.CacheRoot)}",
             $"--output={options.OutputPath}",
             $"--output_options={options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}",
             $"--finalVideoBitRate={options.FinalVideoBitRate.GetValueOrDefault()}",

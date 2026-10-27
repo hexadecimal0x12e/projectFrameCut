@@ -246,15 +246,15 @@ internal static class ExternalRpcSourceClient
                     BinaryPrimitives.WriteUInt16LittleEndian(frame.Blue.AsSpan(offset), (ushort)(((value + 170) % 256) * 257));
                 }
             }
-            if (alpha) frame.Alpha = CreateFloatPlane(pixels, 1f);
-            if (hdr) { frame.Brightness = CreateFloatPlane(pixels, 1f); frame.MaximumBrightness = 1000; }
+            if (alpha) frame.Alpha = CreateHalfPlane(pixels, Half.One);
+            if (hdr) { frame.Brightness = CreateHalfPlane(pixels, Half.One); frame.MaximumBrightness = (Half)1000; }
             return frame;
         }
 
-        private static byte[] CreateFloatPlane(int length, float value)
+        private static byte[] CreateHalfPlane(int length, Half value)
         {
-            var result = new byte[length * sizeof(float)];
-            for (var i = 0; i < length; i++) BitConverter.TryWriteBytes(result.AsSpan(i * sizeof(float)), value);
+            var result = new byte[length * sizeof(ushort)];
+            for (var i = 0; i < length; i++) BitConverter.TryWriteBytes(result.AsSpan(i * sizeof(ushort)), value);
             return result;
         }
     }

@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
@@ -231,8 +231,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
 
     public interface IHDRVideoSource : IVideoSource
     {
-        HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false);
-        HDRPicture16bpp GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false);
+        bool HasHdrContent => true;
+        HDRPictureFP16 GetHDRFrame(uint targetFrame, bool hasAlpha = false);
+        HDRPictureFP16 GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false);
     }
 
 }

@@ -44,7 +44,7 @@ public sealed partial class RenderBackendService
                             using var frame = source.GetFrame((uint)frameIndex);
                             using var resized = frame.Resize(request.Width, Math.Max(1, (int)((double)frame.Height * request.Width / frame.Width)), false);
                             temporaryPath = _artifacts.CreateTemporaryPath(path);
-                            if (resized is IHDRPicture<ushort> hdr)
+                            if (resized is IHDRPicture<Half> hdr)
                             {
                                 using var sdr = hdr.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
                                 sdr.SaveToPng(temporaryPath);

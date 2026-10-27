@@ -640,7 +640,7 @@ public partial class DraftPage
             TargetDecoder = clip.ClipType == ClipMode.VideoClip ? (clip.ExtraData.GetValueOrDefault("TargetDecoder")
                 ?? clip.ExtraData.GetValueOrDefault("targetdecoder"))?.ToString() ?? "auto" : null,
             ResolvedDecoder = (GetLoadedClipInstance(clip.Id) as VideoClip)?.DecoderName,
-            VideoDecoderOptions = clip.ClipType == ClipMode.VideoClip ? new[] { "auto", "DecoderContext8Bit", "DecoderContextHW", "DecoderContext16Bit", "HDRDecoderContext" } : null,
+            VideoDecoderOptions = clip.ClipType == ClipMode.VideoClip ? new[] { "auto", "DecoderContextFP16", "DecoderContextHWFP16", "HDRDecoderContextFP16" } : null,
             HDRBrightnessOffset = clip.ClipType == ClipMode.VideoClip ? (double?)GuiMetadataNumber(clip, "HDRBrightnessOffset") : null,
             AudioClipId = audio?.Id,
             AudioEnabled = audio is null ? (bool?)null : SoundTrackMetadata.ReadBool(audio.ExtraData, SoundTrackMetadata.EnabledKey, true),

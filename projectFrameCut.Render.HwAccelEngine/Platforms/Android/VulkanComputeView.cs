@@ -7,6 +7,7 @@ using Silk.NET.Shaderc;
 using Silk.NET.Vulkan;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using static projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView;
@@ -52,6 +53,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         private OutputElementType _outputElementType;
         private ShaderKind _shaderKind;
         private bool _initialized;
+        private bool _halfEnabled;
         private bool _vulkanComputeDisabled;
         private string? _disableReason;
 
@@ -231,9 +233,20 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
         private void InitializeVulkan()
         {
+            bool requiresHalf = _shaderSource.Contains("float16_t", StringComparison.Ordinal);
+            uint apiVersion = Vk.MakeVersion(1, 0, 0);
+            if (requiresHalf)
+            {
+                uint supportedVersion = 0;
+                Check(_vk.EnumerateInstanceVersion(&supportedVersion), "query Vulkan version");
+                if (supportedVersion < Vk.MakeVersion(1, 1, 0))
+                    throw new NotSupportedException("Half channels require Vulkan 1.1 or later.");
+                apiVersion = Math.Min(supportedVersion, (uint)Vk.MakeVersion(1, 2, 0));
+            }
             var applicationInfo = new ApplicationInfo
             {
                 SType = StructureType.ApplicationInfo,
+                ApiVersion = apiVersion,
             };
 
             var instanceCreateInfo = new InstanceCreateInfo
@@ -270,14 +283,45 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 PQueuePriorities = pQueuePriority,
             };
 
+            var storage16 = new PhysicalDevice16BitStorageFeatures { SType = StructureType.PhysicalDevice16BitStorageFeatures };
+            var float16 = new PhysicalDeviceShaderFloat16Int8Features { SType = StructureType.PhysicalDeviceShaderFloat16Int8Features };
+            nint halfExtension = 0;
+            if (requiresHalf)
+            {
+                storage16.PNext = &float16;
+                var features = new PhysicalDeviceFeatures2 { SType = StructureType.PhysicalDeviceFeatures2, PNext = &storage16 };
+                _vk.GetPhysicalDeviceFeatures2(_physicalDevice, &features);
+                if (!storage16.StorageBuffer16BitAccess || !float16.ShaderFloat16)
+                    throw new NotSupportedException("Vulkan requires shaderFloat16 and storageBuffer16BitAccess for Half channels.");
+                storage16 = new() { SType = StructureType.PhysicalDevice16BitStorageFeatures, PNext = &float16, StorageBuffer16BitAccess = true };
+                float16 = new() { SType = StructureType.PhysicalDeviceShaderFloat16Int8Features, ShaderFloat16 = true };
+                PhysicalDeviceProperties properties = default;
+                _vk.GetPhysicalDeviceProperties(_physicalDevice, &properties);
+                if (properties.ApiVersion < Vk.MakeVersion(1, 1, 0))
+                    throw new NotSupportedException("Half channels require a Vulkan 1.1 device or later.");
+                if (Math.Min(properties.ApiVersion, apiVersion) < Vk.MakeVersion(1, 2, 0))
+                    halfExtension = Marshal.StringToCoTaskMemUTF8("VK_KHR_shader_float16_int8");
+            }
+            byte* extensionName = (byte*)halfExtension;
             var deviceCreateInfo = new DeviceCreateInfo
             {
                 SType = StructureType.DeviceCreateInfo,
+                PNext = requiresHalf ? &storage16 : null,
+                EnabledExtensionCount = halfExtension != 0 ? 1u : 0u,
+                PpEnabledExtensionNames = halfExtension != 0 ? &extensionName : null,
                 QueueCreateInfoCount = 1,
                 PQueueCreateInfos = &queueCreateInfo,
             };
 
-            Check(_vk.CreateDevice(_physicalDevice, in deviceCreateInfo, null, out _device), "create logical device");
+            try
+            {
+                Check(_vk.CreateDevice(_physicalDevice, in deviceCreateInfo, null, out _device), "create logical device");
+                _halfEnabled = requiresHalf;
+            }
+            finally
+            {
+                if (halfExtension != 0) Marshal.FreeCoTaskMem(halfExtension);
+            }
 
             _vk.GetDeviceQueue(_device, _queueFamilyIndex, 0, out _queue);
 
@@ -590,6 +634,11 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
             try
             {
+                if (_shaderSource.Contains("float16_t", StringComparison.Ordinal))
+                {
+                    if (!_halfEnabled) throw new NotSupportedException("Vulkan context was created without Half support.");
+                    _shaderc.CompileOptionsSetTargetEnv(options, TargetEnv.Vulkan, (uint)EnvVersion.Vulkan11);
+                }
                 var sourceSize = (nuint)Encoding.UTF8.GetByteCount(_shaderSource);
                 var result = _shaderc.CompileIntoSpv(compiler, _shaderSource, sourceSize, _shaderKind, "shader.glsl", "main", options);
                 if (result == null)

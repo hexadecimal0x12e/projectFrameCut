@@ -7,8 +7,12 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ColorAdjustmentEffect_IPicture : IColorAdjustEffect
+    public class ColorAdjustmentEffect_IPicture : ColorAdjustmentEffect<IPicture> { }
+
+    public partial class ColorAdjustmentEffect<TPicture> : IColorAdjustEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new ColorAdjustmentEffect<T>();
+
         public bool IsDeterministic => true;
 
         public bool Enabled { get; set; } = true;
@@ -66,7 +70,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            var effect = new ColorAdjustmentEffect_IPicture
+            var effect = new ColorAdjustmentEffect<TPicture>
             {
                 Brightness = DynamicParam.ToFloat(parameters.GetValueOrDefault("Brightness")),
                 Contrast = DynamicParam.ToFloat(parameters.GetValueOrDefault("Contrast")),
@@ -85,7 +89,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Process(IPicture source)
+        public IPicture Process(TPicture source)
         {
             var p = new AdjustmentParams(
                 DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness),
@@ -99,7 +103,10 @@ namespace projectFrameCut.Render.Effect
                 DynamicParam.Resolve(Parameters.GetValueOrDefault("Grayscale"), Grayscale),
                 DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity));
             var sw = Stopwatch.StartNew();
-            IPicture result = source switch
+            IPicture result = source is IPicture<Half> fp ? ProcessFP16(fp, p)
+                : PictureCalculation<TPicture>.Is8 ? ProcessInternal((IPicture<byte>)(object)source, p)
+                : PictureCalculation<TPicture>.Is16 ? ProcessInternal((IPicture<ushort>)(object)source, p)
+                : source switch
             {
                 IPicture<byte> p8 => ProcessInternal(p8, p),
                 IPicture<ushort> p16 => ProcessInternal(p16, p),
@@ -122,7 +129,7 @@ namespace projectFrameCut.Render.Effect
             IPicture<byte> current = source;
 
             if (p.Brightness != 1f)
-                current = BrightnessEffect.Process(current, p.Brightness - 1f);
+                current = BrightnessEffect.Process(current, (Half)(p.Brightness - 1f));
             if (p.Contrast != 1f)
                 current = ContrastEffect.Process(current, p.Contrast);
             if (p.Saturation != 1f)
@@ -130,7 +137,7 @@ namespace projectFrameCut.Render.Effect
             if (p.Hue != 0f)
                 current = HueRotationEffect.Process(current, p.Hue);
             if (p.Gamma != 1f)
-                current = BlurEffect.Process(current, (p.Gamma - 1f) * 0.5f);
+                current = projectFrameCut.Drawing.Effect.BlurEffect.Process(current, (p.Gamma - 1f) * 0.5f);
             if (p.Vibrance != 0f)
                 current = SaturationEffect.Process(current, 1f + p.Vibrance * 0.5f);
             if (p.Temperature != 0f)
@@ -145,7 +152,7 @@ namespace projectFrameCut.Render.Effect
                     current = SaturationEffect.Process(current, 1f - p.Grayscale);
             }
             if (p.Opacity < 1f)
-                current = OpacityEffect.Process(current, p.Opacity);
+                current = OpacityEffect.Process(current, (Half)p.Opacity);
 
             return current;
         }
@@ -161,7 +168,7 @@ namespace projectFrameCut.Render.Effect
             IPicture<ushort> current = source;
 
             if (p.Brightness != 1f)
-                current = BrightnessEffect.Process(current, p.Brightness - 1f);
+                current = BrightnessEffect.Process(current, (Half)(p.Brightness - 1f));
             if (p.Contrast != 1f)
                 current = ContrastEffect.Process(current, p.Contrast);
             if (p.Saturation != 1f)
@@ -169,7 +176,7 @@ namespace projectFrameCut.Render.Effect
             if (p.Hue != 0f)
                 current = HueRotationEffect.Process(current, p.Hue);
             if (p.Gamma != 1f)
-                current = BlurEffect.Process(current, (p.Gamma - 1f) * 0.5f);
+                current = projectFrameCut.Drawing.Effect.BlurEffect.Process(current, (p.Gamma - 1f) * 0.5f);
             if (p.Vibrance != 0f)
                 current = SaturationEffect.Process(current, 1f + p.Vibrance * 0.5f);
             if (p.Temperature != 0f)
@@ -184,7 +191,7 @@ namespace projectFrameCut.Render.Effect
                     current = SaturationEffect.Process(current, 1f - p.Grayscale);
             }
             if (p.Opacity < 1f)
-                current = OpacityEffect.Process(current, p.Opacity);
+                current = OpacityEffect.Process(current, (Half)p.Opacity);
 
             return current;
         }
@@ -205,7 +212,7 @@ namespace projectFrameCut.Render.Effect
                 g = GC.AllocateUninitializedArray<byte>(pixels),
                 b = GC.AllocateUninitializedArray<byte>(pixels),
                 a = source.HasAlphaChannel && source.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
+                    ? GC.AllocateUninitializedArray<Half>(pixels) : null,
                 HasAlphaChannel = source.HasAlphaChannel,
                 Tag = source.Tag,
                 ProcessStack = new List<PictureProcessStack>(source.ProcessStack),
@@ -224,7 +231,7 @@ namespace projectFrameCut.Render.Effect
             float tempRFactor = doTemperature ? 1f + p.Temperature * 0.01f : 1f;
             float tempBFactor = doTemperature ? 1f - p.Temperature * 0.01f : 1f;
             float grayAmount = p.Grayscale;
-            float opacity = p.Opacity;
+            Half opacity = (Half)p.Opacity;
             const float contrastMid = 128f;
             const float maxVal = 255f;
 
@@ -296,7 +303,7 @@ namespace projectFrameCut.Render.Effect
                 if (doOpacity)
                 {
                     for (int i = 0; i < pixels; i++)
-                        result.a![i] = Math.Clamp(source.a![i] * opacity, 0f, 1f);
+                        result.a![i] = Half.Clamp(source.a![i] * opacity, Half.Zero, Half.One);
                 }
                 else
                 {
@@ -336,7 +343,7 @@ namespace projectFrameCut.Render.Effect
                 g = GC.AllocateUninitializedArray<ushort>(pixels),
                 b = GC.AllocateUninitializedArray<ushort>(pixels),
                 a = source.HasAlphaChannel && source.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
+                    ? GC.AllocateUninitializedArray<Half>(pixels) : null,
                 HasAlphaChannel = source.HasAlphaChannel,
                 Tag = source.Tag,
                 ProcessStack = new List<PictureProcessStack>(source.ProcessStack),
@@ -355,7 +362,7 @@ namespace projectFrameCut.Render.Effect
             float tempRFactor = doTemperature ? 1f + p.Temperature * 0.01f : 1f;
             float tempBFactor = doTemperature ? 1f - p.Temperature * 0.01f : 1f;
             float grayAmount = p.Grayscale;
-            float opacity = p.Opacity;
+            Half opacity = (Half)p.Opacity;
             const float contrastMid = 32768f;
             const float maxVal = 65535f;
 
@@ -427,7 +434,7 @@ namespace projectFrameCut.Render.Effect
                 if (doOpacity)
                 {
                     for (int i = 0; i < pixels; i++)
-                        result.a![i] = Math.Clamp(source.a![i] * opacity, 0f, 1f);
+                        result.a![i] = Half.Clamp(source.a![i] * opacity, Half.Zero, Half.One);
                 }
                 else
                 {
@@ -466,7 +473,7 @@ namespace projectFrameCut.Render.Effect
                 g = GC.AllocateUninitializedArray<byte>(pixels),
                 b = GC.AllocateUninitializedArray<byte>(pixels),
                 a = picture.HasAlphaChannel && picture.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
+                    ? GC.AllocateUninitializedArray<Half>(pixels) : null,
                 HasAlphaChannel = picture.HasAlphaChannel,
                 Tag = picture.Tag,
                 ProcessStack = new List<PictureProcessStack>(picture.ProcessStack),
@@ -506,7 +513,7 @@ namespace projectFrameCut.Render.Effect
                 g = GC.AllocateUninitializedArray<ushort>(pixels),
                 b = GC.AllocateUninitializedArray<ushort>(pixels),
                 a = picture.HasAlphaChannel && picture.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
+                    ? GC.AllocateUninitializedArray<Half>(pixels) : null,
                 HasAlphaChannel = picture.HasAlphaChannel,
                 Tag = picture.Tag,
                 ProcessStack = new List<PictureProcessStack>(picture.ProcessStack),

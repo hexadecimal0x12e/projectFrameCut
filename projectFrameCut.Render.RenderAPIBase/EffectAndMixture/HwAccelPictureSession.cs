@@ -43,7 +43,7 @@ public sealed class HwAccelPictureSession : IDisposable
     private long hits, misses, uncached;
     private bool disposed;
     private string? finalStatistics;
-    private readonly record struct UploadKey(object Identity, IHwAccelPictureContext Context, int Width, int Height, int Bits, bool Alpha, bool Hdr, float Peak);
+    private readonly record struct UploadKey(object Identity, IHwAccelPictureContext Context, int Width, int Height, int Bits, bool Alpha, bool Hdr, Half Peak);
     private sealed record CachedUpload(UploadKey Key, IHwAccelPicture Picture, long Bytes);
 
     internal IHwAccelPictureContext GetContext()
@@ -92,8 +92,8 @@ public sealed class HwAccelPictureSession : IDisposable
                 Interlocked.Increment(ref uncached);
                 return WithMetadata(context.Upload(source), source);
             }
-            var hdr = source as IHDRPicture<ushort>;
-            key = new(identity, context, source.Width, source.Height, source.BitPerPixel, source.HasAlphaChannel, hdr is not null, hdr?.MaximumBrightness ?? 203);
+            var hdr = source as IHDRPicture<Half>;
+            key = new(identity, context, source.Width, source.Height, source.BitPerPixel, source.HasAlphaChannel, hdr is not null, hdr?.MaximumBrightness ?? (Half)203);
             lock (gate)
             {
                 if (!uploading.TryGetValue(key, out pending)) uploading.Add(key, pending = new());
@@ -116,7 +116,7 @@ public sealed class HwAccelPictureSession : IDisposable
                 try
                 {
                     lock (gate)
-                        Cache(key, picture, checked((long)source.Pixels * (hdr is null ? 4 : 5) * sizeof(float)));
+                        Cache(key, picture, checked((long)source.Pixels * (6 * sizeof(ushort))));
                     return picture;
                 }
                 catch { picture.Dispose(); throw; }

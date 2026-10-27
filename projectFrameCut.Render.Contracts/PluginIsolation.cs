@@ -40,13 +40,15 @@ public enum IsolationPayloadAccess
 [ProtoContract]
 public sealed class IsolationMediaDescriptor
 {
+    [ProtoMember(13)] public bool UsesFloat16 { get; set; }
     [ProtoMember(1)] public int LayoutVersion { get; set; } = 1;
     [ProtoMember(2)] public int Width { get; set; }
     [ProtoMember(3)] public int Height { get; set; }
     [ProtoMember(4)] public int BitsPerChannel { get; set; }
     [ProtoMember(5)] public bool HasAlpha { get; set; }
     [ProtoMember(6)] public bool HasHdrBrightness { get; set; }
-    [ProtoMember(7)] public float MaximumBrightness { get; set; }
+    [ProtoIgnore] public Half MaximumBrightness { get; set; }
+    [ProtoMember(7)] private ushort MaximumBrightnessBits { get => BitConverter.HalfToUInt16Bits(MaximumBrightness); set => MaximumBrightness = BitConverter.UInt16BitsToHalf(value); }
     [ProtoMember(8)] public long RedLength { get; set; }
     [ProtoMember(9)] public long GreenLength { get; set; }
     [ProtoMember(10)] public long BlueLength { get; set; }

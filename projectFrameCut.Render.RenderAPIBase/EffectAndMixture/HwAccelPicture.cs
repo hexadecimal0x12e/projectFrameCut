@@ -14,7 +14,7 @@ public interface IHwAccelPicture : IPicture
 
     bool IsHdr { get; }
 
-    float MaximumBrightness { get; }
+    Half MaximumBrightness { get; }
 
     IHwAccelPicture Retain();
     IPicture Download();
@@ -24,6 +24,12 @@ public interface IHwAccelPictureContext : IDisposable
 {
     IDisposable Retain();
     IHwAccelPicture Upload(IPicture source);
+}
+
+/// <summary>Downloads linear scRGB as little-endian, premultiplied RGBA FP16.</summary>
+public interface IHwAccelPictureScRgb
+{
+    byte[] DownloadScRgb(IHwAccelPicture source, Func<int, byte[]>? allocatePixels = null);
 }
 
 public interface IHwAccelPictureGeometry
@@ -95,7 +101,7 @@ public sealed class HwAccelPictureScope : IDisposable
             if ((source as ISharedPicture)?.ContentIdentity is not { } identity)
                 return context.Upload(source);
             var key = (identity, source.Width, source.Height, source.BitPerPixel, source.HasAlphaChannel,
-                source is IHDRPicture<ushort>, (source as IHDRPicture<ushort>)?.MaximumBrightness ?? 203);
+                source is IHDRPicture<Half> or IHDRPicture<ushort>, (source as IHDRPicture<Half>)?.MaximumBrightness ?? (source as IHDRPicture<ushort>)?.MaximumBrightness ?? (Half)203);
             if (uploads.TryGetValue(key, out var cached))
             {
                 var retained = cached.Retain();
@@ -166,6 +172,11 @@ public sealed class HwAccelPictureScope : IDisposable
 
 public static class EffectPictureProcessing
 {
+    public static IPicture RequireFP16(IPicture picture, string owner)
+    {
+        if (picture is IPicture<Half> || picture is IHwAccelPicture { BitPerPixel: var mode } && mode == IPicture.PicturePixelMode.Float16Picture) return picture;
+        throw new NotSupportedException($"{owner} returned integer picture {picture.GetType().Name}; rendering requires FP16.");
+    }
     public static IPicture Copy(IPicture picture)
     {
         if (picture is IHwAccelPicture gpu)
@@ -200,7 +211,7 @@ public static class EffectPictureProcessing
         var picture = Materialize(source);
         try
         {
-            return picture is IHDRPicture<ushort> hdr ? hdr.Resize(width, height, preserveAspect) : picture.Resize(width, height, preserveAspect);
+            return PictureResizer.Default.Resize(picture, width, height, preserveAspect);
         }
         finally
         {
@@ -216,7 +227,7 @@ public static class EffectPictureProcessing
         var picture = Materialize(source);
         try
         {
-            return HDRPicture16bpp.ToHDRPictureBySignal(picture, brightness);
+            return picture is IPicture<Half> fp ? HDRPictureFP16.ToHDRPictureBySignal(fp, brightness) : HDRPicture16bpp.ToHDRPictureBySignal(picture, brightness);
         }
         finally
         {
@@ -247,9 +258,14 @@ public static class EffectPictureProcessing
         try
         {
             var result = effect is IContinuousEffect continuous ? continuous.Render(picture, progress, width, height) : effect is IColorAdjustEffect color ? color.Process(picture) : ((INormalEffect)effect).Render(picture, width, height);
+            RequireFP16(result, $"Plugin {effect.FromPlugin}, effect {effect.TypeName}/{effect.Id}");
             if (ReferenceEquals(result, picture))
                 picture = null !;
             return result;
+        }
+        catch (InvalidCastException ex) when (source is IPicture<Half>)
+        {
+            throw new NotSupportedException($"Plugin {effect.FromPlugin}, effect {effect.TypeName}/{effect.Id} cannot process FP16 pictures.", ex);
         }
         finally
         {
@@ -274,7 +290,7 @@ public static class EffectPictureProcessing
         IPicture? result = null;
         try
         {
-            return result = mixture.Mix(left, right, pixelMode, x, y, width, height);
+            return result = RequireFP16(mixture.Mix(left, right, pixelMode, x, y, width, height), $"Plugin {mixture.FromPlugin}, mixture {mixture.TypeName}/{mixture.Id}");
         }
         finally
         {
@@ -299,7 +315,7 @@ public static class EffectPictureProcessing
         IPicture? result = null;
         try
         {
-            return result = transform.Render(aCpu, bCpu, progress, side, width, height);
+            return result = RequireFP16(transform.Render(aCpu, bCpu, progress, side, width, height), $"Plugin {transform.FromPlugin}, transform {transform.TypeName}/{transform.Id}");
         }
         finally
         {
@@ -359,9 +375,16 @@ public static class EffectPictureProcessing
             };
             IRenderContext.CurrentFrameBuffer = input as IPicture;
             result = hardware ? ((IHwAccelPictureEffect)effect).RenderHwAccel((IHwAccelPicture)input!, invocation) : effect is IMultipleOutputEffect multiple ? multiple.ComputeOutputs(invocation) : effect.Compute(invocation);
+            if (result is IPicture output) RequireFP16(output, $"Plugin {effect.FromPlugin}, effect {effect.TypeName}/{effect.Id}");
+            if (result is IReadOnlyDictionary<string, object?> pictureOutputs)
+                foreach (var outputValue in pictureOutputs.Values.OfType<IPicture>()) RequireFP16(outputValue, $"Plugin {effect.FromPlugin}, effect {effect.TypeName}/{effect.Id}");
             if (result is IHwAccelPicture gpu)
                 Track(gpu);
             return result;
+        }
+        catch (InvalidCastException ex) when (context.Input is IPicture<Half> || context.Parameters.Values.Any(v => v is IPicture<Half>))
+        {
+            throw new NotSupportedException($"Plugin {effect.FromPlugin}, effect {effect.TypeName}/{effect.Id} cannot process FP16 pictures.", ex);
         }
         finally
         {

@@ -38,8 +38,8 @@ public sealed class ExampleProvider : IExternalVideoSourceProvider, IExternalAud
         {
             Width = width, Height = height, BitsPerChannel = source.ResultBitsPerPixel,
             Red = new byte[pixels * bytes], Green = new byte[pixels * bytes], Blue = new byte[pixels * bytes],
-            Alpha = source.SupportsAlpha ? new byte[pixels * 4] : [],
-            Brightness = request.RequestHdr && source.SupportsHdr ? new byte[pixels * 4] : [], MaximumBrightness = 1000,
+            Alpha = source.SupportsAlpha ? new byte[pixels * 2] : [],
+            Brightness = request.RequestHdr && source.SupportsHdr ? new byte[pixels * 2] : [], MaximumBrightness = (Half)1000,
         };
         for (var y = 0; y < height; y++)
         {
@@ -62,8 +62,8 @@ public sealed class ExampleProvider : IExternalVideoSourceProvider, IExternalAud
                     BinaryPrimitives.WriteUInt16LittleEndian(frame.Green.AsSpan(i * 2), (ushort)((255 - value) * 257));
                     BinaryPrimitives.WriteUInt16LittleEndian(frame.Blue.AsSpan(i * 2), 32768);
                 }
-                if (frame.Alpha.Length > 0) BitConverter.TryWriteBytes(frame.Alpha.AsSpan(i * 4), 0.5f);
-                if (frame.Brightness.Length > 0) BitConverter.TryWriteBytes(frame.Brightness.AsSpan(i * 4), 2f);
+                if (frame.Alpha.Length > 0) BitConverter.TryWriteBytes(frame.Alpha.AsSpan(i * 2), (Half)0.5f);
+                if (frame.Brightness.Length > 0) BitConverter.TryWriteBytes(frame.Brightness.AsSpan(i * 2), (Half)2);
             }
         }
         return ValueTask.FromResult(frame);

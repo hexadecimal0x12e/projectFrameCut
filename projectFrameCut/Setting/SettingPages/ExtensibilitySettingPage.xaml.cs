@@ -153,8 +153,8 @@ public partial class ExtensibilitySettingPage : ContentPage
 #endif
                         },
                         ..MauiProgram.IntegratedPlugins,
-                        ..PluginService.LoadUserPlugins(),
                     ];
+                    plugins.AddRange(PluginService.LoadUserPlugins(internalPlugins: plugins));
                     PluginManager.Init(plugins);
                     await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
                 }

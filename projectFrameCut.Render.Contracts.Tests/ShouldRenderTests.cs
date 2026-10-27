@@ -159,11 +159,11 @@ public sealed class ShouldRenderTests
     {
         var comparison = new NumericComparisonNodeEffectProvider();
         using var clip = Clip(providers: [Bind(comparison), comparison]);
-        using var source = Picture8bpp.GenerateSolidColor(2, 1, 255, 0, 0, 1);
+        using var source = Picture8bpp.GenerateSolidColor(2, 1, 255, 0, 0, Half.One);
         using var result = Timeline.MixtureLayers([new OneFrame(0, clip, source, resolveEffects: false)], 0, 2, 1, bits,
             transparentBackground: true, disposeIntermediateFrames: true, AfterEffectCallback: (_, _) => Assert.Fail());
         Assert.AreEqual(bits, (int)result.BitPerPixel.Value);
-        Assert.AreEqual(0f, bits == 8 ? ((IPicture<byte>)result).a![0] : ((IPicture<ushort>)result).a![0]);
+        Assert.AreEqual(0f, bits == 8 ? (float)((IPicture<byte>)result).a![0] : (float)((IPicture<ushort>)result).a![0]);
         Assert.IsTrue(source.Disposed);
     }
 
@@ -185,7 +185,7 @@ public sealed class ShouldRenderTests
         {
             Assert.AreEqual(0, reads);
             Assert.AreEqual(bits, (int)result!.BitPerPixel.Value);
-            Assert.AreEqual(2f / 3f, bits == 8 ? ((IPicture<byte>)result).a![0] : ((IPicture<ushort>)result).a![0], 0.0001f);
+            Assert.AreEqual((float)(Half)(2f / 3f), bits == 8 ? (float)((IPicture<byte>)result).a![0] : (float)((IPicture<ushort>)result).a![0], 0.0001f);
         }
     }
 

@@ -135,13 +135,13 @@ public sealed class ClipTransformTests
     [TestMethod]
     public void FadeHonorsSideAndKeepsInputAlive()
     {
-        using var input = Picture8bpp.GenerateSolidColor(2, 2, 255, 0, 0, 1);
+        using var input = Picture8bpp.GenerateSolidColor(2, 2, 255, 0, 0, Half.One);
         var fade = new FadeTransform();
         using var entering = TransformProcessing.ProcessFrames(input, null, fade, TransformInputMode.OneInput, 0, TransformSide.Left, 2, 2);
         using var leaving = TransformProcessing.ProcessFrames(input, null, fade, TransformInputMode.OneInput, 0, TransformSide.Right, 2, 2);
-        Assert.AreEqual(0f, ((IPicture<byte>)entering).a![0]);
-        Assert.AreEqual(1f, ((IPicture<byte>)leaving).a![0]);
-        Assert.AreEqual(1f, input.a![0]);
+        Assert.AreEqual(0f, (float)((IPicture<byte>)entering).a![0]);
+        Assert.AreEqual(1f, (float)((IPicture<byte>)leaving).a![0]);
+        Assert.AreEqual(1f, (float)input.a![0]);
         Assert.ThrowsExactly<NotSupportedException>(() => TransformProcessing.ProcessFrames(input, input, fade, TransformInputMode.TwoInput, 0, TransformSide.Right, 2, 2));
         Assert.IsFalse(((IEffect)fade).IsReorderable);
         Assert.AreEqual(EffectType.Transform, ((IEffect)fade).TypeOfEffect);
@@ -199,14 +199,14 @@ public sealed class ClipTransformTests
         var provider = Attach(info, TransformSide.Left, 5, order: TransformRenderOrder.BeforeEffects);
         using var clip = new SolidColorClip { Id = info.Id, Name = "hdr", Duration = 5, ExtraData = new(), EffectProviders = [provider] };
         clip.EffectsInstances = [new PassThroughTransform { BindedEffectProvidingSystemID = provider.Id.ToString() }];
-        using var input = HDRPicture16bpp.GenerateSolidColor(2, 2, 30000, 0, 0, 1, 0.5f, 1000);
+        using var input = HDRPicture16bpp.GenerateSolidColor(2, 2, 30000, 0, 0, Half.One, (Half)0.5f, (Half)1000);
         Assert.IsTrue(TransformProcessing.TryRender(clip, [clip], 2, 2, 2, 2, 2, IPicture.PicturePixelMode.UShortPicture,
             out var result, initializeClips: false, preparedSource: input));
         using (result)
         {
             var hdr = (IHDRPicture<ushort>)result!;
-            Assert.AreEqual(1000f, hdr.MaximumBrightness);
-            Assert.AreEqual(0.5f, hdr.Brightness[0], 0.00001f);
+            Assert.AreEqual(1000f, (float)hdr.MaximumBrightness);
+            Assert.AreEqual(0.5f, (float)hdr.Brightness[0], 0.00001f);
             hdr.r[0] = 0;
             Assert.AreEqual((ushort)30000, input.r[0]);
         }
@@ -267,20 +267,20 @@ public sealed class ClipTransformTests
     [TestMethod]
     public void CrossfadeWeightsColorAndHdrBrightnessByAlpha()
     {
-        using var left = HDRPicture16bpp.GenerateSolidColor(2, 2, ushort.MaxValue, 0, 0, 1, 0.5f, 1000);
-        using var right = HDRPicture16bpp.GenerateSolidColor(2, 2, 0, 0, 0, 0, 0.1f, 1000);
+        using var left = HDRPicture16bpp.GenerateSolidColor(2, 2, ushort.MaxValue, 0, 0, Half.One, (Half)0.5f, (Half)1000);
+        using var right = HDRPicture16bpp.GenerateSolidColor(2, 2, 0, 0, 0, Half.Zero, (Half)0.1f, (Half)1000);
         using var result = new CrossfadeTransform().Render(left, right, 0.5f, TransformSide.Right, 2, 2);
         var hdr = (IHDRPicture<ushort>)result;
         Assert.AreEqual(ushort.MaxValue, hdr.r[0]);
-        Assert.AreEqual(0.5f, hdr.a![0]);
-        Assert.AreEqual(0.5f, hdr.Brightness[0]);
-        Assert.AreEqual(1000f, hdr.MaximumBrightness);
-        using var l8 = Picture8bpp.GenerateSolidColor(1, 1, 200, 0, 0, 0.25f);
-        using var r8 = Picture8bpp.GenerateSolidColor(1, 1, 0, 100, 0, 0.75f);
+        Assert.AreEqual(0.5f, (float)hdr.a![0]);
+        Assert.AreEqual(0.5f, (float)hdr.Brightness[0]);
+        Assert.AreEqual(1000f, (float)hdr.MaximumBrightness);
+        using var l8 = Picture8bpp.GenerateSolidColor(1, 1, 200, 0, 0, (Half)0.25f);
+        using var r8 = Picture8bpp.GenerateSolidColor(1, 1, 0, 100, 0, (Half)0.75f);
         using var mixed = new CrossfadeTransform().Render(l8, r8, 0.5f, TransformSide.Right, 1, 1);
         Assert.AreEqual((byte)50, ((IPicture<byte>)mixed).r[0]);
         Assert.AreEqual((byte)75, ((IPicture<byte>)mixed).g[0]);
-        Assert.AreEqual(0.5f, ((IPicture<byte>)mixed).a![0]);
+        Assert.AreEqual(0.5f, (float)((IPicture<byte>)mixed).a![0]);
     }
 
     private sealed class SquareEffect : INormalEffect

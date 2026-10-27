@@ -5,8 +5,12 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class RotationEffect_IPicture : INormalEffect
+    public class RotationEffect_IPicture : RotationEffect<IPicture> { }
+
+    public class RotationEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new RotationEffect<T>();
+
         public bool IsDeterministic => true;
 
         private TimeSpan? _elapsed;
@@ -65,7 +69,7 @@ namespace projectFrameCut.Render.Effect
                 expandCanvas = DynamicParam.ToBool(expandVal);
             }
 
-            var effect = new RotationEffect_IPicture
+            var effect = new RotationEffect<TPicture>
             {
                 Angle = angle,
                 ExpandCanvas = expandCanvas,
@@ -76,13 +80,13 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             var sw = Stopwatch.StartNew();
 
             float angle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
             bool expandCanvas = DynamicParam.Resolve(Parameters.GetValueOrDefault("ExpandCanvas"), ExpandCanvas);
-            var result = RotationEffect.Process(source, angle, expandCanvas);
+            var result = PictureCalculation<TPicture>.Rotate(source, angle, expandCanvas);
 
             float radians = angle * MathF.PI / 180f;
             result = PictureEffectChannels.MapHdr(result, source, (x, y) =>

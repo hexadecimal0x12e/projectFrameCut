@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Services;
 
@@ -36,6 +37,7 @@ internal static class CliProcessLauncher
             RedirectStandardError = noConsole,
             RedirectStandardOutput = noConsole,
         };
+        info.Environment[ProjectCachePaths.EnvironmentKey] = ProjectCachePaths.RedirectRoot;
 #if HEADLESS
         if (Path.GetExtension(executablePath).Equals(".dll", StringComparison.OrdinalIgnoreCase))
         {

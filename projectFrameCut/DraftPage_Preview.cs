@@ -1372,6 +1372,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private HashSet<Guid> _visibleClipPreviews = [];
     private bool _clipPreviewViewportDirty = true;
     private bool _clipPreviewViewportQueued;
+    private long _lastSlowClipPreviewViewportLog;
 
     private void InvalidateClipPreviewViewport()
     {
@@ -1404,6 +1405,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         using var viewportMark = new UserMarkRange("Timeline.RefreshPreviewViewport", $"previews={_activeClipPreviews.Count}");
 #endif
         if (TracksAndClipsLayout.Height <= 0 || TimelineScrollView.Width <= 0) return;
+        var startedAt = Stopwatch.GetTimestamp();
         if (_clipPreviewViewportDirty)
         {
             _clipPreviewViewportDirty = false;
@@ -1463,6 +1465,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (!visible.Contains(id) && _activeClipPreviews.TryGetValue(id, out var preview)) preview.Suspend();
         }
         _visibleClipPreviews = visible;
+        var elapsed = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+        if (elapsed >= 30 && Stopwatch.GetElapsedTime(_lastSlowClipPreviewViewportLog).TotalSeconds >= 5)
+        {
+            _lastSlowClipPreviewViewportLog = Stopwatch.GetTimestamp();
+            LogDiagnostic($"[TimelinePreview] Viewport refresh took {elapsed:F1}ms, visible={visible.Count}, registered={_activeClipPreviews.Count}.");
+        }
     }
 
     private void ClearClipPreviews()

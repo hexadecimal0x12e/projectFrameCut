@@ -9,6 +9,9 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
+#if WINDOWS || LINUX || HEADLESS
+using projectFrameCut.Render.HwAccelEngine;
+#endif
 #if ANDROID
 using projectFrameCut.Platforms.Android;
 #endif
@@ -400,6 +403,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 var startInfo = CliProcessLauncher.CreateStartInfo(executable, true);
                 startInfo.ArgumentList.Add("render");
                 Add("project", options.ProjectRoot);
+                Add("projectCacheDirectory", string.IsNullOrWhiteSpace(options.CacheRoot) ? ProjectCachePaths.Initialize(options.ProjectRoot, options.ProjectName) : options.CacheRoot);
                 Add("externalSourceApprovals", Convert.ToBase64String(RenderRpcSerializer.Serialize(new SetProjectExternalSourcesRequest { AllowedSources = options.AllowedExternalSources })));
                 Add("output", options.OutputPath);
                 Add("output_options", $"{options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}");
@@ -407,6 +411,12 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("target", options.WriteToVoid ? "void" : "all");
                 Add("assetDbFile", options.AssetDatabasePath);
                 Add("dataRoot", MauiProgram.BasicDataPath);
+#if WINDOWS || LINUX || HEADLESS
+                var accelerators = AcceleratorsManager.GetConfiguration();
+                Add("acceleratorDeviceName", accelerators.MainAcceleratorName);
+                Add("acceleratorDeviceNames", string.Join(",", accelerators.RenderingAcceleratorNames));
+                Add("multiAccelerator", accelerators.EnableMultiAccel.ToString());
+#endif
                 Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
                 Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
                 Add("allowWorkerOversubscription", options.AllowWorkerOversubscription.ToString());
@@ -423,7 +433,6 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("chunkRender", options.ChunkRender.ToString());
                 if (options.ChunkFrames is uint chunkFrames) Add("chunkFrames", chunkFrames.ToString());
                 if (options.ChunkSeconds is double chunkSeconds) Add("chunkSeconds", chunkSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                Add("chunkParallelism", Math.Max(1, options.ChunkParallelism).ToString());
                 Add("chunkResume", options.ChunkResume.ToString());
                 Add("chunkKeepFiles", options.ChunkKeepFiles.ToString());
                 Add("rpcPipe", _pipeName);
@@ -768,6 +777,7 @@ internal sealed record CliRenderProcessOptions
     public List<ProjectExternalSourceApproval> AllowedExternalSources { get; init; } = [];
     public Guid JobId { get; init; } = Guid.NewGuid();
     public required string ProjectRoot { get; init; }
+    public string CacheRoot { get; init; } = string.Empty;
     public required string ProjectName { get; init; }
     public required string OutputPath { get; init; }
     public required string AssetDatabasePath { get; init; }
@@ -792,7 +802,6 @@ internal sealed record CliRenderProcessOptions
     public bool ChunkRender { get; init; }
     public uint? ChunkFrames { get; init; }
     public double? ChunkSeconds { get; init; }
-    public int ChunkParallelism { get; init; } = 1;
     public bool ChunkResume { get; init; } = true;
     public bool ChunkKeepFiles { get; init; }
     public bool Background { get; init; }

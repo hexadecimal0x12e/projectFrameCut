@@ -1901,8 +1901,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 // Detect a suitable encoder
                 string codec;
-                if (VideoWriter.DetectCodec("libx264")) codec = "libx264";
-                else if (VideoWriter.DetectCodec("mpeg4")) codec = "mpeg4";
+                if (VideoWriterFP16.DetectCodec("libx264")) codec = "libx264";
+                else if (VideoWriterFP16.DetectCodec("mpeg4")) codec = "mpeg4";
                 else return; // No encoder available
 
                 var prevId = Guid.NewGuid();
@@ -1938,7 +1938,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 try
                 {
                     t = TransformServices.Create(configured ?? factory!());
-                    using var writer = new VideoWriter
+                    using var writer = new VideoWriterFP16
                     {
                         Width = previewW,
                         Height = previewH,
@@ -1953,8 +1953,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     {
                         float progress = (float)i / Math.Max(1, frameCount - 1);
                         using var context = ValueProviderFrameContext.PushFrame(i, progress);
-                        using var leftFrame = ((IClip)prevClip).GetFrame(0, previewW, previewH, 8);
-                        using var rightFrame = inputMode == TransformInputMode.TwoInput ? ((IClip)nextClip).GetFrame(nextClip.StartFrame, previewW, previewH, 8) : null;
+                        using var leftFrame = ((IClip)prevClip).GetFrame(0, previewW, previewH, IPicture.PicturePixelMode.Float16Picture);
+                        using var rightFrame = inputMode == TransformInputMode.TwoInput ? ((IClip)nextClip).GetFrame(nextClip.StartFrame, previewW, previewH, IPicture.PicturePixelMode.Float16Picture) : null;
                         leftFrame.CanBeDisposed = true;
                         if (rightFrame is not null) rightFrame.CanBeDisposed = true;
                         var result = TransformProcessing.ProcessFrames(leftFrame, rightFrame, t, inputMode, progress, side, previewW, previewH);

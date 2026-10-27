@@ -183,11 +183,11 @@ namespace projectFrameCut.Render.Text
             ushort fillR = (ushort)Math.Round(color.Red * 65535);
             ushort fillG = (ushort)Math.Round(color.Green * 65535);
             ushort fillB = (ushort)Math.Round(color.Blue * 65535);
-            float fillA = (float)color.Alpha;
+            Half fillA = color.Alpha;
             ushort pinyinR = (ushort)Math.Round(pinyinColor.Red * 65535);
             ushort pinyinG = (ushort)Math.Round(pinyinColor.Green * 65535);
             ushort pinyinB = (ushort)Math.Round(pinyinColor.Blue * 65535);
-            float pinyinA = (float)pinyinColor.Alpha;
+            Half pinyinA = pinyinColor.Alpha;
 
             foreach (var line in lines)
             {

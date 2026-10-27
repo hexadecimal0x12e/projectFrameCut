@@ -89,7 +89,7 @@ public sealed class MaskClipTests
         Assert.AreEqual(3, result.Width);
         Assert.AreEqual(1, result.Height);
         CollectionAssert.AreEqual(new byte[] { 0, 0, 10 }, ((IPicture<byte>)result).r);
-        CollectionAssert.AreEqual(new float[] { 0, 1, 1 }, ((IPicture<byte>)result).a!);
+        CollectionAssert.AreEqual(new Half[] { Half.Zero, Half.One, Half.One }, ((IPicture<byte>)result).a!);
     }
 
     [TestMethod]
@@ -127,7 +127,7 @@ public sealed class MaskClipTests
     [TestMethod]
     public void MaskExcludesUpperClipsAndIncludesLowerEffects()
     {
-        using var pattern = Pattern(_ => Picture8bpp.GenerateSolidColor(5, 1, 10, 0, 0, 1));
+        using var pattern = Pattern(_ => Picture8bpp.GenerateSolidColor(5, 1, 10, 0, 0, Half.One));
         pattern.EffectsInstances = [new InspectEffect(p => Array.Fill(((IPicture<byte>)p).r, (byte)40))];
         using var mask = Mask();
         Arguments(mask, "Sigma", 0f);
@@ -154,14 +154,14 @@ public sealed class MaskClipTests
     [TestMethod]
     public void MosaicHandlesPartialBlocksAndHdrBrightnessWithoutMutatingInput()
     {
-        using var input = HDRPicture16bpp.GenerateSolidColor(3, 1, 0, 0, 0, 1);
+        using var input = HDRPicture16bpp.GenerateSolidColor(3, 1, 0, 0, 0, Half.One);
         input.r = [0, 100, 200];
-        input.Brightness = [0, 1, 0.25f];
+        input.Brightness = [Half.Zero, Half.One, (Half)0.25f];
         using var result = new MosaicMaskSource().Process(input, new Dictionary<string, object> { ["BlockSize"] = 2 }, 1, default);
         CollectionAssert.AreEqual(new ushort[] { 50, 50, 200 }, ((IPicture<ushort>)result).r);
-        CollectionAssert.AreEqual(new float[] { 0.5f, 0.5f, 0.25f }, ((IHDRPicture<ushort>)result).Brightness);
+        CollectionAssert.AreEqual(new Half[] { (Half)0.5f, (Half)0.5f, (Half)0.25f }, ((IHDRPicture<ushort>)result).Brightness);
         CollectionAssert.AreEqual(new ushort[] { 0, 100, 200 }, input.r);
-        Assert.AreEqual(input.MaximumBrightness, ((IHDRPicture<ushort>)result).MaximumBrightness);
+        Assert.AreEqual((float)input.MaximumBrightness, (float)((IHDRPicture<ushort>)result).MaximumBrightness);
     }
 
     [TestMethod]
@@ -202,7 +202,7 @@ public sealed class MaskClipTests
     [DataRow(TransformRenderOrder.AfterEffects)]
     public void TransitionMaskSamplesTheOutputTimeInsteadOfTheClampedMaskTime(TransformRenderOrder order)
     {
-        using var pattern = Pattern(i => Picture8bpp.GenerateSolidColor(5, 1, (byte)(i * 20), 0, 0, 1));
+        using var pattern = Pattern(i => Picture8bpp.GenerateSolidColor(5, 1, (byte)(i * 20), 0, 0, Half.One));
         using var next = new SolidColorClip { Id = Guid.NewGuid(), Name = "next", LayerIndex = 1,
             StartFrame = 4, Duration = 4, TargetWidth = 5, TargetHeight = 1, A = 0, ExtraData = [] };
         IEffectProvider provider = new CrossfadeTransformProvider();
@@ -240,7 +240,7 @@ public sealed class MaskClipTests
     [TestMethod]
     public void SpecificFramesReturnIndependentPictures()
     {
-        using var pattern = Pattern(_ => Picture8bpp.GenerateSolidColor(5, 1, 12, 0, 0, 1));
+        using var pattern = Pattern(_ => Picture8bpp.GenerateSolidColor(5, 1, 12, 0, 0, Half.One));
         var renderer = Renderer(pattern);
         try
         {
@@ -267,7 +267,7 @@ public sealed class MaskClipTests
         {
             string directory = Path.Combine(root, "thumbs", "perClip", pattern.Id.ToString(), "dynamic");
             Directory.CreateDirectory(directory);
-            using var cached = Picture8bpp.GenerateSolidColor(5, 1, 77, 0, 0, 1);
+            using var cached = Picture8bpp.GenerateSolidColor(5, 1, 77, 0, 0, Half.One);
             cached.SaveToDisk(Path.Combine(directory,
                 $"dynamic_v8-mask-vfd_{Timeline.GetClipFrameHash([pattern], pattern, 0)}_5x1_5x1_vfd8.vfd"),
                 PictureExtensions.SharedVfdPictureEncoder);

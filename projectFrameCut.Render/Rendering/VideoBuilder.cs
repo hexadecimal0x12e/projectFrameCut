@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -204,7 +204,7 @@ namespace projectFrameCut.Render.Rendering
             writer.FramePerSecond = framerate;
             writer.PixelFormat = fmt;
             writer.OutputPath = outputPath;
-            if (writer is HDRVideoWriter hdrWriter)
+            if (writer is HDRVideoWriterFP16 hdrWriter)
             {
                 hdrWriter.PreferHardwareAcceleration = encoder.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
                     || encoder.Contains("_amf", StringComparison.OrdinalIgnoreCase)
@@ -325,7 +325,7 @@ namespace projectFrameCut.Render.Rendering
             index = StartFrame;
             if (BlockWrite)
             {
-                Log($"[VideoWriter] Working in sync-writing mode.");
+                Log($"[VideoWriterFP16] Working in sync-writing mode.");
                 return new(() => { });
             }
             return new Thread(() =>
@@ -362,7 +362,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             })
             {
-                Name = $"VideoWriter for {outputPath}",
+                Name = $"VideoWriterFP16 for {outputPath}",
                 Priority = ThreadPriority.AboveNormal
             };
 
@@ -509,21 +509,8 @@ namespace projectFrameCut.Render.Rendering
             var path = GetDiskCachePath(index);
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
 
-            if (frame is HDRPicture16bpp hdr)
-            {
-                hdr.Save(fs, _cacheEncoder);
-                _diskCacheBpp[index] = 32;
-            }
-            else if (frame.BitPerPixel == 16)
-            {
-                ((IPicture<ushort>)frame).Save(fs, _cacheEncoder);
-                _diskCacheBpp[index] = 16;
-            }
-            else
-            {
-                ((IPicture<byte>)frame).Save(fs, _cacheEncoder);
-                _diskCacheBpp[index] = 8;
-            }
+            frame.Save(fs, _cacheEncoder);
+            _diskCacheBpp[index] = 116;
 
             _diskCache[index] = path;
             Interlocked.Increment(ref _framesOnDisk);
@@ -558,21 +545,8 @@ namespace projectFrameCut.Render.Rendering
                 try { File.Delete(path); } catch { }
 
                 using var ms = new MemoryStream(rawData);
-                if (depth == 32)
-                {
-                    if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(ms, out HDRPicture16bpp? hdr)) { goto fail; }
-                    frame = hdr;
-                }
-                else if (depth == 16)
-                {
-                    if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(ms, out Picture16bpp? p16)) { goto fail; }
-                    frame = p16;
-                }
-                else
-                {
-                    if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(ms, out Picture8bpp? p8)) { goto fail; }
-                    frame = p8;
-                }
+                if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoadFP16(ms, out var fp)) goto fail;
+                frame = fp!;
 
                 // Decode succeeded — clean up tracking
                 _diskCacheBpp.TryRemove(frameIndex, out _);

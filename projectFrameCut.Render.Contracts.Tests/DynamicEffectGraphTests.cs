@@ -124,7 +124,7 @@ public sealed class DynamicEffectGraphTests
     }
 
     internal static Dictionary<Guid, IEffectProvider> Providers(params IEffectProvider[] providers) => providers.ToDictionary(p => p.Id);
-    internal static Picture8bpp Picture(byte value) => Picture8bpp.GenerateSolidColor(1, 1, value, 0, 0, 1);
+    internal static Picture8bpp Picture(byte value) => Picture8bpp.GenerateSolidColor(1, 1, value, 0, 0, Half.One);
     private static byte Red(IPicture picture) => ((IPicture<byte>)picture).r[0];
     internal static DynamicEffectGraph Build(Dictionary<Guid, IEffectProvider> providers) => EffectBindingHelper.RebuildAllEffects(providers, null)!.Values.OfType<DynamicEffectGraph>().Single();
     internal static IPicture Evaluate(DynamicEffectGraph graph, IPicture source, uint frame = 0, CancellationToken token = default) =>
@@ -379,16 +379,16 @@ public sealed class DynamicEffectGraphTests
     [TestMethod]
     public void BranchCopiesPreserveHdrAndAlpha()
     {
-        using var source = HDRPicture16bpp.GenerateSolidColor(1, 1, 12345, 0, 0, 0.25f, 0.5f, 1000);
+        using var source = HDRPicture16bpp.GenerateSolidColor(1, 1, 12345, 0, 0, (Half)0.25f, (Half)0.5f, (Half)1000);
         using var copy = DynamicEffectGraph.CopyPicture(source);
         Assert.IsInstanceOfType<IHDRPicture<ushort>>(copy);
         var hdr = (IHDRPicture<ushort>)copy;
-        Assert.AreEqual(1000f, hdr.MaximumBrightness);
-        Assert.AreEqual(0.5f, hdr.Brightness[0]);
-        Assert.AreEqual(0.25f, hdr.a[0]);
+        Assert.AreEqual(1000f, (float)hdr.MaximumBrightness);
+        Assert.AreEqual(0.5f, (float)hdr.Brightness[0]);
+        Assert.AreEqual(0.25f, (float)hdr.a[0]);
         hdr.r[0] = 0;
-        hdr.Brightness[0] = 0;
+        hdr.Brightness[0] = Half.Zero;
         Assert.AreEqual((ushort)12345, source.r[0]);
-        Assert.AreEqual(0.5f, source.Brightness[0]);
+        Assert.AreEqual(0.5f, (float)source.Brightness[0]);
     }
 }
