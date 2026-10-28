@@ -756,10 +756,12 @@ namespace projectFrameCut
                 externalSourcesAllowed: () => ExternalSourceSettings.Load(dataRoot).AllowRpcSources,
 #if WINDOWS
                 additionalPipeFactory: (name, isolated) => Platforms.Windows.WindowsPluginIsolationPlatform.CreateRpcPipe(name, isolated, dataRoot),
+                externalRequestPipeFactory: (name, sids) => ExternalRpcPipePermissions.CreatePipe(name, dataRoot, additionalSids: sids),
                 externalPipeSingleConnection: () => ExternalRpcPipePermissions.LoadSingleConnection(dataRoot))
 #else
                 additionalPipeFactory: null)
 #endif
+                { AllowTestingBackendCrash = !string.IsNullOrWhiteSpace(parentPid) }
                 .RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
 #endif
             return SuccessExitCode;
@@ -974,7 +976,8 @@ namespace projectFrameCut
                 if (projectPluginLoad.Failed.Count > 0)
                     throw new InvalidOperationException("Project plugins failed to load: " + string.Join("; ", projectPluginLoad.Failed.Select(x => $"{x.Key}: {x.Value}")));
             }
-            var timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(projectRoot, "timeline.json")), jsonOptions) ?? new();
+            var (timeline, projectAssets) = ProjectSnapshotStore.ReadForRender(projectRoot, project, jsonOptions,
+                switches.GetValueOrDefault("timelineSource", "timeline"));
             await using var externalSources = await ProjectExternalSourceRuntime.OpenAsync(projectRoot,
                 switches.TryGetValue("externalSourceApprovals", out var sourceApprovals)
                     ? RenderRpcSerializer.Deserialize<SetProjectExternalSourcesRequest>(Convert.FromBase64String(sourceApprovals)).AllowedSources
@@ -983,11 +986,7 @@ namespace projectFrameCut
             var assets = new ConcurrentDictionary<string, AssetItem>();
             if (switches.TryGetValue("assetDbFile", out var assetDb) && File.Exists(assetDb))
                 assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(File.ReadAllText(assetDb), jsonOptions) ?? assets;
-            if (File.Exists(Path.Combine(projectRoot, "assets.json")))
-            {
-                var localAssets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(projectRoot, "assets.json")), jsonOptions) ?? [];
-                foreach (var asset in localAssets.Where(a => !string.IsNullOrWhiteSpace(a.AssetId))) assets[asset.AssetId!] = asset;
-            }
+            foreach (var asset in projectAssets.Where(a => !string.IsNullOrWhiteSpace(a.AssetId))) assets[asset.AssetId!] = asset;
             AssetDatabase.Assets = assets;
             DecoderContextPJFCProject.GlobalAssetGetter = new(() => assets);
             Environment.CurrentDirectory = projectRoot;
@@ -1720,6 +1719,7 @@ namespace projectFrameCut
                     Author = GetOption(args, "author", false) ?? "",
                     Purpose = GetOption(args, "purpose", false) ?? "",
                     PublicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo()),
+                    AdditionalSids = args.Where(a => a.StartsWith("--addSID=", StringComparison.OrdinalIgnoreCase)).Select(a => a[9..]).ToArray(),
                     ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(seconds),
                 };
                 if (persistent) request.Sign(rsa);
@@ -2204,7 +2204,7 @@ The backend loads the project before accepting RPC requests and keeps running un
             Console.WriteLine(
 """
 Usage:
-    pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --wait
+    pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --wait [--addSID=<SID>]...
     pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --publicKey=<public.pem>
     pjfc rpc_request --clientId=<id> --service=<service> --privateKey=<private.pem> [--wait]
 
@@ -2214,6 +2214,7 @@ Usage:
 --service       Request one authorized service (default: rpc).
 --privateKey    Persistent client's RSA private PEM key, used to sign and decrypt the request.
 --launch        Start the authorized client executable after the request is accepted.
+--addSID        Grant an extra SID read/write access to this one-time pipe (Windows; repeatable).
 --timeout       Request lifetime in seconds (5-3600; default 300).
 --requestDir    Override the default AppData/RpcRequest directory (must match the target app).
 
@@ -2396,6 +2397,7 @@ Usage:
   pjfc render -project=<project directory> -output=<file>
               -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                 [-target=video|audio|all|void] [-assetDbFile=<database.json>]
+                [--timelineSource=timeline|latest|snapshot:<id>] (default: timeline)
                 [-finalVideoBitRate=<bps>] (final output only)
                 [-maxParallelThreads=<number>]
                 [-allowWorkerOversubscription=true|false] (default: true)
@@ -2410,6 +2412,9 @@ Usage:
                   chunkResume also restores deferred composition when chunkRender=false.
                 [-chunkKeepFiles=true|false]
                 [--allowExternalSources=all|<ImportId,ImportId,...>]
+
+timelineSource selects the saved timeline.json, the latest saved state, or the
+specified snapshot ID. A snapshot is read together with its own assets.json.
 
 This command is usually used internally, not intended for direct use by end users. 
 It is provided for detached rendering of a project for the UI, and for integration with other tools.

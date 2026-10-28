@@ -56,6 +56,14 @@ Connect-ProjectFrameCut -Name 'Batch editor' -Author 'Me' -Purpose '批量编辑
 
 默认执行 `pjfc rpc_request --wait`。可选 `-ExecutablePath`、`-RequestDirectory`、`-TimeoutSeconds`（默认 300）。请求目录必须与目标应用配置一致。批准请求的窗口即为连接目标。
 
+Windows 沙盒需要额外管道权限时，传入实际沙盒 SID 数组：
+
+```powershell
+Connect-ProjectFrameCut -Name 'Agent' -Author 'Me' -Purpose '编辑当前项目' -AddSID $sandboxSid1,$sandboxSid2
+```
+
+`-AddSID` 为可选 `string[]`，逐项转发为 `rpc_request --addSID=<SID>`，仅用于 Windows 一次性授权请求。SID 由 CLI 校验、去重，只为本次管道追加读写权限；仍需应用审批和令牌校验。
+
 持久授权客户端可以直接使用独立 cmdlet：
 
 ```powershell
@@ -406,6 +414,35 @@ Save-Project
 `Add-ProjectClipEffectGroup` 的 `ProviderIds/ChildGroupIds` 可组合相同父组下的节点和子组。`Ports` 按数组顺序配置公开端口，每项包含 `ProviderId/FieldId/Name/IsInput`；外部连线需要的端口自动补齐。`Add/Set` 支持 `Collapsed/X/Y`，移动已有组会同步移动成员。Clip 参数、跨 Clip 端点和转场不能打包。
 
 `Remove-ProjectClipEffectGroup` 默认解组，加 `-RemoveProviders` 删除组及所有嵌套成员。导出返回可直接保存的 JSON；导入重新生成全部节点和分组 ID，保留内部连线，外部项目连线不导入，可用 `-X/-Y` 放置。`Save-ProjectClipEffectGroup [-ReplaceHash ...]` 保存到应用的效果组库；`Get-ProjectEffectGroupTemplate [-Hash ...]` 返回名称、哈希、JSON 和加载错误。保存到库和导出均不替代 `Save-Project`。
+
+## 批量操作
+
+批量模式适用于已连接的可写本地 GUI 项目。每条命令仍立即发送并更新独立的内存数据，查询和 `-PassThru` 能读取批量中的最新状态；提交之前不保存、不写历史，也不更新预览或时间线。GUI 会显示阻止操作的遮罩，其他 RPC 连接不能编辑该项目。
+
+```powershell
+Start-ProjectBatch
+try {
+    $track = Add-ProjectTrack -PassThru
+    foreach ($i in 0..99) {
+        Add-ProjectSolidColorClip -TrackId $track.TrackId -StartFrame ($i * 60) -DurationFrames 60
+    }
+    Complete-ProjectBatch -ChangeReason '批量添加色块' -TimeoutSeconds 300
+}
+catch {
+    Stop-ProjectBatch
+    throw
+}
+```
+
+`Complete-ProjectBatch` 等待统一保存和界面刷新，整批生成一条历史；空批量不产生历史。返回 `BatchId`、`OperationCount` 和 `CurrentSnapshotId`。普通编辑失败只撤销该条请求，之前成功的操作仍在批量中；需要保留它们时，可在错误处理分支调用 `Complete-ProjectBatch`。
+
+`Stop-ProjectBatch` 丢弃未提交数据。断开连接、移除模块或关闭 Runspace 也会取消未提交批量。批量不允许嵌套，命令仍支持 `-WhatIf`；批量状态只属于发起它的连接，重新连接不能接管。
+
+批量期间不能单独执行 `Save-Project`、历史恢复、帧/转场预览、保存效果组到库或修改外部源注册；先提交或取消。`Add-ProjectAsset` 必须显式指定 `-CopyToProject $true/$false`，文件复制推迟到提交。其他连接的查询仍读取已提交项目。
+
+提交超时不会中止已开始的服务端操作，可在同一连接重试 `Complete-ProjectBatch`；同一批量复用历史节点。保存失败后保留批量供重试或取消；已保存但刷新失败时，重试提交完成刷新，取消不会撤销已保存的结果。
+
+通用 GUI RPC 通过 `GuiProjectSession.SupportsBatch` 查询支持情况。使用新的 `BatchId` 调用 `StartBatch`，随后每条请求携带同一 `BatchId`，以 `CompleteBatch` 或 `StopBatch` 结束。连接归属由服务器生成的连接标识判断，与 `ClientName` 无关。
 
 ## PNG 帧预览
 

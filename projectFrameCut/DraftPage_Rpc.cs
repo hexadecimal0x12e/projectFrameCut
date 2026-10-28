@@ -35,6 +35,55 @@ public partial class DraftPage
     #region external RPC
     private bool? externalRpcUiAllowed;
     private int externalRpcMenuIndex = -1;
+    private int _externalRpcConnectionCount;
+
+#if WINDOWS
+    private Microsoft.UI.Xaml.Window? _externalRpcNativeWindow;
+    private Microsoft.UI.Windowing.AppWindow? _externalRpcAppWindow;
+    private bool _externalRpcCloseConfirmed;
+    private bool _externalRpcClosePromptOpen;
+
+    private void EnableExternalRpcCloseConfirmation()
+    {
+        if (_externalRpcAppWindow is not null || Window?.Handler?.PlatformView is not Microsoft.UI.Xaml.Window nativeWindow)
+            return;
+
+        _externalRpcNativeWindow = nativeWindow;
+        _externalRpcAppWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(
+            Microsoft.UI.Win32Interop.GetWindowIdFromWindow(WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow)));
+        _externalRpcCloseConfirmed = false;
+        _externalRpcAppWindow.Closing += OnExternalRpcWindowClosing;
+    }
+
+    private void DisableExternalRpcCloseConfirmation()
+    {
+        if (_externalRpcAppWindow is not null)
+            _externalRpcAppWindow.Closing -= OnExternalRpcWindowClosing;
+        _externalRpcAppWindow = null;
+        _externalRpcNativeWindow = null;
+    }
+
+    private async void OnExternalRpcWindowClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+    {
+        if (_externalRpcCloseConfirmed || AlreadyDisappeared) return;
+        if (!_externalRpcClosePromptOpen && Volatile.Read(ref _externalRpcConnectionCount) == 0) return;
+
+        args.Cancel = true;
+        if (_externalRpcClosePromptOpen) return;
+        _externalRpcClosePromptOpen = true;
+        try
+        {
+            if (!await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_ExternalRpcCloseWarning, Localized._Confirm, Localized._Cancel))
+                return;
+
+            Log($"Window close confirmed with {Volatile.Read(ref _externalRpcConnectionCount)} external RPC connection(s).");
+            _externalRpcCloseConfirmed = true;
+            _externalRpcNativeWindow?.Close();
+        }
+        catch (Exception ex) { Log(ex, "Confirm window close with external RPC connections", this); }
+        finally { _externalRpcClosePromptOpen = false; }
+    }
+#endif
 
     private void UpdateExternalRpcUi(bool allowed)
     {
@@ -59,6 +108,7 @@ public partial class DraftPage
             if (ReferenceEquals(_guiClient, client) && _guiSessionId != Guid.Empty) return _guiSessionId;
             var id = Guid.NewGuid();
             await client.RegisterGuiProjectAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+            Volatile.Write(ref _externalRpcConnectionCount, 0);
             _guiClient = client;
             _guiSessionId = id;
             Log($"Registered GUI RPC session {id}.");
@@ -80,6 +130,17 @@ public partial class DraftPage
                     { await Task.Delay(1000, ct); continue; }
                     var id = await EnsureGuiRpcSessionAsync(client, ct).ConfigureAwait(false);
                     var work = await client.GetGuiProjectWorkAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+                    Volatile.Write(ref _externalRpcConnectionCount, work.ActiveConnectionCount);
+                    if (work.DisconnectedConnectionId != Guid.Empty)
+                    {
+                        await MainThread.InvokeOnMainThreadAsync(async () =>
+                        {
+                            await _guiEditGate.WaitAsync(ct);
+                            try { if (_guiBatch?.Owner == work.DisconnectedConnectionId) await DiscardGuiBatchAsync(); }
+                            finally { _guiEditGate.Release(); }
+                        });
+                        continue;
+                    }
                     if (!string.IsNullOrWhiteSpace(work.ConnectedClientName))
                     {
                         SetStatusText($"External RPC client connected: {work.ConnectedClientName}");
@@ -94,8 +155,8 @@ public partial class DraftPage
                         {
                             if (AlreadyDisappeared || id != _guiSessionId || ct.IsCancellationRequested)
                                 throw new InvalidOperationException("Project session is closed.");
-                            Log($"GUI RPC {work.Request.Operation}, request {work.Request.RequestId}.");
-                            return JsonSerializer.Serialize(await ExecuteGuiProjectAsync(work.Request, ct));
+                            if (_guiBatch is null) Log($"GUI RPC {work.Request.Operation}, request {work.Request.RequestId}.");
+                            return JsonSerializer.Serialize(await ExecuteGuiRequestAsync(work.Request, work.ConnectionId, ct));
                         });
                     }
                     catch (Exception ex)
@@ -116,6 +177,7 @@ public partial class DraftPage
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
         finally
         {
+            await MainThread.InvokeOnMainThreadAsync(CloseGuiBatchAsync);
             if (_guiClient is not null && _guiSessionId != Guid.Empty)
             {
                 try
@@ -127,6 +189,7 @@ public partial class DraftPage
                 _guiSessionId = Guid.Empty;
                 _guiClient = null;
             }
+            Volatile.Write(ref _externalRpcConnectionCount, 0);
         }
     }
 
@@ -984,12 +1047,12 @@ public partial class DraftPage
         return (await GuiExternalSourcesAsync(a, ct)).Single();
     }
 
-    private async Task<object> AddGuiExternalSourceClipAsync(GuiEditArgs a, CancellationToken ct)
+    private async Task<object> AddGuiExternalSourceClipAsync(GuiEditArgs a, CancellationToken ct, GuiBatchState? batch = null)
     {
         if (a.Has("ImportId") == a.Has("ClientId")) throw new ArgumentException("Choose ImportId or ClientId.");
         if (a.Has("ImportId")) ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
         else ExternalSourceSettings.EnsureRpcSourcesAllowed(MauiProgram.BasicDataPath);
-        if (!Tracks.ContainsKey(a.Int("TrackId"))) throw new KeyNotFoundException("Track not found.");
+        if (!(batch?.Tracks.Contains(a.Int("TrackId")) ?? Tracks.ContainsKey(a.Int("TrackId")))) throw new KeyNotFoundException("Track not found.");
         List<ExternalVideoSourceDescriptor> videos;
         List<ExternalAudioSourceDescriptor> audios;
         List<ExternalMaskSourceDescriptor> masks;
@@ -1015,9 +1078,15 @@ public partial class DraftPage
         {
             var source = masks.SingleOrDefault(s => s.SourceId == id) ?? throw new KeyNotFoundException("Mask source not found.");
             path = importId.HasValue ? ProjectExternalMaskSource.CreatePath(importId.Value, source) : RemoteRpcMaskSource.CreatePath(source);
-            var dto = NewGuiSourceClip(a, ClipMode.MaskClip, "MaskClip", source.Name);
+            var dto = batch is null ? NewGuiSourceClip(a, ClipMode.MaskClip, "MaskClip", source.Name) : NewGuiBatchClip(batch, a, ClipMode.MaskClip, source.Name);
             dto.MetaData!["AllowFreeScaleResize"] = true;
             dto.MetaData[MaskClip.SourceTypeKey] = path;
+            if (batch is not null)
+            {
+                ApplyGuiBatchSourceArguments(dto, a);
+                batch.Put(dto);
+                return GuiClipSnapshot(dto);
+            }
             var mask = DraftImportAndExportHelper.ConvertToElement(dto);
             ApplyGuiSourceArguments(mask, a);
             return GuiClipSnapshot(TimelineMcpLiveService.ReplaceClip(this, GuiEditableDto(mask)));
@@ -1056,6 +1125,26 @@ public partial class DraftPage
             };
         }
         else throw new ArgumentException("SourceKind must be Video, Audio or Mask.");
+        if (batch is not null)
+        {
+            var dto = NewGuiBatchClip(batch, a, asset.ClipType, asset.Name);
+            dto.FilePath = path;
+            dto.SourceDuration = asset.Duration;
+            dto.IsInfiniteLength = asset.isInfiniteLength;
+            dto.FrameTime = asset.SecondPerFrame > 0 ? asset.SecondPerFrame : dto.FrameTime;
+            if (!asset.isInfiniteLength)
+            {
+                uint length = AssetDatabase.DetermineLengthInFrame(asset, batch.Project.TargetFrameRate);
+                if (dto.RelativeStartFrame >= length) throw new ArgumentException("SourceStartFrame is outside the source.");
+                if (!a.Has("DurationFrames")) dto.Duration = length - dto.RelativeStartFrame;
+                if (dto.Duration > length - dto.RelativeStartFrame) throw new ArgumentException("Clip duration exceeds the available source frames.");
+            }
+            if ((ulong)dto.StartFrame + dto.Duration > int.MaxValue) throw new ArgumentException("Clip exceeds the timeline range.");
+            if (!a.Has("WidthPixels") && asset.Width > 0) dto.TargetWidth = asset.Width;
+            if (!a.Has("HeightPixels") && asset.Height > 0) dto.TargetHeight = asset.Height;
+            batch.Put(dto);
+            return GuiClipSnapshot(dto);
+        }
         var clip = CreateFromAsset(asset, a.Int("TrackId"), InternalPluginBase.InternalPluginBaseID, path, FrameToPixel(a.UInt("StartFrame")));
         uint sourceStart = a.UInt("SourceStartFrame");
         if (!clip.isInfiniteLength && clip.maxFrameCount > 0)
@@ -1218,7 +1307,7 @@ public partial class DraftPage
         data.Validate();
         if (data.Cues.Any(c => c.Id == Guid.Empty) || data.Cues.Select(c => c.Id).Distinct().Count() != data.Cues.Count)
             throw new ArgumentException("Subtitle cue IDs must be nonempty and unique.");
-        foreach (var cue in data.Cues) _ = SubtitleData.FrameAt(cue.EndMilliseconds, ProjectInfo.TargetFrameRate);
+        foreach (var cue in data.Cues) _ = SubtitleData.FrameAt(cue.EndMilliseconds, (_guiBatch?.Project ?? ProjectInfo).TargetFrameRate);
     }
 
     private object? ExecuteGuiSubtitleOperation(GuiProjectOperation operation, GuiEditArgs a)
@@ -1564,9 +1653,8 @@ public partial class DraftPage
         Parameters = component.Parameters.Where(p => p.Key != "Children").ToDictionary(p => p.Key, p => p.Value),
     };
 
-    private object GuiVectorClipSnapshot(ClipElementUI clip)
+    private object GuiVectorClipSnapshot(ClipDraftDTO dto)
     {
-        var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false);
         return new
         {
             ClipId = dto.Id,
@@ -1581,17 +1669,17 @@ public partial class DraftPage
             XPixels = dto.TargetX,
             YPixels = dto.TargetY,
             RotationDegrees = dto.Rotation,
-            CanvasWidthPixels = VectorComponentClip.ReadNumber(clip.ExtraData, VectorComponentClip.CanvasWidthKey, dto.TargetWidth),
-            CanvasHeightPixels = VectorComponentClip.ReadNumber(clip.ExtraData, VectorComponentClip.CanvasHeightKey, dto.TargetHeight),
-            Viewport = VectorComponentClip.ReadViewport(clip.ExtraData, dto.TargetWidth, dto.TargetHeight),
-            SourceLengthFrames = VectorComponentClip.ReadNumber(clip.ExtraData, VectorComponentClip.SourceLengthKey, dto.Duration),
-            AntiAliasMode = clip.ExtraData.GetValueOrDefault("VectorAntiAliasMode")?.ToString() is { Length: > 0 } aa ? aa : "Default",
-            Components = EnumerateGuiVectorComponents(VectorComponentSerializer.Read(clip.ExtraData))
+            CanvasWidthPixels = VectorComponentClip.ReadNumber(dto.MetaData!, VectorComponentClip.CanvasWidthKey, dto.TargetWidth),
+            CanvasHeightPixels = VectorComponentClip.ReadNumber(dto.MetaData!, VectorComponentClip.CanvasHeightKey, dto.TargetHeight),
+            Viewport = VectorComponentClip.ReadViewport(dto.MetaData!, dto.TargetWidth, dto.TargetHeight),
+            SourceLengthFrames = VectorComponentClip.ReadNumber(dto.MetaData!, VectorComponentClip.SourceLengthKey, dto.Duration),
+            AntiAliasMode = dto.MetaData!.GetValueOrDefault("VectorAntiAliasMode")?.ToString() is { Length: > 0 } aa ? aa : "Default",
+            Components = EnumerateGuiVectorComponents(VectorComponentSerializer.Read(dto.MetaData!))
                 .Select(c => GuiVectorComponentSnapshot(dto.Id, c.Component, c.Parent)).ToArray(),
         };
     }
 
-    private ClipDraftDTO ApplyGuiVectorClipParameters(ClipDraftDTO dto, JsonElement parameters)
+    private ClipDraftDTO ApplyGuiVectorClipParameters(ClipDraftDTO dto, JsonElement parameters, GuiBatchState? batch = null)
     {
         var metadata = dto.MetaData;
         var node = JsonSerializer.SerializeToNode(dto)!;
@@ -1600,7 +1688,7 @@ public partial class DraftPage
             ("HeightPixels", "TargetHeight"), ("XPixels", "TargetX"), ("YPixels", "TargetY"), ("RotationDegrees", "Rotation") })
             if (parameters.TryGetProperty(source, out var value)) node[target] = JsonNode.Parse(value.GetRawText());
         dto = node.Deserialize<ClipDraftDTO>()!;
-        if (dto.Duration == 0 || dto.LayerIndex > int.MaxValue || !Tracks.ContainsKey((int)dto.LayerIndex)
+        if (dto.Duration == 0 || dto.LayerIndex > int.MaxValue || !(batch?.Tracks.Contains((int)dto.LayerIndex) ?? Tracks.ContainsKey((int)dto.LayerIndex))
             || (ulong)dto.StartFrame + dto.Duration > int.MaxValue || !float.IsFinite(dto.Rotation))
             throw new ArgumentException("Invalid vector clip timing, track or rotation.");
         if (dto.TargetWidth <= 0 || dto.TargetHeight <= 0) throw new ArgumentException("Vector clip dimensions must be positive.");
@@ -1636,14 +1724,7 @@ public partial class DraftPage
     private ClipDraftDTO SetGuiVectorDefinition(ClipDraftDTO dto, List<IVectorComponent> components, bool updateBounds)
     {
         foreach (var component in components) _ = component.ComputeAll().ToArray();
-        // Work on a detached element so invalid definitions cannot partially update the timeline.
-        var element = DraftImportAndExportHelper.ConvertToElement(dto);
-        VectorClipServices.SetDefinition(this, element, components, updateBounds && dto.ClipType == ClipMode.VectorComponentClip);
-        dto.MetaData = element.ExtraData;
-        dto.TargetWidth = element.TargetWidth;
-        dto.TargetHeight = element.TargetHeight;
-        dto.TargetX = element.TargetX;
-        dto.TargetY = element.TargetY;
+        VectorClipServices.SetDefinition(_guiBatch?.Project ?? ProjectInfo, dto, components, updateBounds && dto.ClipType == ClipMode.VectorComponentClip);
         return dto;
     }
 
@@ -1656,17 +1737,18 @@ public partial class DraftPage
         return clip;
     }
 
-    private object? ExecuteGuiVectorOperation(GuiProjectOperation operation, JsonElement parameters, CancellationToken cancellationToken)
+    private object? ExecuteGuiVectorOperation(GuiProjectOperation operation, JsonElement parameters, CancellationToken cancellationToken, GuiBatchState? batch = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         bool Has(string key) => parameters.TryGetProperty(key, out _);
         string? S(string key) => Has(key) ? parameters.GetProperty(key).GetString() : null;
         Guid G(string key) => Has(key) ? parameters.GetProperty(key).GetGuid() : Guid.Empty;
         bool B(string key, bool fallback = false) => Has(key) ? parameters.GetProperty(key).GetBoolean() : fallback;
-        ClipElementUI Clip()
+        ClipDraftDTO Clip()
         {
-            if (!Clips.TryGetValue(G("ClipId"), out var clip)) throw new KeyNotFoundException("Clip not found.");
-            return IsGuiVectorClip(clip) ? clip : throw new ArgumentException("Clip must be a VectorCanvasClip or VectorComponentClip.");
+            var clip = batch is null ? GuiEditableDto(GuiEditableClip(G("ClipId"))) : batch.Edit(G("ClipId"));
+            return clip.ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip ? clip
+                : throw new ArgumentException("Clip must be a VectorCanvasClip or VectorComponentClip.");
         }
 
         if (operation == GuiProjectOperation.GetVectorComponentType)
@@ -1683,15 +1765,15 @@ public partial class DraftPage
                 }).ToArray();
 
         if (operation == GuiProjectOperation.GetVectorClip)
-            return Clips.Values.Where(c => IsGuiVectorClip(c) && (!Has("ClipId") || c.Id == G("ClipId"))
-                && (!Has("TrackId") || c.origTrack == parameters.GetProperty("TrackId").GetInt32())
-                && (!Has("Name") || c.DisplayName.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
+            return GetGuiVectorDtos(batch).Where(c => (c.ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip) && (!Has("ClipId") || c.Id == G("ClipId"))
+                && (!Has("TrackId") || c.LayerIndex == parameters.GetProperty("TrackId").GetInt32())
+                && (!Has("Name") || c.Name.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
                 .Select(GuiVectorClipSnapshot).ToArray();
 
         if (operation == GuiProjectOperation.GetVectorComponent)
         {
             var clip = Clip();
-            return EnumerateGuiVectorComponents(VectorComponentSerializer.Read(clip.ExtraData))
+            return EnumerateGuiVectorComponents(VectorComponentSerializer.Read(clip.MetaData!))
                 .Where(c => (!Has("ComponentId") || c.Component.Id == G("ComponentId"))
                     && (!Has("ParentComponentId") || (c.Parent?.Id ?? Guid.Empty) == G("ParentComponentId"))
                     && (!Has("TypeName") || c.Component.TypeName.Equals(S("TypeName"), StringComparison.OrdinalIgnoreCase)))
@@ -1732,36 +1814,36 @@ public partial class DraftPage
                 Name = S("Name") ?? (canvas ? "Vector Canvas" : components[0].Name),
                 Duration = duration,
                 SourceDuration = duration,
-                FrameTime = 1f / Math.Max(1u, ProjectInfo.TargetFrameRate),
+                FrameTime = 1f / Math.Max(1u, (batch?.Project ?? ProjectInfo).TargetFrameRate),
                 SecondPerFrameRatio = 1f,
-                TargetWidth = ProjectInfo.RelativeWidth,
-                TargetHeight = ProjectInfo.RelativeHeight,
+                TargetWidth = (batch?.Project ?? ProjectInfo).RelativeWidth,
+                TargetHeight = (batch?.Project ?? ProjectInfo).RelativeHeight,
                 MetaData = new(),
             };
             if (!canvas)
             {
-                dto.MetaData[VectorComponentClip.CanvasWidthKey] = ProjectInfo.RelativeWidth;
-                dto.MetaData[VectorComponentClip.CanvasHeightKey] = ProjectInfo.RelativeHeight;
+                dto.MetaData[VectorComponentClip.CanvasWidthKey] = (batch?.Project ?? ProjectInfo).RelativeWidth;
+                dto.MetaData[VectorComponentClip.CanvasHeightKey] = (batch?.Project ?? ProjectInfo).RelativeHeight;
                 dto.MetaData[VectorComponentClip.SourceLengthKey] = duration;
             }
-            dto = ApplyGuiVectorClipParameters(dto, parameters);
+            dto = ApplyGuiVectorClipParameters(dto, parameters, batch);
             dto = SetGuiVectorDefinition(dto, components, !canvas && !Has("Viewport"));
-            dto = ApplyGuiVectorClipParameters(dto, parameters);
-            result = GuiVectorClipSnapshot(ReplaceGuiVectorClip(dto, components, cancellationToken));
+            dto = ApplyGuiVectorClipParameters(dto, parameters, batch);
+            result = GuiVectorClipSnapshot(SaveGuiVectorClip(dto, components, cancellationToken, batch));
         }
         else
         {
             var clip = Clip();
-            dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false);
+            dto = clip;
             dto.MetaData ??= new();
             var components = VectorComponentSerializer.Read(dto.MetaData!);
             if (operation == GuiProjectOperation.SetVectorClip)
             {
                 if (B("UpdateBounds") && Has("Viewport")) throw new ArgumentException("Choose UpdateBounds or Viewport.");
-                dto = ApplyGuiVectorClipParameters(dto, parameters);
+                dto = ApplyGuiVectorClipParameters(dto, parameters, batch);
                 dto = SetGuiVectorDefinition(dto, components, B("UpdateBounds"));
-                dto = ApplyGuiVectorClipParameters(dto, parameters);
-                result = GuiVectorClipSnapshot(ReplaceGuiVectorClip(dto, components, cancellationToken));
+                dto = ApplyGuiVectorClipParameters(dto, parameters, batch);
+                result = GuiVectorClipSnapshot(SaveGuiVectorClip(dto, components, cancellationToken, batch));
             }
             else
             {
@@ -1815,11 +1897,11 @@ public partial class DraftPage
                 if (operation != GuiProjectOperation.SetVectorComponent || Has("Index")) ReindexGuiVectorComponents(siblings);
                 parent?.SetChildren(siblings);
                 dto = SetGuiVectorDefinition(dto, components, B("UpdateBounds", dto.ClipType == ClipMode.VectorComponentClip));
-                ReplaceGuiVectorClip(dto, components, cancellationToken);
+                SaveGuiVectorClip(dto, components, cancellationToken, batch);
                 result = operation == GuiProjectOperation.RemoveVectorComponent ? null : GuiVectorComponentSnapshot(dto.Id, component, parent);
             }
         }
-        Log($"GUI RPC {operation}: vector clip {dto.Id}.");
+        if (batch is null) Log($"GUI RPC {operation}: vector clip {dto.Id}.");
         return result;
     }
     #endregion

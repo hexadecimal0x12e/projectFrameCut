@@ -65,10 +65,12 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
                 descKey = fieldItem.LocalizedDescriptionKey;
             }
 
-            nameKey ??= $"_{fieldId}";
+            source.InFields.TryGetValue(fieldId, out var descriptor);
+            if (descriptor is null) source.GetOutputFields().TryGetValue(fieldId, out descriptor);
+            nameKey ??= descriptor?.LocalizedNameKey ?? $"_{fieldId}";
             descKey ??= $"Description_Field_{source.TypeName}_{fieldId}";
 
-            var name = EffectProviderDisplayDefaults.ResolveLocalized(nameKey, fieldId, locate);
+            var name = EffectProviderDisplayDefaults.ResolveLocalized(nameKey, descriptor?.DisplayName ?? fieldId, locate);
             var desc = EffectProviderDisplayDefaults.ResolveLocalized(descKey, "", locate);
             return (name, desc);
         }

@@ -84,8 +84,7 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<PreviewAudioClock> ControlPreviewAudioAsync(PreviewAudioCommandRequest request, CancellationToken cancellationToken = default);
     ValueTask<PreviewAudioClock> GetPreviewAudioClockAsync(PreviewAudioClockRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken = default);
-    ValueTask<TimelineThumbnailsResponse> GenerateTimelineThumbnailsAsync(TimelineThumbnailsRequest request, CancellationToken cancellationToken = default)
-        => ValueTask.FromException<TimelineThumbnailsResponse>(new NotSupportedException("This render client does not support timeline thumbnails."));
+    ValueTask<TimelineThumbnailsResponse> GenerateTimelineThumbnailsAsync(TimelineThumbnailsRequest request, CancellationToken cancellationToken = default) => ValueTask.FromException<TimelineThumbnailsResponse>(new NotSupportedException("This render client does not support timeline thumbnails."));
     ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken cancellationToken = default);
     ValueTask<DynamicPreviewSession> StartDynamicPreviewAsync(StartDynamicPreviewRequest request, CancellationToken cancellationToken = default);
     ValueTask StopDynamicPreviewAsync(StopDynamicPreviewRequest request, CancellationToken cancellationToken = default);
@@ -111,6 +110,8 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectProviderAsync(RemoveHeadlessEffectProviderRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessProjectSnapshot> SaveHeadlessProjectAsync(HeadlessSaveProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessJsonResponse> ApplyHeadlessProjectEditAsync(HeadlessProjectEditRequest request, CancellationToken cancellationToken = default);
+
+    ValueTask TestingBackendCrashAsync(CancellationToken cancellationToken = default) => ValueTask.FromException(new NotSupportedException("This render client does not support backend crash testing."));
 }
 
 public sealed class DirectRenderTransport(IRenderService service) : IRenderNotificationTransport
@@ -202,6 +203,7 @@ public sealed class RenderClient : IRenderClient
     public string ClientId { get; }
 
     public ValueTask<RenderCapabilities> GetCapabilitiesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, RenderCapabilities>(RenderOperation.GetCapabilities, new(), ct);
+    public async ValueTask TestingBackendCrashAsync(CancellationToken ct = default) => _ = await SendAsync<EmptyRequest, EmptyResponse>(RenderOperation.TestingBackendCrash, new(), ct).ConfigureAwait(false);
     public ValueTask<RenderSession> OpenProjectAsync(OpenProjectRequest request, CancellationToken ct = default) => SendAsync<OpenProjectRequest, RenderSession>(RenderOperation.OpenProject, request, ct);
     public async ValueTask CloseProjectAsync(Guid sessionId, CancellationToken ct = default) { _ = await SendAsync<SessionRequest, EmptyResponse>(RenderOperation.CloseProject, new() { SessionId = sessionId }, ct).ConfigureAwait(false); }
     public ValueTask<ProjectSnapshot> GetProjectSnapshotAsync(Guid sessionId, CancellationToken ct = default) => SendAsync<SessionRequest, ProjectSnapshot>(RenderOperation.GetProjectSnapshot, new() { SessionId = sessionId }, ct);
@@ -334,7 +336,12 @@ public sealed class RenderClient : IRenderClient
 public sealed class RenderRpcException : Exception
 {
     public RenderRpcException(RemoteError error) : base(string.IsNullOrWhiteSpace(error.Details) ? error.Message : $"{error.Message}{Environment.NewLine}{error.Details}")
-    { Error = error; Data[nameof(RemoteError.Code)] = error.Code; Data[nameof(RemoteError.Retryable)] = error.Retryable; if (!string.IsNullOrWhiteSpace(error.Details)) Data[nameof(RemoteError.Details)] = error.Details; }
+    {
+        Error = error; 
+        Data[nameof(RemoteError.Code)] = error.Code; 
+        Data[nameof(RemoteError.Retryable)] = error.Retryable; 
+        if (!string.IsNullOrWhiteSpace(error.Details)) Data[nameof(RemoteError.Details)] = error.Details;
+    }
     public RemoteError Error { get; }
 }
 

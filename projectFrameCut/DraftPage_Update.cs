@@ -126,6 +126,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
     }
 
+    private bool IsRenderBackendRecovering => !IsRemoteProject &&
+        (Volatile.Read(ref _renderBackendRecoveryPending) != 0 || RenderRpcBootstrap.WorkerExitTask?.IsCompletedSuccessfully == true);
+
+    private bool IsRenderBackendConnectionFailure(Exception ex) => !IsRemoteProject &&
+        (ex is RenderPipeException || ((ex is IOException or ObjectDisposedException) && IsRenderBackendRecovering));
+
     private void StartRenderBackendWatchdog()
     {
         if (IsRemoteProject || _renderBackendWatchdogCts is not null) return;
@@ -133,9 +139,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         var cts = new CancellationTokenSource();
         _renderBackendWatchdogCts = cts;
         _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
-        _ = Task.Run(() => MonitorRenderBackendAsync(cts.Token));
-        _ = Task.Run(() => MonitorExternalRpcRequestsAsync(cts.Token));
-        _ = Task.Run(() => MonitorGuiRpcAsync(cts.Token));
+        var token = cts.Token;
+        _ = Task.Run(() => MonitorRenderBackendAsync(token));
+        _ = Task.Run(() => MonitorRenderBackendExitAsync(token));
+        _ = Task.Run(() => MonitorExternalRpcRequestsAsync(token));
+        _ = Task.Run(() => MonitorGuiRpcAsync(token));
     }
 
     private void StopRenderBackendWatchdog()
@@ -155,14 +163,23 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await Task.Delay(RenderBackendHealthCheckIntervalMs, cancellationToken).ConfigureAwait(false);
                 if (AlreadyDisappeared || _renderBackendRestartLock.CurrentCount == 0) continue;
 
+                RenderRpcBootstrap.TryGetClient(out var client);
+                if (Volatile.Read(ref _renderBackendRecoveryPending) != 0)
+                {
+                    if (Environment.TickCount64 < Volatile.Read(ref _renderBackendRetryAfter)) continue;
+                    await RestartRenderBackendAsync(showErrorDialog: false, expectedClient: client,
+                        checkCurrentClient: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
                 bool connected = false;
-                if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+                if (client is not null)
                 {
                     using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     probeCts.CancelAfter(TimeSpan.FromSeconds(5));
                     try
                     {
-                        _ = await client.GetCapabilitiesAsync(probeCts.Token).ConfigureAwait(false);
+                        await RenderServerProcessManager.ProbeAsync(client, probeCts.Token).ConfigureAwait(false);
                         connected = true;
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
@@ -182,7 +199,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (now - _renderBackendDisconnectedSinceUtc < RenderBackendReconnectTimeout) continue;
 
                 _renderBackendDisconnectedSinceUtc = now;
-                await RestartRenderBackendAsync(showErrorDialog: false, captureThreadStacks: true).ConfigureAwait(false);
+                await RestartRenderBackendAsync(showErrorDialog: false, captureThreadStacks: true, expectedClient: client,
+                    checkCurrentClient: true, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -195,7 +213,42 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task RestartRenderBackendAsync(bool showErrorDialog, bool captureThreadStacks = false)
+    private async Task MonitorRenderBackendExitAsync(CancellationToken cancellationToken)
+    {
+        var nextRestart = DateTime.MinValue;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var exitedWorker = RenderRpcBootstrap.WorkerExitTask;
+                if (exitedWorker is null)
+                {
+                    await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+                await exitedWorker.WaitAsync(cancellationToken).ConfigureAwait(false);
+                if (AlreadyDisappeared) return;
+                if (!ReferenceEquals(exitedWorker, RenderRpcBootstrap.WorkerExitTask)) continue;
+                var delay = Math.Max((long)(nextRestart - DateTime.UtcNow).TotalMilliseconds,
+                    Volatile.Read(ref _renderBackendRetryAfter) - Environment.TickCount64);
+                if (delay > 0) await Task.Delay(TimeSpan.FromMilliseconds(delay), cancellationToken).ConfigureAwait(false);
+                await RestartRenderBackendAsync(showErrorDialog: false, exitedWorker: exitedWorker,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                nextRestart = DateTime.UtcNow.AddSeconds(5);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
+            catch (Exception ex)
+            {
+                Log(ex, "Monitor render RPC backend process", this);
+                try { await Task.Delay(5000, cancellationToken).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
+            }
+        }
+    }
+
+    private async Task RestartRenderBackendAsync(bool showErrorDialog, bool captureThreadStacks = false,
+        Task? exitedWorker = null, IRenderClient? expectedClient = null, bool checkCurrentClient = false,
+        CancellationToken cancellationToken = default)
     {
         if (IsRemoteProject)
         {
@@ -204,45 +257,87 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        await _renderBackendRestartLock.WaitAsync();
+        if (!cancellationToken.CanBeCanceled)
+        {
+            try { cancellationToken = _renderBackendWatchdogCts?.Token ?? cancellationToken; }
+            catch (ObjectDisposedException) { return; }
+        }
+        try { await _renderBackendRestartLock.WaitAsync(cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
         try
         {
-            if (AlreadyDisappeared) return;
+            if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
+            RenderRpcBootstrap.TryGetClient(out var currentClient);
+            if (checkCurrentClient && !ReferenceEquals(currentClient, expectedClient)) return;
+            if (exitedWorker is not null && !ReferenceEquals(exitedWorker, RenderRpcBootstrap.WorkerExitTask)) return;
+            Volatile.Write(ref _renderBackendRecoveryPending, 1);
+            if (exitedWorker is not null) Log("Render RPC backend exited unexpectedly; restarting.", "warning");
 #if WINDOWS && DEBUG
             if (captureThreadStacks)
                 await Task.Run(RenderRpcBootstrap.CaptureThreadStacksBeforeRestart).ConfigureAwait(false);
 #endif
-            if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
-
             await Dispatcher.DispatchAsync(() =>
             {
+                if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
                 SetStateBusy();
                 SetStatusText(Localized.DraftPage_RestartBackend_Restarting);
+                CancelDynamicPreview();
+                DynamicPreviewProvider.CancelClipWarmups();
             });
+            cancellationToken.ThrowIfCancellationRequested();
 
-            var draft = await MainThread.InvokeOnMainThreadAsync(() =>
-                DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false));
-
-            await Task.Run(() => RenderRpcBootstrap.Restart(WorkingPath, ProjectName));
-            previewer.CleanupMaterializedPreviews();
-            previewer.RenderSessionId = Guid.NewGuid();
-            await previewer.UpdateDraft(draft).ConfigureAwait(false);
-            _renderBackendDisconnectedSinceUtc = null;
+            var pause = isPlaying || previewer.HasDynamicPreview ? PauseLivePreview(refreshPreview: false) : Task.CompletedTask;
+            var restart = Task.Run(() => RenderRpcBootstrap.Restart(WorkingPath, ProjectName, currentClient, cancellationToken));
+            await Task.WhenAll(pause, restart).ConfigureAwait(false);
+            if (!await restart.ConfigureAwait(false))
+            {
+                Volatile.Write(ref _renderBackendRecoveryPending, 0);
+                Volatile.Write(ref _renderBackendRetryAfter, 0);
+                Interlocked.Exchange(ref _renderBackendRecoveryFailures, 0);
+                return;
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (AlreadyDisappeared) return;
+            await previewer.RestoreBackendAsync(() => MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                if (AlreadyDisappeared) throw new OperationCanceledException();
+                return DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+            }), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!AlreadyDisappeared)
             {
                 await Dispatcher.DispatchAsync(async () =>
                 {
+                    if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
                     DynamicPreviewProvider.SetClips(previewer.Clips);
-                    await RefreshPreviewFromCurrentProviderAsync();
+                    var refresh = RefreshPreviewFromCurrentProviderAsync(cancellationToken);
+                    try { await refresh.WaitAsync(cancellationToken); }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        _ = refresh.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        throw;
+                    }
+                    if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
                     SetStateOK();
                     SetStatusText(Localized.DraftPage_RestartBackend_Succeeded);
                 });
             }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (AlreadyDisappeared) return;
+            _renderBackendDisconnectedSinceUtc = null;
+            Interlocked.Exchange(ref _renderBackendRecoveryFailures, 0);
+            Volatile.Write(ref _renderBackendRetryAfter, 0);
+            Volatile.Write(ref _renderBackendRecoveryPending, 0);
+            Log("Render RPC backend restarted and project session restored.");
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || AlreadyDisappeared) { }
         catch (Exception ex)
         {
             _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
+            var failures = Math.Min(Interlocked.Increment(ref _renderBackendRecoveryFailures), 4);
+            Volatile.Write(ref _renderBackendRetryAfter, Environment.TickCount64 + Math.Min(30000, 5000L << (failures - 1)));
             Log(ex, "Restart render RPC backend", this);
             if (!AlreadyDisappeared)
             {
@@ -263,8 +358,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
         => await DraftChangedAsync(sender, e);
 
-    private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e)
+    private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e, bool throwOnFailure = false)
     {
+        if (GuiBatchOverlay.IsVisible && e.DetailInfo != "RPC batch") return;
         if (e.DetailInfo == "__EFFECT_BINDING_CHANGED__")
         {
             if (!IsReadonly && !AlreadyDisappeared && !e.NoSave) ScheduleSnapshotSave(e);
@@ -346,7 +442,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         catch (Exception ex)
         {
             Log(ex, "apply change", this);
-            if (AlreadyDisappeared) return;
+            if (throwOnFailure) throw;
+            if (AlreadyDisappeared || IsRenderBackendRecovering || IsRenderBackendConnectionFailure(ex)) return;
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
             if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), "Throw", Localized._OK)) throw;
@@ -682,8 +779,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         => SaveCoreAsync(noSlot, args, throwOnFailure);
 
     private async Task SaveCoreAsync(bool noSlot, ClipUpdateEventArgs? args, bool throwOnFailure,
-        CancellationToken snapshotSaveToken = default)
+        CancellationToken snapshotSaveToken = default, Guid requestedSnapshotId = default, Guid? previousSnapshotId = null)
     {
+        if (_guiBatch is not null && requestedSnapshotId == Guid.Empty) return;
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var saveMark = new UserMarkRange("Draft.Save", $"noSlot={noSlot}");
 #endif
@@ -762,7 +860,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             if (!noSlot || args is not null || CurrentSnapshotID == Guid.Empty || FindSlotDirectory(CurrentSnapshotID) is null)
             {
-                var snapshotId = Guid.NewGuid();
+                var snapshotId = requestedSnapshotId == Guid.Empty ? Guid.NewGuid() : requestedSnapshotId;
                 var slot = $"slot_{snapshotId}";
                 if (args is not null)
                 {
@@ -773,7 +871,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 draft.OperatorDetailName = args?.OperatorDetailName ?? string.Empty;
                 draft.ChangedByUserDisplayName = SettingsManager.GetSetting("UserName", "User");
                 draft.ChangedByUser = SettingsManager.GetSettingAs("UserID", Guid.Empty, Guid.Empty);
-                draft.PreviousSnapshot = CurrentSnapshotID;
+                draft.PreviousSnapshot = previousSnapshotId ?? CurrentSnapshotID;
                 draft.SnapshotID = snapshotId;
                 await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), draft);
                 await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), assets);
@@ -1178,6 +1276,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
                 return;
             }
+            draftJson.ProjectSettings?.ApplyTo(ProjectInfo);
+            previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
             (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo);
             Clips = new ConcurrentDictionary<Guid, ClipElementUI>(clips);
             Assets = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));

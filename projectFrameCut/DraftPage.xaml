@@ -551,6 +551,13 @@
             </Grid>
         </Grid>
 
+        <Grid x:Name="GuiBatchOverlay" Grid.RowSpan="3" ZIndex="20000" IsVisible="False"
+              BackgroundColor="#A0000000" InputTransparent="False">
+            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="12">
+                <ActivityIndicator IsRunning="True" Color="White" />
+                <Label Text="{l:Localized Key=DraftPage_Processing}" TextColor="White" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+        </Grid>
         <AbsoluteLayout x:Name="OverlayLayer"
                         Grid.RowSpan="3"
                         ZIndex="10000"

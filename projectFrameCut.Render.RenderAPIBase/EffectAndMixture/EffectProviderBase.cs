@@ -371,6 +371,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             _fieldValues[fieldId] = value;
         }
 
+        protected object? GetField(string fieldId) => _fieldValues.GetValueOrDefault(fieldId);
+
         #endregion
 
         #region Build pipeline

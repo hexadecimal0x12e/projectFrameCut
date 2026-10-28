@@ -1124,7 +1124,7 @@ public partial class DraftEffectBindingView : ContentView
 
             var nameLabel = new Label
             {
-                Text = PluginManager.GetLocalizationItem($"Effect_{provider.TypeName}_{p.Key.Replace('.', '_')}", p.DisplayName),
+                Text = EffectProviderUIHelper.FieldName(provider, p.Key, true, p.DisplayName),
                 TextColor = Colors.LightGray,
                 FontSize = 10,
                 WidthRequest = 48,
@@ -1890,6 +1890,13 @@ public partial class DraftEffectBindingView : ContentView
                         p.Fields = fieldUpdate.newFields;
                 }
                 RefreshNodeParams(node);
+                if (node.Provider is AdvancedMathEffectProvider
+                    && EffectProviderUIHelper.FieldId(node.Provider, args.Id) == "Operation")
+                {
+                    foreach (var port in node.OutputPorts.Where(p => !node.Provider.GetOutputFields().ContainsKey(p.Key)))
+                        RemoveUIBindingsFrom(node.Provider.Id, port.Key);
+                    RefreshSelectedNode();
+                }
                 // 属性面板改动字段后，重建连线（例如动态绑定字段值变化可能影响值绑定连线）。
                 RebuildConnections();
                 ConnectionsLayer.Invalidate();
@@ -2286,7 +2293,7 @@ public partial class DraftEffectBindingView : ContentView
                     Key = kv.Key,
                     FieldType = FieldTypes?.GetInputType(Provider, kv.Key) ?? kv.Value.FieldType,
                     DeclaredFieldType = kv.Value.FieldType,
-                    DisplayName = HumanizePortName(kv.Key),
+                    DisplayName = EffectProviderUIHelper.FieldName(Provider, kv.Key, true, HumanizePortName(kv.Key)),
                     Index = i
                 }).ToList();
 
@@ -2294,7 +2301,8 @@ public partial class DraftEffectBindingView : ContentView
                 : Provider.GetOutputFields().Values.Select((p, i) => new NodePort
                 {
                     Kind = PortKind.AnchorOutput, Key = p.Id, FieldType = FieldTypes?.GetOutputType(Provider, p.Id) ?? p.FieldType,
-                    DeclaredFieldType = p.FieldType, DisplayName = HumanizePortName(p.Id), Index = i,
+                    DeclaredFieldType = p.FieldType,
+                    DisplayName = EffectProviderUIHelper.FieldName(Provider, p.Id, false, HumanizePortName(p.Id)), Index = i,
                 }).ToList();
 
             ParamPorts = inputs
@@ -2302,7 +2310,8 @@ public partial class DraftEffectBindingView : ContentView
                           && !IsStageTerminal && !IsNodeInput(Provider, kv.Key))
                 .Select((kv, i) => new NodePort { Kind = PortKind.ParamBind, Key = kv.Key,
                     FieldType = FieldTypes?.GetInputType(Provider, kv.Key) ?? kv.Value.FieldType,
-                    DeclaredFieldType = kv.Value.FieldType, DisplayName = kv.Key, Index = i })
+                    DeclaredFieldType = kv.Value.FieldType,
+                    DisplayName = EffectProviderUIHelper.FieldName(Provider, kv.Key, true), Index = i })
                 .ToList();
         }
 
@@ -2402,16 +2411,41 @@ public partial class DraftEffectBindingView : ContentView
         }
     }
 
+    private async void OnCanvasActionsClicked(object sender, EventArgs e)
+    {
+        List<(string Text, Action Run)> actions =
+        [
+            ((_groupMultiSelect ? "✓ " : "") + Localized.EffectGroup_MultiSelect, ToggleGroupMultiSelect),
+            (Localized.EffectGroup_Pack, BeginGroup),
+            ("一键整理", () => OnAutoArrangeClicked(this, EventArgs.Empty)),
+        ];
+        if (!PreviewBusyIndicator.IsRunning)
+            actions.Add((Localized.AssetPage_ShowPreview, () => GeneratePreviewButton_Clicked(this, EventArgs.Empty)));
+        actions.Add(("图", () => ShowUiBindingsGraphButton_Clicked(this, EventArgs.Empty)));
+
+        if (IContextMenuBuilder.Default?.CreateNewInstance() is { } menu)
+        {
+            foreach (var action in actions) menu.AddCommand(action.Text, action.Run);
+            if (menu.TryShow(CanvasActionsButton)) return;
+        }
+        if (_page is null) return;
+        var selected = await _page.DisplayActionSheetAsync(CanvasActionsButton.Text, Localized._Cancel, null, actions.Select(a => a.Text).ToArray());
+        foreach (var action in actions)
+            if (action.Text == selected)
+            {
+                action.Run();
+                break;
+            }
+    }
+
     private async void GeneratePreviewButton_Clicked(object sender, EventArgs e)
     {
-        GeneratePreviewButton.IsEnabled = false;
-        var busy = new ActivityIndicator { IsRunning = true };
-        BottomCommandBar.Children.Insert(0, busy);
+        if (PreviewBusyIndicator.IsRunning) return;
+        PreviewBusyIndicator.IsVisible = PreviewBusyIndicator.IsRunning = true;
         try { await GeneratePreviews(); }
         finally
         {
-            GeneratePreviewButton.IsEnabled = true;
-            BottomCommandBar.Children.Remove(busy);
+            PreviewBusyIndicator.IsVisible = PreviewBusyIndicator.IsRunning = false;
         }
 
     }

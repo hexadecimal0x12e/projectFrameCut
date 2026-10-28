@@ -11443,6 +11443,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "\u5F53\u524D\u9879\u76EE\u4ECD\u6709\u5916\u90E8 RPC \u5BA2\u6237\u7AEF\u8FDE\u63A5\u3002\u5173\u95ED\u7A97\u53E3\u5C06\u4E2D\u65AD\u8FD9\u4E9B\u8FDE\u63A5\u548C\u6B63\u5728\u8FDB\u884C\u7684\u64CD\u4F5C\u3002\u662F\u5426\u7EE7\u7EED\u5173\u95ED\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -22384,6 +22392,14 @@
       {
         "Id": "RenderPage_HashPreparationProgress",
         "Value": "Unset localization item:RenderPage_HashPreparationProgress()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "External RPC clients are still connected to this project. Closing the window will interrupt these connections and ongoing operations. Continue closing?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33347,6 +33363,14 @@
       {
         "Id": "RenderPage_HashPreparationProgress",
         "Value": "Unset localization item:RenderPage_HashPreparationProgress()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "\u76EE\u524D\u5C08\u6848\u4ECD\u6709\u5916\u90E8 RPC \u7528\u6236\u7AEF\u9023\u7DDA\u3002\u95DC\u9589\u8996\u7A97\u5C07\u4E2D\u65B7\u9019\u4E9B\u9023\u7DDA\u8207\u9032\u884C\u4E2D\u7684\u64CD\u4F5C\u3002\u662F\u5426\u7E7C\u7E8C\u95DC\u9589\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -44320,6 +44344,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u306F\u5916\u90E8 RPC \u30AF\u30E9\u30A4\u30A2\u30F3\u30C8\u304C\u63A5\u7D9A\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u9589\u3058\u308B\u3068\u3001\u63A5\u7D9A\u3068\u9032\u884C\u4E2D\u306E\u64CD\u4F5C\u304C\u4E2D\u65AD\u3055\u308C\u307E\u3059\u3002\u9589\u3058\u307E\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -55274,6 +55306,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "\uC774 \uD504\uB85C\uC81D\uD2B8\uC5D0 \uC678\uBD80 RPC \uD074\uB77C\uC774\uC5B8\uD2B8\uAC00 \uC5F0\uACB0\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uCC3D\uC744 \uB2EB\uC73C\uBA74 \uC5F0\uACB0\uACFC \uC9C4\uD589 \uC911\uC778 \uC791\uC5C5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4. \uACC4\uC18D \uB2EB\uC73C\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -66222,6 +66262,14 @@
       {
         "Id": "RenderPage_HashPreparationProgress",
         "Value": "Unset localization item:RenderPage_HashPreparationProgress()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "Des clients RPC externes sont encore connect\u00E9s \u00E0 ce projet. Fermer la fen\u00EAtre interrompra ces connexions et les op\u00E9rations en cours. Continuer ?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -77187,6 +77235,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "\u0644\u0627 \u062A\u0632\u0627\u0644 \u0647\u0646\u0627\u0643 \u0639\u0645\u0644\u0627\u0621 RPC \u062E\u0627\u0631\u062C\u064A\u0648\u0646 \u0645\u062A\u0635\u0644\u0648\u0646 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0634\u0631\u0648\u0639. \u0633\u064A\u0624\u062F\u064A \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0625\u0644\u0649 \u0642\u0637\u0639 \u0647\u0630\u0647 \u0627\u0644\u0627\u062A\u0635\u0627\u0644\u0627\u062A \u0648\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062C\u0627\u0631\u064A\u0629. \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -88147,6 +88203,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "Externe RPC-Clients sind noch mit diesem Projekt verbunden. Das Schlie\u00DFen des Fensters unterbricht diese Verbindungen und laufende Vorg\u00E4nge. Trotzdem schlie\u00DFen?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -99099,6 +99163,14 @@
       {
         "Id": "RenderPage_HashPreparationProgress",
         "Value": "Unset localization item:RenderPage_HashPreparationProgress()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "Todav\u00EDa hay clientes RPC externos conectados a este proyecto. Cerrar la ventana interrumpir\u00E1 estas conexiones y las operaciones en curso. \u00BFContinuar?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -110064,6 +110136,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "Alcuni client RPC esterni sono ancora connessi a questo progetto. La chiusura della finestra interromper\u00E0 queste connessioni e le operazioni in corso. Continuare?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -121014,6 +121094,14 @@
       {
         "Id": "RenderPage_HashPreparationProgress",
         "Value": "Unset localization item:RenderPage_HashPreparationProgress()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "Zewn\u0119trzne klienty RPC s\u0105 nadal po\u0142\u0105czone z tym projektem. Zamkni\u0119cie okna przerwie te po\u0142\u0105czenia i trwaj\u0105ce operacje. Kontynuowa\u0107?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -131970,6 +132058,14 @@
       {
         "Id": "RenderPage_HashPreparationProgress",
         "Value": "Unset localization item:RenderPage_HashPreparationProgress()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "Ainda h\u00E1 clientes RPC externos conectados a este projeto. Fechar a janela interromper\u00E1 essas conex\u00F5es e as opera\u00E7\u00F5es em andamento. Continuar?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -142933,6 +143029,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "\u041A \u044D\u0442\u043E\u043C\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0443 \u0432\u0441\u0451 \u0435\u0449\u0451 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B \u0432\u043D\u0435\u0448\u043D\u0438\u0435 \u043A\u043B\u0438\u0435\u043D\u0442\u044B RPC. \u0417\u0430\u043A\u0440\u044B\u0442\u0438\u0435 \u043E\u043A\u043D\u0430 \u043F\u0440\u0435\u0440\u0432\u0451\u0442 \u044D\u0442\u0438 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u0438 \u0442\u0435\u043A\u0443\u0449\u0438\u0435 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -153885,6 +153989,14 @@
       {
         "Id": "RenderPage_HashPreparationProgress",
         "Value": "Unset localization item:RenderPage_HashPreparationProgress()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcCloseWarning",
+        "Value": "Bu projeye h\u00E2l\u00E2 ba\u011Fl\u0131 harici RPC istemcileri var. Pencereyi kapatmak bu ba\u011Flant\u0131lar\u0131 ve devam eden i\u015Flemleri keser. Devam edilsin mi?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -179,7 +179,7 @@ public partial class DraftEffectBindingView
 
     private void FitArrangedNodes(Size size)
     {
-        double top = StagePicker.IsVisible ? Math.Max(40, StagePicker.Height) + 20 : 20;
+        double top = Math.Max(40, TopCommandBar.Height) + 20;
         double width = ConnectionsLayer.Width - 40;
         double height = ConnectionsLayer.Height - top - Math.Max(BottomCommandBar.Height, InfoLabel.Height) - 20;
         double scale = width > 0 && height > 0 ? Math.Clamp(Math.Min(width / size.Width, height / size.Height), 0.2, 1.0) : 1.0;

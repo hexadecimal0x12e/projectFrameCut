@@ -37,7 +37,23 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// X/Y remain project-relative; Width/Height are in output pixels.
         /// </summary>
         public virtual ClipPositionTuple GetPosition(IClip source, uint index, int targetWidth, int targetHeight, int relativeWidth, int relativeHeight)
-            => GetPosition(source, index, targetWidth, targetHeight);
+        {
+            relativeWidth = relativeWidth > 0 ? relativeWidth : targetWidth;
+            relativeHeight = relativeHeight > 0 ? relativeHeight : targetHeight;
+            // Legacy providers evaluate in project space; only dimensions become output pixels.
+            var position = GetPosition(source, index, relativeWidth, relativeHeight);
+            int width = relativeWidth > 0 && relativeWidth != targetWidth
+                ? (int)Math.Round((double)position.TargetWidth * targetWidth / relativeWidth, MidpointRounding.AwayFromZero)
+                : position.TargetWidth;
+            int height = relativeHeight > 0 && relativeHeight != targetHeight
+                ? (int)Math.Round((double)position.TargetHeight * targetHeight / relativeHeight, MidpointRounding.AwayFromZero)
+                : position.TargetHeight;
+            return position with
+            {
+                TargetWidth = !position.IsDelta && position.TargetWidth > 0 ? Math.Max(1, width) : width,
+                TargetHeight = !position.IsDelta && position.TargetHeight > 0 ? Math.Max(1, height) : height,
+            };
+        }
 
         /// <summary>
         /// Whether resizing to the supplied rectangle should preserve the content's aspect ratio.

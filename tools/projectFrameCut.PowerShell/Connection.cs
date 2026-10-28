@@ -13,10 +13,13 @@ internal sealed class Connection : IDisposable
     private static readonly ConditionalWeakTable<Runspace, Connection> Connections = new();
     internal RenderClient Client { get; }
     internal Guid SessionId { get; }
+    internal Guid BatchId { get; set; }
+    internal Guid LastBatchId { get; set; }
+    internal bool SupportsBatch { get; }
     private readonly Runspace _runspace;
 
-    internal Connection(RenderClient client, Guid sessionId, Runspace runspace)
-    { Client = client; SessionId = sessionId; _runspace = runspace; }
+    internal Connection(RenderClient client, Guid sessionId, Runspace runspace, bool supportsBatch = false)
+    { Client = client; SessionId = sessionId; _runspace = runspace; SupportsBatch = supportsBatch; }
 
     internal static Connection Current => Connections.TryGetValue(Runspace.DefaultRunspace, out var c)
         ? c : throw new InvalidOperationException("Run Connect-ProjectFrameCut first.");
@@ -58,7 +61,7 @@ internal sealed class Connection : IDisposable
             {
                 throw new InvalidOperationException("No GUI project is bound to this pipe.");
             }
-            Replace(new(client, session.SessionId, Runspace.DefaultRunspace));
+            Replace(new(client, session.SessionId, Runspace.DefaultRunspace, session.SupportsBatch));
             client = null;
             return session.SessionId;
         }
@@ -99,6 +102,7 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
     [Parameter(ParameterSetName = "Persistent")]
     public string ExecutablePath { get; set; } = "pjfc";
     [Parameter(ParameterSetName = "Authorize")] public string? RequestDirectory { get; set; }
+    [Parameter(ParameterSetName = "Authorize")][ValidateNotNullOrEmpty()] public string[] AddSID { get; set; } = [];
     [Parameter(Mandatory = true, ParameterSetName = "Persistent")] public Guid ClientId { get; set; }
     [Parameter(Mandatory = true, ParameterSetName = "Persistent")] public string PrivateKey { get; set; } = "";
     [Parameter(ParameterSetName = "Persistent")][ValidatePattern("^[A-Za-z0-9._-]{1,24}$")] public string Service { get; set; } = "rpc";
@@ -138,6 +142,7 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
             $"--name={Name}",
             $"--author={Author}",
             $"--purpose={Purpose}",
+            .. AddSID.Select(s => $"--addSID={s}"),
         ], RequestDirectory is null ? null : GetUnresolvedProviderPathFromPSPath(RequestDirectory), Cancellation.Token).ConfigureAwait(false);
     }
 

@@ -108,7 +108,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
     }
 
-    public async Task ResolveAsync(ResolveExternalRpcRequest decision, Func<Guid, string, Task<string>> createPipe, Action<string> revokePipe, CancellationToken ct)
+    public async Task ResolveAsync(ResolveExternalRpcRequest decision, Func<Guid, string, string[], Task<string>> createPipe, Action<string> revokePipe, CancellationToken ct)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         string? token = null;
@@ -129,7 +129,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
                 if (!_request.VerifySignature()) throw new UnauthorizedAccessException("Persistent RPC request signature is invalid.");
             }
             using var rsa = _request.OpenPublicKey();
-            token = await createPipe(authorization?.ClientId ?? Guid.Empty, authorization?.AppName ?? _request.AppName).ConfigureAwait(false);
+            token = await createPipe(authorization?.ClientId ?? Guid.Empty, authorization?.AppName ?? _request.AppName, _request.AdditionalSids).ConfigureAwait(false);
             ExternalRpcPipeSettings.ThrowIfDisabled(_externalRpcAllowed());
             ct.ThrowIfCancellationRequested();
             _lifetime.Token.ThrowIfCancellationRequested();

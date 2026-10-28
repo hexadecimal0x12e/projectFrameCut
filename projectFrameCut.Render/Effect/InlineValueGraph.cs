@@ -160,7 +160,8 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                         inputValue = null;
                     else return node.Provider.GetOutputFields().Keys.ToDictionary(k => k, _ => (object?)EffectBranchState.Inactive);
                 }
-                parameters[key] = EffectFieldTypes.ConvertInput(field.FieldType, inputValue, false);
+                parameters[key] = node.Provider is AdvancedMathEffectProvider && (key is "A" or "B" or "C")
+                    ? inputValue : EffectFieldTypes.ConvertInput(field.FieldType, inputValue, false);
                 if (parameters[key] is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory)
                     || !EffectFieldTypes.Accepts(Types.GetInputType(node.Provider, key), parameters[key]))
                     throw new InvalidOperationException($"Invalid input '{key}' on provider {node.Provider.Id}.");

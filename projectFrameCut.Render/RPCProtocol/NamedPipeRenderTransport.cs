@@ -12,13 +12,15 @@ public sealed class NamedPipeRenderServer(
     Func<string, bool, NamedPipeServerStream>? additionalPipeFactory = null,
     Func<bool>? externalPipeSingleConnection = null,
     Func<bool>? externalRpcAllowed = null,
-    Func<bool>? externalSourcesAllowed = null)
+    Func<bool>? externalSourcesAllowed = null,
+    Func<string, string[], NamedPipeServerStream>? externalRequestPipeFactory = null)
 {
     private readonly IRenderService _service = service ?? throw new ArgumentNullException(nameof(service));
     private readonly Func<bool> _externalRpcAllowed = externalRpcAllowed ?? (() => requestDirectory is null
         || ExternalRpcPipeSettings.Load(Path.GetDirectoryName(Path.GetFullPath(requestDirectory))!).AllowExternalRPC);
     private readonly Func<bool> _externalSourcesAllowed = externalSourcesAllowed ?? (() => requestDirectory is null
         || ExternalSourceSettings.Load(Path.GetDirectoryName(Path.GetFullPath(requestDirectory))!).AllowRpcSources);
+    public bool AllowTestingBackendCrash { get; init; }
 
     public async Task RunAsync(string pipeName, string token, string? expectedParentPid = null, CancellationToken cancellationToken = default)
     {
@@ -27,7 +29,7 @@ public sealed class NamedPipeRenderServer(
 
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var parentMonitor = StartParentMonitor(expectedParentPid, lifetime);
-        await using var additional = allowAdditionalPipes ? new AdditionalPipeHost(_service, lifetime.Token, requestDirectory, additionalPipeFactory, externalPipeSingleConnection, _externalRpcAllowed, _externalSourcesAllowed) : null;
+        await using var additional = allowAdditionalPipes ? new AdditionalPipeHost(_service, lifetime.Token, requestDirectory, additionalPipeFactory, externalPipeSingleConnection, _externalRpcAllowed, _externalSourcesAllowed, AllowTestingBackendCrash, externalRequestPipeFactory) : null;
         try
         {
             await RunListenerAsync(pipeName, token, additional ?? _service, lifetime.Token).ConfigureAwait(false);
@@ -119,6 +121,7 @@ public sealed class NamedPipeRenderServer(
         await using var connection = pipe;
         using var closeOnCancel = cancellationToken.Register(() => pipe.Dispose());
         var connected = false;
+        var connectionId = Guid.NewGuid();
         try
         {
             using var handshakeTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -166,6 +169,7 @@ public sealed class NamedPipeRenderServer(
                     if (bytes is null) break;
                     var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(bytes);
                     request.ClientId = handshake.ClientId;
+                    request.ConnectionId = connectionId;
                     if (externalRpcAllowed?.Invoke() == false)
                     {
                         await DispatchAndWriteAsync(service, pipe, writeGate, request, connectionCancellation.Token,
@@ -214,7 +218,12 @@ public sealed class NamedPipeRenderServer(
                 callbacks.Dispose();
                 pipe.Dispose();
                 try { await Task.WhenAll(requests).ConfigureAwait(false); }
-                finally { writeGate.Dispose(); }
+                finally
+                {
+                    writeGate.Dispose();
+                    if (service is IRenderConnectionObserver connectionObserver)
+                        await connectionObserver.DisconnectedAsync(connectionId).ConfigureAwait(false);
+                }
             }
         }
         catch (EndOfStreamException) { }
@@ -333,7 +342,7 @@ public sealed class NamedPipeRenderServer(
         catch (ObjectDisposedException) { }
     }
 
-    private sealed class AdditionalPipeHost(IRenderService service, CancellationToken cancellationToken, string? requestDirectory, Func<string, bool, NamedPipeServerStream>? additionalPipeFactory, Func<bool>? externalPipeSingleConnection, Func<bool> externalRpcAllowed, Func<bool> externalSourcesAllowed) : IRenderService, IAsyncDisposable, IExternalRpcAuthorizationHost
+    private sealed class AdditionalPipeHost(IRenderService service, CancellationToken cancellationToken, string? requestDirectory, Func<string, bool, NamedPipeServerStream>? additionalPipeFactory, Func<bool>? externalPipeSingleConnection, Func<bool> externalRpcAllowed, Func<bool> externalSourcesAllowed, bool allowTestingBackendCrash, Func<string, string[], NamedPipeServerStream>? externalRequestPipeFactory) : IRenderService, IAsyncDisposable, IExternalRpcAuthorizationHost
     {
         private readonly CancellationTokenSource _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         private readonly object _gate = new();
@@ -351,6 +360,10 @@ public sealed class NamedPipeRenderServer(
                 ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed());
             if (request.ProtocolVersion < RenderProtocol.MinimumSupportedVersion || request.ProtocolVersion > RenderProtocol.CurrentVersion)
                 throw new ArgumentException("Unsupported render protocol version.");
+            if (allowTestingBackendCrash && request.Operation == RenderOperation.TestingBackendCrash)
+            {
+                Environment.FailFast("TestingBackendCrash requested.");
+            }
             if (request.Operation is RenderOperation.RegisterGuiProject or RenderOperation.UnregisterGuiProject
                 or RenderOperation.GetGuiProjectWork or RenderOperation.CompleteGuiProjectWork or RenderOperation.CreateGuiProjectPipe)
             {
@@ -382,7 +395,7 @@ public sealed class NamedPipeRenderServer(
                 var decision = RenderRpcSerializer.Deserialize<ResolveExternalRpcRequest>(request.Payload);
                 if (decision.Approved) _gui.CheckOwner(decision.GuiSessionId, request.ClientId);
                 await _requests.ResolveAsync(decision,
-                    (clientId, clientName) => CreatePipeAsync(ct, decision.GuiSessionId, clientId, clientName), RevokePipe, ct).ConfigureAwait(false);
+                    (clientId, clientName, sids) => CreatePipeAsync(ct, decision.GuiSessionId, clientId, clientName, additionalSids: sids), RevokePipe, ct).ConfigureAwait(false);
                 return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new EmptyResponse()) };
             }
             if (request.Operation == RenderOperation.ListExternalVideoSourceClients)
@@ -454,6 +467,7 @@ public sealed class NamedPipeRenderServer(
                 if (request.Operation == RenderOperation.GetCapabilities && response.Error is null)
                 {
                     var capabilities = RenderRpcSerializer.Deserialize<RenderCapabilities>(response.Payload);
+                    if (allowTestingBackendCrash) capabilities.Operations.Add(nameof(RenderOperation.TestingBackendCrash));
                     if (externalRpcAllowed()) capabilities.Operations.Add(nameof(RenderOperation.CreateAdditionalPipe));
                     capabilities.Operations.Add(nameof(RenderOperation.RegisterGuiProject));
                     capabilities.Operations.Add(nameof(RenderOperation.ListExternalVideoSourceClients));
@@ -479,9 +493,11 @@ public sealed class NamedPipeRenderServer(
             return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new CreateAdditionalPipeResponse { Token = createdToken }) };
         }
 
-        private async Task<string> CreatePipeAsync(CancellationToken ct, Guid guiSessionId = default, Guid externalClientId = default, string clientName = "", bool isolated = false)
+        private async Task<string> CreatePipeAsync(CancellationToken ct, Guid guiSessionId = default, Guid externalClientId = default, string clientName = "", bool isolated = false, string[]? additionalSids = null)
         {
             ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed());
+            if (additionalSids is { Length: > 0 } && externalRequestPipeFactory is null)
+                throw new NotSupportedException("Additional RPC pipe SIDs are unavailable on this server.");
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             lock (_gate)
@@ -489,7 +505,7 @@ public sealed class NamedPipeRenderServer(
                 ObjectDisposedException.ThrowIf(_disposed, this);
                 ct.ThrowIfCancellationRequested();
                 _lifetime.Token.ThrowIfCancellationRequested();
-                _listeners.Add(ListenAsync(token, ready, guiSessionId, externalClientId, clientName, isolated));
+                _listeners.Add(ListenAsync(token, ready, guiSessionId, externalClientId, clientName, isolated, additionalSids));
             }
             try
             {
@@ -501,7 +517,7 @@ public sealed class NamedPipeRenderServer(
                 RevokePipe(token);
                 throw;
             }
-            Log("Created an additional render RPC pipe.");
+            Log($"Created an additional render RPC pipe with {additionalSids?.Length ?? 0} extra SIDs.");
             return token;
         }
 
@@ -511,7 +527,7 @@ public sealed class NamedPipeRenderServer(
                 try { lifetime.Cancel(); } catch (ObjectDisposedException) { }
         }
 
-        private async Task ListenAsync(string token, TaskCompletionSource ready, Guid guiSessionId, Guid externalClientId, string clientName, bool isolated)
+        private async Task ListenAsync(string token, TaskCompletionSource ready, Guid guiSessionId, Guid externalClientId, string clientName, bool isolated, string[]? additionalSids)
         {
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token,
                 guiSessionId == Guid.Empty ? CancellationToken.None : _gui.GetLifetime(guiSessionId));
@@ -525,7 +541,8 @@ public sealed class NamedPipeRenderServer(
                     pipeService = new ExternalVideoSourcePipeService(this, pipeService, externalClientId, clientName);
                 // Only the internal listener receives this management service.
                 await RunListenerAsync(RenderProtocol.AdditionalPipePrefix + token, token, pipeService, lifetime.Token, ready,
-                    externalClientId, additionalPipeFactory, isolated, externalPipeSingleConnection?.Invoke() ?? true, externalRpcAllowed).ConfigureAwait(false);
+                    externalClientId, additionalSids is { Length: > 0 } ? (name, _) => externalRequestPipeFactory!(name, additionalSids) : additionalPipeFactory,
+                    isolated, externalPipeSingleConnection?.Invoke() ?? true, externalRpcAllowed).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
             catch (Exception ex)
@@ -538,6 +555,7 @@ public sealed class NamedPipeRenderServer(
         private sealed class ExternalVideoSourcePipeService(AdditionalPipeHost host, IRenderService inner, Guid clientId, string clientName) : IRenderService, IExternalVideoSourceConnectionHost, IRenderConnectionObserver
         {
             public void Connected(string connectedClientId) => (inner as IRenderConnectionObserver)?.Connected(connectedClientId);
+            public ValueTask DisconnectedAsync(Guid connectionId) => (inner as IRenderConnectionObserver)?.DisconnectedAsync(connectionId) ?? ValueTask.CompletedTask;
 
             public IDisposable Connect(string connectedClientId, Func<RenderRequestEnvelope, CancellationToken, ValueTask<RenderResponseEnvelope>> callback)
             {
@@ -590,6 +608,7 @@ public sealed class NamedPipeRenderServer(
         private sealed class ExternalRpcMetadataPipeService(IRenderService inner, string clientName) : IRenderService, IRenderConnectionObserver
         {
             public void Connected(string _) => (inner as IRenderConnectionObserver)?.Connected(clientName);
+            public ValueTask DisconnectedAsync(Guid connectionId) => (inner as IRenderConnectionObserver)?.DisconnectedAsync(connectionId) ?? ValueTask.CompletedTask;
 
             public ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
             {
@@ -657,4 +676,5 @@ internal interface IExternalRpcAuthorizationHost
 internal interface IRenderConnectionObserver
 {
     void Connected(string clientId);
+    ValueTask DisconnectedAsync(Guid connectionId) => ValueTask.CompletedTask;
 }

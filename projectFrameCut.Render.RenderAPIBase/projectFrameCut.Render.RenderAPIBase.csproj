@@ -31,6 +31,8 @@
 		<InternalsVisibleTo Include="projectFrameCut" />
 		<InternalsVisibleTo Include="projectFrameCut.Render" />
 		<InternalsVisibleTo Include="projectFrameCut.Render.PluginIsolation"/>
+		<InternalsVisibleTo Include="projectFrameCut.StandaloneRender" />
+		<InternalsVisibleTo Include="projectFrameCut.Render.Contracts.Tests" />
 	</ItemGroup>
 
 </Project>

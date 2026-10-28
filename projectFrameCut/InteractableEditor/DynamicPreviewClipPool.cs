@@ -1,4 +1,5 @@
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Rendering;
 
 namespace projectFrameCut.LivePreview;
 
@@ -18,17 +19,9 @@ internal sealed class DynamicPreviewClipPool(long maxBytes, int maxFrames)
 
     public Slot? Reserve(DynamicPreviewCachedClip entry, uint currentFrame, bool preload)
     {
-        long pixels = checked((long)Math.Max(1, entry.Width) * Math.Max(1, entry.Height));
-        frameBytes = Math.Max(frameBytes, checked(pixels * 8 + (pixels + 7) / 8));
+        frameBytes = Math.Max(frameBytes, PreviewBufferWindow.GetFrameBytes(entry.Width, entry.Height));
         int capacity = (int)Math.Clamp(maxBytes / frameBytes, 1, maxFrames);
-        while (slots.Count > capacity)
-        {
-            var old = slots.FirstOrDefault(s => s.Entry is null)
-                ?? slots.Where(s => s.Entry!.FrameIndex < currentFrame).MinBy(s => s.Entry!.FrameIndex)
-                ?? slots.MaxBy(s => s.Entry!.FrameIndex)!;
-            Invalidate(old);
-            slots.Remove(old);
-        }
+        Trim(capacity, currentFrame);
 
         var slot = Find(entry.FrameIndex) ?? slots.FirstOrDefault(s => s.Entry is null)
             ?? slots.Where(s => s.Entry!.FrameIndex < currentFrame).MinBy(s => s.Entry!.FrameIndex);
@@ -47,6 +40,24 @@ internal sealed class DynamicPreviewClipPool(long maxBytes, int maxFrames)
         slot.Entry = entry;
         LastFrame = Math.Max(LastFrame, entry.FrameIndex);
         return slot;
+    }
+
+    public void SetFrameCount(int count, uint currentFrame)
+    {
+        maxFrames = Math.Max(1, count);
+        Trim(maxFrames, currentFrame);
+    }
+
+    private void Trim(int capacity, uint currentFrame)
+    {
+        while (slots.Count > capacity)
+        {
+            var old = slots.FirstOrDefault(s => s.Entry is null)
+                ?? slots.Where(s => s.Entry!.FrameIndex < currentFrame).MinBy(s => s.Entry!.FrameIndex)
+                ?? slots.MaxBy(s => s.Entry!.FrameIndex)!;
+            Invalidate(old);
+            slots.Remove(old);
+        }
     }
 
     public void ResetWindow(uint start, uint end)

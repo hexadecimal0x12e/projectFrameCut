@@ -29,12 +29,14 @@ public enum GuiProjectOperation
     GetSettings, SetSettings,
     GetClipEffectStep, AddClipEffectStep, SetClipEffectStep, RemoveClipEffectStep,
     AddSubTrack,
+    StartBatch, CompleteBatch, StopBatch,
 }
 
 [ProtoContract]
 public sealed class GuiProjectSession
 {
     [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public bool SupportsBatch { get; set; }
 }
 
 [ProtoContract]
@@ -54,6 +56,7 @@ public sealed class GuiProjectRequest
     [ProtoMember(4)] public int TimeoutSeconds { get; set; } = 60;
     [ProtoMember(5)] public string ChangeReason { get; set; } = string.Empty;
     [ProtoMember(6)] public string ClientName { get; set; } = string.Empty;
+    [ProtoMember(7)] public Guid BatchId { get; set; }
 }
 
 [ProtoContract]
@@ -62,6 +65,9 @@ public sealed class GuiProjectWork
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public GuiProjectRequest? Request { get; set; }
     [ProtoMember(3)] public string ConnectedClientName { get; set; } = string.Empty;
+    [ProtoMember(4)] public Guid ConnectionId { get; set; }
+    [ProtoMember(5)] public Guid DisconnectedConnectionId { get; set; }
+    [ProtoMember(6)] public int ActiveConnectionCount { get; set; }
 }
 
 [ProtoContract]

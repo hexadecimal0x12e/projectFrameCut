@@ -36,7 +36,7 @@ namespace projectFrameCut.Setting.SettingPages
 
         public void BuildPPB()
         {
-            var allowExternalRpc = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC;
+            var rpcPipes = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath);
             var externalSources = ExternalSourceSettings.Load(MauiProgram.BasicDataPath);
             Content = new VerticalStackLayout();
             rootPPB = new();
@@ -52,15 +52,13 @@ namespace projectFrameCut.Setting.SettingPages
                 .AddCheckbox(ExternalSourceSettings.AllowRpcSourcesSetting, SettingLocalizedResources.Security_ExternalSources_AllowRpcSources, externalSources.AllowRpcSources)
                 .AddCheckbox(ExternalSourceSettings.AllowAssemblySourcesSetting, SettingLocalizedResources.Security_ExternalSources_AllowAssemblySources, externalSources.AllowAssemblySources)
                 .AddSeparator()
-                .AddText(new SingleLineLabel(SettingLocalizedResources.Security_ExternalRpcPipe, 25))
-                .AddCheckbox(ExternalRpcPipeSettings.AllowExternalRpcSetting,
-                    new InfoSingleLineLabel(SettingLocalizedResources.Security_ExternalRpcPipe_AllowExternalRPC, SettingLocalizedResources.Security_ExternalRpcPipe_AllowExternalRPC_Description),
-                    allowExternalRpc)
+                .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Security_ExternalRpcPipe, SettingLocalizedResources.Security_ExternalRpcPipe_AllowExternalRPC_Description))
+                .AddCheckbox(ExternalRpcPipeSettings.AllowExternalRpcSetting, new SingleLineLabel(SettingLocalizedResources.Security_ExternalRpcPipe_AllowExternalRPC), rpcPipes.AllowExternalRPC)
 #if WINDOWS
-                .AppendWhen(allowExternalRpc, ppb => ppb
-                    .AddText(SettingLocalizedResources.Security_ExternalRpcPipe_Description)
+                .AppendWhen(rpcPipes.AllowExternalRPC, ppb => ppb
                     .AddCheckbox(RpcPipeSingleConnection, SettingLocalizedResources.Security_ExternalRpcPipe_SingleConnection, ExternalRpcPipePermissions.LoadSingleConnection(MauiProgram.BasicDataPath))
-                    .AddCustomChild(BuildExternalRpcPipePermissions()))
+                    .AppendWhen(!rpcPipes.AllowAnyUser, d => d.AddCustomChild(BuildExternalRpcPipePermissions()))
+                    .AddCheckbox(ExternalRpcPipeSettings.AllowAnyUserSetting, SettingLocalizedResources.Security_ExternalRpcPipe_AllowAnyUser, rpcPipes.AllowAnyUser))
 #endif
                 .AddSeparator()
 #if WINDOWS
@@ -133,6 +131,19 @@ namespace projectFrameCut.Setting.SettingPages
                         return;
                     }
 #if WINDOWS
+                    if (args.Id == ExternalRpcPipeSettings.AllowAnyUserSetting)
+                    {
+                        if (!await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Security_ExternalRpcPipe_AllowAnyUser_Warning, Localized._OK, Localized._Cancel))
+                        {
+                            BuildPPB();
+                            return;
+                        }
+                        var configuration = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath);
+                        configuration.AllowAnyUser = Convert.ToBoolean(args.Value);
+                        configuration.Save(MauiProgram.BasicDataPath);
+                        Log($"Set external RPC pipes to allow any user and integrity level: {configuration.AllowAnyUser}.");
+                        return;
+                    }
                     if (args.Id == RpcPipeSingleConnection)
                     {
                         var enabled = Convert.ToBoolean(args.Value);
@@ -203,36 +214,57 @@ namespace projectFrameCut.Setting.SettingPages
             var accounts = new VerticalStackLayout();
             var refresh = new Button { Text = SettingLocalizedResources._Refresh };
             var showAll = new Button();
+            var add = new Button { Text = SettingLocalizedResources.Security_ExternalRpcPipe_AddPrincipal };
             showAll.Clicked += async (_, _) =>
             {
                 showAllRpcPrincipals = !showAllRpcPrincipals;
-                await LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll);
+                await LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll, add);
             };
-            refresh.Clicked += async (_, _) => await LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll);
-            _ = LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll);
+            refresh.Clicked += async (_, _) => await LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll, add);
+            add.Clicked += async (_, _) =>
+            {
+                refresh.IsEnabled = showAll.IsEnabled = add.IsEnabled = false;
+                try
+                {
+                    var input = await DisplayPromptAsync(SettingLocalizedResources.Security_ExternalRpcPipe_AddPrincipal,
+                        SettingLocalizedResources.Security_ExternalRpcPipe_AddPrincipal_Prompt, Localized._OK, Localized._Cancel);
+                    if (string.IsNullOrWhiteSpace(input)) return;
+                    var principal = await Task.Run(() => ExternalRpcPipePermissions.ResolvePrincipal(input));
+                    ExternalRpcPipePermissions.AddPrincipal(MauiProgram.BasicDataPath, principal);
+                    Log($"Added external RPC pipe access for '{principal.Name}' ({principal.Sid}).");
+                    await LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll, add);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "add an external RPC pipe principal", this);
+                    await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
+                }
+                finally { refresh.IsEnabled = showAll.IsEnabled = add.IsEnabled = true; }
+            };
+            _ = LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll, add);
             return new VerticalStackLayout
             {
                 Spacing = 8,
                 VerticalOptions = LayoutOptions.Start,
-                Children = { refresh, accounts, showAll }
+                Children = { refresh, accounts, showAll, add }
             };
         }
 
-        private async Task LoadExternalRpcPrincipalsAsync(VerticalStackLayout accounts, Button refresh, Button showAll)
+        private async Task LoadExternalRpcPrincipalsAsync(VerticalStackLayout accounts, Button refresh, Button showAll, Button add)
         {
-            refresh.IsEnabled = false;
-            showAll.IsEnabled = false;
+            refresh.IsEnabled = showAll.IsEnabled = add.IsEnabled = false;
             showAll.Text = showAllRpcPrincipals ? SettingLocalizedResources.Security_ExternalRpcPipe_ShowCommon : SettingLocalizedResources.Security_ExternalRpcPipe_ShowAll;
             accounts.Children.Clear();
             accounts.Children.Add(new ActivityIndicator { IsRunning = true });
             try
             {
                 var principals = await Task.Run(ExternalRpcPipePermissions.EnumerateLocalPrincipals);
+                var configuration = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath);
                 var allowed = ExternalRpcPipePermissions.LoadAllowedSids(MauiProgram.BasicDataPath);
                 var ppb = new PropertyPanelBuilder { WidthOfContent = 0.1 };
                 var visible = principals.Where(p =>
                 {
-                    if (showAllRpcPrincipals) return true;
+                    if (showAllRpcPrincipals || configuration.ManualPrincipals.ContainsKey(p.Sid)) return true;
                     if (p.IsGroup)
                         return !p.Sid.StartsWith("S-1-5-32-", StringComparison.Ordinal) || p.Sid is "S-1-5-32-544" or "S-1-5-32-545";
                     // Guest, krbtgt, DefaultAccount, WDAGUtilityAccount.
@@ -245,12 +277,18 @@ namespace projectFrameCut.Setting.SettingPages
                         ppb.AddCheckbox(RpcPipeSidPrefix + p.Sid, new TitleAndDescriptionLineLabel(p.Name, p.Sid, 14, 12), allowed.Contains(p.Sid))
                             .AddSeparator(b => b.Opacity = 0.25);
                 }
-                var missing = allowed.Except(principals.Select(p => p.Sid), StringComparer.OrdinalIgnoreCase).ToArray();
+                var missing = allowed.Union(configuration.ManualPrincipals.Keys, StringComparer.OrdinalIgnoreCase)
+                    .Except(principals.Select(p => p.Sid), StringComparer.OrdinalIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase).ToArray();
                 if (missing.Length > 0)
                 {
                     ppb.AddText(SettingLocalizedResources.Security_ExternalRpcPipe_OtherSids, fontSize: 18);
                     foreach (var sid in missing)
-                        ppb.AddCheckbox(RpcPipeSidPrefix + sid, sid, true).AddSeparator(b => b.Opacity = 0.25);
+                    {
+                        var name = configuration.ManualPrincipals.GetValueOrDefault(sid);
+                        if (string.IsNullOrWhiteSpace(name) || name == sid) name = "<unknown user>";
+                        ppb.AddCheckbox(RpcPipeSidPrefix + sid, new TitleAndDescriptionLineLabel(name, sid, 14, 12), allowed.Contains(sid));
+                        ppb.AddSeparator(b => b.Opacity = 0.25);
+                    }
                 }
                 ppb.ListenToChanges(SettingInvoker);
                 accounts.Children.Clear();
@@ -264,8 +302,7 @@ namespace projectFrameCut.Setting.SettingPages
             }
             finally
             {
-                refresh.IsEnabled = true;
-                showAll.IsEnabled = true;
+                refresh.IsEnabled = showAll.IsEnabled = add.IsEnabled = true;
             }
         }
 

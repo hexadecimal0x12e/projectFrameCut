@@ -345,6 +345,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public record EffectArgumentFieldDescriptor : IEffectArgumentField
     {
         public string Id { get; set; } = string.Empty;
+        // Display metadata is independent of the persisted binding key.
+        public string? DisplayName { get; set; }
+        public string? LocalizedNameKey { get; set; }
         public string TypeName { get; set; } = string.Empty;
         public string FromPlugin { get; set; } = string.Empty;
         public bool IsDynamic { get; set; } = false;

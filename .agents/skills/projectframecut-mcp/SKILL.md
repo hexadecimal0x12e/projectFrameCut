@@ -38,6 +38,7 @@ Operate the MCP capabilities implemented by `projectFrameCut/CLIProgram.cs` and 
 - `exit_project` defaults to saving. Pass `save=false` only when the user explicitly wants to abandon the current unsaved work.
 - Shared GUI/RPC sessions use revision and snapshot-hash preconditions internally. On a conflict, refresh the affected state and re-evaluate the edit; do not blindly replay a stale destructive mutation.
 - The CLI-hosted MCP intentionally exposes neither `authorize_client` nor integrated-editor client tools. Do not wait for or fabricate them.
+- Windows sandbox ACLs for a separate one-time GUI RPC pipe can be extended with repeatable `pjfc rpc_request --addSID=<SID>` arguments. This is not an option for `pjfc mcp` or its transports; see [the lifecycle reference](references/server-and-lifecycle.md#windows-sandbox-and-one-time-gui-rpc-pipes) when comparing connection paths.
 - This server currently exposes tools, not MCP resources or prompts.
 
 ## Completion report

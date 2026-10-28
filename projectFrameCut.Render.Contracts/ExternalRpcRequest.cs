@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using ProtoBuf;
@@ -17,6 +18,7 @@ public sealed class ExternalRpcRequest
     public string Author { get; set; } = "";
     public string Purpose { get; set; } = "";
     public string PublicKey { get; set; } = "";
+    public string[] AdditionalSids { get; set; } = [];
     public DateTimeOffset ExpiresAt { get; set; } = DateTimeOffset.UtcNow.AddMinutes(5);
     public string Status { get; set; } = "pending";
     public string EncryptedConnection { get; set; } = "";
@@ -28,6 +30,13 @@ public sealed class ExternalRpcRequest
     {
         if ((Version != 1 && Version != 2) || RequestId == Guid.Empty || Status != "pending" || EncryptedConnection != "")
             throw new ArgumentException("Invalid RPC request state.");
+        if (AdditionalSids is null) throw new ArgumentException("Invalid additional RPC pipe SIDs.");
+        if (AdditionalSids.Length > 0)
+        {
+            if (IsPersistent) throw new ArgumentException("--addSID is only supported for one-time RPC requests.");
+            if (!OperatingSystem.IsWindows()) throw new ArgumentException("--addSID requires Windows.");
+            AdditionalSids = AdditionalSids.Select(s => new SecurityIdentifier(s).Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
         if (IsPersistent)
         {
             if (Version != 2 || ClientId == Guid.Empty || string.IsNullOrWhiteSpace(ServiceId) || ServiceId.Length > 24 || string.IsNullOrWhiteSpace(Signature) || Signature.Length > 16384)

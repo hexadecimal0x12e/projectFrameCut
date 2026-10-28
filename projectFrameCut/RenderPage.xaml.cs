@@ -74,6 +74,8 @@ public partial class RenderPage : ContentPage
     ProjectJSONStructure _project;
     DraftStructureJSON _draft;
     uint _duration;
+    private readonly Dictionary<string, AssetItem> _projectAssets = new();
+    private readonly bool _isRemoteProject;
 
     public bool running;
 
@@ -144,17 +146,21 @@ public partial class RenderPage : ContentPage
         ScreenSaverOverlay.CascadeInputTransparent = true;
     }
 
-    public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo, DraftStructureJSON draft, RenderJob? renderJob = null)
+    public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo, DraftStructureJSON draft,
+        RenderJob? renderJob = null, IEnumerable<AssetItem>? assets = null, bool isRemoteProject = false)
     {
         InitializeComponent();
         _workingPath = path;
         _duration = projectDuration;
         _project = projectInfo;
+        _isRemoteProject = isRemoteProject;
         _renderJobToRestore = renderJob;
         OnPropertyChanged(nameof(ProjectUsesHDR));
         HDRHintLabel.IsVisible = ProjectUsesHDR;
 
         _draft = draft;
+        foreach (var asset in assets ?? [])
+            if (!string.IsNullOrWhiteSpace(asset.AssetId)) _projectAssets[asset.AssetId] = asset;
         Title = Localized.RenderPage_ExportTitle(projectInfo.ProjectName);
         ScreenSaverOverlay.InputTransparent = true;
         ScreenSaverOverlay.CascadeInputTransparent = true;
@@ -506,6 +512,19 @@ public partial class RenderPage : ContentPage
     }
 
     #region rendering
+    private void ReloadSavedTimeline()
+    {
+        if (_isRemoteProject) return;
+        var (draft, assets) = ProjectSnapshotStore.ReadForRender(_workingPath, _project, DraftPage.DraftJSONOption);
+        foreach (var clip in draft.Clips)
+            DraftImportAndExportHelper.MigrateLegacyPlaceResizeToTargetRect(clip, _project);
+        _draft = draft;
+        _duration = Math.Max(draft.Duration, draft.AudioDuration);
+        _projectAssets.Clear();
+        foreach (var asset in assets)
+            if (!string.IsNullOrWhiteSpace(asset.AssetId)) _projectAssets[asset.AssetId] = asset;
+    }
+
     [DebuggerNonUserCode]
     void _WriteToLogBox(string s, string l)
     {
@@ -525,6 +544,7 @@ public partial class RenderPage : ContentPage
         }
         try
         {
+            ReloadSavedTimeline();
             var cacheDir = RenderCacheDirectory;
             Directory.CreateDirectory(cacheDir);
             await PrepareUIForRender();
@@ -979,6 +999,7 @@ public partial class RenderPage : ContentPage
     {
         try
         {
+            ReloadSavedTimeline();
             await PrepareUIForRender();
 
             if (BindingContext is RenderPageViewModel vm)
@@ -1032,6 +1053,7 @@ public partial class RenderPage : ContentPage
     {
         try
         {
+            ReloadSavedTimeline();
             await PrepareUIForRender();
 
             if (BindingContext is RenderPageViewModel vm)
@@ -1327,8 +1349,8 @@ public partial class RenderPage : ContentPage
 
             var duration = Math.Max(draftSrc.Duration, draftSrc.AudioDuration);
 
-            clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
-            var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc, false).ToList();
+            clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false, projectAssets: _projectAssets).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+            var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc, false, _projectAssets).ToList();
             SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log(message, "warn"), initialize: false);
             audioTracks = tracks.ToArray();
 
@@ -1632,8 +1654,8 @@ public partial class RenderPage : ContentPage
             return;
         }
 
-        var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
-        var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc).ToList();
+        var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false, projectAssets: _projectAssets).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
+        var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc, projectAssets: _projectAssets).ToList();
         SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log(message, "warn"));
 
         if (tracks.Count == 0)
@@ -1977,6 +1999,7 @@ public partial class RenderPage : ContentPage
 #endif
         try
         {
+            ReloadSavedTimeline();
             if (RenderRpcBootstrap.SupportsCliRenderProcess)
                 await RenderAudioViaRpcAsync(vm, resultPath);
             else
@@ -2040,7 +2063,9 @@ public partial class RenderPage : ContentPage
             ProjectHeight = Math.Max(1, _project.RelativeHeight),
             FrameRate = Math.Max(1, (int)_project.TargetFrameRate),
             ProxyRoot = ProjectCachePaths.ResolvePath(_workingPath, "proxy"),
-            Assets = Asset.AssetDatabase.Assets.Select(static item => new AssetPathEntry { AssetId = item.Key, Path = item.Value.Path ?? string.Empty }).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
+            Assets = Asset.AssetDatabase.Assets.Concat(_projectAssets).GroupBy(item => item.Key)
+                .Select(group => group.Last()).Select(static item => new AssetPathEntry { AssetId = item.Key, Path = item.Value.Path ?? string.Empty })
+                .Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
         }, _cts.Token);
         try
         {
@@ -2080,6 +2105,7 @@ public partial class RenderPage : ContentPage
 #endif
         try
         {
+            ReloadSavedTimeline();
             await PrepareUIForRender();
             await DoCompute(vm, resultPath);
             if (finalBitRate is long bitRate)

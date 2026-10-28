@@ -39,6 +39,9 @@ namespace projectFrameCut.ApplicationPluginBase
             { "ProgressPlacer_Step", p => new ProgressPlacerUI(p) },
             { "ProgressCrop_Step", p => new ProgressCropUI(p) },
             { "ColorAdjustment", p => new ColorAdjustmentUI(p) },
+            { "AdvancedMath1", p => new AdvancedMathUI(p) },
+            { "AdvancedMath2", p => new AdvancedMathUI(p) },
+            { "AdvancedMath3", p => new AdvancedMathUI(p) },
         };
 
         public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source)

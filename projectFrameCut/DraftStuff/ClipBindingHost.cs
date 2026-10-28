@@ -1,4 +1,5 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
@@ -55,7 +56,8 @@ namespace projectFrameCut.DraftStuff
                         foreach (var output in bundle.GetOutputFields().Values)
                             sources.Add(new ValueBindingSource(bundle is IMultipleOutputEffectProvider
                                 ? EffectProviderOutputExtensions.CreateOutputSourceId(id, output.Id) : id.ToString(),
-                                bundle.Name ?? bundle.TypeName, bundle is IMultipleOutputEffectProvider ? output.Id : output.TypeName));
+                                bundle.Name ?? bundle.TypeName, EffectProviderUIHelper.FieldName(bundle, output.Id, false,
+                                    bundle is IMultipleOutputEffectProvider ? output.Id : output.TypeName)));
                     }
                 }
             }
@@ -79,7 +81,8 @@ namespace projectFrameCut.DraftStuff
                 || providerId == _provider.Id || _clip.EffectProviders?.GetValueOrDefault(providerId) is not { } provider
                 || !DynamicEffectBindings.CanBindOutput(provider)
                 || !provider.TryGetOutputField(outputId, out var output)) return null;
-            var anchor = provider is IMultipleOutputEffectProvider ? output.Id : output.TypeName;
+            var anchor = EffectProviderUIHelper.FieldName(provider, output.Id, false,
+                provider is IMultipleOutputEffectProvider ? output.Id : output.TypeName);
             return string.IsNullOrEmpty(anchor) ? provider.Name ?? provider.TypeName : $"{provider.Name ?? provider.TypeName} ({anchor})";
         }
 
@@ -197,7 +200,7 @@ namespace projectFrameCut.DraftStuff
                 AddOption(s.Id, $"{s.DisplayName}{suffix}");
             }
 
-            var pick = await _page.DisplayActionSheetAsync($"Bind {fieldId}", "Cancel", null, options.ToArray());
+            var pick = await _page.DisplayActionSheetAsync($"Bind {EffectProviderUIHelper.FieldName(_provider, fieldId, true)}", "Cancel", null, options.ToArray());
             if (string.IsNullOrEmpty(pick) || pick == "Cancel") return;
 
             if (sourceByOption.TryGetValue(pick, out var chosen))

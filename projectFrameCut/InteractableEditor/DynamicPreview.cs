@@ -122,21 +122,6 @@ public sealed class DynamicPreview : IDisposable
     public static int GroupRasterizationChildThreshold { get; set; } = 128;
 
     /// <summary>
-    /// Divisor for continuous preview resolution after optional viewport fitting. 2 = half, etc.
-    /// This changes playback and interactive preview bitmap density; still frames prepared by
-    /// <see cref="PrepareFrameAsync(uint, int, int, CancellationToken, bool)"/> always use the requested target resolution.
-    /// </summary>
-    public int PreviewResolutionDivisor
-    {
-        get;
-        set
-        {
-            field = Math.Max(1, value);
-            LogDiagnostic($"[DynamicPreview] PreviewResolutionDivisor set to {field}");
-        }
-    } = 1;
-
-    /// <summary>
     /// Prepares a still frame at the requested output resolution, without viewport fitting.
     /// </summary>
     public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token, bool applyClipTargetLayout = true)
@@ -184,7 +169,6 @@ public sealed class DynamicPreview : IDisposable
         var scale = IgnorePreviewWindowSize && targetPixels > 0
             ? Math.Sqrt(targetPixels / ((double)projectWidth * projectHeight))
             : Math.Min(fittedRect.Width / projectWidth, fittedRect.Height / projectHeight);
-        scale /= PreviewResolutionDivisor;
 
         var canvasWidth = Math.Max(1, (int)Math.Round(projectWidth * scale, MidpointRounding.AwayFromZero));
         var canvasHeight = Math.Max(1, (int)Math.Round(projectHeight * scale, MidpointRounding.AwayFromZero));
@@ -821,7 +805,7 @@ public sealed class DynamicPreview : IDisposable
         using var hashScope = context.Enter();
         var clips = _clips ?? [clip];
         clip.ReInit(mode);
-        using var cache = new PreviewFrameCache(id => Path.Combine(DiskCacheRoot, id.ToString()), frameIndex,
+        using var cache = DynamicPreviewSettings.MemoryOnly ? null : new PreviewFrameCache(id => Path.Combine(DiskCacheRoot, id.ToString()), frameIndex,
             canvasWidth, canvasHeight, projectWidth, projectHeight, scRgb, false, token, keepHwAccelPicture: scRgb,
             findSource: key => GetLocalCacheIndex().FindPreviewSource(key), cacheSourceFrames: DynamicPreviewSettings.CacheSourceFrames);
         IPicture? rendered = null;
@@ -830,8 +814,14 @@ public sealed class DynamicPreview : IDisposable
             ?? throw new InvalidOperationException($"Clip {clip.Id} did not produce a preview frame.");
         try
         {
+            if (DynamicPreviewSettings.MemoryOnly)
+            {
+                var data = PreviewFrameData.Create(Render(), "", "", scRgb);
+                return PreviewFrameMaterializer.FromData(new("", data.Width, data.Height,
+                    scRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage, false), data);
+            }
             var identity = FrameHashHelper.GetClipHash(clips, clip, frameIndex, context.Options, token);
-            var cached = cache.GetOrCreate(clip, clips, identity.Hash, identity.CanReuse,
+            var cached = cache!.GetOrCreate(clip, clips, identity.Hash, identity.CanReuse,
                 Path.Combine(DiskCacheRoot, "temporary", $"{Guid.NewGuid():N}.vfd2m"),
                 () => { var picture = Render(); rendered = null; return picture; },
                 () => clips.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c)));

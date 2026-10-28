@@ -317,7 +317,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         finally { NativeMethods.LocalFree(descriptor); }
     }
 
-    private static SecurityIdentifier DeriveAppContainerSid(string packageFamilyName)
+    internal static SecurityIdentifier DeriveAppContainerSid(string packageFamilyName)
     {
         // Some packaged calls succeed without writing the SID; keep the native output initialized.
         var sid = IntPtr.Zero;

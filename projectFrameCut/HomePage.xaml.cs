@@ -1435,7 +1435,23 @@ public partial class HomePage : ContentPage
                     }
                 }
                 if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
-                startRenderRpcTask = Task.Run(() => RenderRpcBootstrap.Initialize(draftSourcePath, false, projectName: project?.ProjectName ?? "Project"));
+                var startupToken = loadCancellation.Token;
+                startRenderRpcTask = Task.Run(async () =>
+                {
+                    for (int attempt = 0; ; attempt++)
+                    {
+                        try
+                        {
+                            RenderRpcBootstrap.Initialize(draftSourcePath, false, projectName: project?.ProjectName ?? "Project", cancellationToken: startupToken);
+                            return;
+                        }
+                        catch (RenderWorkerExitedException ex) when (attempt < 3 && !startupToken.IsCancellationRequested)
+                        {
+                            Log(ex, "Restart render RPC backend after startup exit", this);
+                            if (attempt > 0) await Task.Delay(TimeSpan.FromSeconds(5 * attempt), startupToken).ConfigureAwait(false);
+                        }
+                    }
+                });
                 DraftPage? createdPage = null;
                 bool pageCreationCancelled = false;
                 await Dispatcher.DispatchAsync(async () =>
@@ -1456,7 +1472,6 @@ public partial class HomePage : ContentPage
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
                                 LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240,
                                 LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8,
-                                DynamicPreviewResolutionDivisor = SettingsManager.GetSettingAs<int>("Edit_DynamicPreviewResolutionDivisor", 1, 1),
                                 DynamicPreviewTimeout = SettingsManager.GetSettingAs<int>("Edit_DynamicPreviewTimeout", 5000, 5000),
                                 UseDynamicPreview = SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"),
                                 UseLightweightDynamicPreviewHost = SettingsManager.IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true),
@@ -2216,19 +2231,19 @@ public partial class HomePage : ContentPage
                 ? Path.Combine(draftSourcePath, "project.pjfc")
                 : Path.Combine(draftSourcePath, "project.json");
             var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projectPath), DraftPage.DraftJSONOption);
-            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json")), DraftPage.DraftJSONOption);
-            if (tml is null || project is null)
+            if (project is null)
             {
                 await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
                 return false;
             }
+            var (tml, assets) = ProjectSnapshotStore.ReadForRender(draftSourcePath, project, DraftPage.DraftJSONOption);
             if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project)) return false;
             foreach (var clip in tml.Clips)
                 DraftImportAndExportHelper.MigrateLegacyPlaceResizeToTargetRect(clip, project);
             if (Directory.Exists(draftSourcePath)) Environment.CurrentDirectory = draftSourcePath;
             Log($"Project loaded: {draftSourcePath}, {tml.Clips.Length} clips, {tml.SoundTracks.Length} soundtracks.");
             renderJob ??= await TryGetActiveRenderJobAsync(draftSourcePath);
-            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, tml, renderJob);
+            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, tml, renderJob, assets);
             await Dispatcher.DispatchAsync(async () =>
             {
                 App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";

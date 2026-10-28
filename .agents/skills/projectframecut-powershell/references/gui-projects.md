@@ -21,6 +21,29 @@ Connect-ProjectFrameCut -PipeName $connection.PipeName
 
 `PipeId` is a 64-character hexadecimal token. Treat it and the token as secrets.
 
+### Windows sandbox connection
+
+When the Agent runs in a Windows sandbox that needs additional pipe ACL entries, obtain its actual sandbox/restricted-token SIDs from the runtime configuration or process token. The current user SID alone may be insufficient. Pass the required SID array when requesting authorization:
+
+```powershell
+Connect-ProjectFrameCut -Name Agent -Author Agent -Purpose 'Edit the requested project' `
+  -AddSID $sandboxSid1,$sandboxSid2
+Get-ProjectInfo
+```
+
+`-AddSID` is an optional `string[]` in the one-time authorization parameter set. Each entry is forwarded as a separate `--addSID=<SID>` argument. The CLI validates and deduplicates the SIDs. Use the actual required SID list; do not guess values or substitute `Everyone`. They grant read/write access only to the requested pipe. Approval and token authentication still apply; this does not change global pipe permissions, filesystem access, or MCP transport permissions. `-AddSID` is not available with persistent authorization, `-PipeId`, or `-PipeName`.
+
+For direct CLI use or an older module without `-AddSID`, run `pjfc rpc_request --name=Agent --author=Agent --purpose='Edit the requested project' --wait "--addSID=$sandboxSid"`. Capture stdout and stderr separately without echoing them, and check the exit code. With `--wait`, the success JSON is on **stderr**, not stdout. Parse the response only after exit code `0` and `status=success`, then connect in the runspace used for editing:
+
+```powershell
+Connect-ProjectFrameCut -PipeName $response.connection.PipeName
+Get-ProjectInfo
+```
+
+Here `$response` is the parsed stderr JSON. Repeat `--addSID` for multiple SIDs and preserve `--requestDir=<path>` and the executable path when the target app requires them. If a previously approved pipe lacks the sandbox ACL, request a new pipe with the required SIDs; increasing the connection timeout does not change its ACL. The CLI also supports `--addSID` with one-time `--publicKey` requests; decrypt the response file's connection data with the matching private key.
+
+### Persistent authorization
+
 For persistent authorization:
 
 ```powershell
@@ -55,13 +78,18 @@ Save-Project
 Disconnect-ProjectFrameCut
 ```
 
-`Add-ProjectClip` requires an existing `TrackId`. Its source can be `-FilePath`, `-AssetId`, or omitted for an empty clip. An omitted start defaults to frame 0; an empty clip defaults to 300 frames. Relative file paths resolve from the PowerShell current filesystem location. Importing an asset copies it into the project assets directory; removing the asset record does not delete the source file.
+`Add-ProjectClip` requires an existing `TrackId`. Its source can be `-FilePath`, `-AssetId`, or omitted for an empty clip. An omitted start defaults to frame 0; an empty clip defaults to 300 frames. Relative file paths resolve from the PowerShell current filesystem location. Asset import follows the application import mode; inspect the returned Path when portability matters. Removing the asset record does not delete the source file.
+
+## Batch editing
+
+For loops that create clips, subtitles, vector components, effects, or keyframes, prefer one batch per logical group of saved edits. Read [batch operations](batch-operations.md) for the `Start-ProjectBatch` / `Complete-ProjectBatch` / `Stop-ProjectBatch` workflow, restrictions, and timeout recovery. Finish a batch before taking previews or using history commands.
 
 ## Command catalog
 
 Inspection and persistence:
 
 - `Get-ProjectInfo`, `Save-Project`
+- `Start-ProjectBatch`, `Complete-ProjectBatch [-ChangeReason] [-TimeoutSeconds]`, `Stop-ProjectBatch`
 - `Get-ProjectTrack [-TrackId]`, `Add-ProjectTrack [-TrackId] [-PassThru]`
 - `Get-ProjectAsset [-AssetId] [-Name]`
 - `Get-ProjectClip [-ClipId] [-TrackId] [-Name]`
@@ -103,7 +131,7 @@ Subtitle cue times and offsets use milliseconds relative to the subtitle source,
 
 Transitions use `Side Left|Right`, `InputMode OneInput|TwoInput`, `DurationFrames`, `RenderOrder BeforeEffects|AfterEffects`, and provider `Fields`. Neighbor selection and shared ownership follow the GUI. Picture-transition previews return a video path. External-source loading is session state; import/removal updates the project index.
 
-Project settings include frame rate, resolution, HDR brightness, imported covers, cover-as-first-frame and `UserDefinedProperties` (null removes a key). Keep using the standard `ChangeReason/WhatIf/PassThru` workflow and save explicitly when finished.
+Project settings include frame rate, resolution, HDR brightness, imported covers, cover-as-first-frame and `UserDefinedProperties` (null removes a key). Keep using the standard `ChangeReason/WhatIf/PassThru` workflow and persist with `Save-Project` or batch completion when finished.
 
 Text:
 
@@ -163,7 +191,7 @@ Effect groups and templates:
 
 Group ports are ordered hashtables with `ProviderId`, `FieldId`, `Name`, and `IsInput`. Required boundary ports are added automatically. Group selected nodes with the same parent; Clip arguments, endpoints, and transitions cannot be grouped. Removing a group ungroups its members unless `-RemoveProviders` is used. Export returns JSON for `Set-Content`; import assigns independent IDs and omits external project bindings. Saving a group writes the application's shared group library and does not replace `Save-Project`.
 
-All connected project commands accept `-TimeoutSeconds` (default 60). Write commands support `-WhatIf`, `-Confirm`, `-PassThru`, and `-ChangeReason`. By default write commands do not emit a result.
+All connected project commands accept `-TimeoutSeconds` (default 60). Write commands support `-WhatIf`, `-Confirm`, `-PassThru`, and `-ChangeReason`. By default ordinary write commands do not emit a result; batch lifecycle commands return status without `-PassThru`.
 
 ## IDs, fields, and history
 

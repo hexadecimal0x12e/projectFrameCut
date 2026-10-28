@@ -273,16 +273,18 @@ namespace projectFrameCut.LivePreview
             }
         }
 
-        public async Task UpdateDraft(DraftStructureJSON json)
+        public Task UpdateDraft(DraftStructureJSON json) => UpdateDraft(json, CancellationToken.None);
+
+        public async Task UpdateDraft(DraftStructureJSON json, CancellationToken cancellationToken)
         {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var updateMark = new UserMarkRange("Preview.Reconfigure");
             using (new UserMarkRange("Preview.WaitUpdateLock"))
 #endif
-            await _updateDraftGate.WaitAsync().ConfigureAwait(false);
+            await _updateDraftGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                await Task.Run(() => UpdateDraftCoreAsync(json)).ConfigureAwait(false);
+                await Task.Run(() => UpdateDraftCoreAsync(json, cancellationToken)).ConfigureAwait(false);
             }
             finally
             {
@@ -290,7 +292,23 @@ namespace projectFrameCut.LivePreview
             }
         }
 
-        private async Task UpdateDraftCoreAsync(DraftStructureJSON json)
+        internal async Task RestoreBackendAsync(Func<Task<DraftStructureJSON>> getDraft, CancellationToken cancellationToken)
+        {
+            await _updateDraftGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var previousSessionId = RenderSessionId;
+                CleanupMaterializedPreviews();
+                RenderSessionId = Guid.NewGuid();
+                var draft = await getDraft().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                await Task.Run(() => UpdateDraftCoreAsync(draft, cancellationToken)).ConfigureAwait(false);
+                await (RpcClient ?? RenderRpcBootstrap.Client).CloseProjectAsync(previousSessionId, cancellationToken).ConfigureAwait(false);
+            }
+            finally { _updateDraftGate.Release(); }
+        }
+
+        private async Task UpdateDraftCoreAsync(DraftStructureJSON json, CancellationToken cancellationToken = default)
         {
             await StopDynamicPreviewAsync().ConfigureAwait(false);
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
@@ -434,8 +452,8 @@ namespace projectFrameCut.LivePreview
             // This keeps application startup and the home page independent from the
             // Windows CLI RPC process. The project root is passed so each open
             // project gets a dedicated backend bound to it.
-            if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot, projectName: ProjectName);
-            var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
+            if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot, projectName: ProjectName, cancellationToken: cancellationToken);
+            var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request, cancellationToken).ConfigureAwait(false);
             if (RpcClient is null && !string.IsNullOrWhiteSpace(session.CacheRoot))
                 ProjectCachePaths.Bind(ProjectRoot, session.CacheRoot, ProjectName);
             if (_dynamicPreviewSnapshotHash != session.SnapshotHash)
@@ -527,6 +545,49 @@ namespace projectFrameCut.LivePreview
 
         public async Task<PreviewFrameSource> RenderClipFrameForDisplayAsync(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
+            if (DynamicPreviewSettings.MemoryOnly)
+            {
+                var name = $"projectFrameCut-preview-{Guid.NewGuid():N}";
+                var secret = Guid.NewGuid().ToString("N");
+                using var pipe = MemoryPreviewChannel.CreateServer(name);
+                using var pending = CancellationTokenSource.CreateLinkedTokenSource(token);
+                var receive = ReceiveAsync();
+                try
+                {
+                    var render = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new()
+                    {
+                        SessionId = RenderSessionId, ClipId = clipId, FrameIndex = frameIndex,
+                        CanvasWidth = canvasWidth, CanvasHeight = canvasHeight, ProjectWidth = projectWidth, ProjectHeight = projectHeight,
+                        PreferredPixelFormat = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled
+                            ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
+                        VectorClipJson = vectorClipJson, UsePreviewMetadata = true, DisableSourceFrameCache = true,
+                        PreviewPipeName = name, PreviewPipeToken = secret,
+                    }, pending.Token).AsTask();
+                    if (await Task.WhenAny(render, receive).ConfigureAwait(false) == receive && !receive.IsCompletedSuccessfully)
+                    {
+                        pending.Cancel();
+                        try { await render.ConfigureAwait(false); } catch { }
+                        return await receive.ConfigureAwait(false);
+                    }
+                    await render.ConfigureAwait(false);
+                    return await receive.ConfigureAwait(false);
+                }
+                finally
+                {
+                    pending.Cancel();
+                    try { await receive.ConfigureAwait(false); } catch { }
+                }
+
+                async Task<PreviewFrameSource> ReceiveAsync()
+                {
+                    await MemoryPreviewChannel.AuthenticateAsync(pipe, secret, pending.Token).ConfigureAwait(false);
+                    var (_, data) = await MemoryPreviewChannel.ReceiveAsync(pipe, pending.Token).ConfigureAwait(false);
+                    var source = PreviewFrameMaterializer.FromData(new("", data.Width, data.Height,
+                        data.ScRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage, false), data);
+                    await pipe.WriteAsync(new byte[] { 1 }, pending.Token).ConfigureAwait(false);
+                    return source;
+                }
+            }
             var format = DefaultOutputMode != NativePreviewOutputMode.Disabled && OperatingSystem.IsWindows()
                 ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage;
             try { return await PrepareDisplayAsync(format).ConfigureAwait(false); }

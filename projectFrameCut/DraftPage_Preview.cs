@@ -187,7 +187,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private bool maskInteractivePreviewApplied;
 
-    internal async Task RefreshPreviewFromCurrentProviderAsync()
+    internal Task RefreshPreviewFromCurrentProviderAsync() => RefreshPreviewFromCurrentProviderAsync(CancellationToken.None);
+
+    private async Task RefreshPreviewFromCurrentProviderAsync(CancellationToken cancellationToken)
     {
         if ((ClipEditor.IsInteractiveManipulationInProgress || maskInteractivePreviewApplied)
             && Clips.Values.Any(c => c.ClipType == ClipMode.MaskClip))
@@ -198,7 +200,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 foreach (var clip in snapshot.Clips) ClipEditor.ApplyInteractivePreviewLayout(clip);
                 return snapshot;
             });
-            await previewer.UpdateDraft(draft);
+            await previewer.UpdateDraft(draft, cancellationToken);
             DynamicPreviewProvider.SetClips(previewer.Clips);
             maskInteractivePreviewApplied = ClipEditor.IsInteractiveManipulationInProgress;
         }
@@ -238,6 +240,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         catch (Exception ex)
         {
             Log(ex, "Render one frame via DynamicPreview", this);
+            if (AlreadyDisappeared || IsRenderBackendConnectionFailure(ex)) return false;
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
             if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK))) throw;
@@ -475,6 +478,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         catch (Exception ex)
         {
             Log(ex, "Render one frame", this);
+            if (AlreadyDisappeared || IsRenderBackendConnectionFailure(ex)) return;
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
             if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), "Throw", Localized._OK))) throw;
@@ -948,9 +952,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         catch (Exception ex)
         {
             Log(ex, "LivePreview", this);
+            var backendFailure = IsRenderBackendConnectionFailure(ex);
             isPlaying = false;
-            await PauseLivePreview();
+            await PauseLivePreview(refreshPreview: !backendFailure);
             await MainThread.InvokeOnMainThreadAsync(() => SetPlayPauseIconToPlay());
+            if (IsRenderBackendRecovering || backendFailure) return;
 #if DEBUG
             if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK))) throw;
 #else
@@ -969,7 +975,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         finally { _dynamicPreviewUIAffinity = null; }
     }
 
-    private async Task PauseLivePreview()
+    private async Task PauseLivePreview(bool refreshPreview = true)
     {
         isPlaying = false;
         StopNonRealtimePlayheadSyncLoop();
@@ -1009,7 +1015,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetPlayPauseIconToPlay();
         });
 
-        await RefreshPreviewFromCurrentProviderAsync();
+        if (refreshPreview && !IsRenderBackendRecovering)
+            await RefreshPreviewFromCurrentProviderAsync();
         _nextPlaybackPath = null;
         _isPreRendering = false;
 

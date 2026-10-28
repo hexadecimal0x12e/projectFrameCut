@@ -65,6 +65,14 @@ Treat tokens placed on a command line as process-visible secrets. Do not print, 
 
 ## GUI client and process lifetime
 
+### Windows sandbox and one-time GUI RPC pipes
+
+When a task separately uses `pjfc rpc_request` to connect to an existing GUI project from a Windows sandbox, pass the actual required sandbox SIDs with optional, repeatable `--addSID=<SID>` arguments. They are validated and deduplicated and grant read/write access only to that newly requested one-time pipe; approval and token authentication remain required. This option is not supported for persistent-client requests.
+
+This is an option for `rpc_request`, not `pjfc mcp`, and does not change MCP stdio, HTTP, or the internal GUI-client pipe. Keep an existing working MCP connection. If the task needs the separate GUI RPC path, use `Connect-ProjectFrameCut -Name ... -Author ... -Purpose ... -AddSID $sandboxSids`, which forwards the array to the CLI. Follow [the sandbox connection workflow](../../projectframecut-powershell/references/gui-projects.md#windows-sandbox-connection) for details or direct CLI use with an older module.
+
+### MCP GUI lifetime
+
 Without `--headless`, `pjfc mcp` starts a local projectFrameCut GUI client connected through an authenticated random named pipe. With no startup project, the client waits for `enter_project`; with a startup project, the GUI and MCP share the same render backend.
 
 The GUI is a lifecycle owner:

@@ -31,40 +31,60 @@ public static partial class VectorClipServices
     {
         var list = components.ToList();
         clip.ShowDefaultHandles = list.Count != 1 || (handler ?? GetHandler(list[0]))?.HasDefaultHandles != false;
-        clip.ExtraData[VectorComponentSerializer.ComponentsKey] = VectorComponentSerializer.Serialize(list);
+        var dto = new ClipDraftDTO
+        {
+            Id = clip.Id, Name = clip.DisplayName, FromPlugin = clip.FromPlugin, TypeName = clip.TypeName,
+            ClipType = clip.ClipType, MetaData = clip.ExtraData, Duration = clip.lengthInFrame,
+            RelativeStartFrame = clip.relativeStartFrame, FrameTime = clip.sourceSecondPerFrame,
+            TargetX = clip.TargetX, TargetY = clip.TargetY, TargetWidth = clip.TargetWidth, TargetHeight = clip.TargetHeight,
+            EffectProviders = clip.EffectProviders?.Values.Select(projectFrameCut.Render.Effect.EffectBindingHelper.SerializeProvider).ToArray(),
+        };
+        SetDefinition(page.ProjectInfo, dto, list, updateBounds);
+        clip.ExtraData = dto.MetaData!;
+        clip.TargetX = dto.TargetX;
+        clip.TargetY = dto.TargetY;
+        clip.TargetWidth = dto.TargetWidth;
+        clip.TargetHeight = dto.TargetHeight;
+    }
+
+    internal static void SetDefinition(ProjectJSONStructure project, ClipDraftDTO clip, IEnumerable<IVectorComponent> components, bool updateBounds)
+    {
+        clip.MetaData ??= new();
+        var list = components.ToList();
+        clip.MetaData![VectorComponentSerializer.ComponentsKey] = VectorComponentSerializer.Serialize(list);
         if (!updateBounds || list.Count == 0) return;
-        int canvasWidth = Math.Max(1, (int)VectorComponentClip.ReadNumber(clip.ExtraData, CanvasWidthKey, page.ProjectInfo.RelativeWidth));
-        int canvasHeight = Math.Max(1, (int)VectorComponentClip.ReadNumber(clip.ExtraData, CanvasHeightKey, page.ProjectInfo.RelativeHeight));
-        int[]? oldViewport = clip.ExtraData.ContainsKey(ViewportKey)
-            ? VectorComponentClip.ReadViewport(clip.ExtraData, clip.TargetWidth, clip.TargetHeight) : null;
+        int canvasWidth = Math.Max(1, (int)VectorComponentClip.ReadNumber(clip.MetaData!, CanvasWidthKey, project.RelativeWidth));
+        int canvasHeight = Math.Max(1, (int)VectorComponentClip.ReadNumber(clip.MetaData!, CanvasHeightKey, project.RelativeHeight));
+        int[]? oldViewport = clip.MetaData!.ContainsKey(ViewportKey)
+            ? VectorComponentClip.ReadViewport(clip.MetaData!, clip.TargetWidth, clip.TargetHeight) : null;
         float scaleX = oldViewport is null ? 1 : clip.TargetWidth / (float)Math.Max(1, oldViewport[2]);
         float scaleY = oldViewport is null ? 1 : clip.TargetHeight / (float)Math.Max(1, oldViewport[3]);
-        using var grouped = clip.ExtraData.ContainsKey(VectorComponentClip.ChildrenKey)
-            ? PluginManager.CreateClip(JsonSerializer.SerializeToElement(DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip))) as VectorComponentClip : null;
+        using var grouped = clip.MetaData!.ContainsKey(VectorComponentClip.ChildrenKey)
+            ? PluginManager.CreateClip(JsonSerializer.SerializeToElement(clip)) as VectorComponentClip : null;
         grouped?.ReInit(8);
         IVectorComponent At(float progress)
         {
             if (grouped is null)
             {
                 var component = list.Count == 1 ? list[0] : new EvaluatedVectorComponent(list.SelectMany(c => c.ComputeAll()));
-                return clip.ExtraData.ContainsKey(VectorComponentClip.TransformsKey)
-                    ? new EvaluatedVectorComponent(VectorComponentClip.ApplyInheritedTransforms(clip.ExtraData, component.ComputeAll())) : component;
+                return clip.MetaData!.ContainsKey(VectorComponentClip.TransformsKey)
+                    ? new EvaluatedVectorComponent(VectorComponentClip.ApplyInheritedTransforms(clip.MetaData!, component.ComputeAll())) : component;
             }
             var viewport = grouped.ReadViewport();
-            uint frame = (uint)Math.Round(progress * Math.Max(0, VectorComponentClip.ReadNumber(clip.ExtraData, VectorComponentClip.SourceLengthKey, clip.lengthInFrame) - 1));
+            uint frame = (uint)Math.Round(progress * Math.Max(0, VectorComponentClip.ReadNumber(clip.MetaData!, VectorComponentClip.SourceLengthKey, clip.Duration) - 1));
             return new EvaluatedVectorComponent(grouped.GetVectorPictureRelativeToStartPointOfSource(frame, viewport[2], viewport[3]).Elements
                 .Select(e => (VectorCanvasElement)new VectorViewportElement(e, viewport[2], viewport[3], -viewport[0], -viewport[1], canvasWidth, canvasHeight)));
         }
         var wrapper = new VectorComponentWrapperClip(At(0), canvasWidth, canvasHeight);
         int x = wrapper.TargetX, y = wrapper.TargetY, width = wrapper.TargetWidth, height = wrapper.TargetHeight;
-        uint length = Math.Max(1, (uint)VectorComponentClip.ReadNumber(clip.ExtraData, VectorComponentClip.SourceLengthKey, clip.lengthInFrame));
+        uint length = Math.Max(1, (uint)VectorComponentClip.ReadNumber(clip.MetaData!, VectorComponentClip.SourceLengthKey, clip.Duration));
         var times = Enumerable.Range(1, grouped is null ? 0 : 32).Select(i => i / 32f);
         if (grouped is not null)
             times = times.Concat(grouped.Children.SelectMany(c => new[] { c.StartFrame / (float)length, Math.Min(1, (c.StartFrame + c.Duration - 1) / (float)length) }));
         foreach (var time in times)
         {
             ClipPositionTuple rect;
-            if (grouped is not null || clip.ExtraData.ContainsKey(VectorComponentClip.TransformsKey))
+            if (grouped is not null || clip.MetaData!.ContainsKey(VectorComponentClip.TransformsKey))
             {
                 var animated = new VectorComponentWrapperClip(At(time), canvasWidth, canvasHeight);
                 rect = new ClipPositionTuple(animated.TargetX, animated.TargetY, animated.TargetWidth, animated.TargetHeight, false);
@@ -74,16 +94,16 @@ public static partial class VectorClipServices
             x = Math.Min(x, rect.TargetX); y = Math.Min(y, rect.TargetY);
             width = right - x; height = bottom - y;
         }
-        float rotation = VectorComponentClip.ReadNumber(clip.ExtraData, VectorComponentClip.RotationKey, 0);
+        float rotation = VectorComponentClip.ReadNumber(clip.MetaData!, VectorComponentClip.RotationKey, 0);
         float dx = oldViewport is null ? 0 : x + width / 2f - oldViewport[0] - oldViewport[2] / 2f;
         float dy = oldViewport is null ? 0 : y + height / 2f - oldViewport[1] - oldViewport[3] / 2f;
         clip.TargetX = oldViewport is null ? x : clip.TargetX + (int)Math.Round((dx * MathF.Cos(rotation) - dy * MathF.Sin(rotation) + (oldViewport[2] - width) / 2f) * scaleX);
         clip.TargetY = oldViewport is null ? y : clip.TargetY + (int)Math.Round((dx * MathF.Sin(rotation) + dy * MathF.Cos(rotation) + (oldViewport[3] - height) / 2f) * scaleY);
         clip.TargetWidth = Math.Max(1, (int)Math.Round(width * scaleX));
         clip.TargetHeight = Math.Max(1, (int)Math.Round(height * scaleY));
-        clip.ExtraData[ViewportKey] = new[] { x, y, width, height };
-        clip.ExtraData[CanvasWidthKey] = canvasWidth;
-        clip.ExtraData[CanvasHeightKey] = canvasHeight;
+        clip.MetaData![ViewportKey] = new[] { x, y, width, height };
+        clip.MetaData![CanvasWidthKey] = canvasWidth;
+        clip.MetaData![CanvasHeightKey] = canvasHeight;
     }
 
     public static ClipElementUI CreateClip(DraftPage page, IVectorComponent component, int track, double start, uint duration)

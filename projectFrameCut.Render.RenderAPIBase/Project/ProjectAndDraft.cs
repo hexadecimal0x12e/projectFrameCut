@@ -268,10 +268,37 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
 
 
     /// <summary>
-    /// Represents the structure of a draft in JSON format.
+    /// Project settings stored with a draft snapshot.
     /// </summary>
+    public sealed class ProjectSettingsSnapshot
+    {
+        public uint FrameRate { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public string? CoverPath { get; set; }
+        public Dictionary<string, string> Properties { get; set; } = new();
+        public Dictionary<string, string> UserDefinedProperties { get; set; } = new();
+
+        public static ProjectSettingsSnapshot Capture(ProjectJSONStructure project) => new()
+        {
+            FrameRate = project.TargetFrameRate, Width = project.RelativeWidth, Height = project.RelativeHeight,
+            CoverPath = project.ThumbPath, Properties = new(project.Properties), UserDefinedProperties = new(project.UserDefinedProperties),
+        };
+
+        public void ApplyTo(ProjectJSONStructure project)
+        {
+            project.TargetFrameRate = FrameRate;
+            project.RelativeWidth = Width;
+            project.RelativeHeight = Height;
+            project.ThumbPath = CoverPath;
+            project.Properties = new(Properties);
+            project.UserDefinedProperties = new(UserDefinedProperties);
+        }
+    }
+
     public class DraftStructureJSON
     {
+        public ProjectSettingsSnapshot? ProjectSettings { get; set; }
         /// <summary>
         /// The unique identifier for the draft snapshot. 
         /// </summary>

@@ -137,6 +137,7 @@ public sealed class RenderWorkerService : Service
         {
             "render",
             $"--project={options.ProjectRoot}",
+            $"--timelineSource={options.TimelineSource}",
             $"--projectCacheDirectory={(string.IsNullOrWhiteSpace(options.CacheRoot) ? projectFrameCut.Shared.ProjectCachePaths.Initialize(options.ProjectRoot, options.ProjectName) : options.CacheRoot)}",
             $"--output={options.OutputPath}",
             $"--output_options={options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}",

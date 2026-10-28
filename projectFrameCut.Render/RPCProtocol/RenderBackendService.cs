@@ -700,7 +700,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             InitializePreviewClips(hashDependencies, pixelMode, request.FrameIndex, cancellationToken);
             initializeMs = Stopwatch.GetElapsedTime(stageStarted).TotalMilliseconds;
             bool wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
-            using var previewCache = request.UsePreviewMetadata
+            using var previewCache = request.UsePreviewMetadata && request.PreviewPipeName.Length == 0
                 ? new PreviewFrameCache(id => Path.Combine(ProjectCachePaths.GetRoot(session.ProjectRoot), "thumbs", "perClip", id.ToString(), "dynamic"),
                 request.FrameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight,
                 wantsScRgb, request.BeforeLayout, cancellationToken, keepHwAccelPicture: wantsScRgb,
@@ -717,6 +717,15 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                         ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
                 }
                 finally { renderMs += Stopwatch.GetElapsedTime(started).TotalMilliseconds; }
+            }
+            if (request.PreviewPipeName.Length > 0)
+            {
+                var data = PreviewFrameData.Create(RenderPreview(), "", "", wantsScRgb);
+                using var pipe = await MemoryPreviewChannel.ConnectAsync(request.PreviewPipeName, request.PreviewPipeToken, cancellationToken).ConfigureAwait(false);
+                await MemoryPreviewChannel.SendAsync(pipe, new(clip.Id, request.FrameIndex, false, data.Info), data, cancellationToken).ConfigureAwait(false);
+                var ack = new byte[1];
+                await pipe.ReadExactlyAsync(ack, cancellationToken).ConfigureAwait(false);
+                return new() { Width = data.Width, Height = data.Height };
             }
             var hashStarted = Stopwatch.GetTimestamp();
             var identity = snapshot is null && FrameHashHelper.CanPersistClipHash(visualClips, clip, hashOptions, cancellationToken)

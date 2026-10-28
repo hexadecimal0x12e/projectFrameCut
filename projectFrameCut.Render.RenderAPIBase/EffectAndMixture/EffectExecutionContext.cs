@@ -81,7 +81,7 @@ public static class EffectFieldTypes
             EffectArgumentFieldType.VectorPicture => value is projectFrameCut.Drawing.Vector.VectorPicture,
             EffectArgumentFieldType.AudioSample => value is projectFrameCut.Shared.IAudioSamples<float>,
             EffectArgumentFieldType.Integer or EffectArgumentFieldType.UnsignedInteger or EffectArgumentFieldType.Long
-                or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric => value is sbyte or byte or short or ushort or int or uint or long or ulong or Half or float or double or decimal,
+                or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric => value is sbyte or byte or short or ushort or int or uint or long or ulong or Half or float or double or decimal or Int128 or UInt128,
             EffectArgumentFieldType.Boolean => value is bool,
             EffectArgumentFieldType.String => value is string,
             EffectArgumentFieldType.Size or EffectArgumentFieldType.Position or EffectArgumentFieldType.SizeAndPosition => value is projectFrameCut.Shared.ClipPositionTuple,
@@ -132,7 +132,10 @@ public static class EffectFieldTypes
             EffectArgumentFieldType.Boolean => typeof(bool),
             _ => null,
         };
-        return target is null ? value : Convert.ChangeType(value is Half h ? (float)h : value, target, CultureInfo.InvariantCulture);
+        if (target is null) return value;
+        if (value is Int128 i128) value = target == typeof(float) ? (object)(float)i128 : checked((decimal)i128);
+        if (value is UInt128 u128) value = target == typeof(float) ? (object)(float)u128 : checked((decimal)u128);
+        return Convert.ChangeType(value is Half h ? (float)h : value, target, CultureInfo.InvariantCulture);
     }
 
     public static projectFrameCut.Shared.FloatAudioSamples CopyAudio(projectFrameCut.Shared.IAudioSamples<float> audio) => new()

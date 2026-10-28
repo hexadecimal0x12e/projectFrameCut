@@ -248,6 +248,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             var d = new DraftStructureJSON
             {
+                ProjectSettings = ProjectSettingsSnapshot.Capture(page.ProjectInfo),
                 Clips = clips.ToArray(),
                 SoundTracks = soundtracks.ToArray(),
                 Duration = (uint)max,
@@ -478,7 +479,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             return normalized;
         }
 
-        public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null)
+        public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null,
+            IReadOnlyDictionary<string, AssetItem>? projectAssets = null)
         {
             var clips = json.Clips;
             if (clips is null || clips.Length == 0)
@@ -501,7 +503,9 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 {
                     try
                     {
-                        clipInstance.FilePath = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)].Path;
+                        var id = clipInstance.FilePath.Substring(1);
+                        clipInstance.FilePath = projectAssets is not null && projectAssets.TryGetValue(id, out var asset)
+                            ? asset.Path : AssetDatabase.Assets[id].Path;
                     }
                     catch (InvalidOperationException)
                     {
@@ -567,7 +571,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             return clipsList.ToArray();
         }
 
-        public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true)
+        public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true,
+            IReadOnlyDictionary<string, AssetItem>? projectAssets = null)
         {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var audioMark = new UserMarkRange("Draft.LoadSoundTracks", $"soundtracks={json.SoundTracks?.Length ?? 0}, initialize={InitAtLoad}");
@@ -603,7 +608,9 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 {
                     try
                     {
-                        trackInstance.FilePath = AssetDatabase.Assets[trackInstance.FilePath.Substring(1)].Path;
+                        var id = trackInstance.FilePath.Substring(1);
+                        trackInstance.FilePath = projectAssets is not null && projectAssets.TryGetValue(id, out var asset)
+                            ? asset.Path : AssetDatabase.Assets[id].Path;
                     }
                     catch (InvalidOperationException)
                     {

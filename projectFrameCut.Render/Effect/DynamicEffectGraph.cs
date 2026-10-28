@@ -417,8 +417,9 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                             parameter = key == selectedKey || node.Provider is EqualityComparisonNodeEffectProvider && (key is "A" or "B")
                                 ? resolved : resolved ?? Fallback(field);
                         }
-                        // Numeric comparison retains integer/decimal precision instead of coercing operands to float.
-                        if (node.Provider is not NumericComparisonNodeEffectProvider || (key is not "A" and not "B"))
+                        // Preserve operand types for numeric comparison and overload selection.
+                        if (!(node.Provider is NumericComparisonNodeEffectProvider && (key is "A" or "B")
+                            || node.Provider is AdvancedMathEffectProvider && (key is "A" or "B" or "C")))
                             parameter = EffectFieldTypes.ConvertInput(field.FieldType, parameter, false);
                         if (parameter is IHwAccelPicture hardwareParameter) Track(hardwareParameter);
                         types.ValidateValue(node.Provider, key, true, field, parameter, frame);

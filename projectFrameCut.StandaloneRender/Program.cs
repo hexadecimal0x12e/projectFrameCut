@@ -385,6 +385,7 @@ namespace projectFrameCut.StandaloneRender
                         -output=<output file>
                         -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                         [-target=<video|audio|all>]
+                        [--timelineSource=timeline|latest|snapshot:<id>] (default: timeline)
                         [--allowExternalSources=all|<ImportId,ImportId,...>]
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
@@ -1158,7 +1159,6 @@ namespace projectFrameCut.StandaloneRender
 
             #region read draft
             ProjectJSONStructure project = new();
-            DraftStructureJSON timeline = new();
             if (File.Exists(Path.Combine(workingPath, "project.pjfc")))
             {
                 project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.pjfc")), savingOpts) ?? new();
@@ -1177,28 +1177,9 @@ namespace projectFrameCut.StandaloneRender
             if (switches.TryGetValue("projectCacheDirectory", out var projectCacheDirectory)) ProjectCachePaths.Bind(workingPath, projectCacheDirectory, project.ProjectName);
             else ProjectCachePaths.Initialize(workingPath, project.ProjectName);
 
-            if (File.Exists(Path.Combine(workingPath, "timeline.json")))
-            {
-                timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(workingPath, "timeline.json")), savingOpts) ?? new();
-            }
-            else
-            {
-                Log("ERROR: timeline.json not found in project directory.");
-                return 1;
-            }
-
-            if (File.Exists(Path.Combine(workingPath, "assets.json")))
-            {
-                var projAssets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json")), savingOpts) ?? new();
-                ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(projAssets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
-                assets = new ConcurrentDictionary<string, AssetItem>(assets.Concat(assetDict));
-
-            }
-            else
-            {
-                Log("ERROR: assets.json not found in project directory.");
-                return 1;
-            }
+            var (timeline, projectAssets) = ProjectSnapshotStore.ReadForRender(workingPath, project, savingOpts,
+                switches.GetValueOrDefault("timelineSource", "timeline"));
+            foreach (var asset in projectAssets.Where(a => !string.IsNullOrWhiteSpace(a.AssetId))) assets[asset.AssetId!] = asset;
             var sourceProjectRoot = Path.GetFullPath(workingPath);
             Environment.CurrentDirectory = workingPath;
             await using var externalSources = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.OpenAsync(sourceProjectRoot,

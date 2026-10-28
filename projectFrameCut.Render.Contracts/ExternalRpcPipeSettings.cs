@@ -6,10 +6,13 @@ namespace projectFrameCut.Render.Contracts;
 public sealed class ExternalRpcPipeSettings
 {
     public const string AllowExternalRpcSetting = "Security_ExternalRpcPipe_AllowExternalRPC";
+    public const string AllowAnyUserSetting = "Security_ExternalRpcPipe_AllowAnyUser";
     public const string DisabledMessage = "External RPC clients are disabled by security policy (Security_ExternalRpcPipe_AllowExternalRPC).";
 
     public string[] AllowedSids { get; set; } = [];
+    public Dictionary<string, string> ManualPrincipals { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool SingleConnection { get; set; } = true;
+    public bool AllowAnyUser { get; set; }
     [JsonPropertyName(AllowExternalRpcSetting)]
     public bool AllowExternalRPC { get; set; } = true;
 

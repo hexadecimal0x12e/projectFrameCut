@@ -241,6 +241,8 @@ namespace projectFrameCut
                 );
 
                 HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);
+
+                if (!IsSettingExists("Edit_UseDynamicPreview")) WriteSetting("Edit_UseDynamicPreview", "True");
             }
             catch (Exception ex)
             {

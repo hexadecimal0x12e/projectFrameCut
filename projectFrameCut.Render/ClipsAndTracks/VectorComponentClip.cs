@@ -124,8 +124,8 @@ public class VectorComponentClip : VectorCanvasClip
     public override VectorPicture GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight)
     {
         var viewport = ReadViewport();
-        float canvasWidth = ReadNumber(ExtraData, CanvasWidthKey, requiredWidth);
-        float canvasHeight = ReadNumber(ExtraData, CanvasHeightKey, requiredHeight);
+        float canvasWidth = ReadNumber(ExtraData, CanvasWidthKey, viewport[2]);
+        float canvasHeight = ReadNumber(ExtraData, CanvasHeightKey, viewport[3]);
         var picture = new VectorPicture
         {
             Elements = BuildRaw(frameIndex).Elements.Select(e => (VectorCanvasElement)new VectorViewportElement(e,

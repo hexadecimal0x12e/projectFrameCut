@@ -75,39 +75,22 @@ public partial class EditSettingPage : ContentPage
             .AddCustomChild(BuildClipInfoTabOrder())
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
-            .AddCheckbox("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"))
             .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required))).Key, null)
+            .AddPicker(DynamicPreviewSettings.DiskCacheSettingKey, SettingLocalizedResources.Edit_CacheDecodedPreviewFrames, DynamicPreviewSettings.DiskCacheOptions.Keys.ToArray(), DynamicPreviewSettings.DiskCacheOptions.First(p => p.Value == DynamicPreviewSettings.DiskCacheMode).Key)
+            .AddEntry("Edit_DynamicPreviewClipPoolMiB", SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB, GetSetting("Edit_DynamicPreviewClipPoolMiB", "64"), "64")
+            .AddCheckbox("Edit_IgnorePreviewWindowSize", SettingLocalizedResources.Edit_IgnorePreviewWindowSize, IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"))
+            .AppendWhen(IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"), c => c.AddPicker(DynamicPreviewSettings.TargetPixelsSettingKey, SettingLocalizedResources.Edit_DynamicPreviewTargetResolution, DynamicPreviewResolutionOptions.Keys.ToArray(), DynamicPreviewResolutionOptions.FirstOrDefault(p => p.Value == DynamicPreview.TargetResolutionPixels).Key ?? DynamicPreviewResolutionOptions.Keys.First()))
+            .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
             .AddCheckbox("Edit_PreviewWarmupEnabled", SettingLocalizedResources.Edit_PreviewWarmupEnabled, IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true))
-            .AppendWhen(IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true),
-                c => c.AddEntry("Edit_PreviewWarmupSeconds", SettingLocalizedResources.Edit_PreviewWarmupSeconds, GetSetting("Edit_PreviewWarmupSeconds", "5"), "5"))
-            .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
-                c => c.AddCheckbox("Edit_UseLightweightDynamicPreviewHost", SettingLocalizedResources.Edit_UseLightweightDynamicPreviewHost, IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true))
-                      .AddCheckbox(DynamicPreviewSettings.CacheSourceFramesSettingKey, SettingLocalizedResources.Edit_CacheDecodedPreviewFrames, DynamicPreviewSettings.CacheSourceFrames)
-                      .AddText(new Label { Text = SettingLocalizedResources.Edit_CacheDecodedPreviewFrames_Subtitle, FontSize = 12, Margin = new Thickness(12, 0, 12, 8) })
-                      .AddEntry("Edit_DynamicPreviewClipPoolMiB", SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB, GetSetting("Edit_DynamicPreviewClipPoolMiB", "64"), "64")
-                      .AddText(new Label { Text = SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB_Subtitle, FontSize = 12, Margin = new Thickness(12, 0, 12, 8) })
-                      .AddCheckbox("Edit_IgnorePreviewWindowSize", SettingLocalizedResources.Edit_IgnorePreviewWindowSize, IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"))
-                      .AppendWhen(IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"),
-                          c => c.AddPicker(DynamicPreviewSettings.TargetPixelsSettingKey, SettingLocalizedResources.Edit_DynamicPreviewTargetResolution,
-                              DynamicPreviewResolutionOptions.Keys.ToArray(), DynamicPreviewResolutionOptions.FirstOrDefault(p => p.Value == DynamicPreview.TargetResolutionPixels).Key ?? DynamicPreviewResolutionOptions.Keys.First()))
-                      .AddEntry("Edit_DynamicPreviewResolutionDivisor", SettingLocalizedResources.Edit_DynamicPreviewResolutionDivisor, GetSetting("Edit_DynamicPreviewResolutionDivisor", "1"), "1")
-                      .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
-            )
-            .AppendWhen(!IsBoolSettingTrue("Edit_UseDynamicPreview"),
-                c => c.AddPicker("Edit_LiveVideoPreviewDefaultResolution", SettingLocalizedResources.Edit_LiveVideoPreviewDefaultResolution, resolutions, GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720"))
-                      .AddEntry("Edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), "240")
-                      .AddEntry("Edit_LiveVideoPreviewZoomFactor", SettingLocalizedResources.Edit_LiveVideoPreviewZoomFactor, GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), "8")
-            )
+            .AppendWhen(IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true), c => c.AddEntry("Edit_PreviewWarmupSeconds", SettingLocalizedResources.Edit_PreviewWarmupSeconds, GetSetting("Edit_PreviewWarmupSeconds", "5"), "5"))
             .AddSeparator()
             .AddText(new SingleLineLabel(SettingLocalizedResources.Edit_MiscOption, 25, FontAttributes.Bold))
-            .AddPicker("Edit_ProxyOption", SettingLocalizedResources.Edit_ProxyOption, ProxyStringMapping.Keys.ToArray(), ProxyStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_ProxyOption", "ask"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_ProxyOption_Ask, "ask")).Key)
             .AddCheckbox("Edit_AccelerateControlUpdates", SettingLocalizedResources.Edit_AccelerateControlUpdates, IsBoolSettingTrue("Edit_AccelerateControlUpdates"))
+            .AddCheckbox("Edit_UseLightweightDynamicPreviewHost", SettingLocalizedResources.Edit_UseLightweightDynamicPreviewHost, IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true))
             .AddCheckbox("Edit_Denoise", SettingLocalizedResources.Edit_Denoise, IsBoolSettingTrue("Edit_Denoise"))
             .AddCheckbox("Edit_LockScrollViewAfterSelection", SettingLocalizedResources.Edit_LockScrollViewAfterSelection, IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true))
             .AddCheckbox("Edit_AllowColorAdjustAppearInEffectEditor", SettingLocalizedResources.Edit_AllowColorAdjustAppearInEffectEditor, IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor"))
-#if WINDOWS || MACCATALYST
-            .AddCheckbox("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"))
-#endif
+            .AddPicker("Edit_ProxyOption", SettingLocalizedResources.Edit_ProxyOption, ProxyStringMapping.Keys.ToArray(), ProxyStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_ProxyOption", "ask"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_ProxyOption_Ask, "ask")).Key)
             .AddButton(SettingLocalizedResources.Edit_ResetQuickCommands, ResetQuickCommands)
             .AddSeparator()
             ;
@@ -277,11 +260,11 @@ public partial class EditSettingPage : ContentPage
                     if (args.Value is string resolution && DynamicPreviewResolutionOptions.TryGetValue(resolution, out var pixels))
                         DynamicPreviewSettings.SetTargetResolution(pixels);
                     return;
-                case DynamicPreviewSettings.CacheSourceFramesSettingKey:
-                    if (args.Value is bool cacheSourceFrames)
+                case DynamicPreviewSettings.DiskCacheSettingKey:
+                    if (args.Value is string selection && DynamicPreviewSettings.DiskCacheOptions.TryGetValue(selection, out var cacheMode))
                     {
-                        WriteSetting(args.Id, cacheSourceFrames.ToString());
-                        LogDiagnostic($"Cache decoded preview source frames: {cacheSourceFrames}.");
+                        WriteSetting(args.Id, cacheMode);
+                        LogDiagnostic($"Preview disk cache: {cacheMode}.");
                     }
                     return;
                 case "Edit_DynamicPreviewClipPoolMiB":

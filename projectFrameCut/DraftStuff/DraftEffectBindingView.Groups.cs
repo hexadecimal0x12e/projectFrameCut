@@ -20,18 +20,6 @@ public partial class DraftEffectBindingView
 
     private void InitializeGroups()
     {
-        var select = new Button { Text = Localized.EffectGroup_MultiSelect, Margin = new Thickness(4, 0) };
-        select.Clicked += (_, _) =>
-        {
-            _groupMultiSelect = !_groupMultiSelect;
-            _groupSelection.Clear();
-            select.BackgroundColor = _groupMultiSelect ? Colors.CornflowerBlue : Colors.Gray;
-            RefreshGroupSelection();
-        };
-        var pack = new Button { Text = Localized.EffectGroup_Pack, Margin = new Thickness(4, 0) };
-        pack.Clicked += (_, _) => BeginGroup();
-        BottomCommandBar.Children.Insert(0, pack);
-        BottomCommandBar.Children.Insert(0, select);
         Loaded += (_, _) =>
         {
             EffectGroupStore.Changed -= OnGroupLibraryChanged;
@@ -42,6 +30,15 @@ public partial class DraftEffectBindingView
     }
 
     private void OnGroupLibraryChanged() => Dispatcher.Dispatch(RefreshGroupLibrary);
+
+    private void ToggleGroupMultiSelect()
+    {
+        _groupMultiSelect = !_groupMultiSelect;
+        _groupSelection.Clear();
+        if (_groupMultiSelect) CanvasActionsButton.BackgroundColor = Colors.CornflowerBlue;
+        else CanvasActionsButton.ClearValue(Button.BackgroundColorProperty);
+        RefreshGroupSelection();
+    }
 
     private void LoadGroups(bool resetSelection = true)
     {
@@ -160,9 +157,9 @@ public partial class DraftEffectBindingView
         {
             var p = providers[id];
             ports.AddRange(DynamicEffectBindings.InputFields(p).Select(f => new EffectGroupPort
-                { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {f.Key}", IsInput = true }));
+                { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {EffectProviderUIHelper.FieldName(p, f.Key, true)}", IsInput = true }));
             ports.AddRange(p.GetOutputFields().Select(f => new EffectGroupPort
-                { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {f.Key}" }));
+                { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {EffectProviderUIHelper.FieldName(p, f.Key, false)}" }));
         }
         foreach (var id in group.ChildGroupIds) ports.AddRange(EffectGroupHelper.Copy(groups.Single(g => g.Id == id).Ports));
         return ports.Where(port => port.IsInput

@@ -30,6 +30,7 @@ public enum RenderOperation
 {
     [ProtoEnum] Unknown = 0,
     [ProtoEnum] GetCapabilities = 1,
+
     [ProtoEnum] OpenProject = 2,
     [ProtoEnum] CloseProject = 3,
     [ProtoEnum] GetProjectSnapshot = 4,
@@ -104,6 +105,7 @@ public enum RenderOperation
     [ProtoEnum] RemoveHeadlessEffectProvider = 113,
     [ProtoEnum] SaveHeadlessProject = 114,
     [ProtoEnum] ApplyHeadlessProjectEdit = 115,
+
     [ProtoEnum] IsolationNegotiate = 2000,
     [ProtoEnum] IsolationLoadPlugin = 2001,
     [ProtoEnum] IsolationCreateProvider = 2002,
@@ -167,6 +169,9 @@ public enum RenderOperation
     [ProtoEnum] IsolationListProjectExternalAudioSources = 2065,
     [ProtoEnum] IsolationListProjectExternalMaskSources = 2066,
     [ProtoEnum] IsolationEditKeyFrames = 2067,
+
+    [ProtoEnum] TestingBackendCrash = int.MaxValue, 
+
 }
 
 [ProtoContract]
@@ -275,6 +280,8 @@ public sealed class RenderRequestEnvelope
     [ProtoMember(4)] public RenderOperation Operation { get; set; }
     [ProtoMember(5)] public byte[] Payload { get; set; } = [];
     [ProtoMember(6)] public Guid CancelRequestId { get; set; }
+    // Assigned by the server transport, never accepted from the wire.
+    [ProtoIgnore] public Guid ConnectionId { get; set; }
 }
 
 [ProtoContract]
@@ -486,6 +493,9 @@ public sealed class ClipPreviewRequest
     [ProtoMember(10)] public bool BeforeLayout { get; set; }
     [ProtoMember(12)] public bool UsePreviewMetadata { get; set; }
     [ProtoMember(13)] public bool DisableSourceFrameCache { get; set; }
+    [ProtoMember(14)] public string PreviewPipeName { get; set; } = "";
+    [ProtoMember(15)] public string PreviewPipeToken { get; set; } = "";
+
 }
 
 [ProtoContract]
@@ -523,6 +533,10 @@ public sealed class StartDynamicPreviewRequest
     [ProtoMember(18)] public long MaxBufferedBytes { get; set; }
     [ProtoMember(19)] public bool UsePreviewMetadata { get; set; }
     [ProtoMember(20)] public bool DisableSourceFrameCache { get; set; }
+    [ProtoMember(21)] public string PreviewPipeName { get; set; } = "";
+    [ProtoMember(22)] public string PreviewPipeToken { get; set; } = "";
+    [ProtoMember(23)] public long PreviewClipPoolMaxBytes { get; set; }
+
 }
 
 [ProtoContract]
@@ -558,6 +572,7 @@ public sealed class DynamicPreviewClock
     [ProtoMember(8)] public Guid PlaybackId { get; set; }
     [ProtoMember(9)] public double? BufferingProgress { get; set; }
     [ProtoMember(10)] public double? BufferingFrameRate { get; set; }
+    [ProtoMember(11)] public int BufferFrames { get; set; }
 }
 
 public sealed class DynamicPreviewCachedClip

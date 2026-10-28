@@ -247,7 +247,9 @@ namespace projectFrameCut.Render.Effect
                     Id = fieldId,
                     FieldType = descriptor.FieldType,
                     DataFormat = descriptor.DataFormat,
-                    Value = (descriptor.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                    Value = (provider is AdvancedMathEffectProvider && (fieldId is "A" or "B" or "C")
+                        ? AdvancedMathEffectProvider.ParseNumber(rawValue)
+                        : descriptor.FieldType.HasFlag(EffectArgumentFieldType.Any)
                         ? rawValue : EffectParamConvert.Normalize(rawValue)) ?? new object(),
                     DefaultValue = descriptor.DefaultValue,
                     MinValue = descriptor.MinValue,

@@ -118,12 +118,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
             var vectorPicture = GetVectorPictureRelativeToStartPointOfSource(
                 frameIndex, requiredWidth, requiredHeight);
 
+            int sourceWidth = TargetWidth > 0 ? TargetWidth : requiredWidth;
+            int sourceHeight = TargetHeight > 0 ? TargetHeight : requiredHeight;
             if (this is VectorComponentClip componentClip)
             {
                 var viewport = componentClip.ReadViewport();
-                vectorPicture = VectorPictureRasterization.ScaleStrokes(vectorPicture,
-                    Math.Min((float)requiredWidth / viewport[2], (float)requiredHeight / viewport[3]));
+                sourceWidth = viewport[2];
+                sourceHeight = viewport[3];
             }
+            vectorPicture = VectorPictureRasterization.ScaleStrokes(vectorPicture,
+                Math.Min((float)requiredWidth / sourceWidth, (float)requiredHeight / sourceHeight));
 
             var aa = ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode;
             var rasterizer = IVectorContentClip.GlobalDefaultRasterizer;

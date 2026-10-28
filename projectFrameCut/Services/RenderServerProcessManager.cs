@@ -30,6 +30,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     private bool _independentWorker;
     private string _projectName = "UnnamedProject";
     private Process? _process;
+    private Task? _workerExitTask;
     private IRenderTransport? _transport;
     private IRenderClient? _client;
     private RenderServiceHost? _directHost;
@@ -53,6 +54,18 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     public bool IsIndependentWorker => _independentWorker;
     public Guid? JobId => _jobId;
     public string? CliPreviewPath { get; private set; }
+    public Task? WorkerExitTask
+    {
+        get
+        {
+            if (_independentWorker) return null;
+#if ANDROID
+            return _androidWorker?.Disconnected;
+#else
+            return _workerExitTask;
+#endif
+        }
+    }
 
     /// <summary>
     /// Requests a CLI render worker to stop and gives it a bounded grace period
@@ -102,9 +115,10 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     /// <param name="projectName">
     /// The name of the project. This is used to identify the project in the UI.
     /// </param>
-    public void Start(string? projectRoot = null, bool independentWorker = false, string? projectName = null)
+    public void Start(string? projectRoot = null, bool independentWorker = false, string? projectName = null, CancellationToken cancellationToken = default)
     {
         if (_client is not null) return;
+        cancellationToken.ThrowIfCancellationRequested();
         _projectRoot = string.IsNullOrWhiteSpace(projectRoot) ? null : Path.GetFullPath(projectRoot);
         _independentWorker = independentWorker;
         _projectName = string.IsNullOrWhiteSpace(projectName) ? Localized._Unknown : projectName;
@@ -117,7 +131,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         }
 
 #if ANDROID
-        StartAndroidEditorWorker();
+        StartAndroidEditorWorker(cancellationToken);
 #else
         if (_independentWorker && TryConnectRegisteredWorker()) return;
         var enableHttp = SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp");
@@ -125,16 +139,20 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         List<Exception> failures = [];
         foreach (var executable in CliProcessLauncher.GetExecutableCandidates())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 StartProcess(executable, enableHttp);
                 return;
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 failures.Add(ex);
             }
         }
+        if (failures.Any(ex => ex is RenderWorkerExitedException))
+            throw new RenderWorkerExitedException("The render RPC backend exited during startup.", new AggregateException(failures));
 #if WINDOWS
         throw new InvalidOperationException("Unable to start RPC server. Please ensure that the longer App alias is enabled in the Settings->Apps->Advanced->App execution alias.", new AggregateException(failures));
 #else
@@ -191,6 +209,10 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 LogDiagnostic($"Starting worker {startInfo.FileName} with args: {JsonSerializer.Serialize(startInfo.ArgumentList)}");
                 _process = Process.Start(startInfo)
                     ?? throw new InvalidOperationException("Unable to start pjfc-cli.exe RPC server.");
+                var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _process.Exited += (_, _) => exited.TrySetResult();
+                _process.EnableRaisingEvents = true;
+                _workerExitTask = exited.Task;
                 if (noConsole)
                 {
                     _process.ErrorDataReceived += (_, e) =>
@@ -212,7 +234,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 var client = new RenderClient(transport, _clientId);
                 _transport = transport;
                 _client = client;
-                WaitForServer(client, _process);
+                WaitForServer(client, _process, cancellationToken);
                 if (_independentWorker) SaveRegistration();
             }
             catch (Exception ex)
@@ -226,8 +248,10 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 try { _process?.Kill(entireProcessTree: true); } catch { }
                 _process?.Dispose();
                 _process = null;
+                _workerExitTask = null;
                 _client = null;
                 _transport = null;
+                cancellationToken.ThrowIfCancellationRequested();
                 if (withHttp)
                 {
                     // A failing optional HTTP endpoint (for example the port is
@@ -300,7 +324,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     }
 
 #if ANDROID
-    private void StartAndroidEditorWorker()
+    private void StartAndroidEditorWorker(CancellationToken cancellationToken)
     {
         _pipeName = AndroidRenderWorkerController.CreateSocketPath();
         var dataRoot = MauiProgram.BasicDataPath;
@@ -313,7 +337,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _projectRoot,
                 _projectName,
                 ffmpeg.RootPath);
-            ConnectAndroidTransport();
+            ConnectAndroidTransport(cancellationToken);
         }
         catch
         {
@@ -382,13 +406,13 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         }
     }
 
-    private void ConnectAndroidTransport()
+    private void ConnectAndroidTransport(CancellationToken cancellationToken = default)
     {
         var transport = new UnixSocketRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
         var client = new RenderClient(transport, _clientId);
         _transport = transport;
         _client = client;
-        WaitForServer(client, null);
+        WaitForServer(client, null, cancellationToken, _androidWorker?.Disconnected);
     }
 
 #endif
@@ -445,6 +469,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 startInfo.ArgumentList.Add("--consoleLog");
                 if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add("--logDiagnostic");
                 ApplyAdditionalBackendOptions(startInfo);
+                Add("timelineSource", options.TimelineSource);
 
                 _process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the CLI renderer.");
                 AttachProcessLogging(_process);
@@ -607,18 +632,35 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             comparison);
     }
 
-    private static void WaitForServer(IRenderClient client, Process? serverProcess)
+    internal static async Task ProbeAsync(IRenderClient client, CancellationToken cancellationToken)
+    {
+        var request = client.GetCapabilitiesAsync(cancellationToken).AsTask();
+        try { await request.WaitAsync(cancellationToken).ConfigureAwait(false); }
+        catch
+        {
+            _ = request.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            throw;
+        }
+    }
+
+    private static void WaitForServer(IRenderClient client, Process? serverProcess, CancellationToken cancellationToken = default, Task? disconnected = null)
     {
         var deadline = Stopwatch.GetTimestamp() + (long)(Stopwatch.Frequency * 20);
         Exception? lastError = null;
         while (Stopwatch.GetTimestamp() < deadline)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (disconnected?.IsCompletedSuccessfully == true)
+                throw new RenderWorkerExitedException("The projectFrameCut Render RPC service disconnected before connecting.", lastError);
             if (serverProcess?.HasExited == true)
-                throw new InvalidOperationException($"The projectFrameCut Render RPC server exited before connecting (exit code {serverProcess.ExitCode}). See log.", lastError);
+                throw new RenderWorkerExitedException($"The projectFrameCut Render RPC server exited before connecting (exit code {serverProcess.ExitCode}). See log.", lastError);
 
             try
             {
-                _ = client.GetCapabilitiesAsync().AsTask().GetAwaiter().GetResult();
+                using var probe = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                probe.CancelAfter(TimeSpan.FromSeconds(2));
+                ProbeAsync(client, probe.Token).GetAwaiter().GetResult();
                 return;
             }
             catch (Exception ex) when (ex is IOException or SocketException or TimeoutException or OperationCanceledException)
@@ -673,6 +715,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             _process.Dispose();
             _process = null;
         }
+        _workerExitTask = null;
         _projectRoot = null;
         _independentWorker = false;
         _jobId = null;
@@ -772,11 +815,14 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     }
 }
 
+internal sealed class RenderWorkerExitedException(string message, Exception? innerException = null) : InvalidOperationException(message, innerException) { }
+
 internal sealed record CliRenderProcessOptions
 {
     public List<ProjectExternalSourceApproval> AllowedExternalSources { get; init; } = [];
     public Guid JobId { get; init; } = Guid.NewGuid();
     public required string ProjectRoot { get; init; }
+    public string TimelineSource { get; init; } = "timeline";
     public string CacheRoot { get; init; } = string.Empty;
     public required string ProjectName { get; init; }
     public required string OutputPath { get; init; }

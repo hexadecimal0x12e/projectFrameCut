@@ -146,6 +146,9 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
 
 #### 可选参数
 
+- **`--timelineSource=timeline|latest|snapshot:<id>`**
+  时间线来源。默认 `timeline`，读取项目根目录的 `timeline.json`；`latest` 使用磁盘上当前最新的已保存状态；`snapshot:<id>` 使用指定快照及其素材列表。快照 ID 为 GUID。`latest` 无法确认当前状态或指定快照不可用时会报错。
+
 - **`-target=<video|audio|all>`**  
   渲染目标。默认：`all`
   - `video`: 仅渲染视频

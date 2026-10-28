@@ -60,6 +60,46 @@ internal static partial class ExternalRpcPipePermissions
         return principals.DistinctBy(p => p.Sid).OrderBy(p => p.IsGroup).ThenBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
+#if WINDOWS
+    internal static Principal ResolvePrincipal(string input)
+    {
+        input = input.Trim();
+        if (input.StartsWith("S-", StringComparison.OrdinalIgnoreCase))
+        {
+            var sid = new SecurityIdentifier(input.ToUpperInvariant());
+            try { return new(((NTAccount)sid.Translate(typeof(NTAccount))).Value, sid.Value, false); }
+            catch (IdentityNotMappedException) { return new(sid.Value, sid.Value, false); }
+        }
+        try
+        {
+            var account = new NTAccount(input);
+            return new(account.Value, ((SecurityIdentifier)account.Translate(typeof(SecurityIdentifier))).Value, false);
+        }
+        catch (IdentityNotMappedException) when (!input.Contains('\\')) { }
+
+        var families = new Windows.Management.Deployment.PackageManager().FindPackagesForUser("")
+            .Select(p => p.Id)
+            .Where(p => string.Equals(p.Name, input, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(p.FullName, input, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(p.FamilyName, input, StringComparison.OrdinalIgnoreCase))
+            .Select(p => p.FamilyName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (families.Length > 1)
+            throw new InvalidOperationException("Multiple packages match this name. Enter the package family name (PFN) instead.");
+        var name = families.SingleOrDefault() ?? input;
+        return new(name, projectFrameCut.Platforms.Windows.WindowsPluginIsolationPlatform.DeriveAppContainerSid(name).Value, false);
+    }
+#endif
+
+    internal static void AddPrincipal(string dataRoot, Principal principal)
+    {
+        var configuration = ExternalRpcPipeSettings.Load(dataRoot);
+        var sid = new SecurityIdentifier(principal.Sid).Value;
+        configuration.ManualPrincipals[sid] = principal.Name;
+        configuration.AllowedSids = configuration.AllowedSids.Append(sid)
+            .Select(s => new SecurityIdentifier(s).Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        configuration.Save(dataRoot);
+    }
+
     internal static HashSet<string> LoadAllowedSids(string dataRoot)
     {
         return ExternalRpcPipeSettings.Load(dataRoot).AllowedSids
@@ -83,21 +123,30 @@ internal static partial class ExternalRpcPipePermissions
         configuration.Save(dataRoot);
     }
 
-    internal static NamedPipeServerStream CreatePipe(string name, string dataRoot, SecurityIdentifier? appContainerSid = null, int maxInstances = 1)
+    internal static NamedPipeServerStream CreatePipe(string name, string dataRoot, SecurityIdentifier? appContainerSid = null, int maxInstances = 1, IEnumerable<string>? additionalSids = null)
     {
-        ExternalRpcPipeSettings.EnsureAllowed(dataRoot);
-        var allowed = LoadAllowedSids(dataRoot);
+        var configuration = ExternalRpcPipeSettings.Load(dataRoot);
+        ExternalRpcPipeSettings.ThrowIfDisabled(configuration.AllowExternalRPC);
+        var allowed = configuration.AllowedSids.Select(s => new SecurityIdentifier(s).Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (additionalSids is not null)
+            allowed.UnionWith(additionalSids.Select(s => new SecurityIdentifier(s).Value));
+        if (configuration.AllowAnyUser)
+        {
+            // Everyone, AppContainers, LPACs, restricted code, and anonymous callers.
+            allowed.UnionWith(["S-1-1-0", "S-1-15-2-1", "S-1-15-2-2", "S-1-5-12", "S-1-5-7"]);
+        }
         if (appContainerSid is null && allowed.Count == 0)
             return new NamedPipeServerStream(name, PipeDirection.InOut, maxInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
         using var current = WindowsIdentity.GetCurrent();
         var sid = current.User ?? throw new InvalidOperationException("The current Windows user has no SID.");
-        var sddl = appContainerSid is null
-            ? GetDefaultDacl(current)
-            : $"D:P(A;;GA;;;SY)(A;;GA;;;{sid.Value})(A;;GA;;;{appContainerSid.Value})";
+        var sddl = configuration.AllowAnyUser || appContainerSid is not null
+            ? $"D:P(A;;GA;;;SY)(A;;GA;;;{sid.Value})"
+            : GetDefaultDacl(current);
+        if (appContainerSid is not null) sddl += $"(A;;GA;;;{appContainerSid.Value})";
         // NamedPipeClientStream opens duplex pipes with GENERIC_READ | GENERIC_WRITE.
         if (sddl.Length > 0)
             foreach (var extraSid in allowed) sddl += $"(A;;GRGW;;;{extraSid})";
-        sddl += "S:(ML;;NW;;;LW)";
+        sddl += configuration.AllowAnyUser ? "S:(ML;;NW;;;S-1-16-0)" : "S:(ML;;NW;;;LW)";
         if (!ConvertStringSecurityDescriptorToSecurityDescriptor(sddl, 1, out var descriptor, out _))
             throw new Win32Exception(Marshal.GetLastWin32Error());
         try
@@ -128,22 +177,33 @@ internal static partial class ExternalRpcPipePermissions
 
     private static string GetDefaultDacl(WindowsIdentity identity)
     {
-        if (!GetTokenInformation(identity.AccessToken, 11, IntPtr.Zero, 0, out var length)
+        if (!GetTokenInformation(identity.AccessToken, TokenInformationClass.TokenDefaultDacl, IntPtr.Zero, 0, out var length)
             && Marshal.GetLastWin32Error() != 122)
             throw new Win32Exception(Marshal.GetLastWin32Error());
+        if (length < IntPtr.Size) throw new InvalidOperationException("Invalid token default DACL buffer size.");
         var buffer = Marshal.AllocHGlobal(length);
         try
         {
-            if (!GetTokenInformation(identity.AccessToken, 11, buffer, length, out _))
+            if (!GetTokenInformation(identity.AccessToken, TokenInformationClass.TokenDefaultDacl, buffer, length, out var actualLength))
                 throw new Win32Exception(Marshal.GetLastWin32Error());
+            if (actualLength < IntPtr.Size || actualLength > length)
+                throw new InvalidOperationException("Invalid token default DACL buffer size.");
             var acl = Marshal.ReadIntPtr(buffer);
             if (acl == IntPtr.Zero) return "";
-            var bytes = new byte[unchecked((ushort)Marshal.ReadInt16(acl, 2))];
-            Marshal.Copy(acl, bytes, 0, bytes.Length);
+            var offset = unchecked((nuint)acl - (nuint)buffer);
+            if (offset < (nuint)IntPtr.Size || offset >= (nuint)actualLength)
+                throw new InvalidOperationException("The token default DACL is outside the returned buffer.");
+            var bytes = new byte[actualLength];
+            Marshal.Copy(buffer, bytes, 0, bytes.Length);
             return new RawSecurityDescriptor(ControlFlags.DiscretionaryAclPresent | ControlFlags.DiscretionaryAclProtected,
-                null, null, null, new RawAcl(bytes, 0)).GetSddlForm(AccessControlSections.Access);
+                null, null, null, new RawAcl(bytes, (int)offset)).GetSddlForm(AccessControlSections.Access);
         }
         finally { Marshal.FreeHGlobal(buffer); }
+    }
+
+    private enum TokenInformationClass
+    {
+        TokenDefaultDacl = 6,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -165,7 +225,7 @@ internal static partial class ExternalRpcPipePermissions
 
     [LibraryImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool GetTokenInformation(SafeAccessTokenHandle token, int informationClass, IntPtr buffer, int length, out int requiredLength);
+    private static partial bool GetTokenInformation(SafeAccessTokenHandle token, TokenInformationClass informationClass, IntPtr buffer, int length, out int requiredLength);
 
     [LibraryImport("advapi32.dll", EntryPoint = "ConvertStringSecurityDescriptorToSecurityDescriptorW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     [return: MarshalAs(UnmanagedType.Bool)]

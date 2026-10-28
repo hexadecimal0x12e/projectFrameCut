@@ -71,16 +71,17 @@ public partial class DraftPage
         };
     }
 
-    private ClipArgumentProvider CreateGuiClipArguments(ClipElementUI clip, Guid id)
+    private ClipArgumentProvider CreateGuiClipArguments(GuiEffectClip clip, Guid id)
     {
         var provider = new ClipArgumentProvider { Id = id };
         IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> fields = ClipArgumentHandler.DefaultFields;
         var values = new Dictionary<string, object>();
         try
         {
-            var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, rebuildEffects: false);
+            var dto = clip.Dto;
             using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto));
-            clip.DeclaredStages = owner.SupportedStages.ToArray();
+            clip.SupportedStages = owner.SupportedStages.ToArray();
+            if (clip.Live is not null) clip.Live.DeclaredStages = clip.SupportedStages;
             fields = owner.ArgumentFields;
             foreach (var field in fields)
             {
@@ -103,7 +104,7 @@ public partial class DraftPage
         return provider;
     }
 
-    private Dictionary<Guid, IEffectProvider> CopyGuiEffectProviders(ClipElementUI clip)
+    private Dictionary<Guid, IEffectProvider> CopyGuiEffectProviders(GuiEffectClip clip)
     {
         var result = new Dictionary<Guid, IEffectProvider>();
         if (clip.EffectProviders is null)
@@ -166,12 +167,12 @@ public partial class DraftPage
             .ToArray();
     }
 
-    private bool GuiClipPrecedes(ClipElementUI source, ClipElementUI target)
+    private bool GuiClipPrecedes(GuiEffectClip source, GuiEffectClip target)
     {
         try
         {
-            var s = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, source, rebuildEffects: false);
-            var t = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, target, rebuildEffects: false);
+            var s = source.Dto;
+            var t = target.Dto;
             return ClipLayerOrder.Compare(s.LayerIndex, s.SubLayerIndex, t.LayerIndex, t.SubLayerIndex) < 0;
         }
         catch (KeyNotFoundException ex)
@@ -181,14 +182,14 @@ public partial class DraftPage
         }
     }
 
-    private string? GuiEndpointStatus(ClipElementUI clip, IClipValueEndpointProvider endpoint,
+    private string? GuiEndpointStatus(GuiEffectClip clip, IClipValueEndpointProvider endpoint,
         IReadOnlyDictionary<Guid, IEffectProvider> providers)
     {
         if (endpoint.IsExport)
         {
             return endpoint.GetMainInputSource() == IEffectProvider.NoConnectionGUID.ToString() ? "Endpoint output is disconnected." : null;
         }
-        if (!Clips.TryGetValue(endpoint.SourceClipId, out var source))
+        if (FindGuiEffectClip(endpoint.SourceClipId, clip.Live is null) is not { } source)
         {
             return "Source clip is missing.";
         }
@@ -218,7 +219,7 @@ public partial class DraftPage
         return output.GetMainInputSource() == IEffectProvider.NoConnectionGUID.ToString() ? "Source endpoint is disconnected." : null;
     }
 
-    private object GuiEndpoint(ClipElementUI clip, IClipValueEndpointProvider endpoint, IReadOnlyDictionary<Guid, IEffectProvider> providers)
+    private object GuiEndpoint(GuiEffectClip clip, IClipValueEndpointProvider endpoint, IReadOnlyDictionary<Guid, IEffectProvider> providers)
     {
         return new
         {
@@ -284,7 +285,7 @@ public partial class DraftPage
         return bindings.ToArray();
     }
 
-    private object GuiEffectGraph(ClipElementUI clip, Dictionary<Guid, IEffectProvider> providers,
+    private object GuiEffectGraph(GuiEffectClip clip, Dictionary<Guid, IEffectProvider> providers,
         List<EffectGroup> groups, EffectFieldTypeResolution types)
     {
         var outputs = new List<object>();
@@ -325,7 +326,7 @@ public partial class DraftPage
         };
     }
 
-    private static void ValidateGuiProviderTarget(ClipElementUI clip, IEffectProvider provider)
+    private static void ValidateGuiProviderTarget(GuiEffectClip clip, IEffectProvider provider)
     {
         if (provider is ClipArgumentProvider)
         {
@@ -462,7 +463,7 @@ public partial class DraftPage
     }
 
     private async Task<object?> ExecuteGuiEffectOperationAsync(GuiProjectOperation operation, JsonElement parameters,
-        CancellationToken ct, Action? deferRendering = null)
+        CancellationToken ct, Action? deferRendering = null, GuiEffectClip? batchClip = null)
     {
         bool HasParameter(string key) => parameters.TryGetProperty(key, out _);
         string? GetString(string key) => parameters.TryGetProperty(key, out var value) ? value.GetString() : null;
@@ -522,7 +523,8 @@ public partial class DraftPage
                 .Select(x => new { x.Hash, x.Name, x.Error, TemplateJson = Encoding.UTF8.GetString(x.Json) }).ToArray();
         }
 
-        if (!Clips.TryGetValue(GetGuid("ClipId"), out var clip))
+        var clip = batchClip ?? FindGuiEffectClip(GetGuid("ClipId"), false);
+        if (clip is null)
         {
             throw new KeyNotFoundException("Clip not found.");
         }
@@ -535,8 +537,8 @@ public partial class DraftPage
         {
             return JsonSerializer.Serialize(new
             {
-                Providers = clip.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray(),
-                Groups = clip.ExtraData.GetValueOrDefault(EffectGroupHelper.MetadataKey),
+                Providers = (clip.Live?.EffectProviders ?? clip.EffectProviders)?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray(),
+                Groups = (clip.Live?.ExtraData ?? clip.ExtraData).GetValueOrDefault(EffectGroupHelper.MetadataKey),
             });
         }
 
@@ -658,7 +660,7 @@ public partial class DraftPage
                     var endpoints = new List<object>();
                     if (GetBoolean("Available"))
                     {
-                        foreach (var sourceClip in Clips.Values)
+                        foreach (var sourceClip in GetGuiEffectClips(batchClip is not null))
                         {
                             if (sourceClip.Id != clip.Id && !GuiClipPrecedes(sourceClip, clip))
                             {
@@ -1063,7 +1065,7 @@ public partial class DraftPage
                         }
                         if (add || HasParameter("SourceClipId") || HasParameter("SourceEndpointId") || HasParameter("Pipeline"))
                         {
-                            if (!Clips.TryGetValue(endpoint.SourceClipId, out var source))
+                            if (FindGuiEffectClip(endpoint.SourceClipId, clip.Live is null) is not { } source)
                             {
                                 throw new KeyNotFoundException("Source clip not found.");
                             }
@@ -1236,7 +1238,7 @@ public partial class DraftPage
         EffectGroupHelper.Validate(groups, providers);
         EffectBindingHelper.MaterializeFields(providers.Values);
         var types = await EffectFieldTypeResolution.ResolveAsync(providers, ct);
-        if (!ReferenceEquals(Clips.GetValueOrDefault(clip.Id), clip) || initialState != GetGraphState())
+        if (clip.Live is not null && (!ReferenceEquals(Clips.GetValueOrDefault(clip.Id), clip.Live) || initialState != GetGraphState()))
         {
             throw new InvalidOperationException("The clip effect graph changed during the request. Read it again before retrying.");
         }
@@ -1246,19 +1248,26 @@ public partial class DraftPage
         {
             throw new InvalidOperationException(string.Join(Environment.NewLine, introduced.Select(e => e.Message)));
         }
-        var effects = errors.Count == 0 ? EffectBindingHelper.RebuildAllEffects(providers, clip.Effects) : null;
-        clip.EffectProviders = providers;
-        ClipInfoBuilder.SaveTextStyleClipArguments(clip);
-        if (effects is not null)
+        if (clip.Live is { } live)
         {
-            clip.Effects = effects;
+            var effects = errors.Count == 0 ? EffectBindingHelper.RebuildAllEffects(providers, live.Effects) : null;
+            live.EffectProviders = providers;
+            ClipInfoBuilder.SaveTextStyleClipArguments(live);
+            if (effects is not null) live.Effects = effects;
+            EffectGroupHelper.Write(live.ExtraData, groups);
+            EffectGroupBindingGuard.Capture(live);
         }
-        EffectGroupHelper.Write(clip.ExtraData, groups);
-        EffectGroupBindingGuard.Capture(clip);
+        else
+        {
+            SaveGuiBatchTextArguments(clip.Dto, providers);
+            clip.Dto.EffectProviders = providers.Values.Select(EffectBindingHelper.SerializeProvider).ToArray();
+            EffectGroupHelper.Write(clip.ExtraData, groups);
+            _guiBatch!.Put(clip.Dto);
+        }
         bool shouldDeferRendering = errors.Count > 0;
         if (!shouldDeferRendering)
         {
-            foreach (var currentClip in Clips.Values)
+            foreach (var currentClip in GetGuiEffectClips(batchClip is not null))
             {
                 var currentProviders = currentClip.EffectProviders;
                 if (currentProviders is null)
@@ -1277,12 +1286,12 @@ public partial class DraftPage
         {
             deferRendering?.Invoke();
         }
-        if (errors.Count > 0)
+        if (errors.Count > 0 && batchClip is null)
         {
             Logger.Log($"Effect graph on clip {clip.Id} is incomplete: {string.Join(" ", errors.Select(e => e.Message))}", "warning");
         }
-        Logger.Log($"GUI RPC {operation} updated clip {clip.Id}: {providers.Count} providers, {groups.Count} groups, {errors.Count} binding diagnostics.", "info");
-        RefreshPropertyPanel(clip);
+        if (batchClip is null) Logger.Log($"GUI RPC {operation} updated clip {clip.Id}: {providers.Count} providers, {groups.Count} groups, {errors.Count} binding diagnostics.", "info");
+        if (clip.Live is not null) RefreshPropertyPanel(clip.Live);
         if (resultProvider != Guid.Empty)
         {
             if (stepResult) return GuiEffectSteps(clip.Id, (IKeyFramedEffectProvider)providers[resultProvider]);
@@ -1326,7 +1335,7 @@ public partial class DraftPage
         }
     }
 
-    private static async Task<object[]> GuiBindingSourcesAsync(ClipElementUI clip, Dictionary<Guid, IEffectProvider> providers,
+    private static async Task<object[]> GuiBindingSourcesAsync(GuiEffectClip clip, Dictionary<Guid, IEffectProvider> providers,
         IEffectProvider? target, string? fieldId, Stage pipeline, bool filterPipeline, CancellationToken ct)
     {
         if (filterPipeline && !clip.SupportedStages.Contains(pipeline))

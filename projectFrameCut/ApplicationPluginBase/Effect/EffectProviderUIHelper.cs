@@ -324,7 +324,15 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 && TextClipStyles.Create(from.ToString()!, type.ToString()!) is { } style
                 && style.SettableFields.ContainsKey(id))
                 return TextStyleServices.GetUIProvider(style).GetLocalizedFieldInfo(style, id, PluginManager.CurrentLocale).name;
-            return PluginManager.GetLocalizationItem($"Effect_{provider.TypeName}_{field.Id.Replace('.', '_')}", field.Id);
+            return FieldName(provider, field.Id, true);
+        }
+
+        internal static string FieldName(IEffectProvider provider, string id, bool isInput, string? fallback = null)
+        {
+            var fields = isInput ? provider.InFields : provider.GetOutputFields();
+            fields.TryGetValue(id, out var descriptor);
+            return PluginManager.GetLocalizationItem(descriptor?.LocalizedNameKey
+                ?? $"Effect_{provider.TypeName}_{id.Replace('.', '_')}", descriptor?.DisplayName ?? fallback ?? id);
         }
 
         private static string ComponentId(IEffectProvider provider, string fieldId)

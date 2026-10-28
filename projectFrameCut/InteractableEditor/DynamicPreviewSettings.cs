@@ -8,7 +8,24 @@ internal static class DynamicPreviewSettings
     public const string TargetPixelsSettingKey = "Edit_DynamicPreviewTargetPixels";
     public const string CacheSourceFramesSettingKey = "Edit_CacheDecodedPreviewFrames";
 
-    public static bool CacheSourceFrames => SettingsManager.IsBoolSettingTrueOrDefault(CacheSourceFramesSettingKey, true);
+    public const string DiskCacheSettingKey = "Edit_PreviewDiskCache";
+    public static string DiskCacheMode
+    {
+        get
+        {
+            var mode = SettingsManager.GetSetting(DiskCacheSettingKey, "");
+            return mode is "none" or "preview" or "previewAndSource" ? mode
+                : SettingsManager.IsBoolSettingTrueOrDefault(CacheSourceFramesSettingKey, true) ? "previewAndSource" : "preview";
+        }
+    }
+    public static bool MemoryOnly => DiskCacheMode == "none";
+    public static bool CacheSourceFrames => DiskCacheMode == "previewAndSource";
+    public static Dictionary<string, string> DiskCacheOptions => new()
+    {
+        [SettingsManager.SettingLocalizedResources.Edit_PreviewDiskCache_None] = "none",
+        [SettingsManager.SettingLocalizedResources.Edit_PreviewDiskCache_Preview] = "preview",
+        [SettingsManager.SettingLocalizedResources.Edit_PreviewDiskCache_All] = "previewAndSource"
+    };
 
     public static Dictionary<string, long> TargetResolutionOptions => new()
     {

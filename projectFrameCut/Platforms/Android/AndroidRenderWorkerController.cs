@@ -27,8 +27,11 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
     private readonly string? _processIdPath;
     private readonly Type _serviceType;
     private readonly bool _stopOnDispose;
+    private readonly TaskCompletionSource _disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _bound;
     private int _disposed;
+
+    internal Task Disconnected => _disconnected.Task;
 
     private AndroidRenderWorkerController(Context context, Type serviceType, string socketPath, string? processIdPath, bool stopOnDispose)
     {
@@ -113,7 +116,10 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
 
     public void OnServiceConnected(ComponentName? name, IBinder? service) { }
 
-    public void OnServiceDisconnected(ComponentName? name) => _bound = false;
+    public void OnServiceDisconnected(ComponentName? name)
+    {
+        if (Volatile.Read(ref _disposed) == 0) _disconnected.TrySetResult();
+    }
 
     public ValueTask DisposeAsync()
     {

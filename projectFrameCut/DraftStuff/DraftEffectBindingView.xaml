@@ -24,8 +24,11 @@
                 <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated" />
             </Grid.GestureRecognizers>
 
-            <Picker x:Name="StagePicker" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" ZIndex="10"
-                    SelectedIndexChanged="OnStageChanged" />
+            <HorizontalStackLayout x:Name="TopCommandBar" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" Spacing="4" ZIndex="10">
+                <Picker x:Name="StagePicker" VerticalOptions="Center" SelectedIndexChanged="OnStageChanged" />
+                <Button x:Name="CanvasActionsButton" Text="☰" VerticalOptions="Center" Clicked="OnCanvasActionsClicked"/>
+                <ActivityIndicator x:Name="PreviewBusyIndicator" IsVisible="False" IsRunning="False" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
 
             <!-- Connections Layer -->
             <GraphicsView x:Name="ConnectionsLayer" 
@@ -42,9 +45,6 @@
             <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect. Pan empty space to move view."
                    x:Name="InfoLabel" TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>
             <HorizontalStackLayout x:Name="BottomCommandBar" HorizontalOptions="End" VerticalOptions="End" Margin="10,0,10,10">
-                <Button x:Name="AutoArrangeButton" Margin="4,0,4,0" Clicked="OnAutoArrangeClicked" Text="一键整理"/>
-                <Button x:Name="GeneratePreviewButton" Margin="4,0,4,0" Clicked="GeneratePreviewButton_Clicked" Text="{l:Localized Key=AssetPage_ShowPreview}"/>
-                <Button x:Name="ShowBindingsGraphButton" Margin="4,0,4,0" Clicked="ShowUiBindingsGraphButton_Clicked" Text="图"/>
                 <Button x:Name="ZoomInButton" Margin="4,0,4,0" Text="+"/>
                 <Button x:Name="ResetButton" Margin="4,0,4,0" Text="↺"/>
                 <Button x:Name="ZoomOutButton" Margin="4,0,4,0" Text="-"/>

@@ -202,38 +202,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private DateTime _lastDynamicPreviewUIUpdate = DateTime.MinValue;
 
     readonly SemaphoreSlim saveLocker = new(1, 1);
-    private const int CurrentSnapshotSlotCount = 3;
     private CurrentSnapshotRecord? _currentSnapshot;
-
-    internal sealed class CurrentSnapshotRecord
-    {
-        public long Sequence { get; set; }
-        public DateTime UpdatedAtUtc { get; set; }
-        public bool IsDirty { get; set; }
-        public Guid SnapshotID { get; set; }
-        public Guid PreviousSnapshot { get; set; }
-        public string SlotName { get; set; } = string.Empty;
-        public DateTime SavedAt { get; set; }
-        public string ChangeReason { get; set; } = string.Empty;
-        public string DetailedChangeReason { get; set; } = string.Empty;
-        public Guid ChangedByUser { get; set; }
-        public string ChangedByUserDisplayName { get; set; } = string.Empty;
-        public ClipChangeOperatorKind Operator { get; set; }
-        public string OperatorDetailName { get; set; } = string.Empty;
-
-        public void CopyTo(DraftStructureJSON draft)
-        {
-            draft.SnapshotID = SnapshotID;
-            draft.PreviousSnapshot = PreviousSnapshot;
-            draft.SavedAt = SavedAt;
-            draft.ChangeReason = ChangeReason;
-            draft.DetailedChangeReason = DetailedChangeReason;
-            draft.ChangedByUser = ChangedByUser;
-            draft.ChangedByUserDisplayName = ChangedByUserDisplayName;
-            draft.Operator = Operator;
-            draft.OperatorDetailName = OperatorDetailName;
-        }
-    }
 
     internal void InitializeCurrentSnapshot(DraftStructureJSON draft, string? slotName = null, bool isDirty = false)
     {
@@ -261,30 +230,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         => ReadCurrentSnapshotRecords(projectPath, out _);
 
     internal static List<CurrentSnapshotRecord> ReadCurrentSnapshotRecords(string projectPath, out bool hasInvalidRecords)
-    {
-        hasInvalidRecords = false;
-        List<CurrentSnapshotRecord> records = [];
-        for (int i = 0; i < CurrentSnapshotSlotCount; i++)
-        {
-            var path = Path.Combine(projectPath, "saveSlots", $"current-{i}.json");
-            if (!File.Exists(path)) continue;
-            try
-            {
-                var record = JsonSerializer.Deserialize<CurrentSnapshotRecord>(File.ReadAllText(path), savingOpts);
-                if (record is null || record.Sequence <= 0 || record.SnapshotID == Guid.Empty
-                    || !record.SlotName.StartsWith("slot_", StringComparison.Ordinal)
-                    || Path.GetFileName(record.SlotName) != record.SlotName)
-                    throw new InvalidDataException($"Invalid current snapshot record: {path}");
-                records.Add(record);
-            }
-            catch (Exception ex)
-            {
-                hasInvalidRecords = true;
-                Log(ex, "read current snapshot record", nameof(DraftPage));
-            }
-        }
-        return records.OrderByDescending(r => r.Sequence).ThenByDescending(r => r.UpdatedAtUtc).ToList();
-    }
+        => ProjectSnapshotStore.ReadCurrentRecords(projectPath, savingOpts, out hasInvalidRecords);
 
     private static async Task WriteSnapshotJsonAsync<T>(string path, T data)
     {
@@ -308,7 +254,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         record.Sequence = sequence;
         record.UpdatedAtUtc = DateTime.UtcNow;
         record.IsDirty = isDirty;
-        await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", $"current-{(sequence - 1) % CurrentSnapshotSlotCount}.json"), record);
+        await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", $"current-{(sequence - 1) % ProjectSnapshotStore.CurrentSnapshotSlotCount}.json"), record);
         _currentSnapshot = record;
         CurrentSnapshotID = PreviousSnapshotID = ProjectInfo.LastSnapshotID = draft.SnapshotID;
         ProjectInfo.NormallyExited = !isDirty;
@@ -350,6 +296,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     private readonly SemaphoreSlim _renderBackendRestartLock = new(1, 1);
     private CancellationTokenSource? _renderBackendWatchdogCts;
     private DateTime? _renderBackendDisconnectedSinceUtc;
+    private int _renderBackendRecoveryPending;
+    private int _renderBackendRecoveryFailures;
+    private long _renderBackendRetryAfter;
     // Set while navigating to the export page so OnNavigatingFrom can tell a
     // same-project navigation apart from actually closing the project. The value
     // is captured synchronously at the start of OnNavigatingFrom before any await.
@@ -536,7 +485,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     private bool _propertyPreviewTimedOut;
     private readonly SemaphoreSlim _propertyPreviewLock = new(1, 1);
     private int _propertyPreviewVersion;
-    public int DynamicPreviewResolutionDivisor { get => DynamicPreviewProvider?.PreviewResolutionDivisor ?? 1; set { DynamicPreviewProvider?.PreviewResolutionDivisor = value; } }
     public bool ReverseScrollLockKeyBehavior { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(ReverseScrollLockKeyBehavior)); RefreshToggleCommandStates(); } } = false;
     public bool IsKeyframeRecordingEnabled
     {
@@ -573,7 +521,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
         DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
         DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
-        DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ApplyClipEditorPreviewOverlayMode();
@@ -1044,20 +991,73 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     internal async Task PrepareRenderBackendAsync(CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        await Dispatcher.DispatchAsync(async () =>
+        bool restart = false;
+        var nextRestart = DateTime.MinValue;
+        int failures = 0;
+        void DelayNextRestart()
         {
-            var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
-            await previewer.UpdateDraft(draft).WaitAsync(cancellationToken);
-            DynamicPreviewProvider.SetClips(previewer.Clips);
-        });
-        cancellationToken.ThrowIfCancellationRequested();
-        Interlocked.Exchange(ref _renderProjectPrepared, 1);
-        LogDiagnostic($"Prepared render RPC project {ProjectName} before navigation.");
+            failures = Math.Min(failures + 1, 4);
+            nextRestart = DateTime.UtcNow.AddSeconds(Math.Min(30, 5 << (failures - 1)));
+        }
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (restart)
+            {
+                var delay = nextRestart - DateTime.UtcNow;
+                if (delay > TimeSpan.Zero) await Task.Delay(delay, cancellationToken);
+                RenderRpcBootstrap.TryGetClient(out var client);
+                bool restarted;
+                try
+                {
+                    restarted = await Task.Run(() => RenderRpcBootstrap.Restart(WorkingPath, ProjectName, client, cancellationToken));
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    Log(ex, "Restart render RPC backend during project loading", this);
+                    DelayNextRestart();
+                    continue;
+                }
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!restarted) throw new InvalidOperationException("The render backend changed during project loading.");
+            }
+
+            var exitedWorker = RenderRpcBootstrap.WorkerExitTask;
+            try
+            {
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+                    await previewer.UpdateDraft(draft, cancellationToken).WaitAsync(cancellationToken);
+                    DynamicPreviewProvider.SetClips(previewer.Clips);
+                });
+                cancellationToken.ThrowIfCancellationRequested();
+                Interlocked.Exchange(ref _renderProjectPrepared, 1);
+                LogDiagnostic($"Prepared render RPC project {ProjectName} before navigation.");
+                return;
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested && !IsRemoteProject &&
+                (ex is RenderPipeException || exitedWorker?.IsCompletedSuccessfully == true ||
+                 (exitedWorker is not null && (ex is IOException or ObjectDisposedException))))
+            {
+                if (ex is not RenderPipeException && exitedWorker is not null && !exitedWorker.IsCompletedSuccessfully)
+                {
+                    var completed = await Task.WhenAny(exitedWorker, Task.Delay(500, cancellationToken));
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!ReferenceEquals(completed, exitedWorker)) throw;
+                }
+                Log(ex, "Render RPC backend disconnected during project loading", this);
+                if (restart) DelayNextRestart();
+                restart = true;
+            }
+        }
     }
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
     {
+#if WINDOWS
+        EnableExternalRpcCloseConfirmation();
+#endif
         if (Debugger.IsAttached) MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog; //user don't want to see a lot of confused error message
 
         if (UpperContent.Children[0] is Grid previewGrid && previewGrid is not MultiWindowView && PreviewAreaHeight > 100)
@@ -1720,6 +1720,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void ForwardClipChangeToWorkspace(object? sender, ClipUpdateEventArgs args)
     {
+        if (GuiBatchOverlay.IsVisible && args.DetailInfo != "RPC batch") return;
         if (_workspace.State is WorkspaceState.Disposed or WorkspaceState.Faulted) return;
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, wrapSoundtrackAsClip: true, includeUiOnlyClips: true, fixOverlap: false, rebuildEffects: false);
         _workspace.GetModule<TimelineModule>().Reset(draft.Clips);
@@ -5490,6 +5491,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #if WINDOWS
     private void QuickCommandShortcuts_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
+        if (_guiBatch is not null || GuiBatchOverlay.IsVisible) { e.Handled = true; return; }
         if (!SettingsManager.IsBoolSettingTrue(EnableQuickCommandShortcutsSetting)) return;
 
         var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control);
@@ -8108,7 +8110,34 @@ public partial class DraftPage : ContentPage, IDraftPage
                         break;
                 }
             })
-        }
+        },
+        {
+            "Debug_BackendCrash", new Command(async () =>
+            {
+                if (IsRemoteProject || !RenderRpcBootstrap.TryGetEditorWorker(out var client, out var exited) || client is null || exited is null)
+                {
+                    SetStateFail("TestingBackendCrash requires a local out-of-process editor backend.");
+                    return;
+                }
+                if (exited.IsCompleted) return;
+                try
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await client.TestingBackendCrashAsync(timeout.Token);
+                    if (!AlreadyDisappeared) SetStateFail("TestingBackendCrash did not terminate the backend.");
+                }
+                catch (Exception ex)
+                {
+                    if (ex is IOException or OperationCanceledException or ObjectDisposedException)
+                    {
+                        await Task.WhenAny(exited, Task.Delay(2000));
+                        if (exited.IsCompletedSuccessfully) return;
+                    }
+                    Log(ex, "Test render RPC backend crash", this);
+                    if (!AlreadyDisappeared) SetStateFail(Localized._ExceptionTemplate(ex));
+                }
+            })
+        },
     };
 
     private async void ShowMoreOptionsMenu(object? sender, EventArgs e)
@@ -8146,8 +8175,24 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async void OnExportedClick(object sender, EventArgs e)
     {
         await Save(true);
-        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, true, false);
-        var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft, await HomePage.TryGetActiveRenderJobAsync(WorkingPath));
+        DraftStructureJSON draft;
+        List<AssetItem> assets;
+        try
+        {
+            if (IsRemoteProject && _remoteProjectSession!.LastSavedRevision != _remoteProjectSession.Snapshot.Revision)
+                throw new InvalidOperationException("The remote project was not saved before rendering.");
+            (draft, assets) = IsRemoteProject
+                ? (_remoteProjectSession!.Draft, _remoteProjectSession.Assets)
+                : ProjectSnapshotStore.ReadForRender(WorkingPath, ProjectInfo, savingOpts);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Load saved timeline for rendering", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            return;
+        }
+        var page = new RenderPage(WorkingPath, Math.Max(draft.Duration, draft.AudioDuration), ProjectInfo, draft,
+            await HomePage.TryGetActiveRenderJobAsync(WorkingPath), assets, IsRemoteProject);
         // The export page belongs to the same project: mark the navigation so
         // OnNavigatingFrom does not tear down this project's render backend.
         _navigatingToRenderPage = true;
@@ -8370,6 +8415,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         // navigation begins. True when leaving for the export page (same project);
         // false when the project is actually being closed (back to HomePage/exit).
         bool leavingProject = !_navigatingToRenderPage;
+#if WINDOWS
+        DisableExternalRpcCloseConfirmation();
+#endif
         try
         {
             _workspaceWindowHost.SaveLayout(freeze: true);
@@ -8378,13 +8426,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             Log(ex, "Save window layout", this);
         }
-        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
+        AlreadyDisappeared = true;
+        await CloseGuiBatchAsync();
+        StopRenderBackendWatchdog();
+        CancelDynamicPreview();
+        try { _renderOneFrameCts?.Cancel(); } catch (ObjectDisposedException) { }
+        await _renderBackendRestartLock.WaitAsync();
+        _renderBackendRestartLock.Release();
+        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview(refreshPreview: false);
         if (leavingProject && !ExitNoSave)
             SaveProjectThumbnailBeforeExit();
-        AlreadyDisappeared = true;
         _frameExportCts?.Cancel();
         CancelVectorHandleDrags();
-        StopRenderBackendWatchdog();
         StopRemoteProjectMonitor();
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
@@ -8588,6 +8641,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     protected override bool OnBackButtonPressed()
     {
+        if (GuiBatchOverlay.IsVisible) return true;
         if (!AllowExit) return true;
         if (!ignoreRunningTasks && RunningTasks.Any(c => !c.Value.InnerTask.IsCompleted))
         {
