@@ -15,9 +15,9 @@ public static class ClipValuePassThrough
         || c.EffectProviders?.Any(p => p.TypeName == "ClipValueInput" && p.Enabled) == true);
 
     public static IDisposable? Open(IReadOnlyList<IClip> clips, uint frame, int width, int height,
-        int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, CancellationToken token, Action<IClip>? evaluate = null)
+        int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, CancellationToken token, Action<IClip>? evaluate = null, bool forceNew = false)
     {
-        if (ClipValueFrameContext.Current is not null || !clips.Any(HasEndpoints)) return null;
+        if ((!forceNew && ClipValueFrameContext.Current is not null) || !clips.Any(HasEndpoints)) return null;
         foreach (var clip in clips.Where(c => c.ContainsFrame(frame) && HasEndpoints(c)))
             if (clip.EffectProvidersInstances?.Any(p => p is IClipValueEndpointProvider) != true)
             {

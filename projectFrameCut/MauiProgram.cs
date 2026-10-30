@@ -68,6 +68,8 @@ namespace projectFrameCut
 {
     public static partial class MauiProgram
     {
+        internal static string LaunchWorkingDirectory { get; } = Environment.CurrentDirectory;
+
         public static MauiApp CreateMauiApp()
         {
 #if ANDROID
@@ -277,6 +279,7 @@ namespace projectFrameCut
                 Crash(new InvalidOperationException($"projectFrameCut can't initialize BasicData. Try uninstall program, cleanup BasicData and reinstall program.", ex));
             }
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
+            ClearStartupState();
             try
             {
                 if (File.Exists(Path.Combine(BasicDataPath, "settings.json")))
@@ -351,12 +354,6 @@ namespace projectFrameCut
                 SettingsManager.Settings = new();
                 SettingsManager.WriteSetting("_SettingFailLoad", "True");
                 SettingsManager.WriteSetting("_SettingFailLoadMsg", $"An unhandled {ex.GetType().Name} exception: {ex.Message}");
-
-                try
-                {
-                    Directory.Delete(Path.Combine(BasicDataPath, "RpcRequest"), true);
-                }
-                catch { }
             }
             var locate = SettingsManager.GetSetting("locate", "default");
 #if !ANDROID
@@ -477,6 +474,11 @@ namespace projectFrameCut
                     handlers.AddHandler<Border, projectFrameCut.Platforms.Linux.LinuxBorderHandler>();
 #endif
                 });
+
+#if WINDOWS
+                builder.ConfigureImageSources(sources =>
+                    sources.AddService<IFileImageSource, WindowsFileImageSourceService>());
+#endif
 
 #pragma warning restore CA1416
                 var lastPath = SettingsManager.GetSetting("General_LastOpenedProject", "");
@@ -694,6 +696,38 @@ namespace projectFrameCut
                 projectFrameCut.WinUI.App.Crash(ex);
 #endif
                 throw;
+            }
+        }
+
+        private static void ClearStartupState()
+        {
+            int removed = 0;
+            foreach (var name in new[] { "RenderJobs", "RpcRequest" })
+                DeleteStateDirectory(Path.Combine(BasicDataPath, name));
+#if WINDOWS
+            if (WinUI.App.IsPackaged())
+            {
+                foreach (var name in new[] { "plugin-isolation", "project-plugins", "project-external-sources", "sandy-runtime", "CurrentProject", "AssetsLibrary" })
+                    DeleteStateDirectory(Path.Combine(Windows.Storage.ApplicationData.Current.LocalFolder.Path, name));
+                DeleteStateDirectory(WindowsPluginIsolationPlatform.CurrentProjectDirectory);
+            }
+#endif
+            if (removed > 0) Log($"Cleaned {removed} startup state directories.");
+
+            void DeleteStateDirectory(string path)
+            {
+                try
+                {
+                    var directory = new DirectoryInfo(path);
+                    if (directory.LinkTarget is not null) directory.Delete();
+                    else if (directory.Exists) directory.Delete(recursive: true);
+                    else return;
+                    removed++;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"clean startup state directory '{path}'");
+                }
             }
         }
 

@@ -43,6 +43,9 @@ public partial class DraftPage
         public required ProjectJSONStructure OriginalProject { get; init; }
         public required Dictionary<string, AssetItem> OriginalAssets { get; init; }
         public required HashSet<int> OriginalTracks { get; init; }
+        public bool OriginalSnapshotDirty { get; init; }
+        public bool OriginalProjectDirty { get; init; }
+        public bool OriginalHistoryNavigatedByUndoRedo { get; init; }
         public int OperationCount { get; set; }
         public bool Applied { get; set; }
         public bool Saved { get; set; }
@@ -106,73 +109,139 @@ public partial class DraftPage
     private Guid _lastGuiBatchId, _lastGuiBatchOwner;
     private object? _lastGuiBatchResult;
     private readonly SemaphoreSlim _guiEditGate = new(1, 1);
-    private readonly List<(VisualElement View, bool Enabled)> _batchDisabledViews = [];
-    private readonly List<(MenuBarItem Menu, bool Enabled)> _batchDisabledMenus = [];
+    private CancellationTokenSource? _guiBatchCancellation;
+    private bool _guiBatchCancelPending;
+    private readonly List<(Window Window, INavigation Navigation, GuiBatchPage Page, Microsoft.Maui.ITitleBar? TitleBar, string Title)> _guiBatchPages = [];
+    private bool IsGuiBatchOverlayVisible => _guiBatchCancellation is not null || _guiBatchPages.Count > 0;
 
     private static T CloneGuiData<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value, savingOpts), savingOpts)!;
 
-    private void SetGuiBatchOverlay(bool visible)
+    private async Task SetGuiBatchOverlayAsync(bool visible)
     {
-        GuiBatchOverlay.IsVisible = visible;
         if (visible)
         {
-            // Floating panes may belong to another native window.
-            foreach (var view in new VisualElement[] { MainMultiWindowView }.Concat(
-                MainMultiWindowView.Windows.Concat(MainMultiWindowView.StandaloneWindows)).Distinct())
+            foreach (var window in MainMultiWindowView.StandaloneWindows.Select(w => w.Window).Prepend(Window).OfType<Window>().Distinct().ToArray())
             {
-                _batchDisabledViews.Add((view, view.IsEnabled));
-                view.IsEnabled = false;
+                var navigation = ReferenceEquals(window, Window) ? Navigation : window.Page!.Navigation;
+                var page = new GuiBatchPage(CancelGuiBatchFromUiAsync);
+                Microsoft.Maui.ITitleBar? titleBar = null;
+#if WINDOWS || MACCATALYST
+                titleBar = window.TitleBar;
+                window.TitleBar = null;
+#endif
+                _guiBatchPages.Add((window, navigation, page, titleBar, window.Title));
+                await navigation.PushModalAsync(page, false);
             }
-            foreach (var menu in MenuBarItems)
-            {
-                _batchDisabledMenus.Add((menu, menu.IsEnabled));
-                menu.IsEnabled = false;
-            }
-            GuiBatchOverlay.Focus();
         }
         else
         {
-            foreach (var (view, enabled) in _batchDisabledViews) view.IsEnabled = enabled;
-            _batchDisabledViews.Clear();
-            foreach (var (menu, enabled) in _batchDisabledMenus) menu.IsEnabled = enabled;
-            _batchDisabledMenus.Clear();
+            try
+            {
+                foreach (var (window, navigation, page, titleBar, title) in _guiBatchPages.ToArray().Reverse())
+                {
+                    page.DisableCancellation();
+                    if (Application.Current?.Windows.Contains(window) == true)
+                    {
+                        if (navigation.ModalStack.Contains(page))
+                        {
+                            if (navigation.ModalStack.LastOrDefault() != page)
+                                throw new InvalidOperationException("Close the active modal before leaving batch mode.");
+                            await navigation.PopModalAsync(false);
+                        }
+#if WINDOWS || MACCATALYST
+                        window.TitleBar = titleBar;
+#endif
+                        window.Title = title;
+                    }
+                    _guiBatchPages.RemoveAll(p => p.Page == page);
+                }
+                _guiBatchCancellation?.Dispose();
+                _guiBatchCancellation = null;
+            }
+            catch (Exception ex)
+            {
+                foreach (var item in _guiBatchPages) item.Page.ShowError(ex);
+                throw;
+            }
         }
+    }
+
+    private async Task CancelGuiBatchFromUiAsync()
+    {
+        if (_guiBatchCancellation is not { } cts || _guiBatchCancelPending) return;
+        _guiBatchCancelPending = true;
+        foreach (var item in _guiBatchPages) item.Page.SetCancelling();
+        try
+        {
+            Log("GUI RPC batch cancellation requested by the user.");
+            cts.Cancel();
+            CancelDynamicPreview();
+            _renderOneFrameCts?.Cancel();
+            await _guiEditGate.WaitAsync();
+            try
+            {
+                if (ReferenceEquals(_guiBatchCancellation, cts)) await DiscardGuiBatchAsync();
+            }
+            finally { _guiEditGate.Release(); }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Cancel GUI RPC batch", this);
+            foreach (var item in _guiBatchPages) item.Page.ShowError(ex);
+        }
+        finally { _guiBatchCancelPending = false; }
     }
 
     private async Task DiscardGuiBatchAsync()
     {
-        if (_guiBatch is not { } batch) return;
-        if (batch.Applied && !batch.Saved)
+        if (_guiBatch is not { } batch)
+        {
+            await SetGuiBatchOverlayAsync(false);
+            return;
+        }
+        if (batch.Applied)
         {
             await ApplyGuiBatchDataToUiAsync(batch.Draft, batch.OriginalProject, batch.OriginalAssets, batch.OriginalTracks);
+            ProjectInfo.SnapshotIDMapping = CloneGuiData(batch.OriginalProject.SnapshotIDMapping);
+            if (batch.OriginalProjectDirty) _workspace.GetModule<ProjectModule>().MarkDirty();
+            else _workspace.GetModule<ProjectModule>().MarkClean();
+            ProjectInfo.LastChanged = batch.OriginalProject.LastChanged;
+            ProjectInfo.PluginUsed = batch.OriginalProject.PluginUsed;
             if (CurrentSnapshotID == batch.Id)
-            {
-                await WriteCurrentSnapshotAsync(batch.Draft, $"slot_{batch.Draft.SnapshotID}", true);
-                ProjectInfo.SnapshotIDMapping = CloneGuiData(batch.OriginalProject.SnapshotIDMapping);
-                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, ProjectJSONStructure.SnapshotMappingFileName), ProjectInfo.SnapshotIDMapping);
-                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "project.pjfc"), ProjectInfo);
-            }
-            await DraftChangedAsync(this, new() { NoSave = true, DetailInfo = "RPC batch" });
+                await WriteCurrentSnapshotAsync(batch.Draft, $"slot_{batch.Draft.SnapshotID}", batch.OriginalSnapshotDirty);
+            ProjectInfo.NormallyExited = batch.OriginalProject.NormallyExited;
+            _historyNavigatedByUndoRedo = batch.OriginalHistoryNavigatedByUndoRedo;
+            await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, ProjectJSONStructure.SnapshotMappingFileName), ProjectInfo.SnapshotIDMapping);
+            await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "project.pjfc"), ProjectInfo);
+            await DraftChangedAsync(this, new() { NoSave = true, DetailInfo = "RPC batch" }, throwOnFailure: true);
+            ForwardClipChangeToWorkspace(this, new() { NoSave = true, DetailInfo = "RPC batch" });
+            RefreshHistorySubWindowContent();
+            _activeHistoryProvider?.NotifyExternalSnapshotChanged();
         }
-        if (!batch.Saved)
+        foreach (string path in batch.CopiedFiles) File.Delete(path);
+        string slot = Path.Combine(WorkingPath, "saveSlots", $"slot_{batch.Id}");
+        if (Directory.Exists(slot))
         {
-            foreach (string path in batch.CopiedFiles) File.Delete(path);
-            string slot = Path.Combine(WorkingPath, "saveSlots", $"slot_{batch.Id}");
-            if (Directory.Exists(slot))
-            {
-                File.Delete(Path.Combine(slot, "timeline.json"));
-                File.Delete(Path.Combine(slot, "assets.json"));
-                if (!Directory.EnumerateFileSystemEntries(slot).Any()) Directory.Delete(slot);
-            }
+            File.Delete(Path.Combine(slot, "timeline.json"));
+            File.Delete(Path.Combine(slot, "assets.json"));
+            File.Delete(Path.Combine(slot, "timeline.json.tmp"));
+            File.Delete(Path.Combine(slot, "assets.json.tmp"));
+            if (!Directory.EnumerateFileSystemEntries(slot).Any()) Directory.Delete(slot);
         }
+        batch.Saved = false;
         Log($"GUI RPC batch {batch.Id} cancelled ({batch.OperationCount} operations).");
+        _lastGuiBatchId = batch.Id;
+        _lastGuiBatchOwner = batch.Owner;
+        _lastGuiBatchResult = null;
         _guiBatch = null;
-        SetGuiBatchOverlay(false);
+        await SetGuiBatchOverlayAsync(false);
     }
 
     private async Task<object?> ExecuteGuiRequestAsync(GuiProjectRequest request, Guid connectionId, CancellationToken ct)
     {
         await _guiEditGate.WaitAsync(ct);
+        bool wasGuiRpcRequest = _guiRpcRequest.Value;
+        _guiRpcRequest.Value = true;
         try
         {
             if (request.Operation == GuiProjectOperation.StartBatch)
@@ -182,11 +251,15 @@ public partial class DraftPage
                 if (ProjectInfo.SnapshotIDMapping.ContainsKey(request.BatchId) || request.BatchId == _lastGuiBatchId
                     || Directory.Exists(Path.Combine(WorkingPath, "saveSlots", $"slot_{request.BatchId}")))
                     throw new ArgumentException("Use a new batch ID.");
-                if (_guiBatch is not null)
+                if (IsGuiBatchOverlayVisible)
                     throw new InvalidOperationException("A project batch is already active.");
-                SetGuiBatchOverlay(true);
+                _guiBatchCancellation = new();
+                using var batchCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _guiBatchCancellation.Token);
+                ct = batchCts.Token;
                 try
                 {
+                    await SetGuiBatchOverlayAsync(true);
+                    ct.ThrowIfCancellationRequested();
                     if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview(refreshPreview: false);
                     CancelDynamicPreview();
                     DynamicPreviewProvider.CancelClipWarmups();
@@ -201,6 +274,7 @@ public partial class DraftPage
                     saveLocker.Release();
                     // Flush only a change that was already pending before entering batch mode.
                     if (_pendingSnapshotSaveArgs is not null || CurrentSnapshotID == Guid.Empty) await Save(args: _pendingSnapshotSaveArgs, throwOnFailure: true);
+                    ct.ThrowIfCancellationRequested();
                     var draft = new DraftStructureJSON
                     {
                         Clips = Clips.Values.Where(c => !c.IsGhost && !c.IsShadow)
@@ -217,22 +291,30 @@ public partial class DraftPage
                         Clips = draft.Clips.ToDictionary(c => c.Id),
                         Assets = CloneGuiData(Assets.Values.ToList()).ToDictionary(a => a.AssetId!), Tracks = Tracks.Keys.ToHashSet(),
                         OriginalProject = originalProject, OriginalAssets = Assets.ToDictionary(a => a.Key, a => a.Value), OriginalTracks = Tracks.Keys.ToHashSet(),
+                        OriginalSnapshotDirty = _currentSnapshot?.IsDirty ?? true,
+                        OriginalProjectDirty = _workspace.GetModule<ProjectModule>().IsDirty,
+                        OriginalHistoryNavigatedByUndoRedo = _historyNavigatedByUndoRedo,
                     };
                     Log($"GUI RPC batch {request.BatchId} started.");
                     return new { BatchId = request.BatchId, OperationCount = 0 };
                 }
-                catch { SetGuiBatchOverlay(false); throw; }
+                catch { await SetGuiBatchOverlayAsync(false); throw; }
             }
             if (request.Operation == GuiProjectOperation.CompleteBatch && _guiBatch is null
                 && request.BatchId == _lastGuiBatchId && connectionId == _lastGuiBatchOwner && _lastGuiBatchResult is not null)
                 return _lastGuiBatchResult;
+            if (request.Operation == GuiProjectOperation.StopBatch && _guiBatch is null
+                && request.BatchId != Guid.Empty && request.BatchId == _lastGuiBatchId
+                && connectionId == _lastGuiBatchOwner && _lastGuiBatchResult is null)
+                return new { BatchId = request.BatchId, Cancelled = true, Saved = false };
             if (_guiBatch is not { } batch)
             {
                 if (request.BatchId != Guid.Empty || request.Operation is GuiProjectOperation.CompleteBatch or GuiProjectOperation.StopBatch)
                     throw new InvalidOperationException("No matching project batch is active.");
                 return await ExecuteGuiProjectAsync(request, ct);
             }
-            if (request.Operation is GuiProjectOperation.GetFramePreview or GuiProjectOperation.GetClipFramePreview or GuiProjectOperation.GetClipTransformPreview)
+            if (request.Operation is GuiProjectOperation.ExportFrameSequence or GuiProjectOperation.ExportAudioSamples
+                or GuiProjectOperation.GetFramePreview or GuiProjectOperation.GetClipFramePreview or GuiProjectOperation.GetClipTransformPreview)
                 throw new InvalidOperationException("Complete or cancel the batch before requesting a preview.");
             if (connectionId != batch.Owner)
             {
@@ -246,7 +328,10 @@ public partial class DraftPage
                 await DiscardGuiBatchAsync();
                 return new { BatchId = batch.Id, Cancelled = !batch.Saved, batch.Saved };
             }
-            if (request.Operation == GuiProjectOperation.CompleteBatch) return await CompleteGuiBatchAsync(request, batch);
+            using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _guiBatchCancellation!.Token);
+            ct = requestCts.Token;
+            ct.ThrowIfCancellationRequested();
+            if (request.Operation == GuiProjectOperation.CompleteBatch) return await CompleteGuiBatchAsync(request, batch, ct);
             if (batch.Applied) throw new InvalidOperationException("The batch is being committed. Retry Complete-ProjectBatch.");
             if (request.Operation is GuiProjectOperation.Save or GuiProjectOperation.UndoProjectHistory or GuiProjectOperation.RedoProjectHistory
                 or GuiProjectOperation.RestoreProjectHistory or GuiProjectOperation.GetFramePreview or GuiProjectOperation.GetClipFramePreview
@@ -257,16 +342,21 @@ public partial class DraftPage
             {
                 batch.BeginRequest(request.Operation);
                 var result = await ExecuteGuiBatchDataAsync(request, batch, ct);
+                ct.ThrowIfCancellationRequested();
                 batch.FinishRequest(false);
                 if (!request.Operation.ToString().StartsWith("Get", StringComparison.Ordinal)) batch.OperationCount++;
                 return result;
             }
             catch { batch.FinishRequest(true); throw; }
         }
-        finally { _guiEditGate.Release(); }
+        finally
+        {
+            _guiRpcRequest.Value = wasGuiRpcRequest;
+            _guiEditGate.Release();
+        }
     }
 
-    private async Task<object> CompleteGuiBatchAsync(GuiProjectRequest request, GuiBatchState batch)
+    private async Task<object> CompleteGuiBatchAsync(GuiProjectRequest request, GuiBatchState batch, CancellationToken ct)
     {
         if (batch.OperationCount > 0)
         {
@@ -275,7 +365,7 @@ public partial class DraftPage
                 if (FindSlotDirectory(batch.Draft.SnapshotID) is { } previousSlot)
                 {
                     string path = Path.Combine(previousSlot, "timeline.json");
-                    var previous = JsonSerializer.Deserialize<DraftStructureJSON>(await File.ReadAllTextAsync(path), savingOpts)!;
+                    var previous = JsonSerializer.Deserialize<DraftStructureJSON>(await File.ReadAllTextAsync(path, ct), savingOpts)!;
                     if (previous.ProjectSettings is null)
                     {
                         previous.ProjectSettings = batch.Draft.ProjectSettings;
@@ -285,35 +375,40 @@ public partial class DraftPage
                 var files = batch.Assets.Values.Select(a => a.Path).Append(batch.Project.ThumbPath).ToHashSet();
                 foreach (var (destination, source) in batch.PendingFiles.Where(p => files.Contains(p.Key)))
                 {
+                    ct.ThrowIfCancellationRequested();
                     Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                    if (batch.CopiedFiles.Contains(destination)) File.Copy(source, destination, true);
-                    else
-                    {
-                        if (File.Exists(destination)) throw new IOException($"Batch output already exists: {destination}");
-                        batch.CopiedFiles.Add(destination);
-                        File.Copy(source, destination);
-                    }
+                    bool overwrite = batch.CopiedFiles.Contains(destination);
+                    await using var input = File.OpenRead(source);
+                    await using var output = new FileStream(destination, overwrite ? FileMode.Create : FileMode.CreateNew,
+                        FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
+                    batch.CopiedFiles.Add(destination);
+                    await input.CopyToAsync(output, ct);
                 }
+                ct.ThrowIfCancellationRequested();
                 try
                 {
                     var draft = CloneGuiData(batch.Draft);
                     draft.Clips = batch.Clips.Values.ToArray();
-                    await ApplyGuiBatchDataToUiAsync(draft, batch.Project, batch.Assets, batch.Tracks);
                     batch.Applied = true;
+                    await ApplyGuiBatchDataToUiAsync(draft, batch.Project, batch.Assets, batch.Tracks);
                 }
                 catch
                 {
                     await ApplyGuiBatchDataToUiAsync(batch.Draft, batch.OriginalProject, batch.OriginalAssets, batch.OriginalTracks);
+                    batch.Applied = false;
                     throw;
                 }
             }
+            ct.ThrowIfCancellationRequested();
             if (!batch.Saved)
             {
                 await SaveCoreAsync(false, CreateGuiProjectChange(request), true,
                     requestedSnapshotId: batch.Id, previousSnapshotId: batch.Draft.SnapshotID);
                 batch.Saved = true;
             }
-            await DraftChangedAsync(this, new() { NoSave = true, DetailInfo = "RPC batch" }, throwOnFailure: true);
+            ct.ThrowIfCancellationRequested();
+            await DraftChangedAsync(this, new() { NoSave = true, DetailInfo = "RPC batch" }, throwOnFailure: true, cancellationToken: ct);
+            ct.ThrowIfCancellationRequested();
             if (!batch.Notified)
             {
                 var change = CreateGuiProjectChange(request);
@@ -329,8 +424,18 @@ public partial class DraftPage
         _lastGuiBatchOwner = batch.Owner;
         _lastGuiBatchResult = result;
         Log($"GUI RPC batch {batch.Id} committed ({batch.OperationCount} operations).");
+        foreach (var item in _guiBatchPages) item.Page.DisableCancellation();
+        if (batch.Saved && MaximumSaveSlot >= 0)
+        {
+            try
+            {
+                await PruneOldestSaveSlotsAsync();
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, ProjectJSONStructure.SnapshotMappingFileName), ProjectInfo.SnapshotIDMapping);
+            }
+            catch (Exception ex) { Log(ex, "Prune GUI RPC batch history", this); }
+        }
         _guiBatch = null;
-        SetGuiBatchOverlay(false);
+        await SetGuiBatchOverlayAsync(false);
         return result;
     }
 
@@ -355,12 +460,12 @@ public partial class DraftPage
         await UpdateAdjacencyForTrack();
         UpdateTimelineWidth();
         previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
-        await AddClipView.RefreshAssetsAsync();
-        await RefreshRestoredSelectionAsync();
+        await RefreshRestoredSelectionAsync(refreshPreview: false);
     }
 
     private async Task CloseGuiBatchAsync()
     {
+        _guiBatchCancellation?.Cancel();
         await _guiEditGate.WaitAsync();
         try { await DiscardGuiBatchAsync(); }
         finally { _guiEditGate.Release(); }
@@ -558,9 +663,9 @@ public partial class DraftPage
                     .Select(v => new { v.AssetId, v.Name, v.Path, Type = v.AssetType.ToString(), v.Width, v.Height, v.Duration }).ToArray();
             case GuiProjectOperation.AddAsset:
                 {
-                    if (!a.Has("CopyToProject")) throw new ArgumentException("CopyToProject must be explicit during a batch.");
+                    var copyToProject = a.Has("CopyToProject") ? a.Bool("CopyToProject") : false;
                     var asset = ProbeGuiBatchAsset(a.String("FilePath")!, a.String("Name"));
-                    asset.IsReference = !a.Bool("CopyToProject");
+                    asset.IsReference = !copyToProject;
                     if (!asset.IsReference)
                     {
                         string destination = Path.Combine(WorkingPath, "asset", asset.AssetId + Path.GetExtension(asset.Path));
@@ -1109,6 +1214,7 @@ public partial class DraftPage
 
     private static ISpeedVarianceProvider? GuiBatchSpeed(ClipDraftDTO clip)
     {
+        if (clip.ClipType == ClipMode.ProjectReferenceClip || clip.MetaData?.ContainsKey(ProjectReferencePart.MetadataKey) == true) return null;
         if (clip.EffectProviders?.Any(p => p.Stage == Stage.SpeedVariance) != true) return null;
         return EffectBindingHelper.RebuildAllEffects(EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null), null)
             ?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
@@ -1258,6 +1364,24 @@ public partial class DraftPage
             return GuiClipSnapshot(group);
         }
         var parent = batch.Read(a.Guid("ClipId"));
+        if (parent.ClipType == ClipMode.ProjectReferenceClip)
+        {
+            var detached = projectFrameCut.Render.ProjectReferences.ProjectReferenceEditing.Detach(parent, batch.Project, WorkingPath);
+            var children = detached.Clips.ToList();
+            foreach (var track in detached.SoundTracks)
+            {
+                var node = JsonSerializer.SerializeToNode(track, savingOpts)!;
+                node["ClipType"] = (int)ClipMode.AudioClip;
+                node["TypeName"] = nameof(SoundTrackToClipWrapper);
+                node["SourceDuration"] = (ulong)track.RelativeStartFrame + track.Duration;
+                node["BindedSoundTrack"] = track.Id;
+                children.Add(node.Deserialize<ClipDraftDTO>(savingOpts)!);
+            }
+            if (children.Any(c => batch.Clips.ContainsKey(c.Id))) throw new InvalidOperationException("Detached clip ID collision.");
+            foreach (var child in children) { batch.Put(child); batch.Tracks.Add((int)child.LayerIndex); }
+            batch.Remove(parent.Id);
+            return children.Select(GuiClipSnapshot).ToArray();
+        }
         if (parent.ClipType == ClipMode.MarkingClip && parent.MetaData?.GetValueOrDefault("GroupedClipIds") is { } ids)
         {
             var children = JsonSerializer.Deserialize<Guid[]>(JsonSerializer.Serialize(ids))!.Where(batch.Clips.ContainsKey).Select(batch.Edit).ToArray();

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ProtoBuf;
 
 namespace projectFrameCut.Render.Contracts;
@@ -21,6 +22,8 @@ public sealed class ExternalRpcRequest
     public string[] AdditionalSids { get; set; } = [];
     public DateTimeOffset ExpiresAt { get; set; } = DateTimeOffset.UtcNow.AddMinutes(5);
     public string Status { get; set; } = "pending";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public RemoteError? Error { get; set; }
     public string EncryptedConnection { get; set; } = "";
     public string Signature { get; set; } = "";
 
@@ -28,14 +31,17 @@ public sealed class ExternalRpcRequest
 
     public void Validate()
     {
-        if ((Version != 1 && Version != 2) || RequestId == Guid.Empty || Status != "pending" || EncryptedConnection != "")
+        if ((Version != 1 && Version != 2) || RequestId == Guid.Empty || Status != "pending" || Error is not null || EncryptedConnection != "")
             throw new ArgumentException("Invalid RPC request state.");
         if (AdditionalSids is null) throw new ArgumentException("Invalid additional RPC pipe SIDs.");
         if (AdditionalSids.Length > 0)
         {
             if (IsPersistent) throw new ArgumentException("--addSID is only supported for one-time RPC requests.");
             if (!OperatingSystem.IsWindows()) throw new ArgumentException("--addSID requires Windows.");
-            AdditionalSids = AdditionalSids.Select(s => new SecurityIdentifier(s).Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var sids = new string[AdditionalSids.Length];
+            for (var i = 0; i < AdditionalSids.Length; i++)
+                sids[i] = new SecurityIdentifier(AdditionalSids[i]).Value;
+            AdditionalSids = sids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
         if (IsPersistent)
         {
@@ -88,10 +94,12 @@ public sealed class ExternalRpcRequest
     public static ExternalRpcRequest Read(Stream stream) =>
         JsonSerializer.Deserialize<ExternalRpcRequest>(stream) ?? throw new ArgumentException("Empty RPC request.");
 
-    public static ExternalRpcRequest ReadFile(string path)
+    public static ExternalRpcRequest ReadFile(string path) => ReadFile(path, 32768);
+
+    public static ExternalRpcRequest ReadFile(string path, int maxLength)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        if (stream.Length > 32768) throw new ArgumentException("RPC request exceeds 32 KiB.");
+        if (stream.Length > maxLength) throw new ArgumentException($"RPC request or response exceeds {maxLength} bytes.");
         return Read(stream);
     }
 }
@@ -142,4 +150,8 @@ public sealed class ResolveExternalRpcRequest
     [ProtoMember(1)] public Guid ClaimId { get; set; }
     [ProtoMember(2)] public bool Approved { get; set; }
     [ProtoMember(3)] public Guid GuiSessionId { get; set; }
+    /// <summary>
+    /// Authorization record resolved by the GUI process (which owns the encrypted store) for persistent requests.
+    /// </summary>
+    [ProtoMember(4)] public ExternalRpcClientAuthorization? Authorization { get; set; }
 }

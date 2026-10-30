@@ -64,6 +64,10 @@ namespace projectFrameCut.LivePreview
         public string? LocalProjectRoot { get; set; }
         public string? RenderProxyRoot { get; set; }
         public IReadOnlyList<AssetPathEntry>? RemoteAssets { get; set; }
+        /// <summary>
+        /// Returns the current project asset map (the page replaces its dictionary on load/batch edits).
+        /// </summary>
+        public Func<IReadOnlyDictionary<string, AssetItem>>? ProjectAssetsProvider { get; set; }
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
         public event Action<double, TimeSpan>? OnProgressChanged;
@@ -318,6 +322,7 @@ namespace projectFrameCut.LivePreview
             var clips = json.Clips ?? [];
             var clipsList = new List<IClip>();
             var reinitTasks = new List<Task>();
+            var projectAssets = ProjectAssetsProvider?.Invoke();
 
             foreach (var clip in clips)
             {
@@ -368,6 +373,10 @@ namespace projectFrameCut.LivePreview
                                 // RenderClipFrame performs the actual source rendering remotely.
                                 clipInstance.FilePath = remoteAsset.Path;
                             }
+                            else if (projectAssets is not null && projectAssets.TryGetValue(assetId, out var projectAsset) && projectAsset is not null && !string.IsNullOrWhiteSpace(projectAsset.Path))
+                            {
+                                clipInstance.FilePath = projectAsset.Path;
+                            }
                             else if (AssetDatabase.Assets.TryGetValue(assetId, out var asset) && asset is not null && !string.IsNullOrWhiteSpace(asset.Path))
                             {
                                 clipInstance.FilePath = asset.Path;
@@ -401,7 +410,7 @@ namespace projectFrameCut.LivePreview
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
                 using var audioMark = new UserMarkRange("Preview.InitializeSoundTracks", $"soundtracks={json.SoundTracks?.Length ?? 0}");
 #endif
-                var soundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json, InitAtLoad: false).ToList();
+                var soundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json, InitAtLoad: false, projectAssets).ToList();
                 SoundTrackMetadata.AddMissingLegacyTracks(Clips, soundTracks, message => Log($"[LiveRender] {message}", "warn"), initialize: false);
                 foreach (var track in SoundTracks ?? [])
                 {
@@ -442,11 +451,17 @@ namespace projectFrameCut.LivePreview
                 ProjectWidth = Math.Max(1, ProjectRelativeWidth),
                 ProjectHeight = Math.Max(1, ProjectRelativeHeight),
                 FrameRate = Math.Max(1, targetFrameRate),
-                Assets = RemoteAssets?.ToList() ?? AssetDatabase.Assets.Select(static item => new AssetPathEntry
-                {
-                    AssetId = item.Key,
-                    Path = item.Value.Path ?? string.Empty,
-                }).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
+                Assets = RemoteAssets?.ToList() ?? (projectAssets is null
+                    ? AssetDatabase.Assets.Select(static item => new AssetPathEntry
+                    {
+                        AssetId = item.Key,
+                        Path = item.Value.Path ?? string.Empty,
+                    })
+                    : projectAssets.Concat(AssetDatabase.Assets.Where(item => !projectAssets.ContainsKey(item.Key))).Select(static item => new AssetPathEntry
+                    {
+                        AssetId = item.Key,
+                        Path = item.Value.Path ?? string.Empty,
+                    })).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
             };
             // Start the Render backend only after a concrete project has been loaded.
             // This keeps application startup and the home page independent from the
@@ -470,7 +485,7 @@ namespace projectFrameCut.LivePreview
             Log($"[LiveRender] Updated {Clips.Length} clips and {SoundTracks.Length} soundtracks in {sw.ElapsedMilliseconds}ms.");
         }
 
-        public async Task GenerateTimelineThumbnailsAsync(Guid clipId, string sourcePath, int totalFrames, int intervalFrames, int maxCount, int width, CancellationToken cancellationToken)
+        public async Task GenerateTimelineThumbnailsAsync(Guid clipId, string sourcePath, int totalFrames, int intervalFrames, int maxCount, int width, CancellationToken cancellationToken, List<int>? frameIndices = null)
         {
             await _backendReady.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             await _updateDraftGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -481,6 +496,7 @@ namespace projectFrameCut.LivePreview
                 {
                     SessionId = RenderSessionId, ClipId = clipId, SourcePath = sourcePath,
                     TotalFrames = totalFrames, IntervalFrames = intervalFrames, MaxCount = maxCount, Width = width,
+                    FrameIndices = frameIndices ?? [],
                 }, cancellationToken).ConfigureAwait(false);
                 try
                 {

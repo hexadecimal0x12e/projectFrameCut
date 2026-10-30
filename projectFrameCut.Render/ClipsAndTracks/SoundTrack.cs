@@ -5,6 +5,7 @@ using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Sources;
 using projectFrameCut.Shared;
 using System;
@@ -95,7 +96,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public static void ReInit(ISoundTrack track)
         {
             ReleaseEffects(track);
-            track.ReInit();
+            if (IsSourceUnavailable(track.ExtraData) && !ClipInitializationFailure.HasDeferredFailures(track.ExtraData))
+                ClipInitializationFailure.Clear(track.ExtraData);
+            try { track.ReInit(); }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                track.ExtraData ??= new();
+                ClipInitializationFailure.Mark(track.ExtraData, "SourceNotFound", ex);
+                Log(ex, $"Initialize soundtrack {track.Id}; using silence", nameof(SoundTrackMetadata));
+            }
+            if (IsSourceUnavailable(track.ExtraData)) return;
             var clip = new SoundTrackToClipWrapper
             {
                 Id = Guid.TryParse(track.Id, out var id) ? id : ReadSourceClipId(track.ExtraData) ?? Guid.NewGuid(),
@@ -108,6 +118,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
             track.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip, syncClipState: false);
             track.EffectStagePlan = clip.EffectStagePlan;
         }
+
+        internal static bool IsSourceUnavailable(Dictionary<string, object>? data)
+            => ClipInitializationFailure.GetStage(data) is "SourceNotFound" or "SourceReading" or "SourceNotMatch" or "ExternalSourceUnavailable";
 
         public static void ReleaseEffects(ISoundTrack track)
         {
@@ -132,14 +145,27 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     || tracks.Any(t => ReadSourceClipId(t.ExtraData) == clip.Id))
                     continue;
 
-                var track = CreateLegacyTrack(clip);
+                ISoundTrack track;
+                if (clip is ReferencePartClip reference && ProjectReferencePart.Read(clip.ExtraData) is { } part)
+                {
+                    var dto = reference.Dto;
+                    track = ProjectReferenceRuntime.CreateDetachedTrack(new()
+                    {
+                        Id = clip.Id.ToString(), Name = clip.Name, LayerIndex = clip.LayerIndex, SubLayerIndex = clip.SubLayerIndex,
+                        StartFrame = clip.StartFrame, RelativeStartFrame = clip.RelativeStartFrame, Duration = clip.Duration,
+                        FilePath = clip.FilePath, Effects = dto.Effects, EffectProviders = dto.EffectProviders, MetaData = clip.ExtraData,
+                    }, part);
+                    track.ExtraData[SourceClipIdKey] = clip.Id.ToString();
+                }
+                else track = CreateLegacyTrack(clip);
                 try
                 {
                     if (initialize)
                     {
                         ReInit(track);
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (track.SamplePerSecond <= 0) throw new InvalidOperationException("The media has no readable audio stream.");
+                        if (track.SamplePerSecond <= 0 && !IsSourceUnavailable(track.ExtraData))
+                            throw new InvalidOperationException("The media has no readable audio stream.");
                     }
                     tracks.Add(track);
                     log?.Invoke($"Migrated legacy clip audio {clip.Id} to soundtrack {track.Id}.");
@@ -204,13 +230,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
             try
             {
                 AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
-                if (ClipInitializationFailure.GetStage(ExtraData) == "ExternalSourceUnavailable") ClipInitializationFailure.Clear(ExtraData);
+                if (SoundTrackMetadata.IsSourceUnavailable(ExtraData)) ClipInitializationFailure.Clear(ExtraData);
             }
-            catch (Exception ex) when (RemoteRpcAudioSource.IsExternalPath(FilePath))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 ExtraData ??= new();
-                ClipInitializationFailure.Mark(ExtraData, "ExternalSourceUnavailable", ex);
-                Log(ex, $"Initialize external audio track {Id}", this);
+                ClipInitializationFailure.Mark(ExtraData, RemoteRpcAudioSource.IsExternalPath(FilePath) ? "ExternalSourceUnavailable"
+                    : ex is FileNotFoundException or DirectoryNotFoundException ? "SourceNotFound" : "SourceReading", ex);
+                Log(ex, $"Initialize audio track {Id}; using silence", this);
             }
         }
 

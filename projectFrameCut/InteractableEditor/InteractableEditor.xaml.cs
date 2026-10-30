@@ -2640,6 +2640,9 @@ namespace projectFrameCut.InteractableEditor
             return Task.CompletedTask;
         }
 
+        internal void RefreshClipSources(IReadOnlySet<Guid> clipIds)
+            => UpdateVisuals(clipFilter: clipIds, reorderClips: false);
+
         /// <summary>
         /// 更新当前帧号，用于显示该帧的所有clips
         /// </summary>

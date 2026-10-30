@@ -41,7 +41,7 @@ Each edit is sent immediately and changes independent in-memory data. Owner quer
 Before completing or cancelling, do not call:
 
 - `Save-Project`, `Undo-ProjectHistory`, `Redo-ProjectHistory`, or `Restore-ProjectHistory`.
-- `Get-ProjectFramePreview`, `Get-ProjectClipFramePreview`, or `Get-ProjectClipTransformPreview`.
+- `Export-ProjectFrameSequence`, `Get-ProjectFramePreview`, `Get-ProjectClipFramePreview`, or `Get-ProjectClipTransformPreview`.
 - `Save-ProjectClipEffectGroup` (writes the shared library), or `Add-ProjectExternalSource`, `Set-ProjectExternalSource`, or `Remove-ProjectExternalSource` (changes source registration).
 
 Clip, subtitle, vector, effect graph, and keyframe edits can stay in the batch; schema queries and reading staged values remain available. `-WhatIf` skips the relevant command; `Start-ProjectBatch -WhatIf` does not enter batch mode. Do not turn an unsaved-preview request into a saved batch without the user's intent supporting persistence.

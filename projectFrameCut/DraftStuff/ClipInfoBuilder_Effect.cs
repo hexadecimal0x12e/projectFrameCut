@@ -103,9 +103,11 @@ namespace projectFrameCut.DraftStuff
                         Tag = stage.ToString(),
                         LazyAsyncContentFactory = () => BuildEffectStageTab(clip, handler, stage)
                     });
+                int selectedIndex = Math.Max(0, items.FindIndex(item => item.Tag == clip.ExtraData.GetValueOrDefault("__EffectStageTab__")?.ToString()));
+                if (page.IsGuiRpcRequest && items.Count > 0) await LoadTabContentAsync(items[selectedIndex]);
                 var tabs = new CompactTabView
                 {
-                    SelectedIndex = Math.Max(0, items.FindIndex(item => item.Tag == clip.ExtraData.GetValueOrDefault("__EffectStageTab__")?.ToString())),
+                    SelectedIndex = selectedIndex,
                     TabItems = new(items),
                 };
                 tabs.OnTabSwitched += (_, item) => clip.ExtraData["__EffectStageTab__"] = item.Tag;
@@ -409,6 +411,7 @@ namespace projectFrameCut.DraftStuff
                     }
                     catch (Exception ex)
                     {
+                        if (page.IsGuiRpcRequest) throw;
                         if (Debugger.IsAttached)
                         {
                             if (Microsoft.Maui.Controls.Application.Current?.Windows?.First()?.Page is Page page)

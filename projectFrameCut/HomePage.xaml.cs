@@ -131,7 +131,8 @@ public partial class HomePage : ContentPage
                 if (!HasAlreadyLaunchedFromFile)
                 {
                     HasAlreadyLaunchedFromFile = true;
-                    if (!await TryRestoreActiveRenderAsync()) await LaunchFromFile();
+                    if (MauiProgram.CmdlineArgs.Any(c => c.Equals("--render", StringComparison.OrdinalIgnoreCase))
+                        || !await TryRestoreActiveRenderAsync()) await LaunchFromFile();
                 }
             }
             catch (Exception ex)
@@ -245,6 +246,8 @@ public partial class HomePage : ContentPage
             string path = "";
 
             var args = argsOverride ?? MauiProgram.CmdlineArgs.ToArray();
+            if (string.Equals(args.FirstOrDefault(), "gui", StringComparison.OrdinalIgnoreCase))
+                args = args.Skip(1).ToArray();
             if (args.Any(c => c.Equals("--rpcAuthorize", StringComparison.OrdinalIgnoreCase)))
             {
                 await AuthorizeExternalRpcClientAsync(args);
@@ -252,6 +255,7 @@ public partial class HomePage : ContentPage
             }
             bool continueRequested = args.Any(c => c.Equals("--continue", StringComparison.OrdinalIgnoreCase));
             bool openRenderPage = args.Any(c => c.Equals("--render", StringComparison.OrdinalIgnoreCase));
+            var renderOptions = openRenderPage ? GuiRenderOptions.Parse(args) : null;
             string? mcpMode = GetCommandLineOption(args, "--mcpMode");
             if (string.Equals(mcpMode, "client", StringComparison.OrdinalIgnoreCase))
             {
@@ -343,6 +347,7 @@ public partial class HomePage : ContentPage
                 LogDiagnostic($"--continue requested, last opened project: {path}");
             }
             if (string.IsNullOrWhiteSpace(path)) return;
+            if (openRenderPage) path = Path.GetFullPath(path, MauiProgram.LaunchWorkingDirectory);
             switch (Path.GetExtension(path))
             {
                 case ".pjfc":
@@ -384,7 +389,7 @@ public partial class HomePage : ContentPage
                                         LogDiagnostic($"Launch target from cli args:{path}");
                                         if (openRenderPage)
                                         {
-                                            await GoRender(p);
+                                            await GoRender(p, launchOptions: renderOptions);
                                         }
                                         else
                                         {
@@ -402,7 +407,7 @@ public partial class HomePage : ContentPage
                             }
                             else
                             {
-                                await ImportDraft(path);
+                                await ImportDraft(path, renderOptions);
                             }
                         }
                         break;
@@ -432,7 +437,7 @@ public partial class HomePage : ContentPage
                             {
                                 if (openRenderPage)
                                 {
-                                    await GoRender(path);
+                                    await GoRender(path, launchOptions: renderOptions);
                                 }
                                 else
                                 {
@@ -455,7 +460,7 @@ public partial class HomePage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Launch from file", this);
-            await DisplayAlertAsync(Localized._Error, "Cannot launch from file. Try again later.", Localized._OK);
+            await DisplayAlertAsync(Localized._Error, $"Cannot launch from file.\r\n{ex.Message}", Localized._OK);
         }
         finally
         {
@@ -1389,6 +1394,13 @@ public partial class HomePage : ContentPage
                     return;
                 }
             ok:
+                await Task.Run(() => projectFrameCut.Render.ProjectReferences.ProjectReferenceStore.RefreshLinked(timeline, draftSourcePath, project.ProjectUniqueId));
+                foreach (var reference in timeline.Clips.Where(c => c.ClipType == ClipMode.ProjectReferenceClip))
+                    if (recoveredClips!.TryGetValue(reference.Id, out var c))
+                    {
+                        c.ExtraData = reference.MetaData ?? new();
+                        c.SourcePath = reference.FilePath;
+                    }
                 await Dispatcher.DispatchAsync(async () =>
                 {
                     if (timeline.Clips.Any(c => c.EffectBundles?.Any() ?? false))
@@ -1410,6 +1422,7 @@ public partial class HomePage : ContentPage
                 Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
                 {
+                    if (item.Value.ClipType == ClipMode.ProjectReferenceClip) continue;
                     if (!string.IsNullOrWhiteSpace(item.Value.SourcePath) && !item.Value.SourcePath.StartsWith('#'))
                     {
                         if (item.Value.SourcePath.StartsWith('$') && AssetDatabase.Assets.TryGetValue(item.Value.SourcePath.Substring(1), out var a))
@@ -2186,7 +2199,7 @@ public partial class HomePage : ContentPage
         });
     }
 
-    private async Task ImportDraft(string path)
+    private async Task ImportDraft(string path, GuiRenderOptions? renderOptions = null)
     {
         var origCont = Content;
         Content = new ActivityIndicator
@@ -2195,6 +2208,7 @@ public partial class HomePage : ContentPage
             WidthRequest = 200,
             HeightRequest = 200
         };
+        string? importedPath = null;
         try
         {
             var workingDir = Path.Combine(MauiProgram.DataPath, "My Drafts", Path.GetFileNameWithoutExtension(path));
@@ -2207,6 +2221,7 @@ public partial class HomePage : ContentPage
             {
                 ZipFile.ExtractToDirectory(path, workingDir, true);
             });
+            importedPath = workingDir;
         }
         catch (Exception ex)
         {
@@ -2214,6 +2229,8 @@ public partial class HomePage : ContentPage
         }
         Content = origCont;
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        if (importedPath is not null && renderOptions is not null)
+            await GoRender(importedPath, launchOptions: renderOptions);
 
     }
 
@@ -2223,10 +2240,11 @@ public partial class HomePage : ContentPage
         await GoRender(vmItem._projectPath);
     }
 
-    private async Task<bool> GoRender(string draftSourcePath, RenderJob? renderJob = null)
+    private async Task<bool> GoRender(string draftSourcePath, RenderJob? renderJob = null, GuiRenderOptions? launchOptions = null)
     {
         try
         {
+            draftSourcePath = Path.GetFullPath(draftSourcePath);
             string projectPath = File.Exists(Path.Combine(draftSourcePath, "project.pjfc"))
                 ? Path.Combine(draftSourcePath, "project.pjfc")
                 : Path.Combine(draftSourcePath, "project.json");
@@ -2243,7 +2261,10 @@ public partial class HomePage : ContentPage
             if (Directory.Exists(draftSourcePath)) Environment.CurrentDirectory = draftSourcePath;
             Log($"Project loaded: {draftSourcePath}, {tml.Clips.Length} clips, {tml.SoundTracks.Length} soundtracks.");
             renderJob ??= await TryGetActiveRenderJobAsync(draftSourcePath);
+            if (renderJob is not null && launchOptions?.HasOverrides == true)
+                throw new InvalidOperationException("Cannot apply render options while this project already has an active render job.");
             var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, tml, renderJob, assets);
+            if (launchOptions is not null) renderPage.ApplyLaunchOptions(launchOptions);
             await Dispatcher.DispatchAsync(async () =>
             {
                 App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";

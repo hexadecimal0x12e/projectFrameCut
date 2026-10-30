@@ -20,6 +20,8 @@
         'Get-ProjectTemplateVariable',
         'Get-ProjectInfo',
         'Get-ProjectFramePreview',
+        'Export-ProjectFrameSequence',
+        'Export-ProjectAudioSamples',
         'Get-ProjectClipFramePreview',
         'Save-Project',
         'Start-ProjectBatch',

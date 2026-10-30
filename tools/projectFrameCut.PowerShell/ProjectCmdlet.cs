@@ -50,7 +50,40 @@ public abstract class ProjectCmdlet : CancellableCmdlet
             WriteVerbose($"GUI RPC {Operation}, request {request.RequestId}.");
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Cancellation.Token);
             timeout.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds + 2));
-            var result = connection.Client.InvokeGuiProjectAsync(request, timeout.Token).AsTask().GetAwaiter().GetResult();
+            var pending = connection.Client.InvokeGuiProjectAsync(request, timeout.Token).AsTask();
+            GuiProjectResult result;
+            if (Operation == GuiProjectOperation.ExportFrameSequence)
+            {
+                try
+                {
+                    WriteProgress(new ProgressRecord(0, "Rendering preview frames", "Preparing renderer") { PercentComplete = 0 });
+                    while (!pending.IsCompleted)
+                    {
+                        if (Task.WhenAny(pending, Task.Delay(500, timeout.Token)).GetAwaiter().GetResult() == pending) break;
+                        timeout.Token.ThrowIfCancellationRequested();
+                        var progress = connection.Client.InvokeGuiProjectAsync(new()
+                        {
+                            Operation = GuiProjectOperation.GetRequestProgress,
+                            ParametersJson = JsonSerializer.Serialize(new { request.RequestId }),
+                            TimeoutSeconds = TimeoutSeconds,
+                        }, timeout.Token).AsTask().GetAwaiter().GetResult();
+                        if (progress.Error is not null) throw new RenderRpcException(progress.Error);
+                        if (progress.IsProgress)
+                            WriteProgress(new ProgressRecord(0, "Rendering preview frames", $"{progress.PercentComplete}%")
+                            {
+                                PercentComplete = Math.Clamp(progress.PercentComplete, 0, 100),
+                                SecondsRemaining = progress.SecondsRemaining,
+                            });
+                    }
+                    result = pending.GetAwaiter().GetResult();
+                }
+                finally
+                {
+                    if (!pending.IsCompleted) timeout.Cancel();
+                    WriteProgress(new ProgressRecord(0, "Rendering preview frames", "Finished") { RecordType = ProgressRecordType.Completed });
+                }
+            }
+            else result = pending.GetAwaiter().GetResult();
             if (result.RequestId != request.RequestId || result.SessionId != connection.SessionId) throw new InvalidOperationException("GUI RPC response does not match the session and request.");
             if (result.Error is not null) throw new RenderRpcException(result.Error);
             if (Operation is GuiProjectOperation.CompleteBatch or GuiProjectOperation.StopBatch)
@@ -102,7 +135,7 @@ public abstract class ProjectCmdlet : CancellableCmdlet
 public abstract class ProjectWriteCmdlet : ProjectCmdlet
 {
     [Parameter] public SwitchParameter PassThru { get; set; }
-    [Parameter][ValidateLength(1, 512)] public string? ChangeReason { get; set; }
+    [Parameter][ValidateLength(1, 512)] public virtual string? ChangeReason { get; set; }
     protected override bool IsWrite => true;
     protected override bool ReturnResult => PassThru;
 }

@@ -13,6 +13,7 @@ public sealed class GuiProjectBroker : IDisposable
         public Channel<GuiProjectWork> Queue { get; } = Channel.CreateBounded<GuiProjectWork>(128);
         public ConcurrentDictionary<Guid, TaskCompletionSource<GuiProjectResult>> Pending { get; } = new();
         public CancellationTokenSource Lifetime { get; } = new();
+        public ConcurrentDictionary<Guid, (Guid ConnectionId, GuiProjectResult Result)> Progress { get; } = new();
         public int ActiveConnectionCount;
     }
 
@@ -47,6 +48,7 @@ public sealed class GuiProjectBroker : IDisposable
         foreach (var completion in session.Pending.Values)
             completion.TrySetException(new InvalidOperationException("The GUI project session was closed."));
         session.Pending.Clear();
+        session.Progress.Clear();
     }
 
     public async Task<GuiProjectResult> InvokeAsync(Guid id, GuiProjectRequest request, CancellationToken ct, Guid connectionId = default)
@@ -56,8 +58,19 @@ public sealed class GuiProjectBroker : IDisposable
             || request.ParametersJson is null || request.ParametersJson.Length > 1024 * 1024
             || request.ChangeReason is null || request.ChangeReason.Length > 512 || request.ClientName is null || request.ClientName.Length > 128)
             throw new ArgumentException("Invalid GUI project request.");
+        if (request.Operation == GuiProjectOperation.GetRequestProgress)
+        {
+            using var json = JsonDocument.Parse(request.ParametersJson);
+            var target = json.RootElement.GetProperty("RequestId").GetGuid();
+            if (session.Progress.TryGetValue(target, out var progress) && progress.ConnectionId == connectionId)
+                return new() { SessionId = id, RequestId = request.RequestId, IsProgress = true,
+                    PercentComplete = progress.Result.PercentComplete, SecondsRemaining = progress.Result.SecondsRemaining };
+            return new() { SessionId = id, RequestId = request.RequestId };
+        }
         var completion = new TaskCompletionSource<GuiProjectResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         if (!session.Pending.TryAdd(request.RequestId, completion)) throw new ArgumentException("Duplicate GUI request.");
+        if (request.Operation == GuiProjectOperation.ExportFrameSequence)
+            session.Progress[request.RequestId] = (connectionId, new() { IsProgress = true });
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct, session.Lifetime.Token);
         timeout.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
         try
@@ -67,7 +80,11 @@ public sealed class GuiProjectBroker : IDisposable
         }
         catch (OperationCanceledException) when (session.Lifetime.IsCancellationRequested)
         { throw new InvalidOperationException("The GUI project session was closed."); }
-        finally { session.Pending.TryRemove(request.RequestId, out _); }
+        finally
+        {
+            session.Pending.TryRemove(request.RequestId, out _);
+            session.Progress.TryRemove(request.RequestId, out _);
+        }
     }
 
     public async Task<GuiProjectWork> TakeAsync(Guid id, string owner, CancellationToken ct)
@@ -95,7 +112,14 @@ public sealed class GuiProjectBroker : IDisposable
     public void Complete(GuiProjectResult result, string owner)
     {
         CheckOwner(result.SessionId, owner);
-        if (Get(result.SessionId).Pending.TryGetValue(result.RequestId, out var completion)) completion.TrySetResult(result);
+        var session = Get(result.SessionId);
+        if (result.IsProgress)
+        {
+            if (session.Progress.TryGetValue(result.RequestId, out var progress))
+                session.Progress.TryUpdate(result.RequestId, (progress.ConnectionId, result), progress);
+            return;
+        }
+        if (session.Pending.TryGetValue(result.RequestId, out var completion)) completion.TrySetResult(result);
     }
 
     public void NotifyConnected(Guid id, string clientName)

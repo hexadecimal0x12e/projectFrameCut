@@ -33,7 +33,8 @@ namespace projectFrameCut.DraftStuff
                 Tag = "timing",
                 LazyContentFactory = () => BuildTimingOptions(clip, handler, out refreshTiming)
             });
-            if (!clip.isInfiniteLength && clip.ClipType != ClipMode.MarkingClip)
+            if (!clip.isInfiniteLength && clip.ClipType is not (ClipMode.MarkingClip or ClipMode.ProjectReferenceClip)
+                && !clip.ExtraData.ContainsKey(ProjectReferencePart.MetadataKey))
             {
                 tabs.TabItems.Add(new TabbedViewItem
                 {
@@ -76,7 +77,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             float fps = page.ProjectInfo.TargetFrameRate;
-            bool finite = !clip.isInfiniteLength && clip.maxFrameCount > 0;
+            bool finite = !clip.isInfiniteLength && clip.maxFrameCount > 0 && clip.ClipType != ClipMode.ProjectReferenceClip;
             bool extendToWhole = ReadExtendToWholeDraft(clip);
             bool updating = false;
             var stack = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(8) };

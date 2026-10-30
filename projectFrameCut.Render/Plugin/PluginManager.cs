@@ -198,6 +198,19 @@ namespace projectFrameCut.Render.Plugin
 
         public static IClip CreateClip(JsonElement source)
         {
+            var dto = source.Deserialize<ClipDraftDTO>();
+            if (dto?.MetaData is { } metadata)
+            {
+                int count = metadata.Count;
+                ClipInitializationFailure.Clear(metadata);
+                if (metadata.Count != count)
+                {
+                    source = JsonSerializer.SerializeToElement(dto);
+                    Log($"Cleared saved initialization failure for clip {dto.Name} ({dto.Id}).");
+                }
+            }
+            if (dto is not null && ProjectReferencePart.Read(dto.MetaData) is { } part)
+                return new ReferencePartClip(dto, part);
             var type = source.GetProperty("FromPlugin").GetString();
             var name = source.GetProperty("Name").GetString();
 
@@ -208,7 +221,6 @@ namespace projectFrameCut.Render.Plugin
 
             if (PluginManager.LoadedPlugins.TryGetValue(type, out var plugin))
             {
-                var dto = source.Deserialize<ClipDraftDTO>();
                 if (dto is not null && VideoClipRotation.Migrate(dto)) source = JsonSerializer.SerializeToElement(dto);
                 var clip = plugin.ClipCreator(source);
                 clip.ExtraData = dto?.MetaData ?? new();
@@ -229,6 +241,9 @@ namespace projectFrameCut.Render.Plugin
 
         public static ISoundTrack CreateSoundTrack(JsonElement source)
         {
+            var referenceDto = source.Deserialize<SoundtrackDTO>();
+            if (referenceDto is not null && ProjectReferencePart.Read(referenceDto.MetaData) is { } part)
+                return ProjectReferenceRuntime.CreateDetachedTrack(referenceDto, part);
             var type = source.GetProperty("FromPlugin").GetString();
             var name = source.GetProperty("Name").GetString();
 

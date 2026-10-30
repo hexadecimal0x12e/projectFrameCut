@@ -32,7 +32,8 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
 
     internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "plugin-isolation");
     internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "project-plugins");
-    internal static string ExternalSourceDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "project-external-sources");
+    internal static string ExternalSourceDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "project-external-sources");
+    internal static string CurrentProjectDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "CurrentProject");
     internal static SecurityIdentifier AppContainerSid => GetAppContainerSid(PackageFamilyName);
     internal static void PrepareExternalSourceAccess(string root)
     {
@@ -77,7 +78,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
 
         lock (DirectoryLinkLock)
         {
-            var linkPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, linkName);
+            var linkPath = Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, linkName);
             var link = new DirectoryInfo(linkPath);
             var existingTarget = link.LinkTarget;
             if (existingTarget is not null)
@@ -102,7 +103,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         var fullProjectRoot = Path.GetFullPath(projectRoot);
         lock (DirectoryLinkLock)
         {
-            var link = new DirectoryInfo(Path.Combine(ApplicationData.Current.LocalFolder.Path, "CurrentProject"));
+            var link = new DirectoryInfo(CurrentProjectDirectory);
             var linkTarget = link.LinkTarget;
             if (linkTarget is null || !string.Equals(Path.GetFullPath(linkTarget, link.Parent!.FullName), fullProjectRoot, StringComparison.OrdinalIgnoreCase)) return;
             link.Delete();
@@ -138,7 +139,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         var sessionRoot = Path.GetFullPath(context.SessionRoot);
         if (!string.Equals(Path.GetDirectoryName(sessionRoot), Path.GetFullPath(SessionDirectory), StringComparison.OrdinalIgnoreCase)
             || !Guid.TryParseExact(Path.GetFileName(sessionRoot), "N", out _))
-            throw new ArgumentException("The isolation session must be a unique directory under the current package LocalState.");
+            throw new ArgumentException("The isolation session must be a unique directory under the current package LocalCache.");
         if (Directory.Exists(sessionRoot)) throw new IOException("The isolation session directory already exists.");
         await Task.Run(() => EnsureSandyProfile(familyName, cancellationToken), cancellationToken).ConfigureAwait(false);
         var appContainerSid = GetAppContainerSid(familyName);
@@ -276,10 +277,8 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         if (!Directory.Exists(sourceRoot)) throw new DirectoryNotFoundException(sourceRoot);
         ValidatePathSegment(context.InstancePackageName, nameof(context.InstancePackageName));
         ValidatePathSegment(context.PluginId, nameof(context.PluginId));
-        var localState = Path.GetFullPath(ApplicationData.Current.LocalFolder.Path);
-        var localStatePrefix = localState.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (!sourceRoot.StartsWith(localStatePrefix, StringComparison.OrdinalIgnoreCase)
-            && !sourceRoot.StartsWith(Path.GetFullPath(ProjectPluginDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        if (!new[] { ApplicationData.Current.LocalFolder.Path, ProjectPluginDirectory, ExternalSourceDirectory }
+            .Any(root => sourceRoot.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
             throw new UnauthorizedAccessException("The isolated plugin must be installed below the current package plugin directories.");
 
         var expectedName = context.PluginId;

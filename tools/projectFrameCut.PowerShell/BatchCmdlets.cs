@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Management.Automation;
 using projectFrameCut.Render.Contracts;
 
@@ -13,6 +14,7 @@ public sealed class StartProjectBatchCommand : ProjectWriteCmdlet
 [Cmdlet(VerbsLifecycle.Complete, "ProjectBatch", SupportsShouldProcess = true)]
 public sealed class CompleteProjectBatchCommand : ProjectWriteCmdlet
 {
+    [Parameter(Mandatory = true)][ValidateLength(1, 512)] public override string? ChangeReason { get; set; }
     protected override GuiProjectOperation Operation => GuiProjectOperation.CompleteBatch;
     protected override bool ReturnResult => true;
 }

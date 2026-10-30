@@ -144,6 +144,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 ChangedClipID = clip.Id,
                 SourceId = clip.Id,
                 SourceName = clip.DisplayName,
+                Operator = ClipChangeOperatorKind.System,
                 Reason = ClipUpdateReason.PropertyChanged
             });
         });
@@ -156,7 +157,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             return false;
         }
 
-        DeleteAClip(clip);
+        DeleteAClip(clip, suppressClipChangedEvent: IsGuiRpcRequest);
         return true;
     }
 
@@ -172,6 +173,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 ChangedClipID = clip.Id,
                 SourceId = clip.Id,
                 SourceName = clip.DisplayName,
+                Operator = ClipChangeOperatorKind.System,
                 Reason = ClipUpdateReason.PropertyChanged
             });
         });
@@ -189,8 +191,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     internal Task RefreshPreviewFromCurrentProviderAsync() => RefreshPreviewFromCurrentProviderAsync(CancellationToken.None);
 
-    private async Task RefreshPreviewFromCurrentProviderAsync(CancellationToken cancellationToken)
+    private async Task RefreshPreviewFromCurrentProviderAsync(CancellationToken cancellationToken, bool throwOnFailure = false)
     {
+        throwOnFailure |= IsGuiRpcRequest;
         if ((ClipEditor.IsInteractiveManipulationInProgress || maskInteractivePreviewApplied)
             && Clips.Values.Any(c => c.ClipType == ClipMode.MaskClip))
         {
@@ -209,15 +212,16 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
         if (UseDynamicPreview)
         {
-            await RefreshDynamicPreviewOverlay();
+            await RefreshDynamicPreviewOverlay(throwOnFailure);
             return;
         }
 
-        await RenderOneFrame((uint)_currentFrame);
+        await RenderOneFrame((uint)_currentFrame, throwOnFailure: throwOnFailure);
     }
 
-    private async Task<bool> RefreshDynamicPreviewOverlay()
+    private async Task<bool> RefreshDynamicPreviewOverlay(bool throwOnFailure = false)
     {
+        throwOnFailure |= IsGuiRpcRequest;
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var overlayMark = new UserMarkRange("Preview.RefreshDynamicOverlay", $"frame={_currentFrame}");
 #endif
@@ -235,11 +239,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         catch (OperationCanceledException)
         {
+            if (throwOnFailure) throw;
             return false;
         }
         catch (Exception ex)
         {
             Log(ex, "Render one frame via DynamicPreview", this);
+            if (throwOnFailure) throw;
             if (AlreadyDisappeared || IsRenderBackendConnectionFailure(ex)) return false;
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
@@ -386,8 +392,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         return ImageSource.FromStream(() => new MemoryStream(content, writable: false));
     }
 
-    private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
+    private async Task RenderOneFrame(uint duration, int? width = null, int? height = null, bool throwOnFailure = false)
     {
+        throwOnFailure |= IsGuiRpcRequest;
         using var busy = new PreviewBusyScope(this);
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var frameMark = new UserMarkRange("Preview.StaticFrame", $"frame={duration}");
@@ -440,7 +447,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     ClipEditor.SetStaticPreviewVisible(false);
                 });
 
-                if (!await RefreshDynamicPreviewOverlay())
+                if (!await RefreshDynamicPreviewOverlay(throwOnFailure))
                 {
                     await RenderStaticPreviewProgressivelyAsync(duration, targetWidth, targetHeight, cts.Token);
                 }
@@ -463,6 +470,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         catch (OperationCanceledException)
         {
+            if (throwOnFailure) throw;
             // Superseded by a newer request → stay silent and let that request own the UI.
             // Only report a timeout when this render is still the active one.
             bool superseded;
@@ -478,6 +486,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         catch (Exception ex)
         {
             Log(ex, "Render one frame", this);
+            if (throwOnFailure) throw;
             if (AlreadyDisappeared || IsRenderBackendConnectionFailure(ex)) return;
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
@@ -1380,6 +1389,39 @@ public partial class DraftPage : ContentPage, IDraftPage
     private bool _clipPreviewViewportDirty = true;
     private bool _clipPreviewViewportQueued;
     private long _lastSlowClipPreviewViewportLog;
+    private Microsoft.Maui.Dispatching.IDispatcherTimer? _clipPreviewZoomTimer;
+    private bool _timelinePinching;
+    internal bool ClipPreviewsSuspendedForZoom { get; private set; }
+
+    private void SuspendClipPreviewsForZoom()
+    {
+        _clipPreviewZoomTimer?.Stop();
+        if (ClipPreviewsSuspendedForZoom) return;
+        ClipPreviewsSuspendedForZoom = true;
+        foreach (var preview in _activeClipPreviews.Values) preview.SetZoomSuspended(true);
+    }
+
+    private void ScheduleClipPreviewsAfterZoom()
+    {
+        if (_timelinePinching || !ClipPreviewsSuspendedForZoom || AlreadyDisappeared) return;
+        if (_clipPreviewZoomTimer is null)
+        {
+            _clipPreviewZoomTimer = Dispatcher.CreateTimer();
+            _clipPreviewZoomTimer.Interval = TimeSpan.FromMilliseconds(300);
+            _clipPreviewZoomTimer.IsRepeating = false;
+            _clipPreviewZoomTimer.Tick += ResumeClipPreviewsAfterZoom;
+        }
+        _clipPreviewZoomTimer.Stop();
+        _clipPreviewZoomTimer.Start();
+    }
+
+    private void ResumeClipPreviewsAfterZoom(object? sender, EventArgs e)
+    {
+        if (AlreadyDisappeared || _timelinePinching) return;
+        ClipPreviewsSuspendedForZoom = false;
+        foreach (var preview in _activeClipPreviews.Values) preview.SetZoomSuspended(false);
+        InvalidateClipPreviewViewport();
+    }
 
     private void InvalidateClipPreviewViewport()
     {
@@ -1389,7 +1431,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     internal void ScheduleClipPreviewViewportUpdate()
     {
-        if (_clipPreviewViewportQueued || AlreadyDisappeared) return;
+        if (_clipPreviewViewportQueued || AlreadyDisappeared || ClipPreviewsSuspendedForZoom) return;
         _clipPreviewViewportQueued = true;
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(16), () =>
         {
@@ -1401,13 +1443,18 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     private void ClipPreviewViewport_SizeChanged(object? sender, EventArgs e)
-        => ScheduleClipPreviewViewportUpdate();
+    {
+        UpdatePlayheadPosition();
+        RulerLayout.Invalidate();
+        ScheduleClipPreviewViewportUpdate();
+    }
 
     private void TracksAndClipsLayout_Scrolled(object? sender, ScrolledEventArgs e)
         => ScheduleClipPreviewViewportUpdate();
 
     private void RefreshClipPreviewViewport()
     {
+        if (ClipPreviewsSuspendedForZoom) return;
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var viewportMark = new UserMarkRange("Timeline.RefreshPreviewViewport", $"previews={_activeClipPreviews.Count}");
 #endif
@@ -1440,9 +1487,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (!Tracks.TryGetValue(trackId, out var track) || track.Parent is not VisualElement row) continue;
             double y = GetAbsolutePosition(row, TracksAndClipsLayout).Y - TracksAndClipsLayout.ScrollY;
             if (row.Height <= 0 || y + row.Height <= -ClipHeight || y >= TracksAndClipsLayout.Height + ClipHeight) continue;
-            var scroll = trackId >= SubTrackOffset ? SubTimelineScrollView : TimelineScrollView;
-            double left = scroll.ScrollX - 200;
-            double right = scroll.ScrollX + scroll.Width + 200;
+            double left = TimelineScrollView.ScrollX - 200;
+            double right = TimelineScrollView.ScrollX + TimelineScrollView.Width + 200;
             int low = 0;
             int high = index.Ends.Length;
             // Prefix ends also handle overlapping clips and different sublayers.
@@ -1457,7 +1503,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 var c = index.Clips[i];
                 if (c.Clip.TranslationX >= right) break;
                 if (c.Clip.Parent != track || !_activeClipPreviews.TryGetValue(c.Id, out var preview)) continue;
-                if (preview.NotifyScrollChanged(scroll.ScrollX, scroll.Width))
+                if (preview.NotifyScrollChanged(TimelineScrollView.ScrollX, TimelineScrollView.Width))
                     visible.Add(c.Id);
                 else
                 {
@@ -1482,6 +1528,14 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void ClearClipPreviews()
     {
+        if (_clipPreviewZoomTimer is not null)
+        {
+            _clipPreviewZoomTimer.Stop();
+            _clipPreviewZoomTimer.Tick -= ResumeClipPreviewsAfterZoom;
+            _clipPreviewZoomTimer = null;
+        }
+        ClipPreviewsSuspendedForZoom = false;
+        _timelinePinching = false;
         foreach (var preview in _activeClipPreviews.Values) preview.Dispose();
         _activeClipPreviews.Clear();
         _clipPreviewTracks.Clear();

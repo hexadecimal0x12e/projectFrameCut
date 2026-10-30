@@ -72,7 +72,8 @@ namespace projectFrameCut.DraftStuff
         internal uint? TimelineStartFrame { get; set; }
         internal DraftPage? TimingPage { get; private set; }
         private bool _projectingTiming;
-        internal ISpeedVarianceProvider? SpeedProvider => Effects?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
+        internal ISpeedVarianceProvider? SpeedProvider => ExtraData.ContainsKey(projectFrameCut.Render.RenderAPIBase.Project.ProjectReferencePart.MetadataKey)
+            ? null : Effects?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
         internal uint TimelineDuration => ClipTiming.EffectiveDuration(lengthInFrame, SpeedProvider);
         internal ulong TimelineEnd => (ulong)(TimelineStartFrame ?? 0) + TimelineDuration;
 
@@ -184,6 +185,7 @@ namespace projectFrameCut.DraftStuff
 
         public void UpdateSourceDuration()
         {
+            if (ClipType == ClipMode.ProjectReferenceClip) return;
             if (ClipType != ClipMode.VideoClip && ClipType != ClipMode.AudioClip && ClipType != ClipMode.ExtendClip)
             {
                 isInfiniteLength = true;
@@ -193,7 +195,7 @@ namespace projectFrameCut.DraftStuff
             if (ClipType == ClipMode.AudioClip && projectFrameCut.Render.EncodeAndDecode.RemoteRpcAudioSource.IsExternalPath(SourcePath)) return;
             try
             {
-                var src = PluginManager.CreateVideoSource(SourcePath, 8);
+                using var src = PluginManager.CreateVideoSource(SourcePath, 8);
                 maxFrameCount = (uint)src.TotalFrames;
 
             }
@@ -367,7 +369,9 @@ namespace projectFrameCut.DraftStuff
                 {
                     new Label
                     {
-                        Text = string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id.ToString()[^4..]}" : DisplayName,
+                        Text = ClipType == ClipMode.ProjectReferenceClip
+                            ? $"▣ {DisplayName} · {(projectFrameCut.Render.RenderAPIBase.Project.ProjectReference.Read(ExtraData)?.Mode == projectFrameCut.Render.RenderAPIBase.Project.ProjectReferenceMode.Linked ? Localized.ProjectReference_Linked : Localized.ProjectReference_Snapshot)}"
+                            : string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id.ToString()[^4..]}" : DisplayName,
                         LineBreakMode = LineBreakMode.TailTruncation,
                         MaxLines = 1,
                         HorizontalOptions = LayoutOptions.Center,

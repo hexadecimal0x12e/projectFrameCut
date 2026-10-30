@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Layouts;
 using Path = System.IO.Path;
 using Image = Microsoft.Maui.Controls.Image;
 using projectFrameCut.Asset;
@@ -22,6 +23,7 @@ namespace projectFrameCut.InteractableEditor
     {
         private const int PoolSpareTiles = 3;
         private const int PoolShrinkThreshold = 8;
+        private const int MaxVideoFrameBatch = 4;
         private static readonly SemaphoreSlim MetadataLoadGate = new(4);
         private readonly ClipMode _clipType = clip.ClipType;
         private readonly string? _sourcePath = clip.SourcePath;
@@ -36,13 +38,12 @@ namespace projectFrameCut.InteractableEditor
                 || _sourcePath != clip.SourcePath || _previewRoot is null || _previewRoot.Parent != clip.Clip.Content)
                 return false;
             if (_clipType == ClipMode.PhotoClip && _photoSourcePath != ResolvePhotoPath()) return false;
-            double height = clip.Clip.HeightRequest > 0 ? clip.Clip.HeightRequest
-                : clip.Clip.Height > 0 ? clip.Clip.Height : DraftPage.ClipHeight;
-            if (_clipType == ClipMode.VideoClip && Math.Abs(_videoPreviewHeight - height) > 0.1
+            if (_clipType == ClipMode.VideoClip && Math.Abs(_videoPreviewHeight - VideoPreviewHeight) > 0.1
                 || _clipType == ClipMode.PhotoClip && Math.Abs(_photoThumbHeight - Math.Max(28, clip.Clip.HeightRequest - 14)) > 0.1) return false;
             foreach (var label in _previewRoot.Children.OfType<Label>())
                 label.Text = clip.DisplayName ?? clip.Id.ToString();
             _metadataMissing = false;
+            _videoRequestedFrames.Clear();
             _lastFirst = -1;
             _lastLast = -1;
             page.ScheduleClipPreviewViewportUpdate();
@@ -62,13 +63,17 @@ namespace projectFrameCut.InteractableEditor
         // ── Video preview state ────────────────────────────────────────────
 
         private string? _videoThumbDir;
+        private string? _videoLocalThumbDir;
         private string? _videoLegacyThumbDir;
+        private CancellationTokenSource? _videoFrameCancellation;
+        private readonly HashSet<int> _videoRequestedFrames = [];
         private int _videoFrameWidth;
         private double _videoPreviewHeight;
         private int _videoCountOfFrame;
+        private (uint SourceStart, uint SourceLength, uint Duration, double PixelWidth, double SourceRate) _lastVideoTiming;
         private List<int>? _videoAvailableFrames;
         private AbsoluteLayout? _videoFrameContainer;
-        private readonly List<Border> _videoFramePool = [];
+        private readonly List<Image> _videoFramePool = [];
         private readonly List<int> _videoPoolFrames = [];
         private readonly List<int> _videoPoolTiles = [];
         private readonly Dictionary<int, ImageSource> _videoFrameSources = [];
@@ -91,6 +96,35 @@ namespace projectFrameCut.InteractableEditor
         private double _lastContentWidth = -1;
         private Grid? _previewRoot;
 
+        internal void SetZoomSuspended(bool suspended)
+        {
+            if (_disposed || _previewRoot is null) return;
+            if (suspended)
+                _videoFrameCancellation?.Cancel();
+            else
+            {
+                _lastContentWidth = -1;
+                _lastFirst = -1;
+                _lastLast = -1;
+            }
+            _previewRoot.IsVisible = !suspended;
+        }
+
+        private sealed class PreviewGrid : Grid
+        {
+            protected override ILayoutManager CreateLayoutManager() => new PreviewLayoutManager(this);
+        }
+
+        private sealed class PreviewLayoutManager(PreviewGrid grid) : GridLayoutManager(grid)
+        {
+            public override Size Measure(double widthConstraint, double heightConstraint)
+            {
+                var size = base.Measure(widthConstraint, heightConstraint);
+                // Native layout passes also use this manager; tiles must not widen the handle grid.
+                return new Size(double.IsFinite(widthConstraint) ? Math.Max(0, widthConstraint) : 0, size.Height);
+            }
+        }
+
         /// <summary>
         /// Updates the visible frame/tile range supplied by the page's viewport index.
         /// </summary>
@@ -108,6 +142,7 @@ namespace projectFrameCut.InteractableEditor
                 : _videoFrameContainer;
             if (previewContainer?.Parent is null)
                 return false;
+            if (page.ClipPreviewsSuspendedForZoom) return true;
 
             if (_clipType == ClipMode.VideoClip && _videoAvailableFrames is null
                 || _clipType == ClipMode.PhotoClip && _photoImageSource is null)
@@ -133,20 +168,36 @@ namespace projectFrameCut.InteractableEditor
         }
 
         /// <summary>
-        /// Global X of the content area (column 1) within the clip.
-        /// The clip Border has a 3-column Grid: [handle 30px] [content *] [handle 30px].
+        /// X of the preview in the horizontal timeline's scroll content.
         /// </summary>
         private double ContentGlobalStartX
         {
             get
             {
-                double tx = clip.Clip.TranslationX;
-                return double.IsNaN(tx) || double.IsInfinity(tx) ? 30 : tx + 30;
+                double x = ContentOffsetX;
+                for (VisualElement? e = clip.Clip; e is not null && e is not ScrollView; e = e.Parent as VisualElement)
+                    x += e.X + e.TranslationX;
+                return double.IsFinite(x) ? x : ContentOffsetX;
+            }
+        }
+
+        private double ContentOffsetX
+        {
+            get
+            {
+                if (_previewRoot is { Width: > 0, Parent: not null })
+                {
+                    double x = 0;
+                    for (VisualElement? e = _previewRoot; e is not null && e != clip.Clip; e = e.Parent as VisualElement)
+                        x += e.X + e.TranslationX;
+                    return x;
+                }
+                return 30 + clip.Clip.StrokeThickness + clip.Clip.Padding.Left;
             }
         }
 
         /// <summary>
-        /// Width of the content area inside the clip (clip width minus the two 30px handles).
+        /// Width inside the clip border, padding and two 30px handles.
         /// </summary>
         private double ContentWidth
         {
@@ -155,8 +206,25 @@ namespace projectFrameCut.InteractableEditor
                 double cw = clip.Clip.WidthRequest > 0
                     ? clip.Clip.WidthRequest
                     : (clip.origLength > 0 ? clip.origLength : Math.Max(60, clip.Clip.Width));
-                return Math.Max(1, cw - 60);
+                double width = Math.Max(0, cw - 60 - clip.Clip.StrokeThickness * 2 - clip.Clip.Padding.HorizontalThickness);
+                return _previewRoot is { Width: > 0, Parent: not null } ? Math.Min(width, _previewRoot.Width) : width;
             }
+        }
+
+        private double VideoPreviewHeight
+        {
+            get
+            {
+                double height = clip.Clip.HeightRequest > 0 ? clip.Clip.HeightRequest
+                    : clip.Clip.Height > 0 ? clip.Clip.Height : DraftPage.ClipHeight;
+                return Math.Max(1, height - clip.Clip.StrokeThickness * 2 - clip.Clip.Padding.VerticalThickness);
+            }
+        }
+
+        private static int GetPreviewTileCount(double width, int tileWidth)
+        {
+            int count = (int)Math.Floor(width / tileWidth);
+            return width - count * (double)tileWidth >= tileWidth / 3d ? count + 1 : count;
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -171,36 +239,34 @@ namespace projectFrameCut.InteractableEditor
             if (clip.SourcePath?.StartsWith('$') ?? false)
             {
                 var assetId = clip.SourcePath[1..];
-                if (AssetDatabase.Assets.TryGetValue(assetId, out var asset))
+                if (!page.Assets.ContainsKey(assetId) && AssetDatabase.Assets.TryGetValue(assetId, out var asset))
                 {
-                    thumbDir = Path.Combine(MauiProgram.DataPath, "My Assets", ".perAssetThumb", assetId);
+                    legacyThumbDir = Path.Combine(MauiProgram.DataPath, "My Assets", ".perAssetThumb", assetId);
                 }
             }
 
-            var rawClipHeight = clip.Clip.HeightRequest > 0
-                ? clip.Clip.HeightRequest
-                : (clip.Clip.Height > 0 ? clip.Clip.Height : DraftPage.ClipHeight);
-            var previewHeight = rawClipHeight;
+            var previewHeight = VideoPreviewHeight;
 
             _videoThumbDir = thumbDir;
+            _videoLocalThumbDir = thumbDir;
             _videoLegacyThumbDir = legacyThumbDir;
             _videoPreviewHeight = previewHeight;
 
             _videoFrameContainer = new AbsoluteLayout
             {
                 HeightRequest = previewHeight,
-                WidthRequest = ContentWidth,
                 InputTransparent = true,
                 IsClippedToBounds = true,
                 VerticalOptions = LayoutOptions.Fill,
                 HorizontalOptions = LayoutOptions.Fill,
             };
-            _previewRoot = new Grid
+            _previewRoot = new PreviewGrid
             {
+                IsVisible = !page.ClipPreviewsSuspendedForZoom,
                 HeightRequest = previewHeight,
-                WidthRequest = ContentWidth,
                 HorizontalOptions = LayoutOptions.Fill,
                 VerticalOptions = LayoutOptions.Fill,
+                IsClippedToBounds = true,
                 Padding = 0,
                 Children =
                 {
@@ -211,11 +277,13 @@ namespace projectFrameCut.InteractableEditor
                         HorizontalOptions = LayoutOptions.Center,
                         VerticalOptions = LayoutOptions.Center,
                         BackgroundColor = Color.FromRgba("#80808080"),
+                        LineBreakMode = LineBreakMode.TailTruncation,
                         MaxLines = 1
                     }
                 }
             };
             _previewRoot.Loaded += PreviewRoot_Loaded;
+            _previewRoot.SizeChanged += PreviewRoot_Loaded;
 
             return _previewRoot;
         }
@@ -292,7 +360,7 @@ namespace projectFrameCut.InteractableEditor
                     }
                     else
                     {
-                        _photoImageSource = ImageSource.FromFile(metadata.Path);
+                        _photoImageSource = CreateThumbnailSource(metadata.Path);
                         _photoImageWidth = metadata.Width;
                         UpdatePhotoLayoutMetrics();
                     }
@@ -341,9 +409,13 @@ namespace projectFrameCut.InteractableEditor
             return result;
         }
 
+        // Avoid WinRT StorageFile calls on the UI thread when a pooled image changes source.
+        private static ImageSource CreateThumbnailSource(string path)
+            => ImageSource.FromStream(token => Task.Run<Stream>(() => File.OpenRead(path), token));
+
         private void UpdateVideoVisibleFrames(double scrollX, double viewportWidth)
         {
-            if (_videoFrameContainer is null || _videoThumbDir is null || _videoAvailableFrames is null)
+            if (_videoFrameContainer is null || _videoThumbDir is null || _videoAvailableFrames is not { Count: > 0 })
                 return;
 
             double contentStart = ContentGlobalStartX;
@@ -372,31 +444,45 @@ namespace projectFrameCut.InteractableEditor
             if (_lastFirst == firstVisible && _lastLast == lastVisible)
                 return; // no change
 
-            bool refreshFrames = _lastFirst < 0;
+            if (_lastFirst >= 0)
+            {
+                _videoRequestedFrames.Clear();
+                if (firstVisible > _lastLast || lastVisible < _lastFirst)
+                    _videoFrameCancellation?.Cancel();
+            }
             _lastFirst = firstVisible;
             _lastLast = lastVisible;
 
-            int visibleCount = lastVisible - firstVisible + 1;
+            int visibleCount = Math.Max(0, lastVisible - firstVisible + 1);
             EnsureVideoFramePoolSize(visibleCount);
+            var missing = new HashSet<int>();
 
             // Keep each tile on the same view until it leaves the pooled range.
             for (int tileIndex = firstVisible; tileIndex <= lastVisible; tileIndex++)
             {
                 int poolIndex = tileIndex % _videoFramePool.Count;
                 bool moved = _videoPoolTiles[poolIndex] != tileIndex;
-                if (moved || refreshFrames)
+                int target = GetVideoSourceFrameForTile(tileIndex);
+                int index = _videoAvailableFrames.BinarySearch(target);
+                if (index < 0)
                 {
-                    int frame = GetVideoFrameForTile(tileIndex);
-                    if (_videoPoolFrames[poolIndex] != frame)
+                    if (missing.Count < MaxVideoFrameBatch && !_videoRequestedFrames.Contains(target))
+                        missing.Add(target);
+                    index = ~index;
+                    if (index == _videoAvailableFrames.Count || index > 0
+                        && target - _videoAvailableFrames[index - 1] <= _videoAvailableFrames[index] - target)
+                        index--;
+                }
+                int frame = _videoAvailableFrames[index];
+                if (_videoPoolFrames[poolIndex] != frame)
+                {
+                    _videoPoolFrames[poolIndex] = frame;
+                    if (!_videoFrameSources.TryGetValue(frame, out var source))
                     {
-                        _videoPoolFrames[poolIndex] = frame;
-                        if (!_videoFrameSources.TryGetValue(frame, out var source))
-                        {
-                            source = ImageSource.FromFile(Path.Combine(_videoThumbDir, $"{frame}.png"));
-                            _videoFrameSources[frame] = source;
-                        }
-                        ((Image)_videoFramePool[poolIndex].Content!).Source = source;
+                        source = CreateThumbnailSource(Path.Combine(_videoThumbDir, $"{frame}.png"));
+                        _videoFrameSources[frame] = source;
                     }
+                    _videoFramePool[poolIndex].Source = source;
                 }
 
                 if (moved)
@@ -410,52 +496,113 @@ namespace projectFrameCut.InteractableEditor
             for (int i = 0; i < _videoFramePool.Count; i++)
                 if ((_videoPoolTiles[i] < firstVisible || _videoPoolTiles[i] > lastVisible) && _videoFramePool[i].IsVisible)
                     _videoFramePool[i].IsVisible = false;
+            if (missing.Count > 0) StartVideoFrameLoad(missing.Order().ToList());
         }
 
         private void UpdateVideoLayoutMetrics()
         {
-            if (_videoFrameContainer is null || _videoFrameWidth <= 0)
+            if (page.ClipPreviewsSuspendedForZoom || _videoFrameContainer is null || _videoFrameWidth <= 0)
                 return;
 
             double contentWidth = ContentWidth;
-            if (Math.Abs(contentWidth - _lastContentWidth) < 0.1)
+            int count = GetPreviewTileCount(contentWidth, _videoFrameWidth);
+            var timing = (clip.relativeStartFrame, clip.lengthInFrame, page.GetClipFrameRange(clip).Duration,
+                page.FrameToPixel(1), page.ProjectInfo.TargetFrameRate * (double)clip.sourceSecondPerFrame);
+            if (count == _videoCountOfFrame && Math.Abs(contentWidth - _lastContentWidth) < 0.1 && timing.Equals(_lastVideoTiming))
                 return;
 
             _lastContentWidth = contentWidth;
-            _videoCountOfFrame = Math.Max(1, (int)Math.Ceiling(contentWidth / _videoFrameWidth));
-            _videoFrameContainer.WidthRequest = contentWidth;
-            if (_previewRoot is not null)
-                _previewRoot.WidthRequest = contentWidth;
+            _lastVideoTiming = timing;
+            _videoFrameCancellation?.Cancel();
+            _videoCountOfFrame = count;
+            for (int i = 0; i < _videoFramePool.Count; i++)
+                if (_videoPoolTiles[i] >= count) _videoFramePool[i].IsVisible = false;
             _lastFirst = -1;
             _lastLast = -1;
         }
 
-        private int GetVideoFrameForTile(int tileIndex)
+        private int GetVideoSourceFrameForTile(int tileIndex)
         {
-            if (_videoAvailableFrames is not { Count: > 0 })
-                return 0;
-
-            double progress = Math.Clamp(tileIndex * _videoFrameWidth / ContentWidth, 0, 1);
             uint duration = page.GetClipFrameRange(clip).Duration;
-            uint offset = (uint)Math.Round(progress * Math.Max(0, (long)duration - 1));
+            uint offset = Math.Min(page.PixelToFrame(ContentOffsetX + tileIndex * (double)_videoFrameWidth), duration > 0 ? duration - 1 : 0);
             uint sourceOffset = ClipTiming.SourceOffset(offset, clip.lengthInFrame, clip.SpeedProvider, duration);
             double sourceFrame = (ulong)clip.relativeStartFrame + sourceOffset;
             if (page.ProjectInfo.TargetFrameRate > 0 && float.IsFinite(clip.sourceSecondPerFrame) && clip.sourceSecondPerFrame > 0)
                 sourceFrame /= page.ProjectInfo.TargetFrameRate * (double)clip.sourceSecondPerFrame;
-            int target = (int)Math.Min(int.MaxValue, Math.Floor(sourceFrame + 1e-9));
-            int index = _videoAvailableFrames.BinarySearch(target);
-            if (index >= 0)
-                return _videoAvailableFrames[index];
+            return (int)Math.Clamp(Math.Floor(sourceFrame + 1e-9), 0, page.GetClipSourceFrameCount(clip) - 1);
+        }
 
-            index = ~index;
-            if (index == 0)
-                return _videoAvailableFrames[0];
-            if (index >= _videoAvailableFrames.Count)
-                return _videoAvailableFrames[^1];
+        private void StartVideoFrameLoad(List<int> frames)
+        {
+            if (_videoFrameCancellation is not null || _videoLocalThumbDir is null) return;
+            var sourcePath = clip.SourcePath;
+            if (string.IsNullOrWhiteSpace(sourcePath)) return;
+            if (sourcePath.StartsWith('$'))
+            {
+                if (!page.Assets.TryGetValue(sourcePath[1..], out var asset)
+                    && !AssetDatabase.Assets.TryGetValue(sourcePath[1..], out asset)) return;
+                sourcePath = asset.Path;
+            }
+            if (string.IsNullOrWhiteSpace(sourcePath)) return;
 
-            int before = _videoAvailableFrames[index - 1];
-            int after = _videoAvailableFrames[index];
-            return target - before <= after - target ? before : after;
+            var cts = _videoFrameCancellation = new CancellationTokenSource();
+            var token = cts.Token;
+            var directory = _videoLocalThumbDir;
+            int totalFrames = page.GetClipSourceFrameCount(clip);
+            foreach (int frame in frames) _videoRequestedFrames.Add(frame);
+            _ = Task.Run(async () =>
+            {
+                List<int>? available = null;
+                try
+                {
+                    await Task.Delay(100, token).ConfigureAwait(false);
+                    await page.previewer.GenerateTimelineThumbnailsAsync(clip.Id, sourcePath, totalFrames,
+                        1, MaxVideoFrameBatch, DraftPage.ThumbTargetWidth, token, frames).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Load visible timeline thumbnails for clip {clip.Id}", this);
+                }
+                finally
+                {
+                    try
+                    {
+                        available = GetNumericFrameFiles(directory, CancellationToken.None).Keys.Order().ToList();
+                    }
+                    catch (Exception ex) { Log(ex, $"Refresh timeline thumbnail cache for clip {clip.Id}", this); }
+                    page.Dispatcher.Dispatch(() =>
+                    {
+                        if (!ReferenceEquals(_videoFrameCancellation, cts))
+                        {
+                            cts.Dispose();
+                            return;
+                        }
+                        _videoFrameCancellation = null;
+                        cts.Dispose();
+                        if (_disposed) return;
+                        if (token.IsCancellationRequested)
+                            foreach (int frame in frames) _videoRequestedFrames.Remove(frame);
+                        if (available is { Count: > 0 })
+                        {
+                            if (_videoThumbDir != directory)
+                            {
+                                _videoThumbDir = directory;
+                                _videoFrameSources.Clear();
+                                for (int i = 0; i < _videoPoolFrames.Count; i++)
+                                {
+                                    _videoPoolFrames[i] = -1;
+                                    _videoFramePool[i].Source = null;
+                                }
+                            }
+                            _videoAvailableFrames = available;
+                        }
+                        _lastFirst = -1;
+                        _lastLast = -1;
+                        page.ScheduleClipPreviewViewportUpdate();
+                    });
+                }
+            });
         }
 
         private void EnsureVideoFramePoolSize(int requiredCount)
@@ -469,7 +616,7 @@ namespace projectFrameCut.InteractableEditor
             {
                 while (_videoFramePool.Count > target)
                 {
-                    ((Image)_videoFramePool[^1].Content!).Source = null;
+                    _videoFramePool[^1].Source = null;
                     _videoFrameContainer.Children.Remove(_videoFramePool[^1]);
                     _videoFramePool.RemoveAt(_videoFramePool.Count - 1);
                     _videoPoolFrames.RemoveAt(_videoPoolFrames.Count - 1);
@@ -481,23 +628,18 @@ namespace projectFrameCut.InteractableEditor
             {
                 while (_videoFramePool.Count < target)
                 {
-                    var border = new Border
+                    var image = new Image
                     {
-                        StrokeThickness = 1,
-                        Padding = 0,
-                        Margin = new(0),
+                        WidthRequest = _videoFrameWidth,
+                        HeightRequest = _videoPreviewHeight,
+                        Aspect = Aspect.AspectFit,
                         InputTransparent = true,
                         IsVisible = false,
-                        Content = new Image
-                        {
-                            InputTransparent = true,
-                            Aspect = Aspect.AspectFit,
-                        },
                     };
-                    _videoFramePool.Add(border);
+                    _videoFramePool.Add(image);
                     _videoPoolFrames.Add(-1);
                     _videoPoolTiles.Add(-1);
-                    _videoFrameContainer.Children.Add(border);
+                    _videoFrameContainer.Children.Add(image);
                 }
                 resized = true;
             }
@@ -542,19 +684,20 @@ namespace projectFrameCut.InteractableEditor
             _photoTileContainer = new AbsoluteLayout
             {
                 HeightRequest = thumbHeight,
-                WidthRequest = ContentWidth,
                 InputTransparent = true,
+                IsClippedToBounds = true,
                 VerticalOptions = LayoutOptions.Fill,
                 HorizontalOptions = LayoutOptions.Fill,
             };
-            _previewRoot = new Grid
+            _previewRoot = new PreviewGrid
             {
+                IsVisible = !page.ClipPreviewsSuspendedForZoom,
                 HeightRequest = thumbHeight,
-                WidthRequest = ContentWidth,
                 InputTransparent = true,
                 VerticalOptions = LayoutOptions.Center,
                 HorizontalOptions = LayoutOptions.Fill,
                 IsClippedToBounds = true,
+                Padding = 0,
             };
 
             _previewRoot.Children.Add(_photoTileContainer);
@@ -564,9 +707,11 @@ namespace projectFrameCut.InteractableEditor
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
                 BackgroundColor = Color.FromRgba("#80808080"),
+                LineBreakMode = LineBreakMode.TailTruncation,
                 MaxLines = 1,
             });
             _previewRoot.Loaded += PreviewRoot_Loaded;
+            _previewRoot.SizeChanged += PreviewRoot_Loaded;
 
             return _previewRoot;
         }
@@ -602,7 +747,7 @@ namespace projectFrameCut.InteractableEditor
             _lastFirst = firstVisible;
             _lastLast = lastVisible;
 
-            int visibleCount = lastVisible - firstVisible + 1;
+            int visibleCount = Math.Max(0, lastVisible - firstVisible + 1);
             EnsurePhotoTilePoolSize(visibleCount);
 
             for (int tileIndex = firstVisible; tileIndex <= lastVisible; tileIndex++)
@@ -624,25 +769,25 @@ namespace projectFrameCut.InteractableEditor
 
         private void UpdatePhotoLayoutMetrics()
         {
-            if (_photoTileContainer is null || _photoImageWidth <= 0)
+            if (page.ClipPreviewsSuspendedForZoom || _photoTileContainer is null || _photoImageWidth <= 0)
                 return;
 
             double contentWidth = ContentWidth;
-            if (Math.Abs(contentWidth - _lastContentWidth) < 0.1)
+            int count = GetPreviewTileCount(contentWidth, _photoImageWidth);
+            if (count == _photoCountOfTiles && Math.Abs(contentWidth - _lastContentWidth) < 0.1)
                 return;
 
             _lastContentWidth = contentWidth;
-            _photoCountOfTiles = Math.Max(1, (int)Math.Ceiling(contentWidth / _photoImageWidth));
-            _photoTileContainer.WidthRequest = contentWidth;
-            if (_previewRoot is not null)
-                _previewRoot.WidthRequest = contentWidth;
+            _photoCountOfTiles = count;
+            for (int i = 0; i < _photoTilePool.Count; i++)
+                if (_photoPoolTiles[i] >= count) _photoTilePool[i].IsVisible = false;
             _lastFirst = -1;
             _lastLast = -1;
         }
 
         private void PreviewRoot_Loaded(object? sender, EventArgs e)
         {
-            if (_disposed)
+            if (_disposed || page.ClipPreviewsSuspendedForZoom)
                 return;
 
             _lastFirst = -1;
@@ -696,6 +841,9 @@ namespace projectFrameCut.InteractableEditor
 
         public void Suspend()
         {
+            _videoFrameCancellation?.Cancel();
+            _videoFrameCancellation = null;
+            _videoRequestedFrames.Clear();
             if (_metadataLoading)
             {
                 _metadataLoading = false;
@@ -705,8 +853,8 @@ namespace projectFrameCut.InteractableEditor
             }
             _metadataMissing = false;
             if (_videoFramePool.Count == 0 && _photoTilePool.Count == 0) return;
-            foreach (var border in _videoFramePool)
-                ((Image)border.Content!).Source = null;
+            foreach (var image in _videoFramePool)
+                image.Source = null;
             foreach (var image in _photoTilePool)
                 image.Source = null;
             _videoFrameContainer?.Children.Clear();
@@ -730,7 +878,10 @@ namespace projectFrameCut.InteractableEditor
             _metadataCancellation?.Dispose();
             _metadataCancellation = null;
             if (_previewRoot is not null)
+            {
                 _previewRoot.Loaded -= PreviewRoot_Loaded;
+                _previewRoot.SizeChanged -= PreviewRoot_Loaded;
+            }
             _videoAvailableFrames = null;
             _videoFramePool.Clear();
             _videoPoolFrames.Clear();

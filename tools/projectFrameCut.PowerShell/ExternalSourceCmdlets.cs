@@ -18,6 +18,7 @@ public sealed class AddProjectExternalSourceCommand : ProjectWriteCmdlet
     [Parameter(Mandatory = true)][ValidateNotNullOrEmpty] public string FilePath { get; set; } = "";
     [Parameter] public Guid? ReplaceImportId { get; set; }
     [Parameter] public bool? Loaded { get; set; }
+    [Parameter] public bool? CopyToProject { get; set; }
 }
 
 [Cmdlet("Set", "ProjectExternalSource", SupportsShouldProcess = true, DefaultParameterSetName = "Project")]

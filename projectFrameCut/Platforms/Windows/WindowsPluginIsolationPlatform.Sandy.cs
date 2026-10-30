@@ -112,6 +112,8 @@ internal sealed partial class WindowsPluginIsolationPlatform
                 GrantSandyDirectory(SessionDirectory, FileSystemRights.ReadAndExecute, recursive: false);
                 Directory.CreateDirectory(ProjectPluginDirectory);
                 GrantSandyDirectory(ProjectPluginDirectory, FileSystemRights.ReadAndExecute);
+                Directory.CreateDirectory(ExternalSourceDirectory);
+                GrantSandyDirectory(ExternalSourceDirectory, FileSystemRights.ReadAndExecute);
                 LogDiagnostic($"Sandy profile '{profile}' ({familyName}) ready ({RuntimeInformation.ProcessArchitecture}, SID {GetAppContainerSid(familyName).Value}, capabilities {capabilityList}).");
             }
             finally { mutex.ReleaseMutex(); }

@@ -23,6 +23,7 @@ internal static class RenderCompletionNotifier
 
     public static void NotifyProgress(RenderJob job, bool force = false)
     {
+        if (job.SuppressNotifications) return;
         if (job.State is not (RenderJobState.Queued or RenderJobState.Running)) return;
 
         var progress = Math.Clamp(job.Progress, 0, 1);
@@ -87,6 +88,7 @@ internal static class RenderCompletionNotifier
 
     public static void NotifyCancelConfirmation(RenderJob job)
     {
+        if (job.SuppressNotifications) return;
 #if ANDROID
         try
         {
@@ -109,6 +111,7 @@ internal static class RenderCompletionNotifier
 
     public static void Notify(RenderJob job)
     {
+        if (job.SuppressNotifications) return;
         ProgressStates.TryRemove(job.JobId, out _);
 #if WINDOWS
         try

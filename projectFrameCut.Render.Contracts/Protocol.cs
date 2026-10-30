@@ -469,6 +469,7 @@ public sealed class TimelineThumbnailsRequest
     [ProtoMember(5)] public int IntervalFrames { get; set; } = 30;
     [ProtoMember(6)] public int MaxCount { get; set; } = 60;
     [ProtoMember(7)] public int Width { get; set; } = 320;
+    [ProtoMember(8)] public List<int> FrameIndices { get; set; } = [];
 }
 
 [ProtoContract]
@@ -667,6 +668,10 @@ public sealed class RenderProjectRequest
     [ProtoMember(10)] public string ProjectName { get; set; } = string.Empty;
     [ProtoMember(11)] public string OutputPath { get; set; } = string.Empty;
     [ProtoMember(12)] public bool Background { get; set; }
+    [ProtoMember(13)] public bool ExportFrameSequence { get; set; }
+    [ProtoMember(14)] public uint StartFrame { get; set; }
+    [ProtoMember(15)] public uint FrameCount { get; set; }
+    [ProtoMember(16)] public FrameSequenceRenderOptions? FrameSequenceOptions { get; set; }
 }
 
 [ProtoContract]
@@ -689,6 +694,10 @@ public sealed class RenderJob
     [ProtoMember(15)] public string Stage { get; set; } = string.Empty;
     [ProtoMember(16)] public long HashPreparationCompleted { get; set; }
     [ProtoMember(17)] public long HashPreparationTotal { get; set; }
+    [ProtoMember(18)] public List<RenderArtifact> FrameArtifacts { get; set; } = [];
+    [ProtoMember(19)] public long CompletedFrames { get; set; }
+    [ProtoMember(20)] public long TotalFrames { get; set; }
+    [ProtoMember(21)] public bool SuppressNotifications { get; set; }
 }
 
 [ProtoContract]

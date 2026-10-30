@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 using System.Collections.Concurrent;
@@ -356,11 +356,17 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
-        => await DraftChangedAsync(sender, e);
-
-    private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e, bool throwOnFailure = false)
     {
-        if (GuiBatchOverlay.IsVisible && e.DetailInfo != "RPC batch") return;
+        // RPC requests await their own draft update after applying all changes.
+        if (!IsGuiRpcRequest) await DraftChangedAsync(sender, e);
+    }
+
+    private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e, bool throwOnFailure = false,
+        CancellationToken cancellationToken = default)
+    {
+        throwOnFailure |= IsGuiRpcRequest || e.Operator == ClipChangeOperatorKind.ExternalRPC;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (IsGuiBatchOverlayVisible && e.DetailInfo != "RPC batch") return;
         if (e.DetailInfo == "__EFFECT_BINDING_CHANGED__")
         {
             if (!IsReadonly && !AlreadyDisappeared && !e.NoSave) ScheduleSnapshotSave(e);
@@ -372,7 +378,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         using var busy = new PreviewBusyScope(this);
         CancelGeneratedSoundTrackSync();
         if (AlreadyDisappeared) return;
-        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
+        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview(refreshPreview: false);
         if (AlreadyDisappeared) return;
         CancelDynamicPreview();
         DynamicPreviewProvider.CancelClipWarmups();
@@ -412,7 +418,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
             });
             if (AlreadyDisappeared) return;
-            if (!usePreparedRenderProject) await previewer.UpdateDraft(d);
+            if (!usePreparedRenderProject) await previewer.UpdateDraft(d, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             if (AlreadyDisappeared) return;
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
             TryMoveToInitialPreviewFrame(d);
@@ -426,18 +433,20 @@ public partial class DraftPage : ContentPage, IDraftPage
                 DynamicPreviewProvider.SetClips(previewer.Clips);
             }
             if (e.Reason == ClipUpdateReason.PropertyChanged)
-                await RefreshPreviewAfterPropertyChangeAsync();
+                await RefreshPreviewAfterPropertyChangeAsync(throwOnFailure || e.Operator != ClipChangeOperatorKind.User, cancellationToken);
             else
-                await RefreshPreviewFromCurrentProviderAsync();
+                await RefreshPreviewFromCurrentProviderAsync(cancellationToken, throwOnFailure || e.Operator != ClipChangeOperatorKind.User);
             if (AlreadyDisappeared) return;
             if (e.Reason == ClipUpdateReason.PropertyChanged && e.SourceId is Guid clipId && ShouldWarmClipPreview(e.DetailInfo))
                 StartClipPreviewWarmup(clipId);
             SetStatusText(Localized.DraftPage_ChangesApplied);
             SetStateOK();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (OperationCanceledException ex)
         {
             Log(ex, "Draft update cancelled during render RPC shutdown", this);
+            if (throwOnFailure) throw;
         }
         catch (Exception ex)
         {
@@ -445,6 +454,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (throwOnFailure) throw;
             if (AlreadyDisappeared || IsRenderBackendRecovering || IsRenderBackendConnectionFailure(ex)) return;
             SetStateFail(Localized._ExceptionTemplate(ex));
+            if (e.Operator != ClipChangeOperatorKind.User) return;
 #if DEBUG
             if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), "Throw", Localized._OK)) throw;
 #else
@@ -570,7 +580,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
-            HistorySubWindow.Content = new DraftSettingPage(this).HistoryTabContent;
+            HistorySubWindow.Content = new DraftSettingPage(this, historyOnly: true).HistoryTabContent;
             _historyPanelDirty = false;
         }
         catch (Exception ex)
@@ -590,7 +600,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             // relative to the page, and including that page offset would turn window movement
             // into an apparent timeline offset.
             var p = e.GetPosition(RulerLayout);
-            if (p is null) return;
+            if (p is null || p.Value.X < TrackHeadLayout.Width) return;
 
             double timelineX = p.Value.X - TrackHeadLayout.Width + TimelineScrollView.ScrollX;
             if (timelineX >= 0)
@@ -598,7 +608,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 // Clip edges and the snap grid are expressed in timeline-content coordinates,
                 // not viewport/page coordinates.
                 double snappedTimelineX = SnapPixels(timelineX);
-                var duration = PixelToFrame(snappedTimelineX);
+                var duration = EditPixelToFrame(snappedTimelineX);
                 _currentFrame = duration;
                 SyncClipEditorCurrentFrame();
                 UpdatePlayheadPosition();
@@ -629,18 +639,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void TimelineScrollView_Scrolled(object sender, ScrolledEventArgs e)
     {
-        if (sender == TimelineScrollView)
-        {
-            if (Math.Abs(SubTimelineScrollView.ScrollX - e.ScrollX) > 0.1)
-                SubTimelineScrollView.ScrollToAsync(e.ScrollX, 0, false);
-        }
-        else if (sender == SubTimelineScrollView)
-        {
-            if (Math.Abs(TimelineScrollView.ScrollX - e.ScrollX) > 0.1)
-                TimelineScrollView.ScrollToAsync(e.ScrollX, 0, false);
-        }
+        if (AlreadyDisappeared) return;
         UpdatePlayheadPosition(e.ScrollX);
-
+        RulerLayout.Invalidate();
         NotifyClipPreviewsScrollChanged(e.ScrollX);
     }
 
@@ -720,7 +721,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void UpdatePlayheadHeight()
     {
-        PlayheadLine.HeightRequest = (TrackContentLayout.Children.Count + SubTrackContentLayout.Children.Count) * ClipHeight;
+        PlayheadLine.HeightRequest = RulerLayout.HeightRequest + (TrackContentLayout.Children.Count + SubTrackContentLayout.Children.Count) * ClipHeight;
     }
 
     public void UpdateTimelineWidth()
@@ -741,8 +742,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         double minWidth = Math.Max(1000d, Window?.Width ?? 2000 + 200);
         if (maxPixel < minWidth) maxPixel = minWidth;
 
-        TrackContentLayout.WidthRequest = maxPixel;
-        SubTrackContentLayout.WidthRequest = maxPixel;
+        TimelineContentLayout.WidthRequest = maxPixel;
+        RulerLayout.Invalidate();
 
         // 更新所有ext endToWholeDraft的clips，使其能延伸到整个项目
         UpdateAllExtendToWholeDraftClips();
@@ -779,8 +780,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         => SaveCoreAsync(noSlot, args, throwOnFailure);
 
     private async Task SaveCoreAsync(bool noSlot, ClipUpdateEventArgs? args, bool throwOnFailure,
-        CancellationToken snapshotSaveToken = default, Guid requestedSnapshotId = default, Guid? previousSnapshotId = null)
+        CancellationToken snapshotSaveToken = default, Guid requestedSnapshotId = default, Guid? previousSnapshotId = null,
+        DraftStructureJSON? preparedDraft = null)
     {
+        throwOnFailure |= IsGuiRpcRequest || args?.Operator == ClipChangeOperatorKind.ExternalRPC;
         if (_guiBatch is not null && requestedSnapshotId == Guid.Empty) return;
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var saveMark = new UserMarkRange("Draft.Save", $"noSlot={noSlot}");
@@ -813,7 +816,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             List<AssetItem> assets = null!;
             await Dispatcher.DispatchAsync(() =>
             {
-                draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
+                draft = preparedDraft ?? DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
                 assets = Assets.Values.ToList();
             });
             var timelineModule = _workspace.GetModule<TimelineModule>();
@@ -840,6 +843,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 }
                 catch (RemoteRenderException ex) when (ex.ErrorCode == RenderErrorCode.VersionConflict)
                 {
+                    if (throwOnFailure) throw;
                     Log("Remote project was modified by another client; local changes conflict with the server.", "warn");
                     SetStateFail(Localized.DraftPage_RemoteProject_ModifiedOnServer);
                     if (!noSlot)
@@ -858,7 +862,13 @@ public partial class DraftPage : ContentPage, IDraftPage
                 return;
             }
 
-            if (!noSlot || args is not null || CurrentSnapshotID == Guid.Empty || FindSlotDirectory(CurrentSnapshotID) is null)
+            bool createSnapshot = !noSlot || args is not null || CurrentSnapshotID == Guid.Empty || FindSlotDirectory(CurrentSnapshotID) is null;
+            if (createSnapshot && await HasSameTimelineAsync(draft, assets, previousSnapshotId ?? CurrentSnapshotID))
+            {
+                createSnapshot = false;
+                LogDiagnostic("Timeline unchanged; skipping duplicate history snapshot.");
+            }
+            if (createSnapshot)
             {
                 var snapshotId = requestedSnapshotId == Guid.Empty ? Guid.NewGuid() : requestedSnapshotId;
                 var slot = $"slot_{snapshotId}";
@@ -884,7 +894,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (ProjectInfo.SnapshotIDMapping.TryGetValue(draft.PreviousSnapshot, out var prevEntry)
                     && !prevEntry.Next.Contains(snapshotId))
                     prevEntry.Next.Add(snapshotId);
-                if (MaximumSaveSlot >= 0) PruneOldestSaveSlots();
+                // A batch can still be rolled back until its commit finishes.
+                if (MaximumSaveSlot >= 0 && requestedSnapshotId == Guid.Empty) await PruneOldestSaveSlotsAsync();
                 _historyNavigatedByUndoRedo = false;
             }
             else
@@ -964,6 +975,41 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
     }
+
+    private async Task<bool> HasSameTimelineAsync(DraftStructureJSON draft, List<AssetItem> assets, Guid snapshotId)
+    {
+        var path = FindSlotDirectory(snapshotId);
+        if (path is null) return false;
+        try
+        {
+            await using var stream = File.OpenRead(Path.Combine(path, "timeline.json"));
+            var previous = await JsonSerializer.DeserializeAsync<DraftStructureJSON>(stream, savingOpts);
+            if (previous is null) return false;
+
+            // Compare timeline content without history metadata.
+            if (!System.Text.Json.Nodes.JsonNode.DeepEquals(GetTimelineContent(draft), GetTimelineContent(previous))) return false;
+            await using var assetStream = File.OpenRead(Path.Combine(path, "assets.json"));
+            var previousAssets = await JsonSerializer.DeserializeAsync<List<AssetItem>>(assetStream, savingOpts);
+            return System.Text.Json.Nodes.JsonNode.DeepEquals(
+                JsonSerializer.SerializeToNode(assets.OrderBy(a => a.AssetId), savingOpts),
+                JsonSerializer.SerializeToNode(previousAssets?.OrderBy(a => a.AssetId), savingOpts));
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Compare previous timeline snapshot failed", this);
+            return false;
+        }
+    }
+
+    private static System.Text.Json.Nodes.JsonNode? GetTimelineContent(DraftStructureJSON draft)
+        => JsonSerializer.SerializeToNode(new
+        {
+            draft.ProjectSettings,
+            draft.Clips,
+            draft.SoundTracks,
+            draft.Duration,
+            draft.AudioDuration
+        }, savingOpts);
 
     private List<SaveSlotMeta> GetSaveSlotsSortedByTime()
     {
@@ -1077,9 +1123,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (!File.Exists(timelinePath)) return DateTime.MinValue;
         try
         {
-            var tml = File.ReadAllText(timelinePath);
-            var draft = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
-            return draft?.SavedAt ?? DateTime.MinValue;
+            using var stream = File.OpenRead(timelinePath);
+            using var json = JsonDocument.Parse(stream);
+            return json.RootElement.TryGetProperty(nameof(DraftStructureJSON.SavedAt), out var value)
+                && value.ValueKind == JsonValueKind.String && value.TryGetDateTime(out var savedAt) ? savedAt : DateTime.MinValue;
         }
         catch { return DateTime.MinValue; }
     }
@@ -1109,17 +1156,17 @@ public partial class DraftPage : ContentPage, IDraftPage
         ProjectInfo.SnapshotIDMapping.Remove(id);
     }
 
-    private void PruneOldestSaveSlots()
+    private async Task PruneOldestSaveSlotsAsync()
     {
         var protectedSnapshots = ReadCurrentSnapshotRecords(WorkingPath).Select(r => r.SnapshotID).ToHashSet();
         protectedSnapshots.Add(CurrentSnapshotID);
         while (ProjectInfo.SnapshotIDMapping.Count > MaximumSaveSlot && MaximumSaveSlot >= 0)
         {
-            var leafToRemove = ProjectInfo.SnapshotIDMapping
+            var candidates = ProjectInfo.SnapshotIDMapping
                 .Where(kv => kv.Value.Next.Count == 0 && !protectedSnapshots.Contains(kv.Key))
-                .Select(kv => new { kv.Key, SavedAt = GetSlotSavedAt(kv.Key) })
-                .OrderBy(x => x.SavedAt)
-                .FirstOrDefault();
+                .Select(kv => kv.Key).ToArray();
+            var leafToRemove = await Task.Run(() => candidates.Select(id => new { Key = id, SavedAt = GetSlotSavedAt(id) })
+                .OrderBy(x => x.SavedAt).FirstOrDefault());
 
             if (leafToRemove is null || leafToRemove.Key == Guid.Empty) break;
 
@@ -1130,7 +1177,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 prevEntry.Next.Remove(leafToRemove.Key);
             }
 
-            DeleteSlotDirectory(leafToRemove.Key);
+            await Task.Run(() => DeleteSlotDirectory(leafToRemove.Key));
             ProjectInfo.SnapshotIDMapping.Remove(leafToRemove.Key);
         }
     }
@@ -1233,7 +1280,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (snapshotId == Guid.Empty) throw new ArgumentException("SnapshotId is required.");
         if (snapshotId == CurrentSnapshotID) return GetProjectHistoryState();
         if (FindSlotDirectory(snapshotId) is null) throw new KeyNotFoundException("Project history snapshot not found.");
-        await ApplySlot(snapshotId);
+        await ApplySlotAsync(snapshotId, throwOnFailure: true);
         if (CurrentSnapshotID != snapshotId) throw new InvalidOperationException("Project history snapshot could not be restored.");
         if (navigatedByUndoRedo) _historyNavigatedByUndoRedo = true;
         return GetProjectHistoryState();
@@ -1249,7 +1296,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         _activeHistoryProvider = provider;
     }
 
-    public async Task ApplySlot(Guid snapshotId)
+    public Task ApplySlot(Guid snapshotId) => ApplySlotAsync(snapshotId, IsGuiRpcRequest);
+
+    private async Task ApplySlotAsync(Guid snapshotId, bool throwOnFailure)
     {
         await saveLocker.WaitAsync();
         try
@@ -1314,13 +1363,14 @@ public partial class DraftPage : ContentPage, IDraftPage
             _workspace.GetModule<ProjectModule>().MarkDirty("Sync changes");
             _activeHistoryProvider?.NotifyExternalSnapshotChanged();
             RefreshHistorySubWindowContent();
-            await DraftChangedAsync(this, new() { DetailInfo = "Sync changes", NoSave = true });
+            await DraftChangedAsync(this, new() { DetailInfo = "Sync changes", NoSave = true }, throwOnFailure);
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
 
         }
         catch (Exception ex)
         {
             Log(ex, "apply changes", this);
+            if (throwOnFailure) throw;
             SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
         }
         finally

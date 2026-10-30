@@ -101,7 +101,7 @@ Disconnect-ProjectFrameCut
 
 时间参数均为项目帧，字幕条目的 `StartMilliseconds/EndMilliseconds/OffsetMilliseconds` 使用源内容内的毫秒。尺寸和位置分别用 `WidthPixels/HeightPixels/XPixels/YPixels`。查询名称按不区分大小写的子串匹配。动态字段用 `-Fields @{ FieldId = Value }`，先用 `Get-ProjectEffectProviderField -TypeName ...` 或 `Get-ProjectTextStyleField -StyleId ...` 查询字段。
 
-`Add-ProjectClip` 必须指定已有 `TrackId`，可选 FilePath、AssetId，或不指定来源创建空片段；默认起点 0，空片段默认长度 300 帧。文件路径相对 PowerShell 当前文件系统位置解析；素材导入复制到项目 assets 目录，移除素材记录不会删除源文件。复制片段默认放到源片段末尾，使用独立的效果实例。
+`Add-ProjectClip` 必须指定已有 `TrackId`，并在 `-FilePath` 与 `-AssetId` 中二选一，素材参数不接受空值或纯空白；默认起点 0。文件路径相对 PowerShell 当前文件系统位置解析；素材导入复制到项目 assets 目录，移除素材记录不会删除源文件。复制片段默认放到源片段末尾，使用独立的效果实例。
 
 写命令支持 `-WhatIf/-Confirm`、`-PassThru` 和 `-ChangeReason`，默认以 cmdlet 名称记录更改原因且不输出结果。所有项目命令支持 `-TimeoutSeconds`（默认 60）。项目关闭后连接失效，必须重新连接；模块不会自动重试写请求。超时或取消不能回滚已经开始执行的修改，可查询项目确认最终状态。
 
@@ -475,3 +475,25 @@ $clip | Get-ProjectClipFramePreview -FrameIndex 30
 | `BindedInputId/BindedOutputId` | `InputProviderId/IsFinalOutput` |
 | `Force` | 标准 PowerShell `-Confirm:$false`，不绕过 `-WhatIf` |
 | `Get-EnvironmentInfo` | `Get-ProjectTextStyle` 与 `Get-ProjectEffectProviderType` |
+
+### 导出节选预览帧
+
+连接 GUI 项目后，使用正式视频渲染器导出 PNG 序列（不输出音频）：
+
+```powershell
+Export-ProjectFrameSequence -StartFrame 120 -FrameCount 30 -WidthPixels 960 -HeightPixels 540 -TimeoutSeconds 300
+```
+
+范围为 `[StartFrame, StartFrame + FrameCount)`，单位为项目帧；省略尺寸时使用项目尺寸。每张图片返回 `Path`、`FrameIndex`、`WidthPixels`、`HeightPixels` 和 `FrameRate`。图片保存在项目 `Temp/FrameSequences` 下的独立目录，以项目帧号命名。批处理必须先完成或取消。超时或失败时，已经写出的图片会保留。
+
+`Export-ProjectFrameSequence` 通过 PowerShell 进度条显示渲染百分比和预计剩余时间，可使用 `-ProgressAction SilentlyContinue` 隐藏。
+
+### 导出节选音频
+
+连接 GUI 项目后，导出指定区间混音后的 PCM WAV 文件：
+
+```powershell
+Export-ProjectAudioSamples -StartFrame 120 -FrameCount 300 -SampleRate 48000 -Channels 2 -TimeoutSeconds 300
+```
+
+范围为 `[StartFrame, StartFrame + FrameCount)`，单位为项目帧，不能超出项目时长。默认采样率为 96000 Hz、双声道，使用 16 位 PCM；`SampleRate` 至少为 8000，`Channels` 为 1–8。返回 `Path`、`StartFrame`、`FrameCount`、`FrameRate`、`SampleRate`、`Channels` 和 `BitsPerSample`。文件保存在项目音频预览缓存中，相同内容和参数可复用缓存。项目中没有启用的音频源时会报错；批处理必须先完成或取消。

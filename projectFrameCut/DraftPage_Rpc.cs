@@ -29,8 +29,10 @@ public partial class DraftPage
 {
     #region Protocol and connect
     private readonly SemaphoreSlim _guiRegistrationGate = new(1, 1);
+    private readonly AsyncLocal<bool> _guiRpcRequest = new();
     private Guid _guiSessionId;
     private IRenderClient? _guiClient;
+    internal bool IsGuiRpcRequest => _guiRpcRequest.Value;
 
     #region external RPC
     private bool? externalRpcUiAllowed;
@@ -143,7 +145,7 @@ public partial class DraftPage
                     }
                     if (!string.IsNullOrWhiteSpace(work.ConnectedClientName))
                     {
-                        SetStatusText($"External RPC client connected: {work.ConnectedClientName}");
+                        SetStatusText(Localized.DraftPage_Rpc_Connected(work.ConnectedClientName));
                         continue;
                     }
                     if (work.Request is null) continue;
@@ -355,6 +357,10 @@ public partial class DraftPage
             case GuiProjectOperation.RestoreProjectHistory:
                 return await ApplyProjectHistorySnapshotAsync(G("SnapshotId"), false);
             case GuiProjectOperation.GetInfo: return Info();
+            case GuiProjectOperation.ExportFrameSequence:
+                return await ExportGuiFrameSequenceAsync(request, p, cancellationToken);
+            case GuiProjectOperation.ExportAudioSamples:
+                return await ExportGuiAudioSamplesAsync(request, p, cancellationToken);
             case GuiProjectOperation.GetFramePreview:
             case GuiProjectOperation.GetClipFramePreview:
                 return await GetGuiPreviewAsync(request, p, cancellationToken);
@@ -375,6 +381,9 @@ public partial class DraftPage
                     {
                         if (!Assets.TryGetValue(S("AssetId")!, out var asset)) throw new KeyNotFoundException("Asset not found.");
                         c = CreateFromAsset(asset, I("TrackId"), FrameToPixel(U("StartFrame")));
+                        RegisterClip(c, true);
+                        AddAClip(c);
+                        StartPerClipThumbGeneration(c);
                     }
                     else
                     {
@@ -410,6 +419,7 @@ public partial class DraftPage
                 }
             case GuiProjectOperation.RemoveClip:
                 if (!TimelineMcpLiveService.DeleteClip(this, Clip().Id)) throw new InvalidOperationException("Clip could not be removed.");
+                await RefreshSelectionUiAsync(refreshPreview: false);
                 result = null; break;
             case GuiProjectOperation.GetTrack:
                 return Tracks.Keys.OrderBy(x => x).Where(x => !Has("TrackId") || x == I("TrackId"))
@@ -434,7 +444,7 @@ public partial class DraftPage
                 {
                     var source = S("FilePath") ?? throw new ArgumentException("FilePath is required.");
                     if (!File.Exists(source)) throw new FileNotFoundException("Asset file not found.", source);
-                    var asset = await AddAsset(source, copyToProject: Has("CopyToProject") ? p.GetProperty("CopyToProject").GetBoolean() : null, name: S("Name"))
+                    var asset = await AddAsset(source, copyToProject: Has("CopyToProject") ? p.GetProperty("CopyToProject").GetBoolean() : false, name: S("Name"), interactive: false)
                         ?? throw new InvalidOperationException("Asset import was cancelled or failed.");
                     result = new { asset.AssetId, asset.Name, asset.Path }; break;
                 }
@@ -515,7 +525,7 @@ public partial class DraftPage
         var change = CreateGuiProjectChange(request);
         if (deferEffectRendering) change.DetailInfo = "__EFFECT_BINDING_CHANGED__";
         ForwardClipChangeToWorkspace(this, change);
-        await DraftChangedAsync(this, change);
+        await DraftChangedAsync(this, change, throwOnFailure: true, cancellationToken: cancellationToken);
         return result;
     }
 
@@ -627,19 +637,40 @@ public partial class DraftPage
                 var pending = await client.GetExternalRpcRequestAsync(timeout.Token).ConfigureAwait(false);
                 if (pending.ClaimId == Guid.Empty) continue;
                 var request = JsonSerializer.Deserialize<ExternalRpcRequest>(pending.Json)!;
-                var approved = request.IsPersistent || await MainThread.InvokeOnMainThreadAsync(async () =>
+                ExternalRpcClientAuthorization? authorization = null;
+                bool approved;
+                if (request.IsPersistent)
                 {
-                    if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
-                    if (!ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC) return false;
-                    return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
-                        Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
-                        Localized._OK, Localized._Cancel);
-                }).WaitAsync(ct).ConfigureAwait(false);
+                    try
+                    {
+                        var storePath = ExternalRpcAuthorizationStore.GetPath(Path.Combine(MauiProgram.BasicDataPath, "RpcRequest"));
+                        authorization = ExternalRpcAuthorizationStore.Find(storePath, request.ClientId);
+                        approved = authorization is not null && !authorization.Revoked && authorization.PublicKey == request.PublicKey;
+                        if (!approved) authorization = null;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "Resolve persistent external RPC authorization", this);
+                        approved = false;
+                        authorization = null;
+                    }
+                }
+                else
+                {
+                    approved = await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
+                        if (!ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC) return false;
+                        return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
+                            Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
+                            Localized._OK, Localized._Cancel);
+                    }).WaitAsync(ct).ConfigureAwait(false);
+                }
                 if (AlreadyDisappeared || ct.IsCancellationRequested) return;
                 ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
                 using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 responseTimeout.CancelAfter(TimeSpan.FromSeconds(10));
-                await client.ResolveExternalRpcRequestAsync(new() { ClaimId = pending.ClaimId, Approved = approved, GuiSessionId = sessionId }, responseTimeout.Token).ConfigureAwait(false);
+                await client.ResolveExternalRpcRequestAsync(new() { ClaimId = pending.ClaimId, Approved = approved, GuiSessionId = sessionId, Authorization = authorization }, responseTimeout.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch (Exception ex)
@@ -1025,10 +1056,9 @@ public partial class DraftPage
         if (operation == GuiProjectOperation.AddExternalSource)
         {
             ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
-            var copyToProject = a.Has("CopyToProject") ? a.Bool("CopyToProject") : await AssetDatabase.PickImportModeAsync(this);
-            if (copyToProject is null) throw new OperationCanceledException("External source import was cancelled.");
+            var copyToProject = a.Has("CopyToProject") ? a.Bool("CopyToProject") : false;
             var asset = await ProjectExternalSourceService.ImportAsync(this, a.String("FilePath")!,
-                a.Has("ReplaceImportId") ? a.Guid("ReplaceImportId") : null, a.Bool("Loaded", true), ct, copyToProject.Value);
+                a.Has("ReplaceImportId") ? a.Guid("ReplaceImportId") : null, a.Bool("Loaded", true), ct, copyToProject);
             await AddClipView.RefreshExternalSourcesAsync();
             var query = new GuiEditArgs(System.Text.Json.JsonSerializer.SerializeToElement(new { asset.ImportId }));
             return (await GuiExternalSourcesAsync(query, ct)).Single();
@@ -1146,6 +1176,9 @@ public partial class DraftPage
             return GuiClipSnapshot(dto);
         }
         var clip = CreateFromAsset(asset, a.Int("TrackId"), InternalPluginBase.InternalPluginBaseID, path, FrameToPixel(a.UInt("StartFrame")));
+        RegisterClip(clip, true);
+        AddAClip(clip);
+        StartPerClipThumbGeneration(clip);
         uint sourceStart = a.UInt("SourceStartFrame");
         if (!clip.isInfiniteLength && clip.maxFrameCount > 0)
         {
@@ -1441,6 +1474,11 @@ public partial class DraftPage
             return new[] { GuiClipSnapshot(current), GuiClipSnapshot(right) };
         }
         var before = Clips.Keys.ToHashSet();
+        if (current.ClipType == ClipMode.ProjectReferenceClip)
+        {
+            await UngroupProjectReferenceAsync(current, notify: false);
+            return Clips.Values.Where(c => !before.Contains(c.Id) && !c.IsGhost && !c.IsShadow).Select(GuiClipSnapshot).ToArray();
+        }
         if (current.ClipType == ClipMode.MarkingClip && ExtractGroupedClipIds(current).Count > 0)
         {
             var ids = ExtractGroupedClipIds(current).Select(Guid.Parse).ToArray();
@@ -1563,6 +1601,119 @@ public partial class DraftPage
             throw new InvalidOperationException("Transform input mode or neighboring clips are incompatible.");
         Logger.Log($"GUI RPC transform {provider.TypeName} on clip {clip.Id}/{side}: {mode}, {duration} frames.", "info");
         return GuiClipTransform(clip, side);
+    }
+    #endregion
+
+    #region keyframe
+    private static object GuiEffectSteps(Guid clipId, IKeyFramedEffectProvider provider, int? index = null)
+    {
+        var steps = provider.Steps;
+        if (index is { } i && (i < 0 || i >= steps.Count)) throw new ArgumentOutOfRangeException(nameof(index));
+        return new
+        {
+            ClipId = clipId,
+            ProviderId = provider.Id,
+            DefaultFields = provider.CreateStep(0).Fields.Values.Select(GuiField).ToArray(),
+            Steps = steps.Select((step, i) => new
+            {
+                StepIndex = i,
+                step.Progress,
+                Fields = step.Fields.Values.Select(GuiField).ToArray(),
+            }).Where(s => index is null || s.StepIndex == index).ToArray(),
+        };
+    }
+    #endregion
+
+    #region export
+    private async Task<object> ExportGuiFrameSequenceAsync(GuiProjectRequest request, JsonElement p, CancellationToken ct)
+    {
+        uint start = p.GetProperty("StartFrame").GetUInt32();
+        uint count = p.GetProperty("FrameCount").GetUInt32();
+        int width = p.TryGetProperty("WidthPixels", out var w) ? w.GetInt32() : ProjectInfo.RelativeWidth;
+        int height = p.TryGetProperty("HeightPixels", out var h) ? h.GetInt32() : ProjectInfo.RelativeHeight;
+        if (count == 0 || count > int.MaxValue || (ulong)start + count > ProjectDuration)
+            throw new ArgumentOutOfRangeException("FrameCount", "The requested range is outside the project timeline.");
+        if (width <= 0 || height <= 0) throw new ArgumentOutOfRangeException("WidthPixels");
+        int fps = checked((int)ProjectInfo.TargetFrameRate);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(request.TimeoutSeconds, 1, 3600)));
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false, rebuildEffects: false);
+        await previewer.UpdateDraft(draft, timeout.Token);
+        var options = new FrameSequenceRenderOptions
+        {
+            MaxThreads = RenderSchedulingSettings.MaxParallelWorkers,
+            AllowWorkerOversubscription = RenderSchedulingSettings.AllowWorkerOversubscription,
+            RenderAheadFrames = RenderSchedulingSettings.RenderAheadFrames,
+            EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
+            MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
+            EnableThreadAffinity = RenderSchedulingSettings.EnableThreadAffinity,
+            WorkerCPUCoreIndexs = RenderSchedulingSettings.WorkerCPUCoreIndexs,
+            GCOption = SettingsManager.GetSettingAs("render_GCOption", 0, 0),
+            ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
+            ResumeInterruptedRender = SettingsManager.IsBoolSettingTrueOrDefault("render_chunkResume", true),
+            LogProcessStack = SettingsManager.IsBoolSettingTrue("render_DumpDiagData"),
+            UseHDR = ProjectInfo.Properties.TryGetValue("EnableHDR", out var hdr) && bool.TryParse(hdr, out var enabled) && enabled,
+            MaximumHDRBrightness = ProjectInfo.Properties.TryGetValue("HdrMaximumBrightness", out var peak) && int.TryParse(peak, out var brightness) ? brightness : 1000,
+            SDRClipsBrightnessInHDRMode = ProjectInfo.Properties.TryGetValue("SdrClipBrightness", out var sdr) && int.TryParse(sdr, out var value) ? value
+                : ProjectInfo.Properties.TryGetValue("sdrClipBrightness", out var legacy) && int.TryParse(legacy, out var oldValue) ? oldValue : 203,
+        };
+        if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableChunkRender", false))
+        {
+            if (SettingsManager.GetSetting("render_chunkSizeMode", "frames") == "seconds")
+            {
+                double seconds = SettingsManager.GetSettingAs("render_chunkSeconds", 60d, 60d);
+                options.ChunkFrames = (uint)Math.Clamp(Math.Round((double.IsFinite(seconds) && seconds > 0 ? seconds : 60) * fps), 1, int.MaxValue);
+            }
+            else options.ChunkFrames = (uint)Math.Max(1, SettingsManager.GetSettingAs("render_chunkFrames", fps * 60, fps * 60));
+        }
+        var paths = await previewer.ExportFrameSequenceAsync(start, count, width, height, options, async job =>
+        {
+            await _guiClient!.CompleteGuiProjectWorkAsync(new()
+            {
+                SessionId = _guiSessionId,
+                RequestId = request.RequestId,
+                IsProgress = true,
+                PercentComplete = Math.Clamp((int)(job.Progress * 100), 0, 100),
+                SecondsRemaining = job.EstimatedRemainingTicks > 0
+                    ? (int)Math.Clamp(TimeSpan.FromTicks(job.EstimatedRemainingTicks).TotalSeconds, 0, int.MaxValue) : -1,
+            }, timeout.Token);
+        }, timeout.Token);
+        return paths.Select((path, i) => new
+        {
+            Path = path,
+            FrameIndex = start + (uint)i,
+            WidthPixels = width,
+            HeightPixels = height,
+            FrameRate = fps,
+        }).ToArray();
+    }
+
+    private async Task<object> ExportGuiAudioSamplesAsync(GuiProjectRequest request, JsonElement p, CancellationToken ct)
+    {
+        uint start = p.GetProperty("StartFrame").GetUInt32();
+        uint count = p.GetProperty("FrameCount").GetUInt32();
+        int sampleRate = p.TryGetProperty("SampleRate", out var sr) ? sr.GetInt32() : 96000;
+        int channels = p.TryGetProperty("Channels", out var ch) ? ch.GetInt32() : 2;
+        if (count == 0 || count > int.MaxValue || (ulong)start + count > ProjectDuration)
+            throw new ArgumentOutOfRangeException("FrameCount", "The requested range is outside the project timeline.");
+        if (sampleRate < 8000) throw new ArgumentOutOfRangeException("SampleRate");
+        if (channels is < 1 or > 8) throw new ArgumentOutOfRangeException("Channels");
+        int fps = checked((int)ProjectInfo.TargetFrameRate);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(request.TimeoutSeconds, 1, 3600)));
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false, rebuildEffects: false);
+        await previewer.UpdateDraft(draft, timeout.Token);
+        var path = await previewer.ExportAudioSamplesAsync(start, count, sampleRate, channels, timeout.Token);
+        return new
+        {
+            Path = path,
+            StartFrame = start,
+            FrameCount = count,
+            FrameRate = fps,
+            SampleRate = sampleRate,
+            Channels = channels,
+            BitsPerSample = 16,
+        };
     }
     #endregion
 

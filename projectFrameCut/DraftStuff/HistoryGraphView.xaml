@@ -27,6 +27,7 @@
 
             <!-- Graph view layer -->
             <Grid x:Name="GraphViewContainer"
+                  IsClippedToBounds="True"
                   SizeChanged="OnGraphViewSizeChanged">
                 <Grid.GestureRecognizers>
                     <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated"/>
@@ -47,9 +48,13 @@
 
             <!-- List view layer -->
             <ScrollView x:Name="ListViewContainer" IsVisible="False"
+                        Scrolled="OnListViewScrolled" SizeChanged="OnListViewSizeChanged"
                         BackgroundColor="#1e1e1e">
-                <VerticalStackLayout x:Name="ListContent" Spacing="0"/>
+                <AbsoluteLayout x:Name="ListContent"/>
             </ScrollView>
+
+            <ActivityIndicator x:Name="LoadingIndicator" IsVisible="False"
+                               Color="#4A9EFF" HorizontalOptions="Center" VerticalOptions="Center"/>
 
             <!-- Empty state hint (shared) -->
             <Label x:Name="EmptyHint" Text="No history available"

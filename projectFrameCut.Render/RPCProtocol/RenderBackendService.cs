@@ -271,25 +271,35 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 group => ResolveProjectSourcePath(root, group.Last().Path) ?? string.Empty,
                 StringComparer.Ordinal);
 
-        var sourceConfiguration = ComputeTextHash(JsonSerializer.Serialize(new
+        var sourceReuseConfiguration = ComputeTextHash(JsonSerializer.Serialize(new
         {
             request.ProjectJson, request.ProxyRoot, request.ProjectWidth, request.ProjectHeight, request.FrameRate,
             request.CacheNamespace,
-            Assets = assets.OrderBy(item => item.Key, StringComparer.Ordinal).ToArray(),
             ProjectSources = externalSources.CacheToken,
             RpcSources = ExternalVideoSourceRegistry.CacheToken,
             RpcAudioSources = ExternalAudioSourceRegistry.CacheToken,
             RpcMaskSources = ExternalMaskSourceRegistry.CacheToken,
             Effects = EffectHelper.ConfigurationRevision,
         }, _jsonOptions));
-        var reusable = previous is not null && previous.SourceConfiguration == sourceConfiguration && previous.ProjectRoot == root ? previous : null;
+        // Individual source paths also participate in clip/track signatures, so unrelated decoders can be retained.
+        var sourceConfiguration = ComputeTextHash(JsonSerializer.Serialize(new
+        {
+            sourceReuseConfiguration,
+            Assets = assets.OrderBy(item => item.Key, StringComparer.Ordinal).ToArray(),
+        }, _jsonOptions));
+        var reusable = previous is not null && previous.SourceReuseConfiguration == sourceReuseConfiguration && previous.ProjectRoot == root ? previous : null;
         var snapshotHash = ComputeTextHash($"{request.ProjectJson}\n{request.TimelineJson}");
-        if (reusable?.SnapshotHash == snapshotHash && reusable.Clips.All(clip => !ClipInitializationFailure.IsMarked(clip)))
+        if (reusable?.SnapshotHash == snapshotHash && reusable.SourceConfiguration == sourceConfiguration
+            && reusable.Clips.All(clip => !ClipInitializationFailure.IsMarked(clip))
+            && reusable.SoundTracks.All(track => !SoundTrackMetadata.IsSourceUnavailable(track.ExtraData)))
             return reusable.ToContract();
         await StopDynamicPreviewAsync(new() { SessionId = sessionId, ClearCache = true }, cancellationToken).ConfigureAwait(false);
         var clipSignatures = draft.Clips.Where(dto => dto.ClipType != ClipMode.MarkingClip)
-            .ToDictionary(dto => dto.Id, GetClipSignature);
-        var trackSignatures = draft.SoundTracks.ToDictionary(dto => dto.Id, dto => JsonSerializer.Serialize(dto, _jsonOptions));
+            .ToDictionary(dto => dto.Id, dto => GetClipSignature(dto, assets, root));
+        var trackSignatures = draft.SoundTracks.ToDictionary(dto => dto.Id, dto => JsonSerializer.Serialize(new
+        {
+            Track = dto, Source = ResolveSignatureSource(dto.FilePath ?? dto.MetaData?.GetValueOrDefault("FilePath")?.ToString(), assets, root),
+        }, _jsonOptions));
 
         IClip[] clips = [];
         ISoundTrack[] soundTracks = [];
@@ -342,7 +352,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             assets,
             snapshotHash,
             hashIndex,
-            cacheNamespace, sourceConfiguration, clipSignatures, trackSignatures);
+            cacheNamespace, sourceConfiguration, sourceReuseConfiguration, clipSignatures, trackSignatures);
         backendSession.ExternalSources = externalSources;
         backendSession.AudioSamples.Revision = () => backendSession.CacheNamespace;
 
@@ -369,10 +379,11 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         return backendSession.ToContract();
     }
 
-    private string GetClipSignature(ClipDraftDTO dto)
+    private string GetClipSignature(ClipDraftDTO dto, IReadOnlyDictionary<string, string> assets, string projectRoot)
     {
         VideoClipRotation.Migrate(dto);
         var json = (JsonObject)JsonSerializer.SerializeToNode(dto, _jsonOptions)!;
+        json["__ResolvedSourcePath"] = ResolveSignatureSource(dto.FilePath ?? dto.MetaData?.GetValueOrDefault("FilePath")?.ToString(), assets, projectRoot);
         json.Remove(nameof(dto.Rotation));
         if (dto.FromPlugin == InternalPluginBase.InternalPluginBaseID && dto.ClipType == ClipMode.VideoClip)
         {
@@ -382,6 +393,12 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             json.Remove(nameof(dto.TargetHeight));
         }
         return json.ToJsonString(_jsonOptions);
+    }
+
+    private static string? ResolveSignatureSource(string? path, IReadOnlyDictionary<string, string> assets, string projectRoot)
+    {
+        if (path?.StartsWith('$') == true && assets.TryGetValue(path[1..], out var asset)) path = asset;
+        return ResolveProjectSourcePath(projectRoot, path);
     }
 
     private static void DisposeResources(IEnumerable<IClip> clips, IEnumerable<ISoundTrack> tracks, BackendSession? retained)
@@ -678,7 +695,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var clips = snapshot is null ? sessionClips : sessionClips.Select(c => c.Id == clip.Id ? clip : c).ToArray();
             if (request.BeforeLayout && clip.GetRelativeFrameIndex(request.FrameIndex) is null)
                 throw new ArgumentOutOfRangeException(nameof(request.FrameIndex), "The frame is outside the clip's timeline interval.");
-            if (!request.BeforeLayout && TransformProcessing.HasActiveTransform(clip, GetVisualClips(clips), request.FrameIndex))
+            if (!request.BeforeLayout && (ProjectReferenceRuntime.IsCanvasClip(clip)
+                || TransformProcessing.HasActiveTransform(clip, GetVisualClips(clips), request.FrameIndex)))
             {
                 previewWidth = canvasWidth;
                 previewHeight = canvasHeight;
@@ -943,8 +961,10 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                                 Duration = length,
                             };
                             await Task.Run(() => composer.Compose(frameRate, sampleRate, channels, 40960, cancellationToken), cancellationToken).ConfigureAwait(false);
+                            cancellationToken.ThrowIfCancellationRequested();
                             writer.Finish();
                         }
+                        cancellationToken.ThrowIfCancellationRequested();
                         _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
                     }
                     finally
@@ -964,6 +984,9 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private RenderJob StartRenderProject(RenderProjectRequest request)
     {
         var session = GetSession(request.SessionId);
+        if (request.ExportFrameSequence && (request.FrameCount == 0 || request.FrameCount > int.MaxValue
+            || (ulong)request.StartFrame + request.FrameCount > session.Duration || request.Width <= 0 || request.Height <= 0))
+            throw new ArgumentOutOfRangeException(nameof(request.FrameCount));
         using var operation = session.BeginOperation();
         using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         var jobId = Guid.NewGuid();
@@ -978,6 +1001,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             ProjectName = string.IsNullOrWhiteSpace(request.ProjectName) ? session.ProjectName : request.ProjectName,
             OutputPath = request.OutputPath,
             Background = request.Background,
+            SuppressNotifications = request.ExportFrameSequence,
         }, PersistJobs);
         _jobs[jobId] = entry;
         PersistJobs();
@@ -993,6 +1017,11 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
             entry.Update(job => job.State = RenderJobState.Running);
             ReportProgress(entry);
+            if (request.ExportFrameSequence)
+            {
+                await RenderFrameSequenceAsync(session, request, entry, operation.Token).ConfigureAwait(false);
+                return;
+            }
             var safeName = SanitizeFileName(request.OutputFileName, "render.mp4");
             var relativePath = $"cache/render/{entry.JobId:N}/{safeName}";
             var segment = new TimelineSegmentRequest
@@ -1039,7 +1068,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         {
             PersistJobs();
             var snapshot = entry.Snapshot();
-            if (snapshot.State is RenderJobState.Completed or RenderJobState.Failed or RenderJobState.Canceled)
+            if (!request.ExportFrameSequence && snapshot.State is (RenderJobState.Completed or RenderJobState.Failed or RenderJobState.Canceled))
             {
                 try { _completionSink?.Invoke(snapshot); } catch (Exception ex) { Log(ex, "Render completion notification", this); }
             }
@@ -1137,6 +1166,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
 
     private void ReportProgress(JobEntry entry)
     {
+        if (entry.Snapshot().SuppressNotifications) return;
         try { _progressSink?.Invoke(entry.Snapshot()); }
         catch (Exception ex) { Log(ex, "Render progress notification", this); }
     }
@@ -1254,6 +1284,15 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (dto.ClipType == ClipMode.MarkingClip) continue;
+                ProjectReferenceRuntime.BindPart(dto.MetaData, projectRoot);
+                if (ProjectReferencePart.Read(dto.MetaData) is not null)
+                {
+                    var path = dto.FilePath;
+                    if (path?.StartsWith('$') == true && assets.TryGetValue(path[1..], out var asset)) path = asset;
+                    dto.FilePath = ResolveProjectSourcePath(projectRoot, path);
+                }
+                if (dto.ClipType == ClipMode.ProjectReferenceClip && ProjectReference.Read(dto.MetaData) is { } reference)
+                    dto.FilePath = Path.GetFullPath(Path.Combine(projectRoot, reference.SnapshotPath));
                 if (previous is not null && previous.ClipSignatures.TryGetValue(dto.Id, out var signature)
                     && signature == signatures[dto.Id] && oldClips!.TryGetValue(dto.Id, out var oldClip)
                     && !ClipInitializationFailure.IsMarked(oldClip))
@@ -1267,10 +1306,13 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 if (clip.ClipType == ClipMode.AudioClip) continue;
                 try
                 {
+                    if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData)) ClipInitializationFailure.Clear(clip);
                     clip.ReInit(IPicture.PicturePixelMode.Float16Picture);
-                    clip.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip);
-                    ClipInitializationFailure.Clear(clip);
-                    _previewClipInitializations.GetValue(clip, static _ => new()).PixelMode = IPicture.PicturePixelMode.Float16Picture.Value;
+                    if (!ClipInitializationFailure.IsMarked(clip))
+                    {
+                        clip.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip);
+                        _previewClipInitializations.GetValue(clip, static _ => new()).PixelMode = IPicture.PicturePixelMode.Float16Picture.Value;
+                    }
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
@@ -1298,8 +1340,16 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             foreach (var dto in draft.SoundTracks)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                ProjectReferenceRuntime.BindPart(dto.MetaData, projectRoot);
+                if (ProjectReferencePart.Read(dto.MetaData) is not null)
+                {
+                    var path = dto.FilePath;
+                    if (path?.StartsWith('$') == true && assets.TryGetValue(path[1..], out var asset)) path = asset;
+                    dto.FilePath = ResolveProjectSourcePath(projectRoot, path);
+                }
                 if (previous is not null && previous.TrackSignatures.TryGetValue(dto.Id, out var signature)
-                    && signature == signatures[dto.Id] && oldTracks!.TryGetValue(dto.Id, out var oldTrack))
+                    && signature == signatures[dto.Id] && oldTracks!.TryGetValue(dto.Id, out var oldTrack)
+                    && !SoundTrackMetadata.IsSourceUnavailable(oldTrack.ExtraData))
                 {
                     tracks.Add(oldTrack);
                     continue;
@@ -1333,6 +1383,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             }
             cancellationToken.ThrowIfCancellationRequested();
             SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log($"[RenderRPC] {message}", "warn"), cancellationToken: cancellationToken);
+            tracks.AddRange(clips.OfType<ProjectReferenceClip>().Where(c => !ClipInitializationFailure.IsMarked(c)).SelectMany(c => c.GetSoundTracks()));
             return tracks.ToArray();
         }
         catch
@@ -1350,7 +1401,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         if (!string.IsNullOrWhiteSpace(path) && path[0] != '#' && !string.IsNullOrWhiteSpace(proxyRoot))
         {
             var proxy = Path.Combine(proxyRoot, $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
-            if (File.Exists(proxy)) path = proxy;
+            // Only complete proxies are published with a .ready marker; never use a partial encode.
+            if (File.Exists(proxy) && File.Exists(proxy + ".ready")) path = proxy;
         }
         if (!string.IsNullOrWhiteSpace(path))
         {
@@ -1418,7 +1470,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         => session.SoundTracks.Any(track => SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true));
 
     private static IClip[] GetVisualClips(IEnumerable<IClip> clips)
-        => clips.Where(static clip => clip.ClipType != ClipMode.AudioClip).ToArray();
+        => ProjectReferenceRuntime.ExpandVisual(clips);
 
     private void InitializePreviewClips(IReadOnlyList<IClip> clips, IPicture.PicturePixelMode pixelMode, uint frameIndex, CancellationToken token)
     {
@@ -1629,7 +1681,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         Guid id, string projectRoot, string projectJson, string timelineJson, string projectName,
         int width, int height, int frameRate, uint duration, IClip[] clips, ISoundTrack[] soundTracks,
         IReadOnlyDictionary<string, string> assets, string snapshotHash, FrameHashIndex hashIndex,
-        string cacheNamespace, string sourceConfiguration, IReadOnlyDictionary<Guid, string> clipSignatures,
+        string cacheNamespace, string sourceConfiguration, string sourceReuseConfiguration, IReadOnlyDictionary<Guid, string> clipSignatures,
         IReadOnlyDictionary<string, string> trackSignatures) : IAsyncDisposable
     {
         public Guid Id { get; } = id;
@@ -1648,6 +1700,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         public string SnapshotHash { get; } = snapshotHash;
         public FrameHashIndex HashIndex { get; } = hashIndex;
         public string SourceConfiguration { get; } = sourceConfiguration;
+        public string SourceReuseConfiguration { get; } = sourceReuseConfiguration;
         public IReadOnlyDictionary<Guid, string> ClipSignatures { get; } = clipSignatures;
         public IReadOnlyDictionary<string, string> TrackSignatures { get; } = trackSignatures;
         public ProjectExternalSourceHost ExternalSources { get; set; } = null!;

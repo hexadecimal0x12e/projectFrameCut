@@ -39,6 +39,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -156,8 +157,11 @@ namespace projectFrameCut.DraftStuff
         public Task<TabbedView> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
             => BuildClipTabs(clip, handler, null);
 
+        internal Task<TabbedView> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, string? selectedTab)
+            => BuildClipTabs(clip, handler, null, selectedTab);
+
         private async Task<TabbedView> BuildClipTabs(ClipElementUI clip,
-            EventHandler<PropertyPanelPropertyChangedEventArgs> handler, ProjectAddClipView? addClipView)
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler, ProjectAddClipView? addClipView, string? selectedTab = null)
         {
             tabbedView = new();
             tabbedView.Background = page.Background;
@@ -170,7 +174,7 @@ namespace projectFrameCut.DraftStuff
                 Content = BuildGeneralTab(clip, handler),
                 Tag = "general"
             });
-            if (clip.ClipType is ClipMode.VideoClip or ClipMode.SolidColorClip or ClipMode.VectorCanvasClip
+            if (clip.ClipType is ClipMode.ProjectReferenceClip or ClipMode.VideoClip or ClipMode.SolidColorClip or ClipMode.VectorCanvasClip
                 or ClipMode.VectorComponentClip or ClipMode.MaskClip or ClipMode.TextClip or ClipMode.SubtitleClip
                 || clip.ClipType != ClipMode.MarkingClip && clip.SupportedStages.Contains(Stage.SourceReplacement))
                 tabs.Add(new TabbedViewItem
@@ -217,7 +221,7 @@ namespace projectFrameCut.DraftStuff
                 });
 
             }
-            if (clip.ClipType != ClipMode.MarkingClip)
+            if (clip.ClipType is not (ClipMode.MarkingClip or ClipMode.ProjectReferenceClip))
             {
                 tabs.Add(new TabbedViewItem
                 {
@@ -282,13 +286,17 @@ namespace projectFrameCut.DraftStuff
                 });
             }
             var order = GetTabOrder();
-            tabbedView.TabItems = new(tabs.OrderBy(t =>
+            tabs = tabs.OrderBy(t =>
             {
                 var i = Array.IndexOf(order, t.Tag);
                 return i < 0 ? int.MaxValue : i;
-            }));
+            }).ToList();
+            // Keep lazy-load failures in the awaited RPC request instead of a tab's async void handler.
+            if (page.IsGuiRpcRequest && tabs.Count > 0)
+                await LoadTabContentAsync(tabs.FirstOrDefault(t => t.Tag == (selectedTab ?? lastSelectedTab)) ?? tabs[0]);
+            tabbedView.TabItems = new(tabs);
             tabbedView.OnTabSwitched += (_, item) => lastSelectedTab = item.Tag;
-            if (!string.IsNullOrEmpty(lastSelectedTab)) tabbedView.SelectByTag(lastSelectedTab);
+            if (!string.IsNullOrEmpty(selectedTab ?? lastSelectedTab)) tabbedView.SelectByTag(selectedTab ?? lastSelectedTab);
 
             tabbedView.HeaderRightContent = new Button
             {
@@ -308,6 +316,14 @@ namespace projectFrameCut.DraftStuff
             };
 
             return tabbedView;
+        }
+
+        private static async Task LoadTabContentAsync(TabbedViewItem tab)
+        {
+            if (tab.Content is not null) return;
+            tab.Content = tab.LazyContentFactory?.Invoke();
+            if (tab.Content is null && tab.LazyAsyncContentFactory is not null)
+                tab.Content = await tab.LazyAsyncContentFactory();
         }
 
         public async Task<TabbedView> BuildFixed(
@@ -774,6 +790,15 @@ namespace projectFrameCut.DraftStuff
             return ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, false);
         }
 
+        private sealed class SourceAspectCache
+        {
+            public (string Path, ClipMode Type, long Length, DateTime Modified) Key;
+            public double Aspect;
+            public long RetryAt;
+        }
+
+        private static readonly ConditionalWeakTable<ClipElementUI, SourceAspectCache> SourceAspects = new();
+
         public static bool TryGetSourceAspectRatio(ClipElementUI clip, ConcurrentDictionary<string, AssetItem>[] assetDict, out double aspect)
         {
             aspect = 0;
@@ -818,59 +843,50 @@ namespace projectFrameCut.DraftStuff
                 }
             }
 
+            if (asset is null && !string.IsNullOrWhiteSpace(clip.SourcePath))
+                asset = assetDict.SelectMany(d => d.Values).FirstOrDefault(a => a.Width > 0 && a.Height > 0
+                    && string.Equals(a.Path, clip.SourcePath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+
             if (asset != null && asset.Width > 0 && asset.Height > 0)
             {
                 aspect = (double)asset.Width / asset.Height;
                 return aspect > 0;
             }
-            else if (File.Exists(clip.SourcePath))
-            {
-                if (clip.ClipType == ClipMode.PhotoClip)
-                {
-                    try
-                    {
-                        using var img = PictureFP16.Load(clip.SourcePath);
-                        aspect = (double)img.Width / img.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-                if (clip.ClipType == ClipMode.VideoClip)
-                {
-                    try
-                    {
-                        var vid = PluginManager.CreateVideoSource(clip.SourcePath, 8);
-                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-            }
-            else if (asset?.Path is not null && File.Exists(asset?.Path))
-            {
-                if (clip.ClipType == ClipMode.PhotoClip)
-                {
-                    try
-                    {
-                        using var img = PictureFP16.Load(asset.Path);
-                        aspect = (double)img.Width / img.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-                if (clip.ClipType == ClipMode.VideoClip)
-                {
-                    try
-                    {
-                        var vid = PluginManager.CreateVideoSource(asset.Path, 8);
-                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
-                        return aspect > 0;
-                    }
-                    catch { }
-                }
-            }
 
-            return false;
+            var path = asset?.Path ?? clip.SourcePath;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return false;
+            var cache = SourceAspects.GetValue(clip, static _ => new());
+            lock (cache)
+            {
+                try
+                {
+                    var file = new FileInfo(path);
+                    var key = (file.FullName, clip.ClipType, file.Length, file.LastWriteTimeUtc);
+                    if (cache.Key != key || cache.Aspect <= 0 && Environment.TickCount64 >= cache.RetryAt)
+                    {
+                        cache.Key = key;
+                        cache.Aspect = 0;
+                        cache.RetryAt = Environment.TickCount64 + 5000;
+                        if (clip.ClipType == ClipMode.PhotoClip)
+                        {
+                            using var img = PictureFP16.Load(path);
+                            if (img.Width > 0 && img.Height > 0) cache.Aspect = (double)img.Width / img.Height;
+                        }
+                        else
+                        {
+                            using var vid = PluginManager.CreateVideoSource(path, 8);
+                            if (vid.Width > 0 && vid.Height > 0) cache.Aspect = (double)vid.Width / vid.Height;
+                        }
+                    }
+                    aspect = cache.Aspect;
+                    return aspect > 0;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Read source dimensions for clip {clip.Id}: {path}", nameof(ClipInfoBuilder));
+                    return false;
+                }
+            }
         }
 
         private class DummyEffectProvider : IEffectProvider

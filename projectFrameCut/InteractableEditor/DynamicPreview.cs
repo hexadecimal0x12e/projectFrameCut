@@ -727,7 +727,8 @@ public sealed class DynamicPreview : IDisposable
         long renderedAt = 0;
         try
         {
-            bool canvasPreview = TransformProcessing.HasActiveTransform(request.Clip, _clips ?? [request.Clip], frameIndex);
+            bool canvasPreview = ProjectReferenceRuntime.IsCanvasClip(request.Clip)
+                || TransformProcessing.HasActiveTransform(request.Clip, _clips ?? [request.Clip], frameIndex);
             if (_previewer is not null)
             {
                 clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);

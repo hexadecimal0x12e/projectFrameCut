@@ -1291,7 +1291,7 @@ public partial class DraftPage
             Logger.Log($"Effect graph on clip {clip.Id} is incomplete: {string.Join(" ", errors.Select(e => e.Message))}", "warning");
         }
         if (batchClip is null) Logger.Log($"GUI RPC {operation} updated clip {clip.Id}: {providers.Count} providers, {groups.Count} groups, {errors.Count} binding diagnostics.", "info");
-        if (clip.Live is not null) RefreshPropertyPanel(clip.Live);
+        if (clip.Live is not null) await RefreshPropertyPanelAsync(clip.Live);
         if (resultProvider != Guid.Empty)
         {
             if (stepResult) return GuiEffectSteps(clip.Id, (IKeyFramedEffectProvider)providers[resultProvider]);

@@ -96,7 +96,7 @@ public sealed class AudioSampleSource(IClip[] clips, ISoundTrack[] tracks, int f
                     foreach (var track in tracks)
                         if ((track.SamplePerSecond <= 0 || changed.Contains(track))
                             && SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true)
-                            && ClipInitializationFailure.GetStage(track.ExtraData) != "ExternalSourceUnavailable")
+                            && (!SoundTrackMetadata.IsSourceUnavailable(track.ExtraData) || changed.Contains(track)))
                         {
                             token.ThrowIfCancellationRequested();
                             SoundTrackMetadata.ReInit(track);

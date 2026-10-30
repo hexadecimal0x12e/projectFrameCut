@@ -515,7 +515,7 @@ public sealed partial class RenderBackendService
         {
             if (_state.PackagingWorkers.Length > 0)
             {
-                _renderClips = GetVisualClips(_state.Clips);
+                _renderClips = _state.Clips.Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
                 _workerLimit = _state.WorkerLimit;
                 _renderAheadFrames = _state.RenderAheadFrames;
                 LogDiagnostic($"[DynamicPreview] Reusing {_state.Workers.Count} clip workers and {_state.Frames.Count} clip frames for {PlaybackId}.");
@@ -562,7 +562,7 @@ public sealed partial class RenderBackendService
             _state.RenderAheadFrames = _renderAheadFrames;
             _state.Clips = await Task.Run(() => _owner.CreateClips(draft, _session.Assets, string.Empty,
                 _session.ProjectRoot, token, null, _session.ClipSignatures), token).ConfigureAwait(false);
-            _renderClips = GetVisualClips(_state.Clips);
+            _renderClips = _state.Clips.Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
             await Task.Run(() => _owner.InitializePreviewClips(_renderClips, PixelMode, _request.StartFrame, token), token).ConfigureAwait(false);
             foreach (var clip in _renderClips) _state.Workers.Add(clip.Id, new(clip));
             int[]? affinity = _request.WorkerCPUCoreIndexs;
@@ -853,7 +853,7 @@ public sealed partial class RenderBackendService
                     _request.ProjectWidth, _request.ProjectHeight, job.Frame, token, PixelMode,
                     initializeClips: false, keepHwAccelPicture: true)
                     ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
-                bool positioned = TransformProcessing.HasActiveTransform(clip, _renderClips, job.Frame);
+                bool positioned = ProjectReferenceRuntime.IsCanvasClip(clip) || TransformProcessing.HasActiveTransform(clip, _renderClips, job.Frame);
                 if (MemoryOnly) return new(job, clip.Id, null, positioned, false, Render());
                 if (!_request.UsePreviewMetadata)
                 {

@@ -17,11 +17,13 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System.Reflection;
+using System.Diagnostics;
+using System.Text.Json;
 
 
 namespace projectFrameCut.DraftStuff;
 
-public class DraftSettingPage
+public partial class DraftSettingPage
 {
     #region init
 
@@ -37,12 +39,15 @@ public class DraftSettingPage
     public TabbedView tabView;
     public DraftPage parent;
 
-    public DraftSettingPage(DraftPage parent)
+    public DraftSettingPage(DraftPage parent) : this(parent, false) { }
+
+    internal DraftSettingPage(DraftPage parent, bool historyOnly)
     {
         tabView = new();
         tabView.HeadersPanel.BackgroundColor = Colors.Transparent;
         this.parent = parent;
-        Build();
+        if (historyOnly) HistoryTabContent = BuildHistoryGraphTab();
+        else Build();
     }
 
     public DraftSettingPage(string projectPath)
@@ -63,6 +68,12 @@ public class DraftSettingPage
             {
                 Header = Localized.DraftSettingPage_Tab_ClipMgnt,
                 Content = BuildClipAndAssetManageTab()
+            });
+            tabView.TabItems.Add(new TabbedViewItem
+            {
+                Header = Localized.DraftSettingPage_AssetFiles_Title,
+                Tag = "assetFiles",
+                LazyAsyncContentFactory = () => Task.FromResult(BuildAssetFilesTab())
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
@@ -116,11 +127,6 @@ public class DraftSettingPage
             Tag = "messages",
             Content = BuildHistoryLogsTab()
         });
-        //tabView.TabItems.Add(new TabbedViewItem
-        //{
-        //    Header = Localized.DraftSettingPage_Tab_Compatibility,
-        //    Content = BuildCompatibilityTab()
-        //});
         if (ProjectExternalSourceService.AllowRpcSources || ProjectExternalSourceService.AllowAssemblySources)
             tabView.TabItems.Add(new TabbedViewItem
             {
@@ -128,6 +134,12 @@ public class DraftSettingPage
                 Tag = "externalSources",
                 LazyAsyncContentFactory = BuildExternalSourcesTabAsync
             });
+        tabView.TabItems.Add(new TabbedViewItem
+        {
+            Header = Localized.DraftSettingPage_AssetFiles_Title,
+            Tag = "assetFiles",
+            LazyAsyncContentFactory = () => Task.FromResult(BuildAssetFilesTab())
+        });
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.MainSettingsPage_Tab_Misc,
@@ -824,26 +836,15 @@ public class DraftSettingPage
 
     public View BuildHistoryGraphTab(bool listOnly = false)
     {
-        // Standalone mode (no DraftPage) — use builder directly, read-only
-        if (IsStandaloneJsonMode)
-        {
-            var standData = HistoryGraphDataBuilder.BuildStandalone(standaloneProjectPath);
-            var standaloneGraph = new HistoryGraphView();
-            standaloneGraph.ViewMode = HistoryViewMode.List;
-            standaloneGraph.LoadHistory(standData.Nodes, standData.Edges,
-                standData.Nodes.Count > 0 ? standData.Nodes[0].SnapshotID : Guid.Empty);
-            HistoryTabContent = standaloneGraph;
-            return standaloneGraph;
-        }
-
-        var provider = new DraftHistoryGraphProvider(parent);
-        parent.RegisterHistoryProvider(provider);
-        var (graphNodes, graphEdges) = provider.BuildGraphData();
-
-        var historyView = new HistoryGraphView(provider);
-        if (listOnly)
+        var provider = IsStandaloneJsonMode ? null : new DraftHistoryGraphProvider(parent);
+        var historyView = provider is null ? new HistoryGraphView() : new HistoryGraphView(provider);
+        if (listOnly || IsStandaloneJsonMode)
             historyView.ViewMode = HistoryViewMode.List;
-        historyView.LoadHistory(graphNodes, graphEdges, parent.CurrentSnapshotID);
+        if (provider is not null)
+            parent.RegisterHistoryProvider(provider);
+        historyView.LoadHistoryWhenVisible(provider is null
+            ? () => Task.Run(() => HistoryGraphDataBuilder.BuildStandalone(standaloneProjectPath!))
+            : provider.BuildGraphDataAsync);
 
         HistoryTabContent = historyView;
         return historyView;
@@ -1320,56 +1321,7 @@ public class DraftSettingPage
     }
 
     internal List<SaveSlotHistoryItem> ReadSaveSlotHistory()
-    {
-        if (parent is null || string.IsNullOrWhiteSpace(parent.WorkingPath))
-        {
-            return [];
-        }
-
-        string saveSlotsPath = System.IO.Path.Combine(parent.WorkingPath, SaveSlotDirectoryName);
-        if (!System.IO.Directory.Exists(saveSlotsPath))
-        {
-            return [];
-        }
-
-        var result = new List<SaveSlotHistoryItem>();
-        foreach (var slotPath in System.IO.Directory.GetDirectories(saveSlotsPath, "slot_*"))
-        {
-            string timelinePath = System.IO.Path.Combine(slotPath, "timeline.json");
-            if (!System.IO.File.Exists(timelinePath))
-            {
-                continue;
-            }
-
-            try
-            {
-                string json = System.IO.File.ReadAllText(timelinePath);
-                var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, DraftPage.DraftJSONOption);
-                if (draft is null || draft.SnapshotID == Guid.Empty)
-                {
-                    continue;
-                }
-
-                result.Add(new SaveSlotHistoryItem
-                {
-                    SnapshotID = draft.SnapshotID,
-                    SavedAt = draft.SavedAt,
-                    ChangeReason = draft.ChangeReason,
-                    ChangedBy = string.IsNullOrWhiteSpace(draft.ChangedByUserDisplayName) ? "Anonymous" : draft.ChangedByUserDisplayName,
-                    ChangedByUserID = draft.ChangedByUser
-                });
-            }
-            catch
-            {
-                // Ignore broken slot files and continue loading other records.
-            }
-        }
-
-        return result
-            .OrderByDescending(i => i.SavedAt)
-            .ThenByDescending(i => i.SnapshotID)
-            .ToList();
-    }
+        => HistoryGraphDataBuilder.ReadSaveSlotHistoryFromPath(ResolveJsonProjectRoot());
 
     #endregion
 
@@ -1403,9 +1355,12 @@ public class DraftSettingPage
             return new ScrollView { Content = errorLayout };
         }
 
+        var missingFiles = ProjectAssetFile.Collect(draft, assets, projectRoot).Where(f => f.IsMissing).ToArray();
         var clips = GetEditableClipDtos(draft)
             .Where(c => IsRealClipId(c.Id))
-            .OrderBy(c => c.LayerIndex)
+            .OrderByDescending(c => missingFiles.Any(f => f.Matches(c.FilePath
+                ?? c.MetaData?.GetValueOrDefault("FilePath")?.ToString(), projectRoot)))
+            .ThenBy(c => c.LayerIndex)
             .ThenBy(c => c.StartFrame)
             .ToList();
 
@@ -1469,7 +1424,8 @@ public class DraftSettingPage
             });
         }
 
-        foreach (var asset in assets.OrderBy(a => a.Name))
+        foreach (var asset in assets.OrderByDescending(a => missingFiles.Any(f => f.AssetIds.Contains(a.AssetId ?? string.Empty)
+            || f.Matches(a.Path, projectRoot))).ThenBy(a => a.Name))
         {
             root.Children.Add(BuildStandaloneAssetEditorCard(asset, draft, clips, assets, projectRoot));
         }
@@ -2015,6 +1971,192 @@ public class DraftSettingPage
         return frame;
     }
 
+    #endregion
+
+    #region asset
+    private View BuildAssetFilesTab()
+    {
+        var rows = new VerticalStackLayout { Spacing = 10, Padding = 10 };
+        var refresh = new Button { Text = Localized.DraftSettingPage_ExternalSources_Refresh };
+        var missingOnly = new CheckBox();
+        var status = new Label { LineBreakMode = LineBreakMode.WordWrap };
+        var panel = new Grid
+        {
+            RowSpacing = 8,
+            RowDefinitions = [new RowDefinition { Height = GridLength.Auto }, new RowDefinition { Height = GridLength.Auto }, new RowDefinition { Height = GridLength.Star }]
+        };
+        panel.Add(new HorizontalStackLayout
+        {
+            Spacing = 8,
+            Children = { refresh, missingOnly, new Label { Text = Localized.DraftSettingPage_AssetFiles_MissingOnly, VerticalOptions = LayoutOptions.Center } }
+        }, 0, 0);
+        panel.Add(status, 0, 1);
+        panel.Add(new ScrollView { Content = rows }, 0, 2);
+        bool busy = false;
+
+        async Task RefreshAsync()
+        {
+            if (busy) return;
+            busy = true;
+            panel.IsEnabled = false;
+            rows.Clear();
+            try
+            {
+                var (draft, assets) = ReadAssetFileData();
+                var files = await Task.Run(() => ProjectAssetFile.Collect(draft, assets, ResolveJsonProjectRoot()));
+                status.Text = Localized.DraftSettingPage_AssetFiles_Summary(files.Count, files.Count(f => f.IsMissing));
+                foreach (var file in files.Where(f => !missingOnly.IsChecked || f.IsMissing))
+                {
+                    var relink = new Button
+                    {
+                        Text = Localized.DraftSettingPage_AssetFiles_Relink,
+                        IsEnabled = IsStandaloneJsonMode || !parent.IsReadonly,
+                        HorizontalOptions = LayoutOptions.Start
+                    };
+                    relink.Clicked += async (_, _) => await RelinkAsync(file);
+                    rows.Add(new Border
+                    {
+                        Padding = 10,
+                        Stroke = Colors.Gray,
+                        StrokeThickness = 1,
+                        StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                        Content = new VerticalStackLayout
+                        {
+                            Spacing = 5,
+                            Children =
+                            {
+                                new Label { Text = file.Name, FontAttributes = FontAttributes.Bold },
+                                new Label { Text = file.Path, LineBreakMode = LineBreakMode.CharacterWrap, FontSize = 12 },
+                                new Label
+                                {
+                                    Text = file.IsMissing ? Localized.DraftSettingPage_AssetFiles_Missing : Localized.DraftSettingPage_AssetFiles_Available,
+                                    TextColor = file.IsMissing ? Colors.OrangeRed : Colors.Green
+                                },
+                                new Label { Text = Localized.DraftSettingPage_AssetFiles_References(file.ReferenceCount), FontSize = 12 },
+                                relink
+                            }
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "List project asset files", this);
+                status.Text = Localized._ExceptionTemplate(ex);
+            }
+            finally
+            {
+                busy = false;
+                panel.IsEnabled = true;
+            }
+        }
+
+        async Task RelinkAsync(ProjectAssetFile file)
+        {
+            if (busy || !IsStandaloneJsonMode && parent.IsReadonly) return;
+            busy = true;
+            panel.IsEnabled = false;
+            try
+            {
+                var selected = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = Localized.DraftSettingPage_AssetFiles_Relink });
+                if (selected is null) return;
+                status.Text = Localized.DraftPage_ApplyingChanges;
+                var timer = Stopwatch.StartNew();
+                var replacement = await Task.Run(() => file.ReadReplacement(selected.FullPath));
+                LogDiagnostic($"[AssetRelink] Validate '{selected.FullPath}': {timer.ElapsedMilliseconds}ms.");
+                if (IsStandaloneJsonMode)
+                {
+                    var (draft, assets) = ReadAssetFileData();
+                    file.Remap(draft, assets, replacement, ResolveJsonProjectRoot());
+                    await SaveStandaloneAssetFilesAsync(draft, assets);
+                }
+                else await parent.RelinkAssetFileAsync(file, replacement);
+                Log($"Relinked project asset file '{file.Path}' to '{replacement.Path}' ({file.ReferenceCount} references).");
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Relink project asset file", this);
+                if (GetHostPage() is Page page)
+                    await page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+            finally
+            {
+                busy = false;
+                panel.IsEnabled = true;
+                await RefreshAsync();
+            }
+        }
+
+        refresh.Clicked += async (_, _) => await RefreshAsync();
+        missingOnly.CheckedChanged += async (_, _) => await RefreshAsync();
+        _ = RefreshAsync();
+        return panel;
+    }
+
+    private (DraftStructureJSON Draft, List<AssetItem> Assets) ReadAssetFileData()
+    {
+        if (!IsStandaloneJsonMode)
+            return (DraftImportAndExportHelper.ExportFromDraftPage(parent, rebuildEffects: false), parent.Assets.Values.ToList());
+        string root = ResolveJsonProjectRoot();
+        var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(ResolveStandaloneProjectFilePath()), DraftPage.DraftJSONOption)
+            ?? throw new InvalidDataException("Project metadata is invalid.");
+        return ProjectSnapshotStore.ReadForRender(root, project, DraftPage.DraftJSONOption, "latest");
+    }
+
+    private async Task SaveStandaloneAssetFilesAsync(DraftStructureJSON draft, List<AssetItem> assets)
+    {
+        string root = ResolveJsonProjectRoot();
+        string projectPath = ResolveStandaloneProjectFilePath();
+        var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projectPath), DraftPage.DraftJSONOption)
+            ?? throw new InvalidDataException("Project metadata is invalid.");
+        project.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(root, DraftPage.DraftJSONOption);
+        if (project.SnapshotIDMapping.Count == 0)
+            project.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(root, DraftPage.DraftJSONOption);
+        draft.PreviousSnapshot = draft.SnapshotID;
+        draft.SnapshotID = Guid.NewGuid();
+        draft.SavedAt = DateTime.Now;
+        draft.ChangeReason = Localized.DraftSettingPage_AssetFiles_Relink;
+        project.LastSnapshotID = draft.SnapshotID;
+        project.LastChanged = draft.SavedAt;
+        project.NormallyExited = true;
+        project.SnapshotIDMapping[draft.SnapshotID] = new() { Previous = draft.PreviousSnapshot };
+        if (project.SnapshotIDMapping.TryGetValue(draft.PreviousSnapshot, out var previous)) previous.Next.Add(draft.SnapshotID);
+        string slotName = $"slot_{draft.SnapshotID}";
+        string slotPath = System.IO.Path.Combine(root, "saveSlots", slotName);
+        var record = DraftPage.CreateCurrentSnapshotRecord(draft, slotName);
+        record.Sequence = (DraftPage.ReadCurrentSnapshotRecords(root).FirstOrDefault()?.Sequence ?? 0) + 1;
+        record.UpdatedAtUtc = DateTime.UtcNow;
+        var writes = new Dictionary<string, string>
+        {
+            [System.IO.Path.Combine(slotPath, "timeline.json")] = JsonSerializer.Serialize(draft, DraftPage.DraftJSONOption),
+            [System.IO.Path.Combine(slotPath, "assets.json")] = JsonSerializer.Serialize(assets, DraftPage.DraftJSONOption),
+            [System.IO.Path.Combine(root, "timeline.json")] = JsonSerializer.Serialize(draft, DraftPage.DraftJSONOption),
+            [System.IO.Path.Combine(root, "assets.json")] = JsonSerializer.Serialize(assets, DraftPage.DraftJSONOption),
+            [System.IO.Path.Combine(root, ProjectJSONStructure.SnapshotMappingFileName)] = JsonSerializer.Serialize(project.SnapshotIDMapping, DraftPage.DraftJSONOption),
+            [projectPath] = JsonSerializer.Serialize(project, DraftPage.DraftJSONOption),
+            [System.IO.Path.Combine(root, "saveSlots", $"current-{(record.Sequence - 1) % ProjectSnapshotStore.CurrentSnapshotSlotCount}.json")] = JsonSerializer.Serialize(record, DraftPage.DraftJSONOption)
+        };
+        var originals = new Dictionary<string, string?>();
+        try
+        {
+            foreach (var (path, json) in writes)
+            {
+                originals[path] = File.Exists(path) ? await File.ReadAllTextAsync(path) : null;
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+                await File.WriteAllTextAsync(path + ".tmp", json);
+                File.Move(path + ".tmp", path, true);
+            }
+        }
+        catch
+        {
+            foreach (var (path, json) in originals.Reverse())
+            {
+                if (json is null) File.Delete(path);
+                else await File.WriteAllTextAsync(path, json);
+            }
+            throw;
+        }
+    }
     #endregion
 
     #region update

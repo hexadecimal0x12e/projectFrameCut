@@ -23,45 +23,6 @@ using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.Rendering
 {
-    public sealed class RenderClipSession : IDisposable
-    {
-        private readonly HashSet<Guid> preparedEffects = new();
-        private readonly ConcurrentDictionary<Guid, byte> initializedClips = new();
-        private bool disposed;
-
-        public RenderClipSession(IClip[] clips)
-        {
-            Clips = clips ?? throw new ArgumentNullException(nameof(clips));
-            Log($"[Render] Reusing {Clips.Length} clips across chunks.");
-        }
-
-        public IClip[] Clips { get; }
-
-        internal void PrepareEffects(IClip clip)
-        {
-            ObjectDisposedException.ThrowIf(disposed, this);
-            if (preparedEffects.Contains(clip.Id)) return;
-            EffectHelper.ResolveClipEffects(clip);
-            preparedEffects.Add(clip.Id);
-        }
-
-        internal bool IsInitialized(IClip clip) => initializedClips.ContainsKey(clip.Id) && !ClipInitializationFailure.IsMarked(clip);
-        internal void MarkInitialized(IClip clip) => initializedClips.TryAdd(clip.Id, 0);
-
-        public void Dispose()
-        {
-            if (disposed) return;
-            disposed = true;
-            foreach (var clip in Clips)
-            {
-                try { EffectHelper.ReleaseClipEffects(clip); }
-                catch (Exception ex) { Log(ex, $"Release render effects for clip {clip.Id}", nameof(RenderClipSession)); }
-                try { clip.Dispose(); }
-                catch (Exception ex) { Log(ex, $"Release clip {clip.Id}", nameof(RenderClipSession)); }
-            }
-        }
-    }
-
     public partial class Renderer : IRenderContext
     {
         #region opts
@@ -1006,7 +967,7 @@ namespace projectFrameCut.Render.Rendering
                         x += (int)Math.Round((pos.TargetWidth - frame.Width) / 2d);
                         y += (int)Math.Round((pos.TargetHeight - frame.Height) / 2d);
                     }
-                    if (result is null && clip.Clip.MixtureInstance is not DynamicMixtureGraph
+                    if (result is null && clip.Clip.MixtureInstance is not (DynamicMixtureGraph or ReferenceMixture)
                         && x == 0 && y == 0 && frame.Width == TargetWidth && frame.Height == TargetHeight)
                         result = frame;
                     else
@@ -2498,5 +2459,47 @@ namespace projectFrameCut.Render.Rendering
         public static int LimitWorkers(int requested, long clipBytes, long budget)
             => (int)Math.Clamp(budget / Math.Max(1, clipBytes), 1, Math.Max(1, requested));
     }
+    #endregion
+
+    #region RenderClipSession
+    public sealed class RenderClipSession : IDisposable
+    {
+        private readonly HashSet<Guid> preparedEffects = new();
+        private readonly ConcurrentDictionary<Guid, byte> initializedClips = new();
+        private bool disposed;
+
+        public RenderClipSession(IClip[] clips)
+        {
+            Clips = clips ?? throw new ArgumentNullException(nameof(clips));
+            Log($"[Render] Reusing {Clips.Length} clips across chunks.");
+        }
+
+        public IClip[] Clips { get; }
+
+        internal void PrepareEffects(IClip clip)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            if (preparedEffects.Contains(clip.Id)) return;
+            EffectHelper.ResolveClipEffects(clip);
+            preparedEffects.Add(clip.Id);
+        }
+
+        internal bool IsInitialized(IClip clip) => initializedClips.ContainsKey(clip.Id) && !ClipInitializationFailure.IsMarked(clip);
+        internal void MarkInitialized(IClip clip) => initializedClips.TryAdd(clip.Id, 0);
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            foreach (var clip in Clips)
+            {
+                try { EffectHelper.ReleaseClipEffects(clip); }
+                catch (Exception ex) { Log(ex, $"Release render effects for clip {clip.Id}", nameof(RenderClipSession)); }
+                try { clip.Dispose(); }
+                catch (Exception ex) { Log(ex, $"Release clip {clip.Id}", nameof(RenderClipSession)); }
+            }
+        }
+    }
+
     #endregion
 }

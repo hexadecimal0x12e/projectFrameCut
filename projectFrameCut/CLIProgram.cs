@@ -251,12 +251,6 @@ namespace projectFrameCut
                 return SuccessExitCode;
             }
 
-            if (command.Equals("render", StringComparison.OrdinalIgnoreCase))
-            {
-                WriteRenderHelp();
-                return SuccessExitCode;
-            }
-
             if (command.Equals("headless", StringComparison.OrdinalIgnoreCase))
             {
                 WriteBackendHelp();
@@ -761,7 +755,7 @@ namespace projectFrameCut
 #else
                 additionalPipeFactory: null)
 #endif
-                { AllowTestingBackendCrash = !string.IsNullOrWhiteSpace(parentPid) }
+            { AllowTestingBackendCrash = !string.IsNullOrWhiteSpace(parentPid) }
                 .RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
 #endif
             return SuccessExitCode;
@@ -856,12 +850,6 @@ namespace projectFrameCut
         {
             try
             {
-                if (args.Length == 0 || args.Any(IsHelpOption))
-                {
-                    WriteRenderHelp();
-                    return SuccessExitCode;
-                }
-
                 var switches = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var arg in args)
                 {
@@ -876,12 +864,15 @@ namespace projectFrameCut
                     : switches.TryGetValue("assetDbFile", out var db)
                     ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(db) ?? Environment.CurrentDirectory, "..", ".."))
                     : AppDataPath;
-                if (TryGetRenderRpcOptions(switches, out var rpcOptions))
-                    return RunRpcRenderAsync(switches, dataRoot, rpcOptions).GetAwaiter().GetResult();
+                if (!TryGetRenderRpcOptions(switches, out var rpcOptions))
+                {
+                    Console.Error.WriteLine("Error: 'render' mode was designed for internal use only.");
+                    Console.Error.WriteLine("For per-frame previews, use projectFrameCut.PowerShell preview cmdlets; for automatic video delivery, use 'pjfc gui --render <project> --output=<file>'.");
 
-                ConfigureHardwareAcceleration(switches);
-                InitializeCliRenderRuntime(dataRoot, switches);
-                return RunRenderPipelineAsync(switches, cancellationToken: default).GetAwaiter().GetResult();
+                    return InvalidCommandExitCode;
+                }
+                return RunRpcRenderAsync(switches, dataRoot, rpcOptions).GetAwaiter().GetResult();
+
             }
             catch (OperationCanceledException) { return 255; }
             catch (Exception ex)
@@ -919,7 +910,7 @@ namespace projectFrameCut
         private static async Task<int> RunRenderPipelineAsync(
             ConcurrentDictionary<string, string> switches,
             CancellationToken cancellationToken,
-            Action<double, TimeSpan, double>? progress = null,
+            Action<double, TimeSpan, double, long, long>? progress = null,
             Action<string>? stageChanged = null,
             Action<long, long>? hashPreparationProgress = null)
         {
@@ -1003,6 +994,7 @@ namespace projectFrameCut
             var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
             var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
+            progress?.Invoke(0, TimeSpan.Zero, 0, 0, duration);
             var chunkOptions = ParseChunkRenderOptions(switches, fps);
             if (deferredComposition && chunkOptions.Enabled)
             {
@@ -1043,7 +1035,7 @@ namespace projectFrameCut
                 uint startFrame,
                 uint frameCount,
                 int renderThreads,
-                Action<double, TimeSpan, double>? rangeProgress = null,
+                Action<double, TimeSpan, double, long, long>? rangeProgress = null,
                 bool writeToVoid = false,
                 int chunkIndex = 0,
                 int chunkCount = 1,
@@ -1115,7 +1107,8 @@ namespace projectFrameCut
                 };
                 renderer.OnProgressChanged += (value, eta) =>
                 {
-                    rangeProgress?.Invoke(value, eta, renderer.CurrentFps);
+                    rangeProgress?.Invoke(value, eta, renderer.CurrentFps,
+                        Math.Clamp((long)renderer.CurrentFinished, 0, frameCount), frameCount);
                 };
                 if (hashPreparationProgress is not null)
                     renderer.OnHashPreparationProgressChanged += hashPreparationProgress;
@@ -1152,7 +1145,8 @@ namespace projectFrameCut
                 if (!chunkOptions.Enabled || writeToVoid)
                 {
                     await RenderVideoRange(path, 0, duration, maxThreads,
-                        (value, eta, currentFps) => progress?.Invoke(target == "all" ? value * 0.9 : value, eta, currentFps),
+                        (value, eta, currentFps, completedFrames, totalFrames) => progress?.Invoke(
+                            target == "all" ? value * 0.9 : value, eta, currentFps, completedFrames, totalFrames),
                         writeToVoid).ConfigureAwait(false);
                     return null;
                 }
@@ -1187,14 +1181,15 @@ namespace projectFrameCut
                                 SoundTrackMetadata.AddMissingLegacyTracks(clipSession.Clips, chunkAudioTracks, message => Log(message, "warn"), initialize: false);
                                 chunkAudioSamples = new AudioSampleSource(clipSession.Clips, chunkAudioTracks.ToArray(), fps, 96000);
                             }
-                            await RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, report,
+                            await RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads,
+                                (value, eta, currentFps, _, _) => report(value, eta, currentFps),
                                 chunkIndex: segment.Index, chunkCount: coordinator.ChunkCount, intermediateChunk: true,
                                 clipSession: clipSession, audioSamples: chunkAudioSamples).ConfigureAwait(false);
                         },
                         state =>
                         {
                             double value = state.GlobalProgress * (target == "all" ? 0.8 : 0.85);
-                            progress?.Invoke(value, state.EstimatedRemaining, state.FramesPerSecond);
+                            progress?.Invoke(value, state.EstimatedRemaining, state.FramesPerSecond, state.CompletedFrames, duration);
                             if (lastChunkCount != state.ChunkCount)
                             {
                                 lastChunkCount = state.ChunkCount;
@@ -1222,7 +1217,7 @@ namespace projectFrameCut
                     }
                     string merged = await coordinator.MergeAsync(
                         (mergeProgress, mergeEta) => progress?.Invoke(
-                            (target == "all" ? 0.8 : 0.85) + mergeProgress * (target == "all" ? 0.2 : 0.15), mergeEta, 0),
+                            (target == "all" ? 0.8 : 0.85) + mergeProgress * (target == "all" ? 0.2 : 0.15), mergeEta, 0, duration, duration),
                         consoleCancellation.Token,
                         tracks.Count > 0 ? new AudioComposer<float> { Clips = [], SoundTracks = tracks.ToArray() } : null).ConfigureAwait(false);
                     await ChunkRenderCoordinator.PublishAsync(merged, path, consoleCancellation.Token).ConfigureAwait(false);
@@ -1274,10 +1269,10 @@ namespace projectFrameCut
                     var video = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(outputPath)}");
                     var audio = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                     await RenderVideo(video);
-                    progress?.Invoke(0.92, TimeSpan.Zero, 0);
+                    progress?.Invoke(0.92, TimeSpan.Zero, 0, duration, duration);
                     stageChanged?.Invoke("ComposeAudio");
                     RenderAudio(audio);
-                    progress?.Invoke(0.97, TimeSpan.Zero, 0);
+                    progress?.Invoke(0.97, TimeSpan.Zero, 0, duration, duration);
                     stageChanged?.Invoke("FinalEncoding");
                     if (File.Exists(audio) || finalVideoBitRate.HasValue)
                         VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true,
@@ -1443,16 +1438,16 @@ namespace projectFrameCut
                 Persist(CaptureForPersistence());
             }
 
-            public async Task<int> RunAsync(Func<Action<double, TimeSpan, double>, Action<string>, Action<long, long>, CancellationToken, Task<int>> render)
+            public async Task<int> RunAsync(Func<Action<double, TimeSpan, double, long, long>, Action<string>, Action<long, long>, CancellationToken, Task<int>> render)
             {
                 Update(job => job.State = RenderJobState.Running);
                 PublishProgress(force: true);
                 try
                 {
-                    var result = await render((progress, eta, fps) =>
+                    var result = await render((progress, eta, fps, completedFrames, totalFrames) =>
                     {
+                        if (!UpdateProgress(progress, eta, fps, completedFrames, totalFrames)) return;
                         if (!TryReserveProgressPublish()) return;
-                        if (!UpdateProgress(progress, eta, fps)) return;
                         QueueProgressPublish();
                     }, UpdateStage, UpdateHashPreparationProgress, _renderCancellation.Token).ConfigureAwait(false);
                     if (result != 0) throw new InvalidOperationException($"CLI renderer exited with code {result}.");
@@ -1460,6 +1455,7 @@ namespace projectFrameCut
                     {
                         job.State = RenderJobState.Completed;
                         job.Progress = 1;
+                        job.CompletedFrames = job.TotalFrames;
                         job.EstimatedRemainingTicks = 0;
                     });
                     PublishCompletion();
@@ -1552,7 +1548,7 @@ namespace projectFrameCut
                 }
             }
 
-            private bool UpdateProgress(double progress, TimeSpan eta, double fps)
+            private bool UpdateProgress(double progress, TimeSpan eta, double fps, long completedFrames, long totalFrames)
             {
                 lock (_gate)
                 {
@@ -1560,6 +1556,8 @@ namespace projectFrameCut
                     _job.Progress = Math.Clamp(progress, 0, 1);
                     _job.EstimatedRemainingTicks = Math.Max(0, eta.Ticks);
                     _job.CurrentFps = Math.Max(0, fps);
+                    _job.TotalFrames = Math.Max(0, totalFrames);
+                    _job.CompletedFrames = Math.Clamp(completedFrames, 0, _job.TotalFrames);
                     _job.UpdatedAtUtc = DateTime.UtcNow;
                     _jobRevision++;
                     return true;
@@ -1679,14 +1677,35 @@ namespace projectFrameCut
         private static async Task<int> RunRpcRequestAsync(string[] args)
         {
             if (args.Any(IsHelpOption)) { WriteRpcRequestHelp(); return 0; }
-            using var rsa = RSA.Create();
             using var cancellation = new CancellationTokenSource();
             ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
             Console.CancelKeyPress += cancel;
             string? path = null;
+            ExternalRpcRequest? request = null;
+            Exception? readError = null;
+            var stage = "load_key";
             var wait = args.Any(a => a.Equals("--wait", StringComparison.OrdinalIgnoreCase));
+
+            int WriteFailure(string status, int exitCode, RemoteError error)
+            {
+                Console.Error.WriteLine(JsonSerializer.Serialize(new
+                {
+                    status,
+                    stage,
+                    requestId = request?.RequestId,
+                    clientId = request?.ClientId,
+                    serviceId = request?.ServiceId,
+                    requestPath = path,
+                    expiresAt = request?.ExpiresAt,
+                    error,
+                    responseReadError = readError is null ? null : new RemoteError(readError),
+                }, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }));
+                return exitCode;
+            }
+
             try
             {
+                using var rsa = RSA.Create();
                 var publicKeyPath = GetOption(args, "publicKey", false);
                 var privateKeyPath = GetOption(args, "privateKey", false);
                 var clientIdText = GetOption(args, "clientId", false);
@@ -1706,9 +1725,10 @@ namespace projectFrameCut
                     if (publicKeyPath is null) rsa.KeySize = 3072;
                     else rsa.ImportFromPem(File.ReadAllText(publicKeyPath));
                 }
+                stage = "validate_request";
                 var seconds = int.Parse(GetOption(args, "timeout", false) ?? "300");
                 if (seconds < 5 || seconds > 3600) throw new ArgumentException("--timeout must be 5-3600 seconds.");
-                var request = new ExternalRpcRequest
+                request = new ExternalRpcRequest
                 {
                     Version = persistent ? 2 : 1,
                     Mode = persistent ? "persistent" : "one-time",
@@ -1724,10 +1744,27 @@ namespace projectFrameCut
                 };
                 if (persistent) request.Sign(rsa);
                 request.Validate();
+                stage = "check_project";
                 var directory = Path.GetFullPath(GetOption(args, "requestDir", false) ?? Path.Combine(AppDataPath, "RpcRequest"));
-                ExternalRpcPipeSettings.EnsureAllowed(Path.GetDirectoryName(directory)!);
-                Directory.CreateDirectory(directory);
                 path = Path.Combine(directory, $"{request.RequestId:N}.json");
+                var dataRoot = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(directory))!;
+                ExternalRpcPipeSettings.EnsureAllowed(dataRoot);
+#if WINDOWS
+                if (WinUI.App.IsPackaged())
+                {
+                    var currentProjectPath = Platforms.Windows.WindowsPluginIsolationPlatform.CurrentProjectDirectory;
+                    if (!Directory.Exists(currentProjectPath))
+                        return WriteFailure("failed", 1, new RemoteError
+                        {
+                            Code = RenderErrorCode.ProjectNotFound,
+                            Message = "No local project is open in projectFrameCut. Open a local project before requesting external RPC authorization.",
+                            Details = $"Current project directory does not exist: {currentProjectPath}",
+                            Retryable = true,
+                        });
+                }
+#endif
+                stage = "submit_request";
+                Directory.CreateDirectory(directory);
                 var temporary = path + ".tmp";
                 try
                 {
@@ -1740,19 +1777,24 @@ namespace projectFrameCut
                     Console.WriteLine(JsonSerializer.Serialize(new { request.RequestId, Path = path }));
                     return 0;
                 }
+                stage = "wait_for_response";
                 while (DateTimeOffset.UtcNow < request.ExpiresAt)
                 {
                     cancellation.Token.ThrowIfCancellationRequested();
                     ExternalRpcRequest? response = null;
-                    try { response = ExternalRpcRequest.ReadFile(path); }
-                    catch (IOException) { }
-                    catch (JsonException) { }
+                    try
+                    {
+                        response = ExternalRpcRequest.ReadFile(path, maxLength: 1024 * 1024);
+                        readError = null;
+                    }
+                    catch (Exception ex) when (ex is IOException or JsonException) { readError = ex; }
                     if (response is not null)
                     {
                         if (response.RequestId != request.RequestId || response.PublicKey != request.PublicKey)
                             throw new ArgumentException("RPC response does not match the request.");
                         if (response.Status == "approved")
                         {
+                            stage = "decrypt_response";
                             var connection = JsonSerializer.Deserialize<ExternalRpcConnection>(rsa.Decrypt(
                                 Convert.FromBase64String(response.EncryptedConnection), RSAEncryptionPadding.OaepSHA256))
                                 ?? throw new ArgumentException("Empty RPC connection.");
@@ -1767,20 +1809,31 @@ namespace projectFrameCut
                         }
                         if (response.Status != "pending")
                         {
-                            Console.Error.WriteLine(JsonSerializer.Serialize(new { status = response.Status }));
-                            return response.Status == "denied" ? 3 : response.Status == "expired" ? 4 : 1;
+                            return WriteFailure(response.Status, response.Status == "denied" ? 3 : response.Status == "expired" ? 4 : 1,
+                                response.Error ?? new RemoteError
+                                {
+                                    Code = response.Status is "denied" or "disabled" ? RenderErrorCode.Unauthorized
+                                        : response.Status == "expired" ? RenderErrorCode.Canceled : RenderErrorCode.BackendFailure,
+                                    Message = $"RPC request ended with status '{response.Status}', but the server did not provide error details.",
+                                });
                         }
                     }
                     await Task.Delay(250, cancellation.Token).ConfigureAwait(false);
                 }
-                Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "timeout" }));
-                return 4;
+                return WriteFailure("timeout", 4, new RemoteError
+                {
+                    Code = RenderErrorCode.Canceled,
+                    Message = "Timed out waiting for RPC authorization. Open a local project in projectFrameCut and ensure it uses the same request directory.",
+                    Retryable = true,
+                });
             }
-            catch (OperationCanceledException) { return 130; }
+            catch (OperationCanceledException ex) { return WriteFailure("canceled", 130, new RemoteError(ex, RenderErrorCode.Canceled)); }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"RPC request failed: {ex.Message}");
-                return ex is ArgumentException or FormatException ? 2 : 1;
+                Log(ex, $"External RPC request failed at {stage}");
+                return WriteFailure("failed", ex is ArgumentException or FormatException ? 2 : 1,
+                    new RemoteError(ex, ex is ArgumentException or FormatException ? RenderErrorCode.InvalidRequest
+                        : ex is UnauthorizedAccessException ? RenderErrorCode.Unauthorized : RenderErrorCode.BackendFailure));
             }
             finally
             {
@@ -2042,7 +2095,6 @@ Usage:
 
 Commands:
   gui         Launch the projectFrameCut graphical interface.
-  render      Run the built-in renderer.
   headless    Start the headless backend for remote access and automation.
   rpc_request Request a one-time or persistent-client external RPC pipe.
   mcp         Serve the user library or one project over MCP in HTTP/stdio.
@@ -2097,8 +2149,8 @@ Usage:
   pjfc help [command]
 
 Commands:
+  rpc_server  Start the headless backend as same as projectFrameCut client. Advanced usage, not recommended for normal usage.
   headless    Start the headless backend for remote access and automation.
-  render      Run the built-in renderer.
   mcp         Serve the user library or one project over MCP in HTTP/stdio.
   help        Show general help or detailed help for a command.
   about       Show version and build information.
@@ -2218,9 +2270,11 @@ Usage:
 --timeout       Request lifetime in seconds (5-3600; default 300).
 --requestDir    Override the default AppData/RpcRequest directory (must match the target app).
 
-Open a local project in projectFrameCut to authorize. No callback command is executed.
+Open a local project in projectFrameCut to authorize. Packaged Windows clients fail immediately if CurrentProject is missing.
+No callback command is executed.
 Responses replace the request file; EncryptedConnection uses RSA-OAEP-SHA256.
 --wait prints the encrypted connection information for the calling program only.
+Failures on stderr include status, stage, request context, and error details (including exception type and stack trace when available).
 Exit codes: 0 success/submitted, 1 failure, 2 invalid arguments, 3 denied, 4 expired, 130 canceled.
 """);
         }
@@ -2261,7 +2315,8 @@ Target:
                                    or --continue is used. When --continue is used, the last
                                    project will be opened and directly open the render page.
 
-                                   To implement automatic rendering, please use 'render' mode. 
+                                   Render parameters below override preferences for this launch.
+                                   Without --output, rendering is started manually in the UI.
 
   --remote                         Enter remote access mode. The GUI will connect to the specified 
                                    RPC server and open the project remotely. 
@@ -2327,6 +2382,29 @@ Persistent external RPC authorization:
   --rpcArguments=<arguments>      Optional fixed executable arguments.
   --rpcResponse=<path>            Optional new response file inside AppData/RpcRequest.
 
+Render options (with --render):
+  --width=<pixels>                 Positive integer output width.
+  --height=<pixels>                Positive integer output height.
+  --fps=<fps>                      Positive integer output frame rate.
+  --encoder=<name>                 auto, a codec family (h264/hevc/av1), or an FFmpeg
+                                   encoder name such as libx264 or hevc_nvenc.
+  --bitDepth=<bits>                8, 10, or 12. HDR projects require 10.
+  --bitRate=<Mbps|auto>            Final video bitrate in Mbps; auto uses encoder defaults.
+  --maxParallelThreads=<count>     Number of parallel render workers, from 1 to 64.
+  --incrementalRendering=<bool>    true or false. Enable or disable incremental rendering.
+
+  --output=<file>                  Write to this file without a save dialog, automatically
+                                   start the full-project render after the page loads, and
+                                   exit the app after successful completion. Failed or canceled
+                                   renders keep the app open. Relative paths resolve from the
+                                   launch working directory. Parent directories are created.
+                                   Status changes write progress, FPS, completed/total frames,
+                                   stage, and ETA to stderr as [RenderStatus] lines.
+  --overwrite=<bool>               Allow replacing an existing --output file. Default: false.
+
+  Omitted render parameters retain the current defaults. Overrides do not update
+  saved preferences.
+
 Protocol URI:
   pjfc:file:///C:/path/to/project.pjfc[?option[&option...]]
 
@@ -2339,6 +2417,8 @@ Examples:
   pjfc gui
   pjfc gui ""D:\Video Projects\demo.pjfc""
   pjfc gui --render ""D:\Video Projects\demo.pjfc""
+  pjfc gui --render ""D:\Video Projects\demo.pjfc"" --width=1920 --height=1080 --fps=30 --encoder=libx264 --bitRate=20
+  pjfc gui --render --continue --width=1920 --height=1080 --fps=30 --encoder=libx264 --output=""D:\Exports\demo.mp4""
   pjfc gui --continue --noSplash
   pjfc gui ""D:\Video Projects\demo.pjfc"" --consoleLog --logDiagnostic
   pjfc gui --overrideCulture=en-US --userData=""D:\pjfc-data""
@@ -2388,47 +2468,8 @@ See the LICENSE and license.md file in the project root for more information.
 """);
         }
 
-        private static void WriteRenderHelp()
-        {
-            Console.WriteLine(
-@"Render a project
 
-Usage:
-  pjfc render -project=<project directory> -output=<file>
-              -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
-                [-target=video|audio|all|void] [-assetDbFile=<database.json>]
-                [--timelineSource=timeline|latest|snapshot:<id>] (default: timeline)
-                [-finalVideoBitRate=<bps>] (final output only)
-                [-maxParallelThreads=<number>]
-                [-allowWorkerOversubscription=true|false] (default: true)
-                [-reuseDynamicPreviewCache=true|false]
-                [--incrementalRendering=true|false]
-                [--projectCacheRoot=<cache folder for all projects>]
-                [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
-                [-acceleratorDeviceName=<name>] [-multiAccelerator=true|false]
-                [-acceleratorDeviceNames=<name1,name2,...>]
-                [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
-                [-chunkResume=true|false]
-                  chunkResume also restores deferred composition when chunkRender=false.
-                [-chunkKeepFiles=true|false]
-                [--allowExternalSources=all|<ImportId,ImportId,...>]
-
-timelineSource selects the saved timeline.json, the latest saved state, or the
-specified snapshot ID. A snapshot is read together with its own assets.json.
-
-This command is usually used internally, not intended for direct use by end users. 
-It is provided for detached rendering of a project for the UI, and for integration with other tools.
-
-This command provide a simple way to render a project in the command line.
-For full functionality of out-of-process rendering, use StandaloneRender.
-
-The render command is executed in-process and uses the same Renderer,
-VideoBuilder, audio composer, plugin manager, and accelerator manager as the GUI.
-For the usage of params, refer to the StandaloneRender's documentation.
-");
-        }
-
-#endregion
+        #endregion
     }
 
 }

@@ -10,22 +10,23 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 public static class ClipPreviewRenderer
 {
-    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true, bool keepHwAccelPicture = false)
+    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true, bool keepHwAccelPicture = false, bool canvasOutput = false, bool ignoreMixture = false)
     {
         if (FrameHashContext.Current is { } context)
             return context.ReadPicture((typeof(ClipPreviewRenderer), clip.Id, frameIndex, canvasWidth, canvasHeight,
-                projectWidth, projectHeight, pixelMode.Value, beforeLayout, keepHwAccelPicture),
+                projectWidth, projectHeight, pixelMode.Value, beforeLayout, keepHwAccelPicture, canvasOutput, ignoreMixture),
                 () => RenderCore(clip, allClips, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex,
-                    token, pixelMode, beforeLayout, initializeClips, keepHwAccelPicture));
+                    token, pixelMode, beforeLayout, initializeClips, keepHwAccelPicture, canvasOutput, ignoreMixture));
         return RenderCore(clip, allClips, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex,
-            token, pixelMode, beforeLayout, initializeClips, keepHwAccelPicture);
+            token, pixelMode, beforeLayout, initializeClips, keepHwAccelPicture, canvasOutput, ignoreMixture);
     }
 
     private static IPicture? RenderCore(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight,
         int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode,
-        bool beforeLayout, bool initializeClips, bool keepHwAccelPicture)
+        bool beforeLayout, bool initializeClips, bool keepHwAccelPicture, bool canvasOutput, bool ignoreMixture)
     {
         token.ThrowIfCancellationRequested();
+        canvasOutput |= ProjectReferenceRuntime.IsCanvasClip(clip);
         using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,
             projectWidth, projectHeight, pixelMode, token);
         using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
@@ -36,8 +37,8 @@ public static class ClipPreviewRenderer
         {
             try
             {
-                clip.ReInit(pixelMode);
                 ClipInitializationFailure.Clear(clip);
+                clip.ReInit(pixelMode);
             }
             catch (Exception ex)
             {
@@ -97,8 +98,8 @@ public static class ClipPreviewRenderer
             token.ThrowIfCancellationRequested();
             return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
                 projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
-                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token,
-                beforeLayoutOutput: beforeLayout, allClips: allClips, keepHwAccelPicture: keepHwAccelPicture);
+                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: !canvasOutput, cancellationToken: token,
+                beforeLayoutOutput: beforeLayout, allClips: allClips, keepHwAccelPicture: keepHwAccelPicture, ignoreMixture: ignoreMixture);
         }
         catch
         {

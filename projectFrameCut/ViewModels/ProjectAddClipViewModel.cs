@@ -518,6 +518,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand GenerateTextPreviewCommand { get; set; } = null!;
     public ICommand AddSubTitleClipCommand { get; set; } = null!;
     public ICommand AddAlternativeSourceClipCommand { get; set; } = null!;
+    public ICommand ImportProjectReferenceCommand => _draftPage.ImportProjectReferenceCommand;
     public ICommand AddAssetClipCommand { get; set; } = null!;
     public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;

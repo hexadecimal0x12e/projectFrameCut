@@ -78,7 +78,7 @@ Save-Project
 Disconnect-ProjectFrameCut
 ```
 
-`Add-ProjectClip` requires an existing `TrackId`. Its source can be `-FilePath`, `-AssetId`, or omitted for an empty clip. An omitted start defaults to frame 0; an empty clip defaults to 300 frames. Relative file paths resolve from the PowerShell current filesystem location. Asset import follows the application import mode; inspect the returned Path when portability matters. Removing the asset record does not delete the source file.
+`Add-ProjectClip` requires an existing `TrackId` and exactly one source: `-FilePath` or `-AssetId`. Source parameters reject null, empty, or whitespace-only values. An omitted start defaults to frame 0. Relative file paths resolve from the PowerShell current filesystem location. Asset import follows the application import mode; inspect the returned Path when portability matters. Removing the asset record does not delete the source file.
 
 ## Batch editing
 
@@ -100,7 +100,8 @@ Clips and assets:
 
 - `Add-ProjectAsset -FilePath <path> [-Name] [-PassThru]`
 - `Remove-ProjectAsset -AssetId <id>`
-- `Add-ProjectClip -TrackId <id> [-FilePath] [-AssetId] [-Name] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-WidthPixels] [-HeightPixels] [-PassThru]`
+- `Add-ProjectClip -TrackId <id> -FilePath <path> [-Name] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-WidthPixels] [-HeightPixels] [-PassThru]`
+- `Add-ProjectClip -TrackId <id> -AssetId <id> [-Name] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-WidthPixels] [-HeightPixels] [-PassThru]`
 - `Set-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-FilePath] [-PassThru]`
 - `Copy-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-PassThru]`
 - `Remove-ProjectClip -ClipId <id>`
@@ -198,3 +199,51 @@ All connected project commands accept `-TimeoutSeconds` (default 60). Write comm
 Never invent IDs. Use returned `TrackId`, `AssetId`, `ClipId`, `StyleId`, and `ProviderId`. Query provider/style fields first; send only fields supported by the returned schema. Provider graph edits should be read back with `Get-ProjectClipEffectProvider` before saving.
 
 `Copy-ProjectClip` places a copy at the source clip's end by default and creates independent effect instances. `Redo-ProjectHistory` chooses the most recently saved successor when multiple branches exist. History operations do not imply `Save-Project`.
+
+## Frame sequence previews
+
+Prefer `Export-ProjectFrameSequence -StartFrame 0 -FrameCount 30 -WidthPixels 960 -HeightPixels 540 -TimeoutSeconds 300` to review the composed project through the render backend. Choose a valid range: project frames are zero-based and `StartFrame + FrameCount` must not exceed project duration. Complete or cancel an active batch first.
+
+The command exports consecutive video-only PNGs and returns `Path`, `FrameIndex`, `WidthPixels`, `HeightPixels`, and `FrameRate` per frame, with PowerShell progress. Omit dimensions to use project size. Open returned PNGs to assess the result. Cover short projects in one request; split long projects by scene and inspect cuts, transitions, animation, and endpoints. Use lower dimensions for broad review and higher dimensions for detail. Use `Get-ProjectFramePreview -FrameIndex ...` for isolated composed frames and `Get-ProjectClipFramePreview -ClipId ... -FrameIndex ...` to diagnose an individual clip. Audio requires separate listening. Use these component preview interfaces for visual review; `pjfc render` is an internal command and must not be used by agents for previews or video delivery.
+
+To export mixed audio for listening, use `Export-ProjectAudioSamples -StartFrame 0 -FrameCount 300 -SampleRate 48000 -Channels 2 -TimeoutSeconds 300`. It uses the same project-frame range rules and batch restriction, returning a 16-bit PCM WAV `Path` with `StartFrame`, `FrameCount`, `FrameRate`, `SampleRate`, `Channels`, and `BitsPerSample`. Defaults are 96000 Hz and two channels; the project must contain an enabled audio source.
+
+## Video delivery
+
+After previews and persistence succeed, use the same installation's `pjfc gui --render {<target>|--continue} [options]`. Finish any active batch with `Complete-ProjectBatch`; ordinary edits require `Save-Project` first. Do not save the same completed batch again. Options override the page defaults for this launch without updating saved preferences; omitted options retain their defaults.
+
+```powershell
+$info = Get-ProjectInfo
+& $pjfc gui --render $info.WorkingPath
+```
+
+Here `$pjfc` is the verified executable path or command. Prefer an explicit project path. Use `pjfc gui --render --continue` only when the last opened project is known to be the intended target. Preserve relevant GUI options such as `--userData`; check `pjfc help gui` or `WriteGuiHelp` in `projectFrameCut/CLIProgram.cs` for current options.
+
+Use `--name=value` syntax for render options:
+
+| Option | Value |
+| --- | --- |
+| `--width`, `--height` | Positive integer output dimensions in pixels. |
+| `--fps` | Positive integer output frame rate. |
+| `--encoder` | `auto`, a codec family such as `h264/hevc/av1`, or an installed FFmpeg encoder such as `libx264/hevc_nvenc`. |
+| `--bitDepth` | `8`, `10`, or `12`; HDR projects require `10`. |
+| `--bitRate` | `auto` or a positive final video bitrate in Mbps. |
+| `--maxParallelThreads` | Render workers, from `1` to `64`. |
+| `--incrementalRendering` | `true` or `false`. |
+| `--output` | Target video file including extension; enables automatic rendering and exit after success. Relative paths resolve from the launch working directory; parent directories are created. |
+| `--overwrite` | `true` to replace an existing output file; defaults to `false`. |
+
+Without `--output`, the command only opens and prefills the page; let the user start rendering. With `--output`, the app skips the save dialog, starts the full-project render after page initialization, and exits after successful completion without a confirmation or countdown. Failed or canceled renders keep the app open and do not perform the saved post-render action. Project plugin and external-source authorization still apply. An active render job cannot have its options replaced by a new launch.
+
+Automatic rendering writes `[RenderStatus]` lines to stderr when status changes, including state, stage, percentage, FPS, completed/total video frames, and ETA; hash preparation also includes its completed/total count. Repeated lines are omitted, ordinary updates are limited to four per second, and stage changes and terminal states are emitted immediately. Numbers use invariant culture. Video frame counts can reach the total before overall progress reaches 100% because audio and final encoding remain. For example:
+
+```text
+[RenderStatus] state=Running stage=Render progress=45.00% fps=60.25 frame=500/1000 eta=00:00:08
+```
+
+```powershell
+& $pjfc gui --render $info.WorkingPath --width=1920 --height=1080 --fps=30 `
+    --encoder=libx264 --bitDepth=8 --bitRate=20 "--output=$outputPath"
+```
+
+Do not report GUI launch as a completed render. Inspect the actual output before reporting a video path as delivered.

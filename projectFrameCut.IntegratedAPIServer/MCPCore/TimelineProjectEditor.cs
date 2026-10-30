@@ -1,6 +1,7 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.ProjectReferences;
 using projectFrameCut.Shared;
 using System.Text.Json;
 
@@ -9,6 +10,41 @@ namespace projectFrameCut.McpCore;
 public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
 {
     public TimelineProjectWorkspace Workspace { get; } = workspace;
+
+    public ClipDraftDTO ImportProjectReference(string source, ProjectReferenceMode mode, uint startFrame, uint layerIndex)
+    {
+        var reference = ProjectReferenceStore.Capture(source, Workspace.ProjectRoot, Workspace.ProjectInfo.ProjectUniqueId, mode);
+        var clip = ProjectReferenceEditing.Create(reference, Workspace.ProjectInfo, Workspace.ProjectRoot, startFrame, layerIndex);
+        ProjectReferenceEditing.Validate(clip, Workspace.ProjectRoot);
+        return UpsertClip(clip);
+    }
+
+    public ClipDraftDTO RefreshProjectReference(string id, string? source = null)
+    {
+        var clip = GetClip(id);
+        var reference = ProjectReference.Read(clip.MetaData) ?? throw new ArgumentException("Clip is not a project reference.");
+        var refreshed = ProjectReferenceStore.Capture(ProjectReferenceStore.Resolve(Workspace.ProjectRoot, source ?? reference.SourcePath),
+            Workspace.ProjectRoot, Workspace.ProjectInfo.ProjectUniqueId, reference.Mode);
+        var configuration = ProjectReferenceEditing.Create(refreshed, Workspace.ProjectInfo, Workspace.ProjectRoot, 0, 0);
+        ProjectReferenceEditing.Validate(configuration, Workspace.ProjectRoot);
+        clip.MetaData![ProjectReference.MetadataKey] = refreshed;
+        clip.MetaData.Remove("ProjectReferenceError");
+        clip.FilePath = refreshed.SnapshotPath;
+        clip.SourceDuration = configuration.SourceDuration;
+        return clip;
+    }
+
+    public DraftStructureJSON UngroupProjectReference(string id)
+    {
+        var clip = GetClip(id);
+        var detached = ProjectReferenceEditing.Detach(clip, Workspace.ProjectInfo, Workspace.ProjectRoot);
+        if (detached.Clips.Any(c => Workspace.Draft.Clips.Any(existing => existing.Id == c.Id))
+            || detached.SoundTracks.Any(t => Workspace.Draft.SoundTracks.Any(existing => existing.Id == t.Id)))
+            throw new InvalidOperationException("Detached clip ID collision.");
+        Workspace.Draft.Clips = Workspace.Draft.Clips.Where(c => c.Id != clip.Id).Concat(detached.Clips).ToArray();
+        Workspace.Draft.SoundTracks = Workspace.Draft.SoundTracks.Concat(detached.SoundTracks).ToArray();
+        return detached;
+    }
 
     public IReadOnlyList<ClipDraftDTO> ListClips()
         => Workspace.Draft.Clips.OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame).ThenBy(c => c.SubLayerIndex).ToList();

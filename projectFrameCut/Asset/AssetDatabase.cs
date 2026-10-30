@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Services;
@@ -194,12 +194,20 @@ namespace projectFrameCut.Asset
 
                     try
                     {
-                        VideoResizer.ReencodeToResolution(asset.Path, proxiedPath, 1280, 720, "libx264");
+                        var temporaryProxy = proxiedPath + ".tmp";
+                        VideoResizer.ReencodeToResolution(asset.Path, temporaryProxy, 1280, 720, "libx264");
+                        File.Move(temporaryProxy, proxiedPath, true);
+                        File.WriteAllText(proxiedPath + ".ready", "");
                         Log($"Proxy created for asset {name}: {proxiedPath}");
                     }
                     catch (Exception ex)
                     {
                         Log(ex, $"Failed to create proxy for asset {name}");
+                    }
+                    finally
+                    {
+                        var temporaryProxy = proxiedPath + ".tmp";
+                        if (File.Exists(temporaryProxy)) File.Delete(temporaryProxy);
                     }
                 }
 

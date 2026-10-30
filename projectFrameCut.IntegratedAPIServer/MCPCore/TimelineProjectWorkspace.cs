@@ -63,6 +63,7 @@ public sealed class TimelineProjectWorkspace
         }
 
         EffectBindingHelper.NormalizeDraftProviders(draft);
+        projectFrameCut.Render.ProjectReferences.ProjectReferenceStore.RefreshLinked(draft, root, project.ProjectUniqueId);
 
         List<AssetItem> assets = [];
         if (File.Exists(assetsFile))

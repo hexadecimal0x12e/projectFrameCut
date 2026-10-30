@@ -14,6 +14,10 @@
              x:DataType="viewmodels:ProjectAddClipViewModel">
     <ContentView.Resources>
         <ResourceDictionary>
+            <!-- Avoid WinUI BringItemIntoView while batch mode covers the source panel. -->
+            <Style TargetType="CollectionView">
+                <Setter Property="ItemsUpdatingScrollMode" Value="KeepScrollOffset"/>
+            </Style>
             <SolidColorBrush x:Key="AvaliableColorBrush">Green</SolidColorBrush>
             <SolidColorBrush x:Key="NotAvaliableColorBrush">Gray</SolidColorBrush>
 
@@ -699,6 +703,7 @@
                     <Button Text="{l:Localized Key=DraftPage_AddClipView_EmptyVideoSource}" Command="{Binding AddEmptyVideoClipCommand}"/>
                     <Button Text="{l:Localized Key=DraftPage_AddClipView_PassthroughMaskSource}" Command="{Binding AddPassthroughMaskClipCommand}"/>
                     <Button Text="{l:Localized Key=DraftPage_AddClipView_AddFromAlternativeSrc}" Command="{Binding AddAlternativeSourceClipCommand}"/>
+                    <Button Text="{l:Localized Key=ProjectReference_Import}" Command="{Binding ImportProjectReferenceCommand}"/>
                 </VerticalStackLayout>
             </ScrollView>
         </tv:TabbedViewItem>

@@ -5,7 +5,7 @@ description: 使用 tools/projectFrameCut.PowerShell 操作 projectFrameCut 会�
 
 # 使用 projectFrameCut 创作视频
 
-通过 `tools/projectFrameCut.PowerShell` 完成实际的素材导入、时间线编辑、文字字幕、转场、效果和动画。用户要求制作视频时，推进到保存项目及所要求的成片交付，不停在脚本、分镜或命令建议上。
+通过 `tools/projectFrameCut.PowerShell` 完成实际的素材导入、时间线编辑、文字字幕、转场、效果和动画。用户要求制作视频时，完成编辑、预览和保存；需要成片时使用 GUI 渲染流程，支持参数预填、手动启动或指定输出文件后的自动渲染与退出。
 
 ## 按任务读取
 
@@ -20,8 +20,8 @@ description: 使用 tools/projectFrameCut.PowerShell 操作 projectFrameCut 会�
 2. 读取当前项目和素材，核对实际画面、声音、时长、分辨率及字幕。文件名只能作为线索，不能证明素材内容。需要探测元数据时可使用已安装的 `ffprobe` 等工具，编辑仍通过 projectFrameCut 完成。
 3. 将要求变成简短的剪辑表：素材、源入点、源出点、时间线入点、轨道、画面适配、原声、字幕或卖点。简单任务直接使用内存中的表；较复杂任务可随项目保存剪辑表供核对。
 4. 先完成主画面和声音，再加字幕、标题、补充画面及动画。同一素材复用已有 `AssetId`，后续操作使用返回的真实 ID。大量关联编辑按场景、字幕或动画阶段使用批量操作：素材导入和外部源注册先完成，再 `Start-ProjectBatch`，最后 `Complete-ProjectBatch -ChangeReason ...` 合成一条已保存的历史。
-5. 成功提交当前批量后，在开场、每个剪口和转场附近、字幕密集处、关键动画时刻、结尾抽取画布预览；据实际结果修正遮挡、构图和时序。声音和连续动作还需试听、播放或检查输出视频。
-6. 读取修改后的状态，确认批量提交或普通编辑的显式保存成功；提交已保存的同一批更改无需再 `Save-Project`。需要成片时继续渲染和验收。交付实际路径，简述完成内容和仍未核验的项目。
+5. 成功提交当前批量后，用 `Get-ProjectFramePreview` 检查单帧，用 `Export-ProjectFrameSequence` 检查连续帧：短项目可覆盖整个时间线，长项目按场景分段，重点覆盖开场、剪口、转场、字幕密集处、关键动画和结尾。打开返回的 PNG 检查构图、遮挡和连续帧时序，发现问题后缩小范围加密检查。具体参数见[会话与交付](references/session-and-delivery.md#预览与读回)。音频仍需单独试听。
+6. 读取修改后的状态，确认批量提交或普通编辑的显式保存成功；提交已保存的同一批更改无需再 `Save-Project`。需要成片时用 `pjfc gui --render {<target>|--continue} [options]`，按要求预填参数；省略 `--output` 由用户手动启动，传入 `--output=<file>` 则自动渲染并在成功后退出。`pjfc render` 是内部用途命令，Agent 不用它进行预览或成片渲染。交付实际路径，简述完成内容和仍未核验的项目；只打开页面或渲染失败时不能声称成片已生成。
 
 ## 操作约定
 

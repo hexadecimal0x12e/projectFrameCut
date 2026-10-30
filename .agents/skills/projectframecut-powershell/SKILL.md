@@ -17,6 +17,7 @@ Do not treat the module as an in-process page API. It returns serialized snapsho
 - For packaging, importing, offline project CRUD, templates, or starting an app, read [references/offline-projects.md](references/offline-projects.md).
 - For authorization, named-pipe connection, timeline/assets/text/effects/history operations, read [references/gui-projects.md](references/gui-projects.md).
 - For many related GUI edits saved as one history entry, read [references/batch-operations.md](references/batch-operations.md).
+- For single-frame or frame-sequence visual review, read [frame sequence previews](references/gui-projects.md#frame-sequence-previews); for opening the render page, read [video delivery](references/gui-projects.md#video-delivery).
 - For failures, reconnection, timeout, runspace, or security-sensitive handling, read [references/troubleshooting.md](references/troubleshooting.md).
 
 ## Common operating workflow
@@ -28,7 +29,8 @@ Do not treat the module as an in-process page API. It returns serialized snapsho
 5. Use the narrow cmdlet for the mutation. For many related writes to a writable local GUI project, prefer `Start-ProjectBatch` and `Complete-ProjectBatch`; import assets and register external sources first. Queries and `-PassThru` read staged data, so returned IDs remain usable within the batch. Keep single edits and unsaved-preview tasks on the ordinary path.
 6. Use `-WhatIf` for destructive or uncertain writes, then execute the approved mutation with an explicit `-ChangeReason`.
 7. Read back the affected state. Complete a batch with one `Complete-ProjectBatch -ChangeReason ...` before previewing or rendering; it already saves and creates one history entry, so do not immediately add a redundant `Save-Project`. Ordinary edits still require `Save-Project` unless the user requested an unsaved preview.
-8. Disconnect when the session is no longer needed.
+8. Use `Get-ProjectFramePreview` for single-frame review and `Export-ProjectFrameSequence` for consecutive frames: cover short timelines or inspect long timelines by scene, then inspect returned PNGs. For video delivery, use `pjfc gui --render {<target>|--continue} [options]` after saving. Render options prefill the page; omit `--output` for a manual start, or supply `--output=<file>` to render automatically and exit after success. `pjfc render` is an internal command; agents must not use it for previews or video delivery. See [frame sequence previews](references/gui-projects.md#frame-sequence-previews) and [video delivery](references/gui-projects.md#video-delivery).
+9. Disconnect when the session is no longer needed.
 
 ## Non-obvious invariants
 

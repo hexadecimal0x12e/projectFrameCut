@@ -11,7 +11,8 @@ public sealed partial class RenderBackendService
     private async ValueTask<TimelineThumbnailsResponse> GenerateTimelineThumbnailsAsync(TimelineThumbnailsRequest request, CancellationToken cancellationToken)
     {
         if (request.ClipId == Guid.Empty || request.TotalFrames <= 0 || request.IntervalFrames <= 0
-            || request.MaxCount is <= 0 or > 60 || request.Width is <= 0 or > 4096)
+            || request.MaxCount is <= 0 or > 60 || request.Width is <= 0 or > 4096
+            || request.FrameIndices.Count > request.MaxCount || request.FrameIndices.Any(f => f < 0 || f >= request.TotalFrames))
             throw new ArgumentException("Invalid timeline thumbnail parameters.");
         ArgumentException.ThrowIfNullOrWhiteSpace(request.SourcePath);
         var session = GetSession(request.SessionId);
@@ -28,10 +29,13 @@ public sealed partial class RenderBackendService
             source.Initialize();
             try
             {
-                for (int i = 0; i < request.MaxCount; i++)
+                var frames = request.FrameIndices.Count > 0
+                    ? request.FrameIndices.Distinct().Order().Select(f => (long)f)
+                    : Enumerable.Range(0, request.MaxCount).Select(i => (long)i * request.IntervalFrames);
+                foreach (long frameIndex in frames)
                 {
-                    long frameIndex = (long)i * request.IntervalFrames;
                     if (frameIndex >= request.TotalFrames) break;
+                    if (source.TotalFrames > 0 && frameIndex >= source.TotalFrames) break;
                     cancellationToken.ThrowIfCancellationRequested();
                     var relativePath = $"thumbs/perClip/{request.ClipId}/timeline/{frameIndex}.png";
                     var path = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
@@ -41,7 +45,9 @@ public sealed partial class RenderBackendService
                         var cacheHit = File.Exists(path);
                         if (!cacheHit)
                         {
-                            using var frame = source.GetFrame((uint)frameIndex);
+                            using var frame = source.Width > 0 && source.Height > 0
+                                ? source.GetFrame((uint)frameIndex, request.Width, Math.Max(1, (int)((double)source.Height * request.Width / source.Width)))
+                                : source.GetFrame((uint)frameIndex);
                             using var resized = frame.Resize(request.Width, Math.Max(1, (int)((double)frame.Height * request.Width / frame.Width)), false);
                             temporaryPath = _artifacts.CreateTemporaryPath(path);
                             if (resized is IHDRPicture<Half> hdr)

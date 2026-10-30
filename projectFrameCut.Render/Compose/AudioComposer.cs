@@ -163,18 +163,6 @@ namespace projectFrameCut.Render.Compose
                         continue;
                     }
 
-                    // Soundtracks are initialized by the project loader. Reuse that
-                    // validated source instead of opening a second decoder here. Apart
-                    // from being wasteful, the old path silently converted any second
-                    // open/read failure into an all-zero preview WAV.
-                    int sourceSampleRate = track.SamplePerSecond;
-                    if (sourceSampleRate <= 0)
-                    {
-                        if (ClipInitializationFailure.GetStage(track.ExtraData) == "ExternalSourceUnavailable") continue;
-                        throw new InvalidOperationException(
-                            $"Soundtrack '{track.Name}' ({track.Id}) has no initialized audio source.");
-                    }
-
                     float ratio = track.Ratio <= 0f ? 1f : track.Ratio;
                     int trackStartSample = FrameToSample(track.StartFrame, videoFramerate, outputSampleRate);
                     int durationFrames = (int)Math.Max(0, Math.Round(track.Duration * ratio));
@@ -184,15 +172,20 @@ namespace projectFrameCut.Render.Compose
                         continue;
                     }
 
+                    int trackEndSample = FrameToSample((ulong)track.StartFrame + (uint)durationFrames, videoFramerate, outputSampleRate);
+                    int overlapStartSample = Math.Max(trackStartSample, renderStartSample);
+                    int overlapEndSample = Math.Min(trackEndSample, renderEndSample);
+                    if (overlapEndSample > overlapStartSample)
+                        totalSamples = Math.Max(totalSamples, overlapEndSample - renderStartSample);
+                    if (SoundTrackMetadata.IsSourceUnavailable(track.ExtraData)) continue;
+                    int sourceSampleRate = track.SamplePerSecond;
+                    if (sourceSampleRate <= 0)
+                        throw new InvalidOperationException($"Soundtrack '{track.Name}' ({track.Id}) has no initialized audio source.");
                     int sourceStartSample = FrameToSample(track.RelativeStartFrame, videoFramerate, sourceSampleRate);
                     IEffect[] effects = (track.EffectsInstances ?? Array.Empty<IEffect>())
                         .Where(e => e.Enabled)
                         .OrderBy(e => e.Index)
                         .ToArray();
-
-                    int trackEndSample = FrameToSample((ulong)track.StartFrame + (uint)durationFrames, videoFramerate, outputSampleRate);
-                    int overlapStartSample = Math.Max(trackStartSample, renderStartSample);
-                    int overlapEndSample = Math.Min(trackEndSample, renderEndSample);
                     contexts.Add(new SoundTrackContext
                     {
                         SoundTrack = track,
@@ -209,9 +202,6 @@ namespace projectFrameCut.Render.Compose
                         Effects = effects,
                         HasAudioEffects = effects.Any(e => e is IAudioNormalEffect or IAudioContinuousEffect)
                     });
-
-                    if (overlapEndSample > overlapStartSample)
-                        totalSamples = Math.Max(totalSamples, overlapEndSample - renderStartSample);
                 }
             }
 

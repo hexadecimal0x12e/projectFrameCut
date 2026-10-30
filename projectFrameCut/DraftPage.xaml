@@ -218,9 +218,9 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8ff;}" Command="{Binding ZoomCommand}" CommandParameter="-" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
-                                Key="Equal" />
+                                Key="{OnPlatform WinUI=187, Default=Equal}" />
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Shift'}" 
-                                Key="OemPlus" />
+                                Key="{OnPlatform WinUI=187, Default=OemPlus}" />
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="Add" />
                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -228,13 +228,13 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomReset}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xea10;}" Command="{Binding ZoomCommand}" CommandParameter="0" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
-                                Key="0" />
+                                Key="{OnPlatform WinUI=Number0, Default=0}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomOut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe900;}" Command="{Binding ZoomCommand}" CommandParameter="+" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
-                                Key="OemMinus" />
+                                Key="{OnPlatform WinUI=189, Default=OemMinus}" />
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="Subtract" />
                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -406,7 +406,7 @@
         <Grid x:Name="LowerContent" Grid.Row="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="12"/>
+                <RowDefinition Height="18"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -471,54 +471,39 @@
                 </HorizontalStackLayout>
             </Grid>
 
-            <HorizontalStackLayout Grid.Row="1"
-                                   x:Name="RulerLayout"
-                                   HeightRequest="12"
-                                   BackgroundColor="LightGray" />
+            <GraphicsView Grid.Row="1"
+                          x:Name="RulerLayout"
+                          HeightRequest="18"
+                          BackgroundColor="{AppThemeBinding Light=#F2F2F2, Dark=#252525}"
+                          SizeChanged="ClipPreviewViewport_SizeChanged" />
 
-            <ScrollView Grid.Row="2" x:Name="TracksAndClipsLayout" Orientation="Vertical" Scrolled="TracksAndClipsLayout_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged">
-                <VerticalStackLayout>
-                    <Grid x:Name="MainTrackContentGrid">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="8*"/>
-                        </Grid.ColumnDefinitions>
+            <ScrollView Grid.Row="2" x:Name="TracksAndClipsLayout" Orientation="Vertical" Scrolled="TracksAndClipsLayout_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HandlerChanging="TimelineScrollView_HandlerChanging" HandlerChanged="TimelineScrollView_HandlerChanged">
+                <Grid x:Name="TracksContentGrid" ColumnDefinitions="1*,8*" RowDefinitions="Auto,Auto">
+                    <VerticalStackLayout Grid.Column="0">
+                        <VerticalStackLayout x:Name="TrackHeadLayout" Padding="2" SizeChanged="ClipPreviewViewport_SizeChanged" />
+                        <VerticalStackLayout x:Name="SubTrackHeadLayout" Padding="2" />
+                    </VerticalStackLayout>
 
-                        <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
-
+                    <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HandlerChanging="TimelineScrollView_HandlerChanging" HandlerChanged="TimelineScrollView_HandlerChanged" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never">
+                        <VerticalStackLayout x:Name="TimelineContentLayout" HorizontalOptions="Fill" SizeChanged="ClipPreviewViewport_SizeChanged">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <PinchGestureRecognizer PinchUpdated="TimelinePinchUpdated" />
+                            </VerticalStackLayout.GestureRecognizers>
+                            <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                            <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" />
                         </VerticalStackLayout>
+                    </ScrollView>
 
-                        <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
-                            <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" SizeChanged="ClipPreviewViewport_SizeChanged" />
-                        </ScrollView>
-                    </Grid>
-
-                    <Grid x:Name="SubTrackContentGrid">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="8*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <VerticalStackLayout x:Name="SubTrackHeadLayout" Grid.Column="0" Padding="2">
-
-                        </VerticalStackLayout>
-
-                        <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HorizontalOptions="Fill">
-                            <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" SizeChanged="ClipPreviewViewport_SizeChanged" />
-                        </ScrollView>
-                    </Grid>
-                    <Grid ColumnDefinitions="1*,8*">
-                        <Button Margin="0,8,0,0"
-                                Grid.Column="0"
-                                x:Name="AddTrackButton"
-                                Text="+"
-                                Clicked="AddTrackButton_Clicked"
-                                HeightRequest="80" />
-                    </Grid>
-                </VerticalStackLayout>
-
+                    <Button Grid.Row="1"
+                            Grid.Column="0"
+                            Margin="0,8,0,0"
+                            x:Name="AddTrackButton"
+                            Text="+"
+                            Clicked="AddTrackButton_Clicked"
+                            HeightRequest="80" />
+                </Grid>
             </ScrollView>
-            <BoxView Grid.Row="2" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
+            <BoxView Grid.Row="1" Grid.RowSpan="2" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
         <Grid Grid.Row="2" BackgroundColor="#80001122" Margin="0,0,0,0">
@@ -551,13 +536,6 @@
             </Grid>
         </Grid>
 
-        <Grid x:Name="GuiBatchOverlay" Grid.RowSpan="3" ZIndex="20000" IsVisible="False"
-              BackgroundColor="#A0000000" InputTransparent="False">
-            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="12">
-                <ActivityIndicator IsRunning="True" Color="White" />
-                <Label Text="{l:Localized Key=DraftPage_Processing}" TextColor="White" HorizontalOptions="Center" />
-            </VerticalStackLayout>
-        </Grid>
         <AbsoluteLayout x:Name="OverlayLayer"
                         Grid.RowSpan="3"
                         ZIndex="10000"

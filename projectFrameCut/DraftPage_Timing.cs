@@ -4,6 +4,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using System.Collections.Concurrent;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut;
 
@@ -109,7 +110,7 @@ public partial class DraftPage
         {
             uint limit = neighbors.Where(r => r.Start >= end).Select(r => r.Start).DefaultIfEmpty(uint.MaxValue).Min();
             boundary = Math.Min(boundary, limit);
-            uint maximum = clip.isInfiniteLength || clip.maxFrameCount == 0
+            uint maximum = clip.isInfiniteLength || clip.maxFrameCount == 0 || clip.ClipType == ClipMode.ProjectReferenceClip
                 ? uint.MaxValue - before.SourceStart : Math.Max(1u, clip.maxFrameCount - Math.Min(clip.maxFrameCount, before.SourceStart));
             clip.lengthInFrame = ClipTiming.SourceDuration(boundary > before.Start ? boundary - before.Start : 1,
                 maximum, clip.SpeedProvider);
@@ -127,7 +128,7 @@ public partial class DraftPage
         clip.SetTimelineStart(before.Start);
     }
 
-    internal async Task RefreshRestoredSelectionAsync()
+    internal async Task RefreshRestoredSelectionAsync(bool refreshPreview = true)
     {
         string? tab = (RightContentBorder.Content as TabbedView)?.SelectedItem?.Tag;
         var ids = _selectedClipIds.ToArray();
@@ -142,9 +143,9 @@ public partial class DraftPage
         OnPropertyChanged(nameof(SelectedAnyClip));
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
-        await RefreshSelectionUiAsync();
+        await RefreshSelectionUiAsync(refreshPreview, tab);
         if (tab is not null && RightContentBorder.Content is TabbedView panel) panel.SelectByTag(tab);
-        if (_selected is not null && Popup.IsVisible && popupShowingDirection != "none") RefreshPropertyPanel(_selected);
+        if (_selected is not null && Popup.IsVisible && popupShowingDirection != "none") await RefreshPropertyPanelAsync(_selected);
     }
 
     internal async Task JumpToSubtitleAsync(ClipElementUI clip, SubtitleCue cue)

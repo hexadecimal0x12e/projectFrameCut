@@ -272,6 +272,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.VectorCanvasClip => element.Deserialize<VectorCanvasClip>() ?? throw new NullReferenceException(),
             ClipMode.VectorComponentClip => element.Deserialize<VectorComponentClip>() ?? throw new NullReferenceException(),
             ClipMode.MaskClip => element.Deserialize<MaskClip>() ?? throw new NullReferenceException(),
+            ClipMode.ProjectReferenceClip => element.Deserialize<ProjectReferenceClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }

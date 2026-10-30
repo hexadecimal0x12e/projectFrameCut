@@ -646,5 +646,31 @@ namespace projectFrameCut.DraftStuff
         }
         #endregion
 
+        #region refrenced project
+        private View BuildProjectReferenceProperties(ClipElementUI clip)
+        {
+            var reference = ProjectReference.Read(clip.ExtraData);
+            var layout = new VerticalStackLayout
+            {
+                Spacing = 8,
+                Padding = 8,
+                Children =
+            {
+                new Label { Text = Localized.ProjectReference_ImportMode + (reference?.Mode == ProjectReferenceMode.Linked ? Localized.ProjectReference_Linked : Localized.ProjectReference_Snapshot) },
+                new Label { Text = reference?.SourcePath, LineBreakMode = LineBreakMode.CharacterWrap },
+                new Button { Text = Localized.ProjectReference_Ungroup, Command = new Command(async () => await page.UngroupProjectReferenceAsync(clip)) },
+            }
+            };
+            if (clip.ExtraData.GetValueOrDefault("ProjectReferenceError") is { } error)
+                layout.Children.Add(new Label { Text = error.ToString(), TextColor = Colors.OrangeRed });
+            if (reference?.Mode == ProjectReferenceMode.Linked)
+            {
+                layout.Children.Add(new Button { Text = Localized.ProjectReference_Refresh, Command = new Command(async () => await page.RefreshProjectReferenceAsync(clip)) });
+                layout.Children.Add(new Button { Text = Localized.ProjectReference_Relocate, Command = new Command(async () => await page.RefreshProjectReferenceAsync(clip, true)) });
+            }
+            return new ScrollView { Content = layout };
+        }
+        #endregion
+
     }
 }

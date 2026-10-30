@@ -188,7 +188,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     {
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
-        public ClipMode ClipType => ClipMode.MarkingClip;
+        public virtual ClipMode ClipType => ClipMode.MarkingClip;
 
         public Guid Id { get; init; }
         public string Name { get; init; }
@@ -230,7 +230,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? MarkData;
         public Guid MarkID;
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
         }
@@ -247,12 +247,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
         }
 
-        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        public virtual void ReInit(IPicture.PicturePixelMode targetPPB)
         {
             throw new NotImplementedException();
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
+        public virtual IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotImplementedException();
         }

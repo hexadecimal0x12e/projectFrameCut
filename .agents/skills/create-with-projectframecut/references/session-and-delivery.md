@@ -74,7 +74,7 @@ Connect-ProjectFrameCut -PipeId $pipeId
 1. 先核对项目、素材内容和参数；在批量外完成 `Add-ProjectAsset`、外部源注册与加载。当前素材 cmdlet 未暴露批量 RPC 所需的 `CopyToProject`，批量中使用已有 `AssetId`。
 2. 在当前连接执行 `Start-ProjectBatch`，再运行配方中的相关编辑。查询和 `-PassThru` 读取最新暂存状态，返回的片段、组件和 Provider ID 可继续使用。GUI 显示遮罩，其他 RPC 连接不能编辑。
 3. 用一次 `Complete-ProjectBatch -ChangeReason '本阶段的创作意图' -TimeoutSeconds 300` 提交并等待完成。它会统一保存、生成一条历史并刷新 UI/子系统；无需再为同一批更改执行 `Save-Project`。
-4. 成功后读回结果，再抽帧、试听或渲染。发现问题时开启下一批修正；不要在未提交批量里运行预览、`Save-Project`、历史恢复或渲染。
+4. 成功后读回结果，再抽帧、试听或打开渲染页。发现问题时开启下一批修正；不要在未提交批量里运行预览、`Save-Project`、历史恢复或打开渲染页。
 
 编辑错误默认用 `Stop-ProjectBatch` 取消暂存；需要保留成功部分时，先核对它们确实符合创作意图再提交。提交超时仅在同一连接重试 `Complete-ProjectBatch`，不重放配方；按[批量失败处理](../../projectframecut-powershell/references/troubleshooting.md#batch-failures) 限制重试并核实最终状态。若要保留未提交工作，不要先退出运行空间或让 `finally` 断开连接。已保存的批量不会因取消或断开而回滚。
 
@@ -91,13 +91,15 @@ Connect-ProjectFrameCut -PipeId $pipeId
 
 ```powershell
 $info = Get-ProjectInfo
-$preview = Get-ProjectFramePreview -FrameIndex 0
-$preview.Path
+$frames = Export-ProjectFrameSequence -StartFrame 0 -FrameCount 30 -WidthPixels 960 -HeightPixels 540 -TimeoutSeconds 300
+$frames | Select-Object FrameIndex, Path
 Get-ProjectClip | Sort-Object StartFrame, TrackId |
     Select-Object ClipId, Name, TrackId, StartFrame, DurationFrames, SourceStartFrame
 ```
 
-打开返回的 PNG 实际检查构图。画布预览包含布局与合成；`Get-ProjectClipFramePreview -ClipId ... -FrameIndex ...` 用于定位单个素材或效果问题，不包含布局、Clip 旋转、边缘转场及其他 Clip 合成。两者的帧号都是项目时间线帧号，单片段请求必须落在其有效区间。
+单帧和批量预览使用 PowerShell 等组件提供的预览接口。示例假定项目至少有 30 帧，实际请求须满足 `StartFrame + FrameCount` 不超过项目总帧数；帧号从 0 开始，范围为左闭右开。短项目可一次导出全部帧，长项目按场景分段导出，先低分辨率检查，再对问题区间提高尺寸。`Export-ProjectFrameSequence` 由渲染后端输出连续 PNG，仅视频，无音频；支持 PowerShell 进度条，返回每帧的 `Path/FrameIndex/WidthPixels/HeightPixels/FrameRate`。必须打开返回的图片实际检查，命令成功不等于画面正确。
+
+只需单帧时使用 `Get-ProjectFramePreview -FrameIndex ...`。画布预览包含布局与合成；`Get-ProjectClipFramePreview -ClipId ... -FrameIndex ...` 用于定位单个素材或效果问题，不包含布局、Clip 旋转、边缘转场及其他 Clip 合成。两者的帧号都是项目时间线帧号，单片段请求必须落在其有效区间。
 
 在剪口前一帧、剪口帧和后一帧检查画面；在转场或动画的起点、中点、终点额外抽查。长片按场景抽样，发现问题后加密检查。音频需检查首尾、剪口和混音，不能从 PNG 推断声音质量。
 
@@ -105,22 +107,28 @@ Get-ProjectClip | Sort-Object StartFrame, TrackId |
 
 ## 导出成片
 
-用户要求成片时，先成功完成当前 `Complete-ProjectBatch`；普通编辑则先 `Save-Project`。再使用同一安装版本的 `pjfc render` 或 `projectFrameCut.StandaloneRender`。模块没有渲染 cmdlet。参数以实际可执行文件的帮助、仓库 `projectFrameCut/CLIProgram.cs` 的 `WriteRenderHelp` 和 `projectFrameCut.StandaloneRender/readme.md` 为准。
+用户要求成片时，先成功完成当前 `Complete-ProjectBatch`；普通编辑则先 `Save-Project`。完成预览后，使用同一安装版本的 `pjfc gui --render {<target>|--continue} [options]`。渲染参数只覆盖本次页面默认值，不修改用户偏好；省略 `--output` 时由用户手动启动，指定 `--output=<file>` 时自动开始全项目渲染，成功后退出 App。`pjfc render` 是内部用途命令，Agent 不使用它进行预览或成片渲染。
 
-下面示例导出 SDR H.264，首行 `Save-Project` 适用于普通未保存编辑，已成功提交批量时省略该行；`$pjfc` 是已核实的可执行文件路径或命令，`$outputPath` 是本次交付的新输出路径。编码器需在该安装中可用，HDR 或透明视频应按要求另选格式。
+下面示例打开已保存项目的渲染页，首行 `Save-Project` 适用于普通未保存编辑，已成功提交批量时省略该行；`$pjfc` 是已核实的可执行文件路径或命令。
 
 ```powershell
 Save-Project -ChangeReason '保存待导出视频'
 $info = Get-ProjectInfo
-& $pjfc render "-project=$($info.WorkingPath)" "-output=$outputPath" `
-    "-output_options=$($info.WidthPixels),$($info.HeightPixels),$($info.FrameRate),AV_PIX_FMT_YUV420P,libx264" `
-    '-target=all'
-if ($LASTEXITCODE -ne 0) { throw 'projectFrameCut 渲染失败，请检查本次渲染输出。' }
-if (!(Test-Path -LiteralPath $outputPath) -or (Get-Item -LiteralPath $outputPath).Length -eq 0) {
-    throw '没有生成有效的输出文件。'
-}
+& $pjfc gui --render $info.WorkingPath
 ```
 
-导出后检查时长、尺寸、帧率和音视频流，并实际播放或抽取关键区间验收。缺失编码器、插件或外部来源时根据具体错误处理，不把现有文件或退出码单独当作成片正确的证明。
+可添加 `--width/--height/--fps/--encoder/--bitDepth/--bitRate` 等参数预填页面；参数均使用 `--name=value`，`--bitRate` 的单位为 Mbps，`--fps` 为正整数。自动交付时指定本次实际输出路径：
 
-交付时给出 `.pjfc` 项目目录、要求导出的视频路径、完成的主要内容、`Save-Project` 或 `Complete-ProjectBatch` 的保存结果，以及无法核验的事项。只要求项目时交付项目；需要归档或转移时同时检查外部素材和插件依赖。
+```powershell
+& $pjfc gui --render $info.WorkingPath `
+    "--width=$($info.WidthPixels)" "--height=$($info.HeightPixels)" `
+    "--fps=$($info.FrameRate)" --encoder=libx264 --bitDepth=8 --bitRate=20 "--output=$outputPath"
+```
+
+示例适用于 SDR 项目；HDR 项目使用 `--bitDepth=10` 和支持 HDR 的编码器。`$outputPath` 是已确定的输出文件路径；相对路径按启动工作目录解析，父目录自动创建。默认拒绝覆盖已有文件，确实需要替换时加 `--overwrite=true`。失败或取消不会自动退出，也不会执行用户偏好的结束动作；先检查错误再修正，不把已有文件当作本次渲染成功的证明。
+
+优先传入明确的项目路径；只有确认最近打开的项目就是目标时才使用 `pjfc gui --render --continue`。需要时沿用该项目的 `--userData` 等 GUI 选项，完整参数见[渲染参数](../../projectframecut-powershell/references/gui-projects.md#video-delivery)，以 `pjfc help gui` 或 `projectFrameCut/CLIProgram.cs` 的 `WriteGuiHelp` 为准。仅预填时不代替用户点击开始，也不把 GUI 启动成功当作成片已生成。
+
+手动或自动渲染完成后，核对实际输出路径，检查时长、尺寸、帧率和音视频流，并实际播放或抽取关键区间验收。缺失编码器、插件或外部来源时根据具体错误处理，不把现有文件或退出码单独当作成片正确的证明。
+
+交付时给出 `.pjfc` 项目目录、完成的主要内容、`Save-Project` 或 `Complete-ProjectBatch` 的保存结果，以及无法核验的事项。手动模式下尚未开始渲染时说明需用户启动；自动模式说明实际完成或失败状态，只交付已核实的视频路径。只要求项目时交付项目；需要归档或转移时同时检查外部素材和插件依赖。

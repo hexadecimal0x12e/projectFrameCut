@@ -234,6 +234,7 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
     {
         object? source = clip switch
         {
+            ProjectReferenceClip or ReferenceLayerClip or ReferencePartClip => throw new UnhashableInputException(),
             VideoClip video when video.Decoder is { IsDeterministic: true, AllowCachingResult: true, Disposed: false } decoder
                 && !string.IsNullOrWhiteSpace(clip.FilePath)
                 => new { decoder.TypeName, Module = decoder.GetType().Module.ModuleVersionId },

@@ -498,6 +498,10 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 }
 
                 var clipJson = JsonSerializer.SerializeToElement(clip);
+                ProjectReferenceRuntime.BindPart(clip.MetaData, Environment.CurrentDirectory);
+                if (clip.ClipType == ClipMode.ProjectReferenceClip && ProjectReference.Read(clip.MetaData) is { } reference)
+                    clip.FilePath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, reference.SnapshotPath));
+                clipJson = JsonSerializer.SerializeToElement(clip);
                 var clipInstance = PluginManager.CreateClip(clipJson) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })})");
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
@@ -505,7 +509,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     {
                         var id = clipInstance.FilePath.Substring(1);
                         clipInstance.FilePath = projectAssets is not null && projectAssets.TryGetValue(id, out var asset)
-                            ? asset.Path : AssetDatabase.Assets[id].Path;
+                            ? asset.Path
+                            : AssetDatabase.Assets.TryGetValue(id, out var globalAsset) ? globalAsset.Path : clipInstance.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -568,7 +573,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 clipsList.Add(clipInstance);
 
             }
-            return clipsList.ToArray();
+            return clipsList.SelectMany(c => c is ProjectReferenceClip reference ? reference.GetLayers(true) : new[] { c }).ToArray();
         }
 
         public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true,
@@ -578,15 +583,24 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             using var audioMark = new UserMarkRange("Draft.LoadSoundTracks", $"soundtracks={json.SoundTracks?.Length ?? 0}, initialize={InitAtLoad}");
 #endif
             var tracks = json.SoundTracks;
-            if (tracks is null || tracks.Length == 0)
+            if ((tracks is null || tracks.Length == 0) && !json.Clips.Any(c => c.ClipType == ClipMode.ProjectReferenceClip))
             {
                 return Array.Empty<ISoundTrack>();
             }
 
             var tracksList = new List<ISoundTrack>();
 
-            foreach (var track in tracks)
+            foreach (var track in tracks ?? [])
             {
+                ProjectReferenceRuntime.BindPart(track.MetaData, Environment.CurrentDirectory);
+                if (ProjectReferencePart.Read(track.MetaData) is not null && !string.IsNullOrWhiteSpace(track.FilePath))
+                {
+                    if (track.FilePath.StartsWith('$'))
+                        track.FilePath = projectAssets is not null && projectAssets.TryGetValue(track.FilePath[1..], out var asset)
+                            ? asset.Path
+                            : AssetDatabase.Assets.TryGetValue(track.FilePath[1..], out var globalAsset) ? globalAsset.Path : track.FilePath;
+                    else if (!track.FilePath.StartsWith('#')) track.FilePath = Path.GetFullPath(track.FilePath);
+                }
                 var trackJson = JsonSerializer.SerializeToElement(track);
                 var trackInstance = PluginManager.CreateSoundTrack(trackJson);
                 trackInstance.ExtraData = track.MetaData ?? new();
@@ -610,7 +624,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     {
                         var id = trackInstance.FilePath.Substring(1);
                         trackInstance.FilePath = projectAssets is not null && projectAssets.TryGetValue(id, out var asset)
-                            ? asset.Path : AssetDatabase.Assets[id].Path;
+                            ? asset.Path
+                            : AssetDatabase.Assets.TryGetValue(id, out var globalAsset) ? globalAsset.Path : trackInstance.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -641,6 +656,20 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 tracksList.Add(trackInstance);
             }
 
+            foreach (var dto in json.Clips.Where(c => c.ClipType == ClipMode.ProjectReferenceClip))
+            {
+                var reference = ProjectReference.Read(dto.MetaData) ?? throw new InvalidDataException("Missing project reference configuration.");
+                var node = JsonSerializer.SerializeToNode(dto, DraftJSONOption)!;
+                node["FilePath"] = Path.GetFullPath(reference.SnapshotPath);
+                var owner = (ProjectReferenceClip)PluginManager.CreateClip(JsonSerializer.SerializeToElement(node, DraftJSONOption));
+                try
+                {
+                    var audio = owner.GetSoundTracks(true);
+                    if (audio.Length == 0) owner.Dispose();
+                    tracksList.AddRange(audio);
+                }
+                catch { owner.Dispose(); throw; }
+            }
             return tracksList.ToArray();
         }
 
@@ -970,7 +999,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.lengthInFrame = Math.Max(1u, dto.Duration);
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.SubLayerIndex = (int)dto.SubLayerIndex;
-                element.maxFrameCount = dto.Duration;
+                element.maxFrameCount = ProjectReferencePart.Read(dto.MetaData) is null ? dto.Duration : checked(dto.RelativeStartFrame + dto.Duration);
                 element.isInfiniteLength = false;
                 element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = ClipMode.AudioClip;

@@ -30,6 +30,8 @@ public enum GuiProjectOperation
     GetClipEffectStep, AddClipEffectStep, SetClipEffectStep, RemoveClipEffectStep,
     AddSubTrack,
     StartBatch, CompleteBatch, StopBatch,
+    ExportFrameSequence, GetRequestProgress,
+    ExportAudioSamples,
 }
 
 [ProtoContract]
@@ -77,6 +79,9 @@ public sealed class GuiProjectResult
     [ProtoMember(2)] public Guid RequestId { get; set; }
     [ProtoMember(3)] public string Json { get; set; } = "null";
     [ProtoMember(4)] public RemoteError? Error { get; set; }
+    [ProtoMember(5)] public bool IsProgress { get; set; }
+    [ProtoMember(6)] public int PercentComplete { get; set; }
+    [ProtoMember(7)] public int SecondsRemaining { get; set; } = -1;
 }
 
 [ProtoContract]

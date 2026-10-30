@@ -27,7 +27,10 @@ public readonly record struct ChunkRenderJobProgress(
     double GlobalProgress,
     TimeSpan EstimatedRemaining,
     double FramesPerSecond,
-    bool Reused);
+    bool Reused)
+{
+    public long CompletedFrames { get; init; }
+}
 
 public delegate Task ChunkRenderDelegate(
     ChunkRenderSegment segment,
@@ -365,7 +368,10 @@ public sealed class ChunkRenderCoordinator
             _totalFrames > 0 ? Math.Clamp(completedFrames / _totalFrames, 0, 1) : 0,
             Renderer.GetEstimatedRemaining(_totalFrames - completedFrames, fps),
             fps,
-            reused);
+            reused)
+        {
+            CompletedFrames = (long)Math.Round(completedFrames)
+        };
     }
 
     private string ResolveChunkPath(string relativePath)

@@ -36,6 +36,7 @@ public partial class ClipInfoBuilder
 
     private async Task<View> BuildSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
     {
+        if (clip.ClipType == ClipMode.ProjectReferenceClip) return BuildProjectReferenceProperties(clip);
         View? properties = clip.ClipType switch
         {
             ClipMode.VideoClip => BuildVideoSourcePropertiesTab(clip, handler),

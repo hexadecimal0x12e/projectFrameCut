@@ -169,6 +169,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 return clip switch
                 {
+                    ProjectReferenceClip or ReferenceLayerClip or ReferencePartClip => false,
                     VirtualSourceVideoClip virtualClip => virtualClip.VirtualSource?.IsDeterministic == true,
                     MaskClip mask => Sources.MaskSources.Create(mask.SourceType).IsDeterministic,
                     VideoClip video => video.HasCurrentDecoder
@@ -228,7 +229,7 @@ namespace projectFrameCut.Render.Rendering
             CancellationToken cancellationToken = default,
             Action<IEffect, object?>? afterNodeCallback = null,
             bool beforeLayoutOutput = false, IReadOnlyList<IClip>? allClips = null, bool keepHwAccelPicture = false,
-            IPicture? basePicture = null)
+            IPicture? basePicture = null, bool ignoreMixture = false)
         {
             using var gpuScope = HwAccelPictureScope.Current is null ? new HwAccelPictureScope() : null;
             using var gpuEntry = gpuScope?.Enter();
@@ -308,7 +309,7 @@ namespace projectFrameCut.Render.Rendering
                         : ValueProviderFrameContext.ObserveNodes(ObserveNode);
                     if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
                     {
-                        result = EffectPictureProcessing.Mix(PreviewSourceFrameContext.ReadingRaw ? ClassicOverlayMixture.Default
+                        result = EffectPictureProcessing.Mix(PreviewSourceFrameContext.ReadingRaw || ignoreMixture ? ClassicOverlayMixture.Default
                                 : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default,
                             result ?? Track(transparentBackground ? PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero) : FallBackImageGetter(targetWidth, targetHeight)),
                             srcFrame.Clip, targetPPB, 0, 0, targetWidth, targetHeight);
@@ -472,11 +473,11 @@ namespace projectFrameCut.Render.Rendering
                     clipY += (int)Math.Round((clipPos.TargetHeight - effected.Height) / 2d);
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
 
-                    var mixer = PreviewSourceFrameContext.ReadingRaw ? ClassicOverlayMixture.Default
+                    var mixer = PreviewSourceFrameContext.ReadingRaw || ignoreMixture ? ClassicOverlayMixture.Default
                         : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     if (result is null)
                     {
-                        if (!needsPlacement && mixer is not DynamicMixtureGraph)
+                        if (!needsPlacement && mixer is not (DynamicMixtureGraph or ReferenceMixture))
                         {
                             result = effected;
                         }
