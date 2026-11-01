@@ -427,10 +427,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
                 using var editorMark = new UserMarkRange("Preview.UpdateEditors", $"clips={Clips.Count}");
 #endif
-                await ClipEditor.UpdateClips(Clips);
-                ClipEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
-                FastPreviewEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
                 DynamicPreviewProvider.SetClips(previewer.Clips);
+                await ClipEditor.UpdateClips(Clips, updateVisuals: false);
+                SyncClipEditorCurrentFrame();
             }
             if (e.Reason == ClipUpdateReason.PropertyChanged)
                 await RefreshPreviewAfterPropertyChangeAsync(throwOnFailure || e.Operator != ClipChangeOperatorKind.User, cancellationToken);
@@ -714,6 +713,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void UpdatePlayheadPosition(double scrollX)
     {
+        if (IsPreviewForm)
+        {
+            UpdatePreviewFormPlaybackControls();
+            return;
+        }
         double timeX = FrameToPixel((uint)_currentFrame);
         double screenX = timeX + TrackHeadLayout.Width - scrollX;
         PlayheadLine.TranslationX = screenX;
@@ -721,7 +725,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void UpdatePlayheadHeight()
     {
-        PlayheadLine.HeightRequest = RulerLayout.HeightRequest + (TrackContentLayout.Children.Count + SubTrackContentLayout.Children.Count) * ClipHeight;
+        PlayheadLine.HeightRequest = Math.Max(0, RulerLayout.Height) + Math.Max(0, TracksAndClipsLayout.Height);
     }
 
     public void UpdateTimelineWidth()
@@ -737,6 +741,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         ProjectDuration = GetTimelineDuration();
+        UpdatePreviewFormPlaybackControls();
         maxPixel += 50;
 
         double minWidth = Math.Max(1000d, Window?.Width ?? 2000 + 200);

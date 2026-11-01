@@ -132,7 +132,7 @@ namespace projectFrameCut
         public static Microsoft.UI.Xaml.Window NativeWindow;
         public static NavigationViewItem homeItem, assetItem, templateItem, debugItem, settingItem, createItem;
         internal static Microsoft.UI.Xaml.FrameworkElement? _shellContent;
-        private string _titleBeforeModelShow = "";
+        private string _titleBeforeModelShow = Localized.AppBrand;
 
         // Modal-tracking: save nav state before a modal appears, restore on dismiss.
         internal static bool _navWasVisibleBeforeModal;
@@ -459,13 +459,13 @@ namespace projectFrameCut
                         {
                             if (MainNavView is null || MainNavView.Visibility == Microsoft.UI.Xaml.Visibility.Collapsed) return;
                             _titleBeforeModelShow = Application.Current.Windows[0].Title;
-                            Application.Current.Windows[0].Title = "";
+                            if (MainNavView.IsPaneVisible) Application.Current.Windows[0].Title = "";
                             MainNavView.IsEnabled = false;
                         };
                         Microsoft.Maui.Controls.Application.Current.ModalPopped += (_, _) =>
                         {
                             if (MainNavView is null || MainNavView.Visibility == Microsoft.UI.Xaml.Visibility.Collapsed) return;
-                            Application.Current.Windows[0].Title = _titleBeforeModelShow;
+                            if (MainNavView.IsPaneVisible) Application.Current.Windows[0].Title = _titleBeforeModelShow;
                             MainNavView.IsEnabled = true;
 
                         };

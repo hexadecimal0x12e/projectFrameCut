@@ -9,6 +9,8 @@ namespace projectFrameCut.ApplicationAPIBase.Project
     /// Exposes timeline editing operations and host page capabilities to application plugins.
     /// Provides the contract for the draft/project editing surface, including clip management,
     /// track manipulation, state persistence, and UI interaction.
+    /// <br/>
+    /// <b>This is not for plugins to implement directly.</b>
     /// </summary>
     public interface IDraftPage : IContentView, Microsoft.Maui.Controls.ILayout, IPageController, IElementConfiguration<Page>, IPaddingElement, IView, ITitledElement, IToolbarElement, ISafeAreaView
     {
@@ -16,6 +18,14 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// Gets the main multi-window host used by the draft editor.
         /// </summary>
         public MultiWindowView MainMultiWindowView { get; }
+
+        /// <summary>Gets the current overall editor layout.</summary>
+        DraftPageForm CurrentForm { get; }
+
+        /// <summary>Switches the overall editor layout on the UI thread.</summary>
+        Task SwitchFormAsync(DraftPageForm form);
+
+        event EventHandler? FormChanged;
 
         /// <summary>
         /// Gets current playhead frame position.
@@ -261,4 +271,12 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// <returns>A task representing the asynchronous popup operation.</returns>
         Task ShowAPopup(View? content = null, View? border = null, IClipElementUI? clip = null, string mode = "bottom");
     }
+
+    public enum DraftPageForm
+    {
+        Workspace,
+        Mobile,
+        Preview
+    }
+
 }

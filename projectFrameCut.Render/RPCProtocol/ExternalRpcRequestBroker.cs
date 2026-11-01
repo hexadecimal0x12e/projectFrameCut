@@ -65,6 +65,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
                         Release();
                     }
                     if (_request is not null || (allowed && DateTimeOffset.UtcNow > _frontendUntil)) continue;
+                    if (!Directory.Exists(_directory)) continue;
                     foreach (var path in Directory.EnumerateFiles(_directory, "*.json"))
                     {
                         FileStream? file = null;

@@ -9,6 +9,9 @@ internal static class RenderSchedulingSettings
     public static bool EnableThreadAffinity => SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
     public static int RenderAheadFrames => Math.Max(0, SettingsManager.GetSettingAs("render_renderAheadFrames", 0, 0));
     public static bool EnableMemoryBudget => SettingsManager.IsBoolSettingTrueOrDefault("render_enableMemoryBudget", false);
+    public static bool EnableGpuBufferPoolLimit => SettingsManager.IsBoolSettingTrueOrDefault("render_enableGpuBufferPoolLimit", false);
+    public static long GpuBufferPoolMaxBytes => Math.Clamp(SettingsManager.GetSettingAs<long>("render_gpuBufferPoolMiB", 128, 128),
+        1, long.MaxValue / (1024 * 1024)) * 1024 * 1024;
     public static int[] WorkerCPUCoreIndexs => SettingsManager.GetSetting("render_coreAffinityOverride", "")
         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .Where(c => int.TryParse(c, out var index) && index >= 0).Select(int.Parse).Distinct().ToArray();

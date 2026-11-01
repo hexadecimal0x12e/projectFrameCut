@@ -151,6 +151,8 @@ public sealed class RenderWorkerService : Service
             $"--renderAheadFrames={options.RenderAheadFrames}",
             $"--enableMemoryBudget={options.EnableMemoryBudget}",
             $"--maxBufferedBytes={options.MaxBufferedBytes}",
+            $"--enableGpuBufferPoolLimit={options.EnableGpuBufferPoolLimit}",
+            $"--gpuBufferPoolMaxBytes={options.GpuBufferPoolMaxBytes}",
             $"--GCOptions={Math.Clamp(options.GcOption, 0, 2)}",
             $"--enableThreadAffinity={options.EnableThreadAffinity}",
             $"--coreAffinityOverride={string.Join(",", options.WorkerCPUCoreIndexs)}",

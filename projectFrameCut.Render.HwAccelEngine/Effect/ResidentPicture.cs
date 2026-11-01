@@ -9,6 +9,7 @@ internal abstract class ResidentBuffer : IDisposable
 {
     internal ResidentPictureContext? Owner;
     internal int Returned;
+    internal LinkedListNode<ResidentBuffer>? PoolNode, SizeNode;
     internal abstract int Length { get; }
     internal abstract void Destroy();
     public void Dispose()
@@ -40,8 +41,12 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
         return Run(p, ResidentOperation.Hdr, p.Width, p.Height, [], bits: 16, hdr: true, peak: (Half)Math.Clamp(brightness, 100, 10000));
     }
 
-    private HwAccelResourceBudget budget = new();
-    private readonly LinkedList<ResidentBuffer> idle = new();
+    private const long MaxPendingBytes = 128L * 1024 * 1024;
+    private long maxPoolBytes = HwAccelPictureSession.DefaultBufferPoolMaxBytes;
+    private bool limitBufferPool = HwAccelPictureSession.DefaultEnableBufferPoolLimit;
+    private long pooledBytes;
+    private readonly Dictionary<int, LinkedList<ResidentBuffer>> idle = new();
+    private readonly LinkedList<ResidentBuffer> idleOrder = new();
     private readonly List<ResidentBuffer> retired = [];
     private readonly List<IDisposable> pendingResources = [];
     private long pendingBytes, allocations, reuses, synchronizations;
@@ -56,20 +61,24 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
     protected abstract void Release();
     public virtual IEnumerable<IHwAccelPictureContext> CreateSiblingContexts() => [];
 
-    public void SetBudget(HwAccelResourceBudget value)
+    public void SetBufferPoolLimit(bool enabled, long maxBytes)
     {
-        lock (Gate) { TrimPool(); budget = value; }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxBytes);
+        lock (Gate)
+        {
+            limitBufferPool = enabled;
+            maxPoolBytes = maxBytes;
+            if (enabled) TrimPoolToSize(maxPoolBytes);
+        }
     }
 
     protected ResidentBuffer RentBuffer(int length)
     {
         failure?.Throw();
-        for (var node = idle.Last; node is not null; node = node.Previous)
+        if (idle.TryGetValue(length, out var pool) && pool.Last is { } node)
         {
-            if (node.Value.Length != length) continue;
             var buffer = node.Value;
-            idle.Remove(node);
-            budget.Release((long)length);
+            RemovePooledBuffer(buffer);
             buffer.Returned = 0;
             reuses++;
             return buffer;
@@ -90,7 +99,7 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
     protected void BeginSubmission()
     {
         failure?.Throw();
-        if (submissions >= 32 || pendingBytes >= HwAccelResourceBudget.DefaultBytes) Complete();
+        if (submissions >= 32 || pendingBytes >= MaxPendingBytes) Complete();
         submissions++;
     }
 
@@ -108,7 +117,7 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
             {
                 retired.Add(buffer);
                 pendingBytes += (long)buffer.Length;
-                if (pendingBytes >= HwAccelResourceBudget.DefaultBytes) Complete();
+                if (pendingBytes >= MaxPendingBytes) Complete();
             }
             else CacheBuffer(buffer);
         }
@@ -116,16 +125,35 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
 
     private void CacheBuffer(ResidentBuffer buffer)
     {
-        long size = (long)buffer.Length;
-        if (closing || failure is not null || size > HwAccelResourceBudget.DefaultBytes) { buffer.Destroy(); return; }
-        while (!budget.TryReserve(size))
+        if (closing || failure is not null || limitBufferPool && buffer.Length > maxPoolBytes)
         {
-            if (idle.First is not { } oldest) { buffer.Destroy(); return; }
-            idle.RemoveFirst();
-            budget.Release((long)oldest.Value.Length);
-            oldest.Value.Destroy();
+            buffer.Destroy();
+            return;
         }
-        idle.AddLast(buffer);
+        if (limitBufferPool) TrimPoolToSize(maxPoolBytes - buffer.Length);
+        if (!idle.TryGetValue(buffer.Length, out var pool)) idle.Add(buffer.Length, pool = new());
+        buffer.SizeNode = pool.AddLast(buffer);
+        buffer.PoolNode = idleOrder.AddLast(buffer);
+        pooledBytes += buffer.Length;
+    }
+
+    private void RemovePooledBuffer(ResidentBuffer buffer)
+    {
+        var pool = idle[buffer.Length];
+        pool.Remove(buffer.SizeNode!);
+        if (pool.Count == 0) idle.Remove(buffer.Length);
+        idleOrder.Remove(buffer.PoolNode!);
+        buffer.SizeNode = buffer.PoolNode = null;
+        pooledBytes -= buffer.Length;
+    }
+
+    private void TrimPoolToSize(long maximum)
+    {
+        while (pooledBytes > maximum && idleOrder.First is { } node)
+        {
+            RemovePooledBuffer(node.Value);
+            node.Value.Destroy();
+        }
     }
 
     public void Complete()
@@ -163,18 +191,13 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
     {
         lock (Gate)
         {
-            while (idle.First is { } node)
-            {
-                idle.RemoveFirst();
-                budget.Release((long)node.Value.Length);
-                node.Value.Destroy();
-            }
+            TrimPoolToSize(0);
         }
     }
 
     public string GetStatistics()
     {
-        lock (Gate) return $"GPU buffers: {allocations} allocations, {reuses} reuses, {synchronizations} waits";
+        lock (Gate) return $"GPU buffers: {allocations} allocations, {reuses} reuses, {synchronizations} waits, pooled={pooledBytes / 1024 / 1024} MiB";
     }
 
     internal void RetainContext()

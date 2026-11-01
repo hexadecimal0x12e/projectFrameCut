@@ -47,8 +47,10 @@ namespace projectFrameCut.Platforms.Android
                     }
                 }
             }
+#if !DEBUG
             // use https://github.com/Kyant0/Fishnet to capture Android crashes
             Com.Kyant.Fishnet.Fishnet.Init(this, loggingDir ?? FileSystem.AppDataDirectory);
+#endif
 
         }
 

@@ -146,6 +146,10 @@
                         FontFamily="Icons"
                         Clicked="ZoomInButton_Clicked"
                         ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" />
+                <Button x:Name="FullScreenButton"
+                        Text="{l:Localized Key=DraftPage_Preview_FullScreen}"
+                        IsVisible="False"
+                        Clicked="FullScreenButton_Clicked" />
             </HorizontalStackLayout>
 
             <Border x:Name="OverviewHost"

@@ -127,8 +127,6 @@
                                        Keyboard="Text"
                                        Text="{Binding BitDepth, Mode=TwoWay}" />
                             </HorizontalStackLayout>
-                            <Label x:Name="MaxParallelThreadsCountLabel" Text="RenderPage_MaxParallelThreadsCount" />
-                            <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                             <Picker x:Name="EncodingPicker"
                                     Title="{l:Localized Key=RenderPage_ToolBar_AdvancedEncodingOption}"
                                     ItemsSource="{Binding ExportOptions_Encoding}"
@@ -136,6 +134,46 @@
                             <Entry Placeholder="libx264 / hevc_nvenc"
                                    IsVisible="{Binding IsCustomEncodingVisible}"
                                    Text="{Binding CustomEncoding, Mode=TwoWay}" />
+                            <VerticalStackLayout Spacing="8" Margin="0,8">
+                                <Label Text="{l:SettingLocalized Key=Render_Scheduling}" FontAttributes="Bold" />
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <CheckBox x:Name="OverrideScheduling" CheckedChanged="OverrideScheduling_CheckedChanged" />
+                                    <Label Grid.Column="1" Text="{l:SettingLocalized Key=Render_SchedulingOverride}" VerticalOptions="Center" />
+                                </Grid>
+                                <Label Text="{l:SettingLocalized Key=Render_SchedulingOverride_Desc}" FontSize="12" TextColor="Gray" />
+                                <VerticalStackLayout Spacing="8"
+                                                     IsVisible="{Binding IsChecked, Source={x:Reference OverrideScheduling}, x:DataType=CheckBox}">
+                                    <Label x:Name="MaxParallelThreadsCountLabel" />
+                                    <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
+                                    <Label Text="{l:SettingLocalized Key=Render_RenderAheadFrames}" />
+                                    <Entry x:Name="RenderAheadFramesEntry" Keyboard="Numeric" Placeholder="{l:SettingLocalized Key=Render_RenderAheadFrames_Desc}" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <CheckBox x:Name="AllowWorkerOversubscriptionCheckBox" />
+                                        <Label Grid.Column="1" Text="{l:SettingLocalized Key=Render_AllowWorkerOversubscription}" VerticalOptions="Center" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <CheckBox x:Name="EnableThreadAffinityCheckBox" />
+                                        <Label Grid.Column="1" Text="{l:SettingLocalized Key=Render_EnableAutoThreadAffinity}" VerticalOptions="Center" />
+                                    </Grid>
+                                    <Label x:Name="ThreadAffinityUnsupportedHint" Text="{l:SettingLocalized Key=Render_EnableAutoThreadAffinity_Unsupported}" FontSize="12" TextColor="Gray" IsVisible="False" />
+                                    <Label Text="{l:SettingLocalized Key=Render_CoreAffinityOverride}" />
+                                    <Entry x:Name="CoreAffinityOverrideEntry" Placeholder="{l:SettingLocalized Key=Render_CoreAffinityOverride_Desc}" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <CheckBox x:Name="EnableMemoryBudgetCheckBox" />
+                                        <Label Grid.Column="1" Text="{l:SettingLocalized Key=Render_EnableMemoryBudget}" VerticalOptions="Center" />
+                                    </Grid>
+                                    <Label Text="{l:SettingLocalized Key=Render_MaxBufferedMiB}" />
+                                    <Entry x:Name="MaxBufferedMiBEntry" Keyboard="Numeric" Placeholder="{l:SettingLocalized Key=Render_MaxBufferedMiB_Desc}"
+                                           IsEnabled="{Binding IsChecked, Source={x:Reference EnableMemoryBudgetCheckBox}, x:DataType=CheckBox}" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <CheckBox x:Name="EnableGpuBufferPoolLimitCheckBox" />
+                                        <Label Grid.Column="1" Text="{l:SettingLocalized Key=Render_EnableGpuBufferPoolLimit}" VerticalOptions="Center" />
+                                    </Grid>
+                                    <Label Text="{l:SettingLocalized Key=Render_GpuBufferPoolMiB}" />
+                                    <Entry x:Name="GpuBufferPoolMiBEntry" Keyboard="Numeric"
+                                           IsEnabled="{Binding IsChecked, Source={x:Reference EnableGpuBufferPoolLimitCheckBox}, x:DataType=CheckBox}" />
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
                             <Button Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoWithAlpha}" x:Name="ExportAlphaHdr" Clicked="ExportAlphaHdr_Clicked" />
                             <Button Text="{l:Localized Key=RenderPage_ToolBar_ExportAudioOnly}" x:Name="ExportAudioOnly" Clicked="ExportAudioOnly_Clicked" />
                             <Button Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoOnly}" x:Name="ExportVideoOnly" Clicked="ExportVideoOnly_Clicked" />

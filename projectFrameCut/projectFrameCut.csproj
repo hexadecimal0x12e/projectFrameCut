@@ -44,8 +44,6 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
-		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
-		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<WindowsPackageType>MSIX</WindowsPackageType>
 
 		<AssemblyVersion>1.7.0.0</AssemblyVersion>
@@ -68,6 +66,15 @@
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<MauiXamlInflator>Runtime</MauiXamlInflator>
+	</PropertyGroup>
+	
+	<PropertyGroup Condition="'$(Configuration)' != 'Debug'">
+		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -209,8 +216,8 @@
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\Sandy\win-$(SandyArchitecture)\sandy.exe" LogicalName="sandy.exe" />
-		<MauiAsset Include="Platforms\Windows\Sandy\LICENSE.txt" LogicalName="Sandy-LICENSE.txt" />
-		<MauiAsset Include="Platforms\Windows\Sandy\toml11-LICENSE.txt" LogicalName="toml11-LICENSE.txt" />
+		<MauiAsset Include="Platforms\Windows\Sandy\LICENSE.txt" LogicalName="AboutApplication\Sandy\LICENSE.txt" />
+		<MauiAsset Include="Platforms\Windows\Sandy\toml11-LICENSE.txt" LogicalName="AboutApplication\Sandy\toml11.LICENSE.txt" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
@@ -245,10 +252,12 @@
 		<AndroidMavenLibrary Include="io.github.kyant0:fishnet" Version="1.1.0" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
+		<PackageReference Include="Xamarin.AndroidX.Window.WindowJava" Version="1.5.1.3" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net11.0-android'">
 		<AndroidMavenLibrary Include="com.github.L-JINBIN:MTDataFilesProvider" Version="1.0.0" Repository="https://jitpack.io" />
+		<AndroidNativeLibraryNoJniPreload Include="libfishnet.so" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net11.0-android'">

@@ -36,6 +36,20 @@ namespace projectFrameCut.Platforms.Android
         DataPath = "/launch")]
     public class MainActivity : MauiAppCompatActivity
     {
+        internal event EventHandler? FormEnvironmentChanged;
+
+        public override void OnConfigurationChanged(global::Android.Content.Res.Configuration newConfig)
+        {
+            base.OnConfigurationChanged(newConfig);
+            FormEnvironmentChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public override void OnWindowFocusChanged(bool hasFocus)
+        {
+            base.OnWindowFocusChanged(hasFocus);
+            FormEnvironmentChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         protected override void OnCreate(Bundle? savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -87,6 +101,7 @@ namespace projectFrameCut.Platforms.Android
             base.OnResume();
 
             Platform.OnResume(this);
+            FormEnvironmentChanged?.Invoke(this, EventArgs.Empty);
         }
 
         protected override void OnNewIntent(Intent intent)

@@ -534,6 +534,11 @@ public sealed class RendererPipelineTests
         {
             renderer.PrepareRender(timeout.Token);
             await renderer.GoRender(timeout.Token);
+            Assert.AreEqual(0, builder.WrittenFramesCount);
+            Assert.AreEqual(0, renderer.CurrentFinished);
+            Assert.AreEqual(0.5d, renderer.Progress);
+            using var rendererComposer = (DeferredRenderComposer)renderer.Composer!;
+            await rendererComposer.WriteVideoAsync(builder, timeout.Token);
             CollectionAssert.AreEqual(new byte[] { 20, 21, 22, 23 }, written);
             Assert.AreEqual(4, builder.WrittenFramesCount);
             Assert.AreEqual(4, renderer.CurrentFinished);
@@ -566,6 +571,8 @@ public sealed class RendererPipelineTests
             try
             {
                 await initial.GoRender(cancellation.Token);
+                using var initialComposer = (DeferredRenderComposer)initial.Composer!;
+                await initialComposer.WriteVideoAsync(firstBuilder, cancellation.Token);
                 Assert.Fail("The render should be cancelled.");
             }
             catch (OperationCanceledException) { }
@@ -587,6 +594,8 @@ public sealed class RendererPipelineTests
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             resumed.PrepareRender(timeout.Token);
             await resumed.GoRender(timeout.Token);
+            using var resumedComposer = (DeferredRenderComposer)resumed.Composer!;
+            await resumedComposer.WriteVideoAsync(builder, timeout.Token);
             CollectionAssert.AreEqual(new uint[] { 2, 3 }, decoded.ToArray());
             Assert.AreEqual(4, builder.WrittenFramesCount);
             builder.Writer.Finish();
@@ -618,6 +627,8 @@ public sealed class RendererPipelineTests
             try
             {
                 await initial.GoRender(cancellation.Token);
+                using var initialComposer = (DeferredRenderComposer)initial.Composer!;
+                await initialComposer.WriteVideoAsync(firstBuilder, cancellation.Token);
                 Assert.Fail("The render should be cancelled.");
             }
             catch (OperationCanceledException) { }
@@ -635,6 +646,8 @@ public sealed class RendererPipelineTests
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             resumed.PrepareRender(timeout.Token);
             await resumed.GoRender(timeout.Token);
+            using var resumedComposer = (DeferredRenderComposer)resumed.Composer!;
+            await resumedComposer.WriteVideoAsync(builder, timeout.Token);
             CollectionAssert.AreEqual(new byte[] { 40, 41, 42, 43 }, written);
             Assert.AreEqual(stamp, File.GetLastWriteTimeUtc(composed));
             Assert.AreEqual(4, builder.WrittenFramesCount);
@@ -660,6 +673,8 @@ public sealed class RendererPipelineTests
             var initial = DeferredRenderer(first, firstBuilder, root);
             initial.PrepareRender(timeout.Token);
             await initial.GoRender(timeout.Token);
+            using var initialComposer = (DeferredRenderComposer)initial.Composer!;
+            await initialComposer.WriteVideoAsync(firstBuilder, timeout.Token);
             int decoded = 0;
             using var next = Clip(frame =>
             {
@@ -672,6 +687,8 @@ public sealed class RendererPipelineTests
             if (changed) renderer.RenderResumeSignature = "changed";
             renderer.PrepareRender(timeout.Token);
             await renderer.GoRender(timeout.Token);
+            using var rendererComposer = (DeferredRenderComposer)renderer.Composer!;
+            await rendererComposer.WriteVideoAsync(builder, timeout.Token);
             Assert.AreEqual(4, decoded);
         }
         finally
@@ -693,6 +710,8 @@ public sealed class RendererPipelineTests
             var initial = DeferredRenderer(first, firstBuilder, root);
             initial.PrepareRender(timeout.Token);
             await initial.GoRender(timeout.Token);
+            using var initialComposer = (DeferredRenderComposer)initial.Composer!;
+            await initialComposer.WriteVideoAsync(firstBuilder, timeout.Token);
             foreach (string path in Directory.EnumerateFiles(root, "0.vfd", SearchOption.AllDirectories))
                 File.WriteAllBytes(path, [1, 2, 3]);
             var decoded = new List<uint>();
@@ -705,6 +724,8 @@ public sealed class RendererPipelineTests
             var resumed = DeferredRenderer(next, builder, root);
             resumed.PrepareRender(timeout.Token);
             await resumed.GoRender(timeout.Token);
+            using var resumedComposer = (DeferredRenderComposer)resumed.Composer!;
+            await resumedComposer.WriteVideoAsync(builder, timeout.Token);
             CollectionAssert.AreEqual(new uint[] { 0 }, decoded);
             Assert.AreEqual(4, builder.WrittenFramesCount);
         }
@@ -749,6 +770,8 @@ public sealed class RendererPipelineTests
             renderer.ReuseDynamicPreviewCache = reusePreview;
             renderer.PrepareRender(timeout.Token);
             await renderer.GoRender(timeout.Token);
+            using var rendererComposer = (DeferredRenderComposer)renderer.Composer!;
+            await rendererComposer.WriteVideoAsync(builder, timeout.Token);
             CollectionAssert.AreEqual(Enumerable.Repeat(reusePreview ? (byte)77 : (byte)0, 4).ToArray(), written);
             Assert.IsFalse(Directory.Exists(Path.Combine(root, "thumbs", "render-deferred", "clips")));
             Assert.IsTrue(Directory.EnumerateFiles(Path.Combine(root, "thumbs", "render-deferred"), "*.vfd", SearchOption.AllDirectories).Any());
@@ -764,6 +787,76 @@ public sealed class RendererPipelineTests
             IRenderContext.Current = null;
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task ReadyFrameCompositionUsesVideoBuilderBufferAndPreservesOutputOrder(bool diskCache)
+    {
+        using var buffered = new ManualResetEventSlim();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var first = Clip(_ =>
+        {
+            Assert.IsTrue(buffered.Wait(TimeSpan.FromSeconds(5), timeout.Token));
+            return PictureFP16.GenerateSolidColor(2, 1, (Half)0.25f, Half.Zero, Half.Zero, Half.One);
+        }, duration: 1);
+        using var second = Clip(_ => PictureFP16.GenerateSolidColor(2, 1, (Half)0.75f, Half.Zero, Half.Zero, Half.One),
+            startFrame: 1, duration: 1);
+        var written = new List<uint>();
+        var writer = Writer();
+        writer.OnFrameWrite += (_, _) => written.Add(IRenderContext.WorkerState!.CurrentFrame);
+        using var builder = new VideoBuilder(writer)
+        {
+            Duration = 2, BlockWrite = true, EnablePreview = true, minFrameCountToGeneratePreview = 1,
+            EnableDiskCacheRouting = diskCache, ForceUseDiskCache = diskCache,
+        };
+        builder.OnPreviewGenerated += (_, picture) =>
+        {
+            using (picture)
+                if (builder.FramePendedToWrite.TryGetValue(1, out bool done) && !done
+                    && !builder.FramePendedToWrite.ContainsKey(0)) buffered.Set();
+        };
+        var renderer = new Renderer
+        {
+            Clips = [first, second], builder = builder, Duration = 2, MaxThreads = 2,
+            RenderAheadFrames = 2, ComposeInTimelineOrder = false,
+        };
+        try
+        {
+            renderer.PrepareRender(timeout.Token);
+            await renderer.GoRender(timeout.Token);
+            CollectionAssert.AreEqual(new uint[] { 0, 1 }, written);
+            Assert.IsTrue(buffered.IsSet);
+            Assert.IsFalse(builder.BlockWrite);
+            Assert.AreEqual(2, builder.WrittenFramesCount);
+            Assert.AreEqual(0, builder.PendingWriteCount);
+            Assert.IsTrue(builder.FramePendedToWrite.Values.All(done => done));
+        }
+        finally { IRenderContext.Current = null; }
+    }
+
+    [TestMethod]
+    public async Task ComposerWaitsForNullClipResultsAndReleasesItsInputLease()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var builder = new VideoBuilder(Writer()) { Duration = 1 };
+        using var inputs = new MemoryStream();
+        using var composer = new RenderComposer(builder);
+        composer.Initialize(new()
+        {
+            StartFrame = 0, Duration = 1, TargetWidth = 2, TargetHeight = 1,
+            ProjectRelativeWidth = 2, ProjectRelativeHeight = 1,
+        }, timeout.Token);
+        Guid first = Guid.NewGuid(), second = Guid.NewGuid();
+        composer.RegisterFrame(new(0, [first, second], 1, inputs), timeout.Token);
+        composer.Submit(0, first, null);
+        Assert.AreEqual(0, builder.WrittenFramesCount);
+        Assert.IsTrue(inputs.CanWrite);
+        composer.Submit(0, second, null);
+        await composer.CompleteAsync(timeout.Token);
+        Assert.AreEqual(1, builder.WrittenFramesCount);
+        Assert.IsFalse(inputs.CanWrite);
     }
 
     private static Renderer DeferredRenderer(IClip clip, VideoBuilder builder, string root) => new()

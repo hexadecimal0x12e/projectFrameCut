@@ -77,6 +77,7 @@ public partial class EditSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
             .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required))).Key, null)
             .AddPicker(DynamicPreviewSettings.DiskCacheSettingKey, SettingLocalizedResources.Edit_CacheDecodedPreviewFrames, DynamicPreviewSettings.DiskCacheOptions.Keys.ToArray(), DynamicPreviewSettings.DiskCacheOptions.First(p => p.Value == DynamicPreviewSettings.DiskCacheMode).Key)
+            .AppendWhen(!DynamicPreviewSettings.MemoryOnly, c => c.AddEntry(DynamicPreviewSettings.BufferSecondsSettingKey, SettingLocalizedResources.Edit_DynamicPreviewBufferSeconds, DynamicPreviewSettings.BufferSeconds.ToString(CultureInfo.InvariantCulture), "5"))
             .AddEntry("Edit_DynamicPreviewClipPoolMiB", SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB, GetSetting("Edit_DynamicPreviewClipPoolMiB", "64"), "64")
             .AddCheckbox("Edit_IgnorePreviewWindowSize", SettingLocalizedResources.Edit_IgnorePreviewWindowSize, IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"))
             .AppendWhen(IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"), c => c.AddPicker(DynamicPreviewSettings.TargetPixelsSettingKey, SettingLocalizedResources.Edit_DynamicPreviewTargetResolution, DynamicPreviewResolutionOptions.Keys.ToArray(), DynamicPreviewResolutionOptions.FirstOrDefault(p => p.Value == DynamicPreview.TargetResolutionPixels).Key ?? DynamicPreviewResolutionOptions.Keys.First()))
@@ -265,6 +266,15 @@ public partial class EditSettingPage : ContentPage
                     {
                         WriteSetting(args.Id, cacheMode);
                         LogDiagnostic($"Preview disk cache: {cacheMode}.");
+                        BuildPPB();
+                    }
+                    return;
+                case DynamicPreviewSettings.BufferSecondsSettingKey:
+                    if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var bufferSeconds)
+                        && bufferSeconds > 0)
+                    {
+                        WriteSetting(args.Id, bufferSeconds.ToString(CultureInfo.InvariantCulture));
+                        LogDiagnostic($"Dynamic preview buffer duration changed to {bufferSeconds} seconds.");
                     }
                     return;
                 case "Edit_DynamicPreviewClipPoolMiB":

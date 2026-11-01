@@ -47,6 +47,8 @@ public sealed partial class RenderBackendService
                     RenderAheadFrames = options.RenderAheadFrames,
                     EnableMemoryBudget = options.EnableMemoryBudget,
                     MaxBufferedBytes = options.MaxBufferedBytes,
+                    EnableGpuBufferPoolLimit = !options.DisableGpuBufferPoolLimit,
+                    GpuBufferPoolMaxBytes = options.GpuBufferPoolMaxBytes,
                     EnableThreadAffinity = options.EnableThreadAffinity,
                     WorkerCPUCoreIndexs = options.WorkerCPUCoreIndexs,
                     GCOption = options.GCOption,

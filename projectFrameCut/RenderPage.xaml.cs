@@ -79,6 +79,7 @@ public partial class RenderPage : ContentPage
     private GuiRenderOptions? _launchOptions;
     private bool _launchRenderStarted;
     private bool _renderInProgress;
+    private RenderSchedulingOptions _renderSchedulingOptions = null!;
     private readonly object _automaticRenderStatusGate = new();
     private string? _lastAutomaticRenderStatus;
     private RenderJob? _lastAutomaticRenderJob;
@@ -125,6 +126,7 @@ public partial class RenderPage : ContentPage
     public RenderPage()
     {
         InitializeComponent();
+        LoadSchedulingOptions();
         var vmDefault = new RenderPageViewModel();
         try
         {
@@ -157,6 +159,7 @@ public partial class RenderPage : ContentPage
         RenderJob? renderJob = null, IEnumerable<AssetItem>? assets = null, bool isRemoteProject = false)
     {
         InitializeComponent();
+        LoadSchedulingOptions();
         _workingPath = path;
         _duration = projectDuration;
         _project = projectInfo;
@@ -191,12 +194,10 @@ public partial class RenderPage : ContentPage
                 vm.SelectedPostRenderActionEnum = action;
             }
             if (ProjectUsesHDR) vm.BitDepth = "10bit";
-            MaxParallelThreadsCount.Value = (int)SettingsManager.GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8);
         }
         catch { }
         BindingContext = vm;
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
-        MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
         DebugView.IsVisible = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         InitializeLogTimer();
@@ -229,11 +230,99 @@ public partial class RenderPage : ContentPage
                 vm.BitRateDisplay = Localized.RenderPage_CustomOption;
             }
         }
-        if (options.MaxParallelThreads is int workers) MaxParallelThreadsCount.Value = workers;
+        if (options.MaxParallelThreads is int workers)
+        {
+            OverrideScheduling.IsChecked = true;
+            MaxParallelThreadsCount.Value = workers;
+        }
         if (options.IncrementalRendering is bool incremental) vm.IncrementalRendering = incremental;
         if (options.OutputPath is not null) vm.SelectedPostRenderActionEnum = PostRenderAction.CloseApp;
         if (options.HasOverrides) Log("Applied GUI render startup options for this session.");
     }
+
+    private sealed record RenderSchedulingOptions(
+        int MaxParallelWorkers, bool AllowWorkerOversubscription, int RenderAheadFrames,
+        bool EnableThreadAffinity, int[] WorkerCPUCoreIndexs, bool EnableMemoryBudget,
+        long MaxBufferedBytes, bool EnableGpuBufferPoolLimit, long GpuBufferPoolMaxBytes);
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        if (!running && !OverrideScheduling.IsChecked) LoadSchedulingOptions();
+    }
+
+    private void OverrideScheduling_CheckedChanged(object sender, CheckedChangedEventArgs e)
+    {
+        LoadSchedulingOptions();
+    }
+
+    private void LoadSchedulingOptions()
+    {
+        MaxParallelThreadsCount.Maximum = Math.Max(64, RenderSchedulingSettings.MaxParallelWorkers);
+        MaxParallelThreadsCount.Value = RenderSchedulingSettings.MaxParallelWorkers;
+        MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)Math.Round(MaxParallelThreadsCount.Value));
+        RenderAheadFramesEntry.Text = RenderSchedulingSettings.RenderAheadFrames.ToString(CultureInfo.InvariantCulture);
+        AllowWorkerOversubscriptionCheckBox.IsChecked = RenderSchedulingSettings.AllowWorkerOversubscription;
+        EnableThreadAffinityCheckBox.IsChecked = RenderSchedulingSettings.EnableThreadAffinity;
+        bool supportsAffinity = false;
+        try
+        {
+            supportsAffinity = (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsAndroid())
+                && ThreadAffinityHelper.GetCpuCoreGroups().Count > 1;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "detect render thread affinity support", this);
+        }
+        EnableThreadAffinityCheckBox.IsEnabled = supportsAffinity;
+        ThreadAffinityUnsupportedHint.IsVisible = !supportsAffinity;
+        CoreAffinityOverrideEntry.Text = string.Join(",", RenderSchedulingSettings.WorkerCPUCoreIndexs);
+        EnableMemoryBudgetCheckBox.IsChecked = RenderSchedulingSettings.EnableMemoryBudget;
+        MaxBufferedMiBEntry.Text = (RenderSchedulingSettings.MaxBufferedBytes / (1024 * 1024)).ToString(CultureInfo.InvariantCulture);
+        EnableGpuBufferPoolLimitCheckBox.IsChecked = RenderSchedulingSettings.EnableGpuBufferPoolLimit;
+        GpuBufferPoolMiBEntry.Text = (RenderSchedulingSettings.GpuBufferPoolMaxBytes / (1024 * 1024)).ToString(CultureInfo.InvariantCulture);
+    }
+
+    private RenderSchedulingOptions GetRenderSchedulingOptions()
+    {
+        var options = new RenderSchedulingOptions(
+            RenderSchedulingSettings.MaxParallelWorkers, RenderSchedulingSettings.AllowWorkerOversubscription,
+            RenderSchedulingSettings.RenderAheadFrames, RenderSchedulingSettings.EnableThreadAffinity,
+            RenderSchedulingSettings.WorkerCPUCoreIndexs, RenderSchedulingSettings.EnableMemoryBudget,
+            RenderSchedulingSettings.MaxBufferedBytes, RenderSchedulingSettings.EnableGpuBufferPoolLimit,
+            RenderSchedulingSettings.GpuBufferPoolMaxBytes);
+        if (!OverrideScheduling.IsChecked) return options;
+
+        var sl = SettingsManager.SettingLocalizedResources;
+        var cores = (CoreAffinityOverrideEntry.Text ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (cores.Any(c => !int.TryParse(c, out var index) || index < 0))
+            throw new ArgumentException(sl.Render_SchedulingInvalidValue(sl.Render_CoreAffinityOverride));
+
+        return options with
+        {
+            MaxParallelWorkers = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value)),
+            AllowWorkerOversubscription = AllowWorkerOversubscriptionCheckBox.IsChecked,
+            RenderAheadFrames = (int)ReadSchedulingNumber(RenderAheadFramesEntry.Text, sl.Render_RenderAheadFrames, 0, int.MaxValue),
+            EnableThreadAffinity = EnableThreadAffinityCheckBox.IsChecked,
+            WorkerCPUCoreIndexs = cores.Select(int.Parse).Distinct().ToArray(),
+            EnableMemoryBudget = EnableMemoryBudgetCheckBox.IsChecked,
+            MaxBufferedBytes = EnableMemoryBudgetCheckBox.IsChecked
+                ? ReadSchedulingNumber(MaxBufferedMiBEntry.Text, sl.Render_MaxBufferedMiB, 0, long.MaxValue / (1024 * 1024)) * 1024 * 1024
+                : options.MaxBufferedBytes,
+            EnableGpuBufferPoolLimit = EnableGpuBufferPoolLimitCheckBox.IsChecked,
+            GpuBufferPoolMaxBytes = EnableGpuBufferPoolLimitCheckBox.IsChecked
+                ? ReadSchedulingNumber(GpuBufferPoolMiBEntry.Text, sl.Render_GpuBufferPoolMiB, 1, long.MaxValue / (1024 * 1024)) * 1024 * 1024
+                : options.GpuBufferPoolMaxBytes
+        };
+    }
+
+    private static long ReadSchedulingNumber(string? text, string name, long min, long max)
+    {
+        if (!long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value < min || value > max)
+            throw new ArgumentException(SettingsManager.SettingLocalizedResources.Render_SchedulingInvalidValue(name));
+        return value;
+    }
+
     private void InitializeLogTimer()
     {
         _logUpdateTimer = new System.Timers.Timer(800);
@@ -838,14 +927,16 @@ public partial class RenderPage : ContentPage
             Encoder = encoder,
             FinalVideoBitRate = finalVideoBitRate,
             PixelFormat = pixelFormat,
-            MaxParallelThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value)),
-            AllowWorkerOversubscription = SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true),
-            RenderAheadFrames = RenderSchedulingSettings.RenderAheadFrames,
-            EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
-            MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
+            MaxParallelThreads = _renderSchedulingOptions.MaxParallelWorkers,
+            AllowWorkerOversubscription = _renderSchedulingOptions.AllowWorkerOversubscription,
+            RenderAheadFrames = _renderSchedulingOptions.RenderAheadFrames,
+            EnableMemoryBudget = _renderSchedulingOptions.EnableMemoryBudget,
+            MaxBufferedBytes = _renderSchedulingOptions.MaxBufferedBytes,
+            EnableGpuBufferPoolLimit = _renderSchedulingOptions.EnableGpuBufferPoolLimit,
+            GpuBufferPoolMaxBytes = _renderSchedulingOptions.GpuBufferPoolMaxBytes,
             GcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) ? gcOption : 0,
-            EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
-            WorkerCPUCoreIndexs = RenderSchedulingSettings.WorkerCPUCoreIndexs,
+            EnableThreadAffinity = _renderSchedulingOptions.EnableThreadAffinity,
+            WorkerCPUCoreIndexs = _renderSchedulingOptions.WorkerCPUCoreIndexs,
             ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
             EnableDeferredComposition = vm.IncrementalRendering,
             ChunkRender = chunkOptions.Enabled && !writeToVoid,
@@ -1360,6 +1451,7 @@ public partial class RenderPage : ContentPage
     {
         IClip[] clips = [];
         ISoundTrack[] audioTracks = [];
+        Renderer? renderer = null;
         try
         {
             var encoderSelection = ResolveEncoderOptions(vm);
@@ -1402,11 +1494,7 @@ public partial class RenderPage : ContentPage
 
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
-            int[] CPUAffinityOverride = RenderSchedulingSettings.WorkerCPUCoreIndexs;
-            bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
-            int parallelThreadCount = Math.Max(1, (int)MaxParallelThreadsCount.Value);
-
-            Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {EnableThreadAffinity}, Worker target cores: {string.Join(",", CPUAffinityOverride)}, parallelThreadCount: {parallelThreadCount}");
+            Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {_renderSchedulingOptions.EnableThreadAffinity}, Worker target cores: {string.Join(",", _renderSchedulingOptions.WorkerCPUCoreIndexs)}, parallelThreadCount: {_renderSchedulingOptions.MaxParallelWorkers}");
 
 #if ANDROID
             AndroidExecutionHelper.AddPlatformComputeViewHandler = new((v) =>
@@ -1537,7 +1625,7 @@ public partial class RenderPage : ContentPage
                 builder.DiskCacheDirectory = Path.Combine(ProjectCachePaths.GetTemporaryRoot(_workingPath, MauiProgram.CachePath), "RenderingCache");
             if (!vm.UseAlphaBrightnessPackage) builder?.Writer?.Metadata = metadata ?? new();
 
-            Renderer renderer = new Renderer
+            renderer = new Renderer
             {
                 AudioSamples = new AudioSampleSource(clips, audioTracks, fps, 96000),
                 builder = builder,
@@ -1552,13 +1640,15 @@ public partial class RenderPage : ContentPage
                 LogProcessStack = dumpDiagData,
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
-                MaxThreads = parallelThreadCount,
-                AllowWorkerOversubscription = SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true),
-                RenderAheadFrames = RenderSchedulingSettings.RenderAheadFrames,
-                EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
-                MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
-                EnableThreadAffinity = EnableThreadAffinity,
-                WorkerCPUCoreIndexs = CPUAffinityOverride,
+                MaxThreads = _renderSchedulingOptions.MaxParallelWorkers,
+                AllowWorkerOversubscription = _renderSchedulingOptions.AllowWorkerOversubscription,
+                RenderAheadFrames = _renderSchedulingOptions.RenderAheadFrames,
+                EnableMemoryBudget = _renderSchedulingOptions.EnableMemoryBudget,
+                MaxBufferedBytes = _renderSchedulingOptions.MaxBufferedBytes,
+                EnableGpuBufferPoolLimit = _renderSchedulingOptions.EnableGpuBufferPoolLimit,
+                GpuBufferPoolMaxBytes = _renderSchedulingOptions.GpuBufferPoolMaxBytes,
+                EnableThreadAffinity = _renderSchedulingOptions.EnableThreadAffinity,
+                WorkerCPUCoreIndexs = _renderSchedulingOptions.WorkerCPUCoreIndexs,
                 ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
                 EnableDeferredComposition = vm.IncrementalRendering,
                 ResumeInterruptedRender = SettingsManager.IsBoolSettingTrueOrDefault("render_chunkResume", true),
@@ -1684,7 +1774,12 @@ public partial class RenderPage : ContentPage
             }
 
             sw1.Restart();
-            await Task.Run(async () => await renderer.GoRender(_cts.Token, cover), _cts.Token);
+            await Task.Run(async () =>
+            {
+                await renderer.GoRender(_cts.Token, cover);
+                if (renderer.Composer is DeferredRenderComposer deferred)
+                    await deferred.WriteVideoAsync(builder, _cts.Token);
+            }, _cts.Token);
             Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 
             SetSubProg("WriteVideo");
@@ -1743,6 +1838,7 @@ public partial class RenderPage : ContentPage
         }
         finally
         {
+            renderer?.Composer?.Dispose();
             builder?.Dispose();
             builder = null;
             foreach (var clip in clips) clip.Dispose();
@@ -1981,7 +2077,7 @@ public partial class RenderPage : ContentPage
 
     private void MaxParallelThreadsCount_ValueChanged(object sender, ValueChangedEventArgs e)
     {
-        MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)e.NewValue);
+        MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)Math.Round(e.NewValue));
     }
 
     private async void MoreOptions_Clicked(object sender, EventArgs e)
@@ -2052,6 +2148,18 @@ public partial class RenderPage : ContentPage
             return;
         }
 
+        RenderSchedulingOptions scheduling;
+        try
+        {
+            scheduling = GetRenderSchedulingOptions();
+        }
+        catch (ArgumentException ex)
+        {
+            Log(ex, "read render scheduling options", this);
+            await DisplayAlertAsync(Localized._Error, ex.Message, Localized._OK);
+            return;
+        }
+
         var encoderSelection = ResolveEncoderOptions(vm);
         var (pixelFormat, encoder, ext) = GetStandaloneOutputOptions(vm.BitDepth, encoderSelection.Encoder);
 
@@ -2064,7 +2172,7 @@ public partial class RenderPage : ContentPage
 #endif
 
 
-        var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath, encoderSelection.UseHardwareAcceleration, finalBitRate);
+        var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath, encoderSelection.UseHardwareAcceleration, finalBitRate, scheduling);
         await DisplayPromptAsync(Localized._Info, "Copy the args below:", Localized._OK, null, initialValue: args);
     }
 
@@ -2351,6 +2459,7 @@ public partial class RenderPage : ContentPage
 
     private async Task PrepareUIForRender()
     {
+        _renderSchedulingOptions = GetRenderSchedulingOptions();
 #if WINDOWS || MACCATALYST || MACOS
         _renderSleepRequest ??= RenderSleepRequest.Acquire();
 #else
@@ -2453,7 +2562,7 @@ public partial class RenderPage : ContentPage
 #endif
     }
 
-    private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath, bool useHardwareAcceleration, long? finalVideoBitRate)
+    private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath, bool useHardwareAcceleration, long? finalVideoBitRate, RenderSchedulingOptions scheduling)
     {
         var args = new List<string>
         {
@@ -2467,11 +2576,17 @@ public partial class RenderPage : ContentPage
             $"-FFmpegLibraryPath={FFmpeg.AutoGen.ffmpeg.RootPath}"
         };
 
-        var maxThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value));
         var allowedSources = ProjectExternalSourceService.GetApprovals(_workingPath);
         if (allowedSources.Count > 0) args.Add("--allowExternalSources=" + string.Join(',', allowedSources.Select(x => x.ImportId)));
-        args.Add($"-maxParallelThreads={maxThreads}");
-        args.Add($"-allowWorkerOversubscription={SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true)}");
+        args.Add($"-maxParallelThreads={scheduling.MaxParallelWorkers}");
+        args.Add($"-allowWorkerOversubscription={scheduling.AllowWorkerOversubscription}");
+        args.Add($"-renderAheadFrames={scheduling.RenderAheadFrames}");
+        args.Add($"-enableThreadAffinity={scheduling.EnableThreadAffinity}");
+        args.Add($"-coreAffinityOverride={string.Join(",", scheduling.WorkerCPUCoreIndexs)}");
+        args.Add($"-enableMemoryBudget={scheduling.EnableMemoryBudget}");
+        args.Add($"-maxBufferedBytes={scheduling.MaxBufferedBytes}");
+        args.Add($"-enableGpuBufferPoolLimit={scheduling.EnableGpuBufferPoolLimit}");
+        args.Add($"-gpuBufferPoolMaxBytes={scheduling.GpuBufferPoolMaxBytes}");
         args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
         if (finalVideoBitRate is long bitRate) args.Add($"-finalVideoBitRate={bitRate}");
         args.Add($"-reuseDynamicPreviewCache={SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false)}");

@@ -308,7 +308,7 @@ public partial class HomePage : ContentPage
                     await page.PostInit();
                     AppShell.instance?.HideNavView();
                     Shell.SetTabBarIsVisible(page, false);
-                    Shell.SetNavBarIsVisible(page, true);
+                    Shell.SetNavBarIsVisible(page, !page.HasMobileTitleBar);
                     lastPage = page;
                     await Navigation.PushAsync(page);
                 });
@@ -790,7 +790,7 @@ public partial class HomePage : ContentPage
                 App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {page.ProjectName} (MCP)";
                 AppShell.instance?.HideNavView();
                 Shell.SetTabBarIsVisible(page, false);
-                Shell.SetNavBarIsVisible(page, true);
+                Shell.SetNavBarIsVisible(page, !page.HasMobileTitleBar);
 
                 if (activePage is null)
                 {
@@ -1089,6 +1089,19 @@ public partial class HomePage : ContentPage
 
     private async Task GoDraft(string draftSourcePath, string title, bool isReadonly = false, bool throwOnException = false, bool? skipAskForRecover = null, bool? overrideLayoutOption = null)
     {
+        await Dispatcher.DispatchAsync(() => ImportButton.IsEnabled = false);
+        try
+        {
+            await LoadDraftAsync(draftSourcePath, title, isReadonly, throwOnException, skipAskForRecover, overrideLayoutOption);
+        }
+        finally
+        {
+            await Dispatcher.DispatchAsync(() => ImportButton.IsEnabled = true);
+        }
+    }
+
+    private async Task LoadDraftAsync(string draftSourcePath, string title, bool isReadonly, bool throwOnException, bool? skipAskForRecover, bool? overrideLayoutOption)
+    {
         LogDiagnostic($"Loading draft {draftSourcePath}, {title}, \r\n{Environment.StackTrace}");
         Stopwatch initTimer = Stopwatch.StartNew();
         bool cancelled = false;
@@ -1110,6 +1123,7 @@ public partial class HomePage : ContentPage
             loadCancellation.Cancel();
             await Dispatcher.DispatchAsync(() =>
             {
+                AppShell.instance?.ShowNavView();
                 Content = origContent;
             });
         };
@@ -1132,6 +1146,8 @@ public partial class HomePage : ContentPage
         catch { }
         */
         await Dispatcher.DispatchAsync(() =>
+        {
+            AppShell.instance?.HideNavView();
             Content = new VerticalStackLayout
             {
                 HorizontalOptions = LayoutOptions.Center,
@@ -1160,7 +1176,8 @@ public partial class HomePage : ContentPage
                     },
                     */
                 }
-            });
+            };
+        });
         await Task.Delay(50);
         ProjectJSONStructure project = new();
         try
@@ -1419,7 +1436,6 @@ public partial class HomePage : ContentPage
                 var dict = recoveredClips!;
                 var trackCount = recoveredTrackCount;
                 ConcurrentDictionary<string, AssetItem> assetDict = new(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}"));
-                Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
                 {
                     if (item.Value.ClipType == ClipMode.ProjectReferenceClip) continue;
@@ -1434,20 +1450,8 @@ public partial class HomePage : ContentPage
                         {
                             continue; // draft will handle thumb generation
                         }
-                        else
-                        {
-                            notfounds.Add(item.Value.Id.ToString(), new AssetItem { AssetId = item.Value.Id.ToString(), Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
-                        }
                     }
                 }
-                foreach (var item in assetDict)
-                {
-                    if (!string.IsNullOrWhiteSpace(item.Value.Path) && !item.Value.Path.StartsWith('#') && !File.Exists(item.Value.Path))
-                    {
-                        notfounds.Add(item.Value?.AssetId ?? Guid.NewGuid().ToString(), item.Value);
-                    }
-                }
-                if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
                 var startupToken = loadCancellation.Token;
                 startRenderRpcTask = Task.Run(async () =>
                 {
@@ -1480,46 +1484,29 @@ public partial class HomePage : ContentPage
                                 ProjectName = project?.ProjectName ?? "?",
                                 IsReadonly = isReadonly,
                                 Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise"),
-                                MaximumSaveSlot = SettingsManager.GetSettingAs("Edit_MaximumSaveSlot", 50, 50),
+                                MaximumSaveSlot = int.MaxValue,
                                 AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"),
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
                                 LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240,
-                                LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8,
+                                LivePreviewResolutionFactor = 1,
                                 DynamicPreviewTimeout = SettingsManager.GetSettingAs<int>("Edit_DynamicPreviewTimeout", 5000, 5000),
-                                UseDynamicPreview = SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"),
+                                UseDynamicPreview = true,
                                 UseLightweightDynamicPreviewHost = SettingsManager.IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true),
                                 ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none"),
                                 AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"),
                                 LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true),
                                 UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"),
                                 PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d,
-                                UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone,
+                                UseCompactLayout = overrideLayoutOption,
                                 EnableClipInfoPopup = SettingsManager.IsBoolSettingTrue("Edit_EnableClipInfoPopup"),
                                 BetterAccessibilityMode = SettingsManager.IsBoolSettingTrue("Edit_BetterAccessibility")
                             };
-                            if (!SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"))
-                            {
-                                var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
-                                if (resolution.Split('x', 2).Length >= 2)
-                                {
-                                    p.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
-                                    p.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
-                                }
-                                else
-                                {
-                                    p.DefaultPreviewWidth = 1280;
-                                    p.DefaultPreviewHeight = 720;
-                                }
-                            }
                             p.InitializeCurrentSnapshot(timeline, recoveredSlotName, wasRecovered);
                             await p.InitializeLoadedUiAsync(true, loadCancellation.Token);
                             if (wasRecovered && recoveredSlotName is not null && !isReadonly)
                                 await p.WriteCurrentSnapshotAsync(timeline, recoveredSlotName, true);
                             await p.PostInit();
                             loadCancellation.Token.ThrowIfCancellationRequested();
-                            //var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };
-                            //projectPluginsItem.Clicked += async (_, _) => await p.Navigation.PushAsync(new ProjectPluginPage(p));
-                            //p.ExtensionsMenuBar.Add(projectPluginsItem);\
                             bool hasAddItems = false;
                             foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
                             {
@@ -1553,6 +1540,11 @@ public partial class HomePage : ContentPage
                             }
 
                             createdPage = p;
+                            Dispatcher.Dispatch(() =>
+                            {
+                                Shell.SetTabBarIsVisible(createdPage, false);
+                                Shell.SetNavBarIsVisible(createdPage, !p.HasMobileTitleBar);
+                            });
                             break;
                         }
                         catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
@@ -1702,11 +1694,8 @@ public partial class HomePage : ContentPage
                 {
                     try
                     {
-                        App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
-                        AppShell.instance?.HideNavView();
-                        Shell.SetTabBarIsVisible(page, false);
-                        Shell.SetNavBarIsVisible(page, true);
                         lastPage = page;
+                        App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
                         await Navigation.PushAsync(page);
 #if WINDOWS
                         if (!string.IsNullOrWhiteSpace(_pendingIntegratedMcpAddress))
@@ -1755,6 +1744,7 @@ public partial class HomePage : ContentPage
         {
             await Dispatcher.DispatchAsync(() =>
             {
+                AppShell.instance?.ShowNavView();
                 cancelButton.IsVisible = false;
                 Content = origContent;
             });

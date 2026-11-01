@@ -189,6 +189,23 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private bool maskInteractivePreviewApplied;
 
+    private void PreparePreviewFrameLayout(uint frame, bool reusePrepared = false)
+    {
+        if (ActivePreviewEditor is LightweightInteractableEditor editor)
+            editor.PrepareFrameLayout(frame, DynamicPreviewProvider.Clips, reusePrepared);
+        else
+            ClipEditor.PrepareFrameLayout(frame, reusePrepared);
+    }
+
+    private bool ApplyPreparedPreviewFrame(IInteractableEditor editor, IReadOnlyList<PreparedPreview> previews, uint frame)
+    {
+        var applied = editor is LightweightInteractableEditor lightweight
+            ? lightweight.ApplyPreparedPreviews(previews, frame)
+            : ClipEditor.ApplyPreparedPreviews(previews, frame);
+        LivePreviewPlayer.IsVisible = false;
+        return applied;
+    }
+
     internal Task RefreshPreviewFromCurrentProviderAsync() => RefreshPreviewFromCurrentProviderAsync(CancellationToken.None);
 
     private async Task RefreshPreviewFromCurrentProviderAsync(CancellationToken cancellationToken, bool throwOnFailure = false)
@@ -210,7 +227,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var refreshMark = new UserMarkRange("Preview.RefreshProvider", $"frame={_currentFrame}, dynamic={UseDynamicPreview}");
 #endif
-        if (UseDynamicPreview)
+        if (UseDynamicPreviewForCurrentForm)
         {
             await RefreshDynamicPreviewOverlay(throwOnFailure);
             return;
@@ -231,11 +248,26 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         try
         {
-            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame,
+            var frame = (uint)_currentFrame;
+            var editor = ActivePreviewEditor;
+            var view = (VisualElement)editor;
+            if (!await Dispatcher.DispatchAsync(() =>
+            {
+                token.ThrowIfCancellationRequested();
+                if (AlreadyDisappeared || frame != (uint)_currentFrame || !ReferenceEquals(editor, ActivePreviewEditor)) return false;
+                PreparePreviewFrameLayout(frame, reusePrepared: true);
+                return true;
+            })) return false;
+            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync(frame,
                 Math.Max(1, ProjectInfo.RelativeWidth), Math.Max(1, ProjectInfo.RelativeHeight),
-                ClipEditor.Width, ClipEditor.Height, token, interactivePreview: true);
+                view.Width, view.Height, token, interactivePreview: true);
             token.ThrowIfCancellationRequested();
-            return await ActivePreviewEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
+            return await Dispatcher.DispatchAsync(() =>
+            {
+                token.ThrowIfCancellationRequested();
+                if (AlreadyDisappeared || frame != (uint)_currentFrame || !ReferenceEquals(editor, ActivePreviewEditor)) return false;
+                return ApplyPreparedPreviewFrame(editor, preparedPreviews, frame);
+            });
         }
         catch (OperationCanceledException)
         {
@@ -257,57 +289,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task SwitchEditorLayoutAsync(string? mode)
-    {
-        bool fixedLayout = string.Equals(mode, "fixed", StringComparison.OrdinalIgnoreCase);
-        if (fixedLayout == IsFixedLayout && _fixedLayoutInitialized) return;
-
-        if (fixedLayout)
-        {
-            DetachViewFromParent(ClipEditorHost);
-            DetachViewFromParent(LowerContent);
-            DetachViewFromParent(AddClipView);
-
-            FixedPreviewHost.Content = ClipEditorHost;
-            FixedTimelineHost.Content = LowerContent;
-            PlayingControlLayout.HorizontalOptions = LayoutOptions.Fill;
-            PlayingControlLayout.Margin = new(4, 2, 0, 3);
-            MainMultiWindowView.IsVisible = false;
-            UpperContent.IsVisible = false;
-            MainControlGrid.IsVisible = false;
-            FixedLayoutRoot.IsVisible = true;
-            IsFixedLayout = true;
-            RebuildQuickCommandSlots();
-            await RefreshFixedClipInfoAsync(_selectedClipIds.Count == 1 ? _selected : null);
-        }
-        else
-        {
-            DetachViewFromParent(AddClipView);
-            FixedPreviewHost.Content = null;
-            FixedTimelineHost.Content = null;
-            FixedClipInfoHost.Content = null;
-            if (AddClipSubwindow is not null && (_fixedLayoutInitialized || !_workspaceWindowHost.WasLayoutRestored))
-            {
-                _workspaceWindowHost?.OpenWindow("clips.add");
-            }
-            PreviewSubwindow.Content = ClipEditorHost;
-            TimelineSubwindow.Content = LowerContent;
-            AddClipHost.Content = AddClipView;
-            PlayingControlLayout.HorizontalOptions = UseCompactLayout == true ? LayoutOptions.End : LayoutOptions.Fill;
-            PlayingControlLayout.Margin = UseCompactLayout == true ? new(0, 0, 8, 0) : new(4, 2, 0, 3);
-            FixedLayoutRoot.IsVisible = false;
-            UpperContent.IsVisible = true;
-            MainControlGrid.IsVisible = true;
-            MainMultiWindowView.IsVisible = true;
-            IsFixedLayout = false;
-            _fixedClipInfoTabs = null;
-            _fixedClipInfoPopupTabs = null;
-        }
-
-        _fixedLayoutInitialized = true;
-        await Dispatcher.DispatchAsync(() => UpdatePlayheadPosition());
-    }
-
     private static void DetachViewFromParent(View? view)
     {
         if (view?.Parent is ContentView contentView && contentView.Content == view)
@@ -318,6 +299,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             border.Content = null;
         }
+        else if (view?.Parent is ScrollView scrollView && scrollView.Content == view)
+        {
+            scrollView.Content = null;
+        }
         else if (view?.Parent is Layout layout)
         {
             layout.Remove(view);
@@ -327,9 +312,21 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task RefreshFixedClipInfoAsync(ClipElementUI? clip)
     {
         if (!IsFixedLayout) return;
+        var version = ++_fixedClipInfoVersion;
         if (popupShowingDirection != "none") await HidePopup(true);
         DetachViewFromParent(AddClipView);
-        _fixedClipInfoPopupTabs = await infoBuilder.BuildFixed(clip, OnClipPropertiesChanged, AddClipView);
+        var tabs = await infoBuilder.BuildFixed(clip, OnClipPropertiesChanged, AddClipView);
+        if (!IsMobileForm || version != _fixedClipInfoVersion)
+        {
+            if (IsWorkspaceForm)
+            {
+                DetachViewFromParent(AddClipView);
+                AddClipHost.Content = AddClipView;
+                AddClipView.IsVisible = true;
+            }
+            return;
+        }
+        _fixedClipInfoPopupTabs = tabs;
         _fixedClipInfoPopupTabs.HeaderRightContent = new Button
         {
             Text = MaterialIconClose,
@@ -371,7 +368,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (item.Tag == "add")
         {
             DetachViewFromParent(AddClipView);
-            await ShowAPopup(content: AddClipView);
+            AddClipView.IsVisible = true;
+            await ShowAPopup(new ContentView { Content = AddClipView }, disableScrollWrapping: true);
             return;
         }
         await ShowAPopup(content: _fixedClipInfoPopupTabs);
@@ -395,6 +393,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null, bool throwOnFailure = false)
     {
         throwOnFailure |= IsGuiRpcRequest;
+        if (AlreadyDisappeared || duration != (uint)_currentFrame) return;
         using var busy = new PreviewBusyScope(this);
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var frameMark = new UserMarkRange("Preview.StaticFrame", $"frame={duration}");
@@ -422,10 +421,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             // A newer render request arrived while we waited for the lock; drop this one quietly.
-            if (cts.IsCancellationRequested) return;
-
-            _currentFrame = duration;
-            SyncClipEditorCurrentFrame();
+            if (cts.IsCancellationRequested || duration != (uint)_currentFrame) return;
+            PreparePreviewFrameLayout(duration, reusePrepared: true);
 
             // Always keep a hard timeout (even in DEBUG) so a wedged render can never hold the lock
             // forever — otherwise every later playhead click would silently block on WaitAsync.
@@ -437,17 +434,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             var targetWidth = width ?? previewWidth;
             var targetHeight = height ?? previewHeight;
 
-            if (UseDynamicPreview)
+            if (UseDynamicPreviewForCurrentForm)
             {
                 if (DynamicPreviewProvider.Clips is null) return;
-                await Dispatcher.DispatchAsync(() =>
-                {
-                    ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
-                    LivePreviewPlayer.IsVisible = false;
-                    ClipEditor.SetStaticPreviewVisible(false);
-                });
-
-                if (!await RefreshDynamicPreviewOverlay(throwOnFailure))
+                var hasPreview = await RefreshDynamicPreviewOverlay(throwOnFailure);
+                cts.Token.ThrowIfCancellationRequested();
+                if (duration != (uint)_currentFrame) return;
+                if (!hasPreview)
                 {
                     await RenderStaticPreviewProgressivelyAsync(duration, targetWidth, targetHeight, cts.Token);
                 }
@@ -455,16 +448,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             else
             {
                 if (previewer.Clips is null) return;
-                await Dispatcher.DispatchAsync(() =>
-                {
-                    ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
-                    LivePreviewPlayer.IsVisible = false;
-                });
-
                 await RenderStaticPreviewProgressivelyAsync(duration, targetWidth, targetHeight, cts.Token);
             }
 
 
+            cts.Token.ThrowIfCancellationRequested();
+            if (duration != (uint)_currentFrame) return;
             SetStateOK();
             SetStatusText(Localized.DraftPage_EverythingFine);
         }
@@ -563,11 +552,19 @@ public partial class DraftPage : ContentPage, IDraftPage
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
                         using var imageMark = new UserMarkRange("Preview.ApplyStaticImage", $"frame={frameIndex}, size={width}x{height}");
 #endif
+                        token.ThrowIfCancellationRequested();
+                        if (AlreadyDisappeared || frameIndex != (uint)_currentFrame) return;
+                        if (displayedTier < 0)
+                        {
+                            LivePreviewPlayer.IsVisible = false;
+                            ClipEditor.ApplyPreparedPreviews([]);
+                        }
+                        ClipEditor.ApplyFrameLayout(frameIndex);
                         ClipEditor.SetStaticPreviewFrame(content.Frame, content.Source);
+                        ClipEditor.SetStaticPreviewVisible(true);
                     });
                     token.ThrowIfCancellationRequested();
                     displayedTier = tier;
-                    await Dispatcher.DispatchAsync(() => ClipEditor.SetStaticPreviewVisible(true));
                 }
                 finally
                 {
@@ -637,7 +634,19 @@ public partial class DraftPage : ContentPage, IDraftPage
     bool playbackDone = false;
     private async void PlayPauseButton_Clicked(object sender, EventArgs e)
     {
-        if ((UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) && _pendingClipPlacementFactory is not null)
+        if (IsPreviewForm)
+        {
+            _previewFormSeekCts?.Cancel();
+            _resumePreviewFormPlayback = false;
+            if (!isPlaying && ProjectDuration == 0) return;
+            if (!isPlaying && _currentFrame >= ProjectDuration - 1d)
+            {
+                _currentFrame = 0;
+                SyncClipEditorCurrentFrame();
+                UpdatePlayheadPosition();
+            }
+        }
+        if (IsMobileForm && _pendingClipPlacementFactory is not null)
         {
             CancelPendingClipPlacement();
             Dispatcher.Dispatch(() =>
@@ -732,7 +741,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 while (!token.IsCancellationRequested)
                 {
-                    if (!isPlaying || UseDynamicPreview)
+                    if (!isPlaying || UseDynamicPreviewForCurrentForm)
                     {
                         await Task.Delay(100, token);
                         continue;
@@ -795,7 +804,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             _playbackStartFrame = _currentFrame;
             _nextPlaybackPath = null;
             var continuousAudioReady = false;
-            var useWorkerAudio = UseDynamicPreview && !IsRemoteProject;
+            var useWorkerAudio = UseDynamicPreviewForCurrentForm && !IsRemoteProject;
             _continuousAudioStartFrame = _currentFrame;
 
             if (!useWorkerAudio)
@@ -859,17 +868,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 }
             }
 
-            if (UseDynamicPreview)
+            if (UseDynamicPreviewForCurrentForm)
             {
                 SetStateBusy();
-                await Dispatcher.DispatchAsync(() =>
-                {
-                    var host = EnsureRealtimePreviewHost();
-                    ClipEditor.SetRealtimePreviewContent(host);
-                    ClipEditor.SetStaticPreviewVisible(false);
-                    LivePreviewPlayer.IsVisible = false;
-                });
-
                 if (!useWorkerAudio)
                 {
                     await Dispatcher.DispatchAsync(() =>
@@ -1050,7 +1051,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetStatusText(Localized._ProcessingWithProg(p));
         }
 
-        if (UseDynamicPreview)
+        if (UseDynamicPreviewForCurrentForm)
         {
             throw new InvalidOperationException("Use RenderSomeFramesDynamicSynced instead.");
         }
@@ -1078,7 +1079,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
         var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
-        var (width, height) = DynamicPreviewProvider.ResolveDimensions(projectWidth, projectHeight, ClipEditor.Width, ClipEditor.Height);
+        var view = (VisualElement)ActivePreviewEditor;
+        var (width, height) = DynamicPreviewProvider.ResolveDimensions(projectWidth, projectHeight, view.Width, view.Height);
         DynamicPreviewCache? cache = null;
         IDisposable? uiAffinity = null;
         try
@@ -1211,7 +1213,13 @@ public partial class DraftPage : ContentPage, IDraftPage
                 continue;
             }
 
-            _currentFrame = targetFrame;
+            var editorForFrame = await Dispatcher.DispatchAsync(() =>
+            {
+                ct.ThrowIfCancellationRequested();
+                _currentFrame = targetFrame;
+                PreparePreviewFrameLayout(targetFrame);
+                return ActivePreviewEditor;
+            });
 
             using var frameCts = cache is null ? CancellationTokenSource.CreateLinkedTokenSource(ct) : null;
             frameCts?.CancelAfter(DynamicPreviewTimeout);
@@ -1257,7 +1265,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         var timeX = FrameToPixel(frameForThisUpdate);
                         var scrollX = TimelineScrollView.ScrollX;
                         var viewportWidth = TimelineScrollView.Width;
-                        if (viewportWidth > 0)
+                        if (!IsPreviewForm && viewportWidth > 0)
                         {
                             double margin = 50;
                             if (timeX < scrollX + margin)
@@ -1272,10 +1280,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                             }
                         }
 
+                        if (ct.IsCancellationRequested || frameForThisUpdate != (uint)_currentFrame
+                            || !ReferenceEquals(editorForFrame, ActivePreviewEditor)) return;
                         CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(frameForThisUpdate * SecondsPerFrame):mm\\:ss\\.ff} / {totalDisplay}";
                         var applyStartedAt = Stopwatch.GetTimestamp();
-                        FastPreviewEditor.SetCurrentFrame(frameForThisUpdate);
-                        ActivePreviewEditor.ApplyPreparedPreviews(previewsForThisFrame);
+                        ApplyPreparedPreviewFrame(editorForFrame, previewsForThisFrame, frameForThisUpdate);
                         var appliedAt = Stopwatch.GetTimestamp();
                         if (cache is null || previewsForThisFrame.Count > 0) appliedFrameTimes.Enqueue(appliedAt);
                         var cutoff = appliedAt - Stopwatch.Frequency;
@@ -1338,6 +1347,17 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (!ct.IsCancellationRequested)
         {
+            if (IsPreviewForm)
+            {
+                await Dispatcher.DispatchAsync(() =>
+                {
+                    if (ct.IsCancellationRequested || !IsPreviewForm) return;
+                    _currentFrame = Math.Max(0, ProjectDuration - 1d);
+                    SyncClipEditorCurrentFrame();
+                    UpdatePlayheadPosition();
+                });
+            }
+            if (ct.IsCancellationRequested) return;
             await PauseLivePreview();
             SetStateOK(Localized.DraftPage_EverythingFine);
         }
@@ -1444,6 +1464,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void ClipPreviewViewport_SizeChanged(object? sender, EventArgs e)
     {
+        UpdatePlayheadHeight();
         UpdatePlayheadPosition();
         RulerLayout.Invalidate();
         ScheduleClipPreviewViewportUpdate();

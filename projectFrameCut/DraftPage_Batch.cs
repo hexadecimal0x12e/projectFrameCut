@@ -425,7 +425,7 @@ public partial class DraftPage
         _lastGuiBatchResult = result;
         Log($"GUI RPC batch {batch.Id} committed ({batch.OperationCount} operations).");
         foreach (var item in _guiBatchPages) item.Page.DisableCancellation();
-        if (batch.Saved && MaximumSaveSlot >= 0)
+        if (batch.Saved)
         {
             try
             {

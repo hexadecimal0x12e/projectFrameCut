@@ -10,14 +10,14 @@ using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.PluginIsolation;
-using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using System.Reflection;
 using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json;
 
 
@@ -66,8 +66,13 @@ public partial class DraftSettingPage
             tabView.TabItems.Clear();
             tabView.TabItems.Add(new TabbedViewItem
             {
+                Header = Localized.MainSettingsPage_Tab_Misc,
+                Content = BuildAdvancedTab()
+            });
+            tabView.TabItems.Add(new TabbedViewItem
+            {
                 Header = Localized.DraftSettingPage_Tab_ClipMgnt,
-                Content = BuildClipAndAssetManageTab()
+                LazyContentFactory = BuildClipAndAssetManageTab
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
@@ -77,27 +82,21 @@ public partial class DraftSettingPage
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
+                Header = Localized.DraftSettingPage_Tab_ExternalSources,
+                Tag = "externalSources",
+                LazyAsyncContentFactory = BuildExternalSourcesTabAsync
+            });
+            tabView.TabItems.Add(new TabbedViewItem
+            {
                 Header = Localized.DraftSettingPage_Tab_History,
                 Tag = "history",
-                Content = BuildHistoryGraphTab(true)
+                LazyContentFactory = () => BuildHistoryGraphTab(true)
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
                 Header = Localized.DraftSettingPage_Tab_Statistics,
                 Tag = "statistics",
                 LazyAsyncContentFactory = BuildStatisticsTabAsync
-            });
-            if (ProjectExternalSourceService.AllowRpcSources || ProjectExternalSourceService.AllowAssemblySources)
-                tabView.TabItems.Add(new TabbedViewItem
-                {
-                    Header = Localized.DraftSettingPage_Tab_ExternalSources,
-                    Tag = "externalSources",
-                    LazyAsyncContentFactory = BuildExternalSourcesTabAsync
-                });
-            tabView.TabItems.Add(new TabbedViewItem
-            {
-                Header = Localized.MainSettingsPage_Tab_Misc,
-                Content = BuildAdvancedTab()
             });
             return;
         }
@@ -127,18 +126,17 @@ public partial class DraftSettingPage
             Tag = "messages",
             Content = BuildHistoryLogsTab()
         });
-        if (ProjectExternalSourceService.AllowRpcSources || ProjectExternalSourceService.AllowAssemblySources)
-            tabView.TabItems.Add(new TabbedViewItem
-            {
-                Header = Localized.DraftSettingPage_Tab_ExternalSources,
-                Tag = "externalSources",
-                LazyAsyncContentFactory = BuildExternalSourcesTabAsync
-            });
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.DraftSettingPage_AssetFiles_Title,
             Tag = "assetFiles",
             LazyAsyncContentFactory = () => Task.FromResult(BuildAssetFilesTab())
+        });
+        tabView.TabItems.Add(new TabbedViewItem
+        {
+            Header = Localized.DraftSettingPage_Tab_ExternalSources,
+            Tag = "externalSources",
+            LazyAsyncContentFactory = BuildExternalSourcesTabAsync
         });
         tabView.TabItems.Add(new TabbedViewItem
         {
@@ -351,8 +349,9 @@ public partial class DraftSettingPage
         var writeCoverAsFirstFrame = parent.ProjectInfo.Properties.TryGetValue(WriteCoverAsFirstFrameProperty, out var wcaff) && bool.TryParse(wcaff, out var writeCover) && writeCover;
         PropertyPanelBuilder ppb = new();
         ppb.AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_General_TargetSize, Localized.DraftSettingPage_General_TargetSize_Description));
-        ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "60", null, default);
-        ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", null);
+        ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "n/a", s => s.IsEnabled = false);
+        ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, [$"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}"], $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", s => s.IsEnabled = false);
+        ppb.AddCustomChild(new Label { Text = Localized.DraftSettingPage_General_TargetSize_ReadonlyAtProjectMode, TextColor = Colors.Gray, FontSize = 12 });
         ppb.AddCheckbox("enableHDR", Localized.DraftSettingPage_General_EnableHDR, enableHDR, null);
         ppb.AppendWhen(enableHDR, c => c.AddEntry("HdrMaximumBrightness", Localized.DraftSettingPage_General_HDRLimit, parent.ProjectInfo.Properties.TryGetValue("HdrMaximumBrightness", out var hdrMaxiumBrightness) ? hdrMaxiumBrightness : "1000", null, null));
         ppb.AppendWhen(enableHDR, c => c.AddEntry("sdrClipBrightness", Localized.DraftSettingPage_General_SDRBrightness,
@@ -490,23 +489,6 @@ public partial class DraftSettingPage
         .AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_General_TargetSize, Localized.DraftSettingPage_General_TargetSize_Description))
         .AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, info.TargetFrameRate.ToString(), "60", null, default)
         .AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{info.RelativeWidth}x{info.RelativeHeight}", null)
-        .AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_UserDefinedProperties, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Subtitle))
-        .Foreach(info.UserDefinedProperties, (p, item) => p.AddEntry($"CustomOption,{item.Key}", item.Key, item.Value, Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default))
-        .AddSeparator()
-        .AddButton(Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add, async (s, e) =>
-        {
-            var key = await PromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, string.Empty);
-            if (string.IsNullOrWhiteSpace(key)) return;
-
-            if (!info.UserDefinedProperties.ContainsKey(key))
-            {
-                info.UserDefinedProperties[key] = string.Empty;
-                await SaveStandaloneProjectInfo(info);
-            }
-
-            tabView.SelectedItem.Content = BuildAdvancedTab();
-        })
-        .AddButton("SaveCustomOption", Localized._Save)
         .AddSeparator();
         AddProjectMetadata(ppb, info);
         return ppb
@@ -520,14 +502,6 @@ public partial class DraftSettingPage
                 info.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
                 info.LastOpenAppName = MauiProgram.AssemblyName;
                 info.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
-                await SaveStandaloneProjectInfo(info);
-            }
-        })
-        .AddButton(Localized.DraftSettingPage_Advanced_DiscardUnsavedChange, async (s, e) =>
-        {
-            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
-            {
-                info.NormallyExited = true;
                 await SaveStandaloneProjectInfo(info);
             }
         })
@@ -627,6 +601,23 @@ public partial class DraftSettingPage
                 await ShowInfoAsync(Localized._Done);
             }
         })
+        .AddSeparator()
+        .AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_UserDefinedProperties, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Subtitle))
+        .Foreach(info.UserDefinedProperties, (p, item) => p.AddEntry($"CustomOption,{item.Key}", item.Key, item.Value, Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default))
+        .AddButton(Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add, async (s, e) =>
+        {
+            var key = await PromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, string.Empty);
+            if (string.IsNullOrWhiteSpace(key)) return;
+
+            if (!info.UserDefinedProperties.ContainsKey(key))
+            {
+                info.UserDefinedProperties[key] = string.Empty;
+                await SaveStandaloneProjectInfo(info);
+            }
+
+            tabView.SelectedItem.Content = BuildAdvancedTab();
+        })
+        .AddButton("SaveCustomOption", Localized._Save)
         .ListenToChanges(OnStandaloneAdvancedPropertiesChanged)
         .BuildWithScrollView(null);
 

@@ -266,6 +266,8 @@ public static class RenderScheduleBenchmark
             renderer.PrepareRender(token);
             using var progress = createProgress?.Invoke(renderer);
             await renderer.GoRender(token);
+            if (renderer.Composer is DeferredRenderComposer deferred)
+                await deferred.WriteVideoAsync(builder, token);
             frames = builder.WrittenFramesCount;
             if (frames != report.Duration || renderer.CurrentFinished != report.Duration || writer.DurationWritten != report.Duration)
                 throw new InvalidOperationException($"Incomplete output: renderer={renderer.CurrentFinished}, builder={frames}, writer={writer.DurationWritten}, expected={report.Duration}.");
@@ -285,7 +287,7 @@ public static class RenderScheduleBenchmark
         {
             sw.Stop();
             await sampler.DisposeAsync();
-            try { if (builder is not null) builder.Dispose(); else writer?.Dispose(); }
+            try { renderer?.Composer?.Dispose(); if (builder is not null) builder.Dispose(); else writer?.Dispose(); }
             finally
             {
                 try { foreach (var clip in clips) clip.Dispose(); }

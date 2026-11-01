@@ -1149,8 +1149,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void OnDockTapped(object sender, EventArgs e)
         {
-            PerformDock(true);
+            Dock();
         }
+
+        /// <summary>Returns this item from its independent OS window to its original host.</summary>
+        public void Dock() => PerformDock(true);
 
         private void PerformDock(bool closeWindow)
         {

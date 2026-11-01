@@ -27,7 +27,7 @@ internal sealed class AudioTrackPreviewAudioSink : IAudioPreviewSink
             .SetBufferSizeInBytes(Math.Max(minimum, format.SampleRate * format.Channels * sizeof(float) * 2))
             .SetTransferMode(AudioTrackMode.Stream)
             .Build();
-        if (_track.State != State.Initialized) throw new InvalidOperationException("AudioTrack initialization failed.");
+        if (_track.State != AudioTrackState.Initialized) throw new InvalidOperationException("AudioTrack initialization failed.");
         return ValueTask.CompletedTask;
     }
 

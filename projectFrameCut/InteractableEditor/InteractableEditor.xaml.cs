@@ -111,10 +111,14 @@ namespace projectFrameCut.InteractableEditor
         private readonly Dictionary<Guid, ClipOverlayState> _clipStates = new();
         private readonly object _clipStatesLock = new();
         private readonly Dictionary<Guid, object> _previewSourceClips = new();
+        private readonly record struct ClipLayout(Rect Bounds, float Rotation, IClip? FrameClip);
+        private Dictionary<Guid, ClipLayout>? _pendingFrameLayouts;
+        private uint _pendingFrame;
         private readonly Dictionary<Guid, IInteractableElement> _genericElements = new();
         private readonly Dictionary<Guid, InteractiveRect> _genericLastRects = new();
         private ClipOverlayState? _activeState;
         private Func<Task>? _previewRefreshCallback;
+        private Func<Task>? _fullScreenPreviewCallback;
         private Func<Task<ImageSource?>>? _overviewImageSourceProvider;
         private bool _overviewImageSourceRequested;
         private int _overviewImageSourceVersion;
@@ -610,7 +614,7 @@ namespace projectFrameCut.InteractableEditor
                     || (!ClipVisual.IsVisible && !PreviewHost.IsVisible);
             }
 
-            public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual, Brush? clipStroke = null)
+            public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual, Brush? clipStroke = null, float? clipRotation = null)
             {
                 // The editor's clip collection can be replaced while a draft is loading or a
                 // history snapshot is being applied. Prefer the current selection as a fallback
@@ -624,8 +628,8 @@ namespace projectFrameCut.InteractableEditor
                 Root.IsVisible = true;
                 AbsoluteLayout.SetLayoutBounds(Root, new Rect(displayX, displayY, displayW, displayH));
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
-                float rotation = clip is null ? 0 : _owner.GetClipRotation(clip);
-                if (clip is null && _owner._previewSourceClips.TryGetValue(ClipId, out var source))
+                float rotation = clipRotation ?? (clip is null ? 0 : _owner.GetClipRotation(clip));
+                if (clipRotation is null && clip is null && _owner._previewSourceClips.TryGetValue(ClipId, out var source))
                     rotation = source switch
                     {
                         ClipElementUI uiClip => _owner.GetClipRotation(uiClip),
@@ -1401,6 +1405,19 @@ namespace projectFrameCut.InteractableEditor
             LogDiagnostic($"[Zoom] Zoom-in button changed zoom to {ZoomScale:F2}x");
         }
 
+        private async void FullScreenButton_Clicked(object? sender, EventArgs e)
+        {
+            if (_fullScreenPreviewCallback is null) return;
+            try
+            {
+                await _fullScreenPreviewCallback();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Enter full screen preview", this);
+            }
+        }
+
         private void EnsureOverviewImageSource()
         {
             if (_overviewImageSourceRequested || _overviewImageSourceProvider is null) return;
@@ -1563,6 +1580,13 @@ namespace projectFrameCut.InteractableEditor
         public InteractableEditor ConfigurePreviewRefresh(Func<Task>? refreshCallback)
         {
             _previewRefreshCallback = refreshCallback;
+            return this;
+        }
+
+        public InteractableEditor ConfigureFullScreenPreview(Func<Task>? callback)
+        {
+            _fullScreenPreviewCallback = callback;
+            FullScreenButton.IsVisible = callback is not null;
             return this;
         }
 
@@ -1838,6 +1862,7 @@ namespace projectFrameCut.InteractableEditor
         {
             _videoWidth = width;
             _videoHeight = height;
+            _pendingFrameLayouts = null;
             UpdateOverviewViewport();
             UpdateVisuals(ignorePositionProvider);
         }
@@ -1865,7 +1890,7 @@ namespace projectFrameCut.InteractableEditor
 
             try
             {
-                Dispatcher.Dispatch(() =>
+                void AttachState()
                 {
                     if (!ClipStatesHost.Children.Contains(state.Root))
                     {
@@ -1881,7 +1906,9 @@ namespace projectFrameCut.InteractableEditor
                             });
                         }
                     }
-                });
+                }
+                if (Dispatcher.IsDispatchRequired) Dispatcher.Dispatch(AttachState);
+                else AttachState();
                 return state;
             }
             catch (Exception e1)
@@ -2632,11 +2659,14 @@ namespace projectFrameCut.InteractableEditor
             UpdateVisuals();
         }
 
-        public Task UpdateClips(ConcurrentDictionary<Guid, ClipElementUI> clips)
+        public Task UpdateClips(ConcurrentDictionary<Guid, ClipElementUI> clips) => UpdateClips(clips, true);
+
+        internal Task UpdateClips(ConcurrentDictionary<Guid, ClipElementUI> clips, bool updateVisuals)
         {
             Clips = clips;
             _allClips = clips;
-            UpdateVisuals();
+            _pendingFrameLayouts = null;
+            if (updateVisuals) UpdateVisuals();
             return Task.CompletedTask;
         }
 
@@ -2648,6 +2678,7 @@ namespace projectFrameCut.InteractableEditor
         /// </summary>
         public void UpdateCurrentFrame(uint frameNumber)
         {
+            _pendingFrameLayouts = null;
             _currentFrame = frameNumber;
             UpdateVisuals();
         }
@@ -2655,6 +2686,38 @@ namespace projectFrameCut.InteractableEditor
         public void SetCurrentFrame(uint currentFrame)
         {
             UpdateCurrentFrame(currentFrame);
+        }
+
+        internal void PrepareFrameLayout(uint frame, bool reusePrepared = false)
+        {
+            if (reusePrepared && _pendingFrame == frame && _pendingFrameLayouts is not null) return;
+            _pendingFrame = frame;
+            _pendingFrameLayouts = null;
+            if (IsInteractiveManipulationInProgress) return;
+            // 缓存逻辑布局，等同帧的预览内容齐备后再应用。
+            _pendingFrameLayouts = _allClips?.Values
+                .Where(c => IsClipVisibleAtFrame(c, frame))
+                .ToDictionary(c => c.Id, c => ResolveClipLayout(c, frame, false, usePreviewSource: false));
+        }
+
+        internal void ApplyFrameLayout(uint frame)
+        {
+            var layouts = TakeFrameLayouts(frame);
+            bool frameChanged = _currentFrame != frame;
+            _currentFrame = frame;
+            if (layouts is not null)
+            {
+                foreach (var (id, layout) in layouts)
+                    if (layout.FrameClip is not null) _previewSourceClips[id] = layout.FrameClip;
+            }
+            if (layouts is not null || frameChanged) UpdateVisuals(preparedLayouts: layouts);
+        }
+
+        private Dictionary<Guid, ClipLayout>? TakeFrameLayouts(uint frame)
+        {
+            var layouts = _pendingFrame == frame && !IsInteractiveManipulationInProgress ? _pendingFrameLayouts : null;
+            _pendingFrameLayouts = null;
+            return layouts;
         }
 
         public void SetAssets(ConcurrentDictionary<string, AssetItem>? assets)
@@ -2781,7 +2844,7 @@ namespace projectFrameCut.InteractableEditor
             return new Rect(offX, offY, drawW, drawH);
         }
 
-        private void UpdateVisuals(bool ignorePositionProvider = false, IReadOnlySet<Guid>? clipFilter = null, bool reorderClips = true)
+        private void UpdateVisuals(bool ignorePositionProvider = false, IReadOnlySet<Guid>? clipFilter = null, bool reorderClips = true, IReadOnlyDictionary<Guid, ClipLayout>? preparedLayouts = null)
         {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var visualsMark = new UserMarkRange("Editor.UpdateVisuals", $"frame={_currentFrame}, filtered={clipFilter?.Count.ToString() ?? "all"}");
@@ -2819,7 +2882,7 @@ namespace projectFrameCut.InteractableEditor
                 // 当使用DraftPage中的所有clips时，先处理多clips模式
                 if (_allClips is not null)
                 {
-                    UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider, clipFilter, reorderClips);
+                    UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider, clipFilter, reorderClips, preparedLayouts);
                     return;
                 }
 
@@ -3037,14 +3100,29 @@ namespace projectFrameCut.InteractableEditor
         /// <b>THIS FUNCTION MUST BE CALLED ON THE UI THREAD.</b>
         /// </remarks>
         /// <param name="preparedPreviews">The prepared previews</param>
-        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         public bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> preparedPreviews)
+            => ApplyPreparedPreviewsCore(preparedPreviews, null);
+
+        internal bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> preparedPreviews, uint frame)
+            => ApplyPreparedPreviewsCore(preparedPreviews, frame);
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+        private bool ApplyPreparedPreviewsCore(IReadOnlyList<PreparedPreview> preparedPreviews, uint? frame)
         {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var applyMark = new UserMarkRange("Preview.Apply", $"previews={preparedPreviews.Count}, host=editor");
 #endif
-            var canvasPreview = preparedPreviews.FirstOrDefault(static preview => preview.IsCanvasPreview);
-            if (canvasPreview is not null)
+            var views = new View?[preparedPreviews.Count];
+            var canvasIndex = -1;
+            for (var i = 0; i < preparedPreviews.Count; i++)
+            {
+                views[i] = PreviewErrorView.GetView(preparedPreviews[i]);
+                if (canvasIndex < 0 && preparedPreviews[i].IsCanvasPreview) canvasIndex = i;
+            }
+            bool frameChanged = frame.HasValue && _currentFrame != frame.Value;
+            var preparedLayouts = frame.HasValue ? TakeFrameLayouts(frame.Value) : null;
+            if (frame.HasValue) _currentFrame = frame.Value;
+            if (canvasIndex >= 0)
             {
                 if (_customHandleLivePreviews.Count > 0) return true;
                 foreach (var state in _clipStates.Values)
@@ -3054,10 +3132,10 @@ namespace projectFrameCut.InteractableEditor
                 }
                 _previewSourceClips.Clear();
 
-                var canvasView = PreviewErrorView.GetView(canvasPreview);
+                var canvasView = views[canvasIndex];
                 foreach (var preview in preparedPreviews)
                     if (preview.Source is not null) _previewSourceClips[preview.ClipId] = preview.Source;
-                if (!IsInteractiveManipulationInProgress) UpdateVisuals(reorderClips: false);
+                if (!IsInteractiveManipulationInProgress) UpdateVisuals(reorderClips: false, preparedLayouts: preparedLayouts);
                 if (LivePreviewerHost.Content is HdrPreviewView existingHdr && canvasView is HdrPreviewView incomingHdr)
                 {
                     existingHdr.Frame = incomingHdr.Frame;
@@ -3075,6 +3153,7 @@ namespace projectFrameCut.InteractableEditor
                 return canvasView is not null;
             }
 
+            SetStaticPreviewVisible(false);
             LivePreviewerHost.IsVisible = false;
 
             if (preparedPreviews.Count == 0)
@@ -3108,6 +3187,7 @@ namespace projectFrameCut.InteractableEditor
                     {
                         state.RefreshPreviewVisibility();
                     }
+                    if (preparedLayouts is not null || frameChanged) UpdateVisuals(preparedLayouts: preparedLayouts);
                     return false;
                 }
             }
@@ -3116,8 +3196,9 @@ namespace projectFrameCut.InteractableEditor
             var layoutChanged = new HashSet<Guid>();
             var hasVisiblePreview = false;
 
-            foreach (var prepared in preparedPreviews)
+            for (var i = 0; i < preparedPreviews.Count; i++)
             {
+                var prepared = preparedPreviews[i];
                 if (prepared.ClipId == Guid.Empty)
                 {
                     continue;
@@ -3156,7 +3237,7 @@ namespace projectFrameCut.InteractableEditor
                     continue;
                 }
 
-                var previewView = PreviewErrorView.GetView(prepared);
+                var previewView = views[i];
                 if (previewView is not null)
                 {
                     var shouldDeferViewSwap = ShouldKeepExistingPreviewFrame(prepared.ClipId)
@@ -3198,7 +3279,11 @@ namespace projectFrameCut.InteractableEditor
             {
                 state.RefreshPreviewVisibility();
             }
-            if (layoutChanged.Count > 0)
+            if (preparedLayouts is not null || frameChanged)
+            {
+                UpdateVisuals(preparedLayouts: preparedLayouts);
+            }
+            else if (layoutChanged.Count > 0)
             {
                 LogDiagnostic($"[Preview] Updating layout for {layoutChanged.Count} clips at frame {_currentFrame}.");
                 UpdateVisuals(clipFilter: layoutChanged, reorderClips: false);
@@ -3366,7 +3451,66 @@ namespace projectFrameCut.InteractableEditor
             RenderRectVisual.IsVisible = true;
         }
 
-        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale, bool ignorePositionProvider, IReadOnlySet<Guid>? clipFilter, bool reorderClips)
+        private ClipLayout ResolveClipLayout(ClipElementUI clip, uint frame, bool ignorePositionProvider, bool usePreviewSource = true)
+        {
+            var clipInstance = usePreviewSource ? GetClipArgumentPreview(clip.Id) : GetClipInstance(clip);
+            if (!usePreviewSource && clipInstance is not null)
+                clipInstance = ClipArgumentBinding.InitializeFrame(clipInstance, frame);
+            var argumentClip = clipInstance is not null && ClipArgumentBinding.IsFrameCopy(clipInstance) ? clipInstance : null;
+            double x = argumentClip?.TargetX ?? clip.TargetX;
+            double y = argumentClip?.TargetY ?? clip.TargetY;
+            int targetWidth = argumentClip?.TargetWidth ?? clip.TargetWidth;
+            int targetHeight = argumentClip?.TargetHeight ?? clip.TargetHeight;
+            double w = targetWidth > 0 ? targetWidth : _videoWidth;
+            double h = targetHeight > 0 ? targetHeight : _videoHeight;
+
+            if (argumentClip is null && clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
+            {
+                ComputeFittedRectFromAsset(null, clip, _videoWidth, _videoHeight, ref w, ref h);
+                if (w <= 0) w = _videoWidth;
+                if (h <= 0) h = _videoHeight;
+            }
+
+            if (argumentClip is null && clip.ClipType == ClipMode.TextClip && TryResolveTextClipViewRect(clip.ExtraData, out var textRect))
+            {
+                x += textRect.X;
+                y += textRect.Y;
+                w = textRect.Width;
+                h = textRect.Height;
+            }
+
+            clipInstance ??= GetClipInstance(clip);
+            if (!ignorePositionProvider && clipInstance is not null)
+            {
+                ApplyPositionProvidersToRect(
+                    argumentClip is not null ? argumentClip.EffectsInstances : clip.Effects?.Values,
+                    clipInstance, frame, (int)Math.Round(_videoWidth), (int)Math.Round(_videoHeight),
+                    ref x, ref y, ref w, ref h);
+            }
+
+            if (argumentClip is null)
+            {
+                w = Math.Clamp(w, MinSize, _videoWidth);
+                h = Math.Clamp(h, MinSize, _videoHeight);
+                if (!AllowClipOutOfBounds)
+                {
+                    x = Math.Clamp(x, 0, _videoWidth - w);
+                    y = Math.Clamp(y, 0, _videoHeight - h);
+                }
+            }
+            else
+            {
+                w = Math.Max(1, w);
+                h = Math.Max(1, h);
+            }
+
+            float rotation = argumentClip is not null
+                ? VideoClipRotation.GetAngle(argumentClip, frame, (int)_videoWidth, (int)_videoHeight)
+                : VideoClipRotation.GetAngle(clip.Rotation, clipInstance, clip.Effects?.Values, frame, (int)_videoWidth, (int)_videoHeight);
+            return new ClipLayout(new Rect(x, y, w, h), rotation, argumentClip);
+        }
+
+        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale, bool ignorePositionProvider, IReadOnlySet<Guid>? clipFilter, bool reorderClips, IReadOnlyDictionary<Guid, ClipLayout>? preparedLayouts)
         {
             //LogDiagnostic($"Updating visuals for {_allClips.Count} clips, scale: {scale}");
             if (_allClips is null || _allClips.Count == 0)
@@ -3378,81 +3522,21 @@ namespace projectFrameCut.InteractableEditor
             IEnumerable<ClipElementUI> candidates = clipFilter is null ? _allClips.Values
                 : clipFilter.Select(id => _allClips.TryGetValue(id, out var clip) ? clip : null).OfType<ClipElementUI>();
             var activeClips = candidates
-                .Where(IsClipVisibleInCurrentFrame)
+                .Where(c => preparedLayouts?.ContainsKey(c.Id) ?? IsClipVisibleInCurrentFrame(c))
                 .ToList();
             var activeClipIds = activeClips.Select(c => c.Id).ToHashSet();
 
             // 遍历所有clips，筛选出在当前帧范围内的clips
             foreach (var clip in activeClips)
             {
-                //LogDiagnostic($"Updating layout of {clip.Id}");
-                Stopwatch sw = Stopwatch.StartNew();
-
                 var state = GetOrCreateClipState(clip.Id);
-
-                // 计算clip的位置和大小
-                double x;
-                double y;
-                double w;
-                double h;
-
-                var argumentClip = GetClipArgumentPreview(clip.Id);
-                x = argumentClip?.TargetX ?? clip.TargetX;
-                y = argumentClip?.TargetY ?? clip.TargetY;
-                int targetWidth = argumentClip?.TargetWidth ?? clip.TargetWidth;
-                int targetHeight = argumentClip?.TargetHeight ?? clip.TargetHeight;
-                w = targetWidth > 0 ? targetWidth : _videoWidth;
-                h = targetHeight > 0 ? targetHeight : _videoHeight;
-
-                // 当 TargetWidth 和 TargetHeight 均未设置时，根据资产原始比例计算适配尺寸
-                if (argumentClip is null && clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
-                {
-                    ComputeFittedRectFromAsset(null, clip, _videoWidth, _videoHeight, ref w, ref h);
-                    if (w <= 0) w = _videoWidth;
-                    if (h <= 0) h = _videoHeight;
-                }
-
-                if (argumentClip is null && clip.ClipType == ClipMode.TextClip && TryResolveTextClipViewRect(clip.ExtraData, out var textRect))
-                {
-                    x += textRect.X;
-                    y += textRect.Y;
-                    w = textRect.Width;
-                    h = textRect.Height;
-                }
-
-                // 安全获取 clip 实例用于位置提供器；回调未配置时跳过。
-                var clipInstance = argumentClip ?? GetClipInstance(clip);
-                if (!ignorePositionProvider && clipInstance is not null)
-                {
-                    ApplyPositionProvidersToRect(
-                        argumentClip is not null ? argumentClip.EffectsInstances : clip.Effects?.Values,
-                        clipSource: clipInstance,
-                        _currentFrame,
-                        (int)Math.Round(_videoWidth),
-                        (int)Math.Round(_videoHeight),
-                        ref x, ref y, ref w, ref h);
-                }
-
-                if (argumentClip is null)
-                {
-                    w = Math.Clamp(w, MinSize, _videoWidth);
-                    h = Math.Clamp(h, MinSize, _videoHeight);
-                    if (!AllowClipOutOfBounds)
-                    {
-                        x = Math.Clamp(x, 0, _videoWidth - w);
-                        y = Math.Clamp(y, 0, _videoHeight - h);
-                    }
-                }
-                else
-                {
-                    w = Math.Max(1, w);
-                    h = Math.Max(1, h);
-                }
+                var layout = preparedLayouts?.GetValueOrDefault(clip.Id) ?? ResolveClipLayout(clip, _currentFrame, ignorePositionProvider);
+                var (x, y, w, h) = (layout.Bounds.X, layout.Bounds.Y, layout.Bounds.Width, layout.Bounds.Height);
 
                 bool isCurrentClip = _currentClip is not null
                     && _currentClip.Id == clip.Id;
 
-                if (argumentClip is null && _genericElements.TryGetValue(clip.Id, out var genericElement))
+                if (layout.FrameClip is null && _genericElements.TryGetValue(clip.Id, out var genericElement))
                 {
                     var nextRect = new InteractiveRect(x, y, w, h);
                     var previousRect = _genericLastRects.GetValueOrDefault(clip.Id, nextRect);
@@ -3489,7 +3573,8 @@ namespace projectFrameCut.InteractableEditor
                     showSizeLabel: showSizeLabel,
                     sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
                     showClipVisual: isCurrentClip,
-                    clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null);
+                    clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null,
+                    clipRotation: layout.Rotation);
 
                 UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
 
@@ -3514,16 +3599,13 @@ namespace projectFrameCut.InteractableEditor
             if (clipFilter is null)
             {
                 var inactiveIds = _clipStates.Keys.Except(activeClipIds).ToList();
-                MainThread.BeginInvokeOnMainThread(() =>
+                foreach (var inactiveId in inactiveIds)
                 {
-                    foreach (var inactiveId in inactiveIds)
+                    if (_clipStates.TryGetValue(inactiveId, out var state))
                     {
-                        if (_clipStates.TryGetValue(inactiveId, out var state))
-                        {
-                            state.Hide();
-                        }
+                        state.Hide();
                     }
-                });
+                }
             }
 
 
@@ -3604,6 +3686,9 @@ namespace projectFrameCut.InteractableEditor
 
         [DebuggerStepThrough()]
         private bool IsClipVisibleInCurrentFrame(ClipElementUI clip)
+            => IsClipVisibleAtFrame(clip, _currentFrame);
+
+        private bool IsClipVisibleAtFrame(ClipElementUI clip, uint frame)
         {
             if (!clip.ShouldDisplayInUI)
                 return false;
@@ -3613,7 +3698,7 @@ namespace projectFrameCut.InteractableEditor
 
             if (_getClipInstanceCallback is not null && _getClipInstanceCallback(clip) is IClip c)
             {
-                return c.ContainsFrame(_currentFrame);
+                return c.ContainsFrame(frame);
             }
 
             if (clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft"))
@@ -3654,7 +3739,7 @@ namespace projectFrameCut.InteractableEditor
             uint clipEndFrame = clipStartFrame + clipDurationFrames;
 
             // 检查当前帧是否在clip的范围内
-            return _currentFrame >= clipStartFrame && _currentFrame < clipEndFrame;
+            return frame >= clipStartFrame && frame < clipEndFrame;
         }
 
 #endregion

@@ -885,6 +885,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "\u5355\u6B21\u7F13\u51B2\u65F6\u957F\uFF08\u79D2\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "\u6BCF\u4E2A\u7247\u6BB5\u9884\u89C8\u6C60\u4E0A\u9650\uFF08MiB\uFF09",
         "Mode": "ConstString",
@@ -2709,6 +2717,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "\u9650\u5236 GPU \u7F13\u51B2\u6C60\u5BB9\u91CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_EnableHwAccelRasterizer",
         "Value": "\u786C\u4EF6\u52A0\u901F\u5149\u6805\u5316",
         "Mode": "ConstString",
@@ -2800,6 +2816,14 @@
       {
         "Id": "Render_GCOption_LetCLRDoGC",
         "Value": "\u8BA9 .NET CLR \u51B3\u5B9A\u4F55\u65F6\u8FDB\u884C\u5783\u573E\u56DE\u6536\uFF08\u9ED8\u8BA4\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "GPU \u7F13\u51B2\u6C60\u5BB9\u91CF\u4E0A\u9650\uFF08MiB\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3295,6 +3319,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Security_ExternalRpcPipe_AllowAnyUser_Warning",
+        "Value": "\u5141\u8BB8\u4EFB\u610F\u7528\u6237\u8BBF\u95EE RPC \u7BA1\u9053\u53EF\u80FD\u9020\u6210\u610F\u5916\u5730\u4FE1\u606F\u6CC4\u9732\u95EE\u9898\uFF0C\u53EA\u5E94\u8BE5\u5728\u76EE\u6807\u5BA2\u6237\u7AEF\u65E0\u6CD5\u8FDE\u63A5\u7684\u65F6\u5019\u542F\u7528\u3002\r\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Security_ExternalRpcPipe_AllowExternalRPC",
         "Value": "\u5141\u8BB8\u5916\u90E8 RPC \u5BA2\u6237\u7AEF",
         "Mode": "ConstString",
@@ -3575,10 +3607,31 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_ExternalRpcPipe_AllowAnyUser_Warning",
-        "Value": "\u5141\u8BB8\u4EFB\u610F\u7528\u6237\u8BBF\u95EE RPC \u7BA1\u9053\u53EF\u80FD\u9020\u6210\u610F\u5916\u5730\u4FE1\u606F\u6CC4\u9732\u95EE\u9898\uFF0C\u53EA\u5E94\u8BE5\u5728\u76EE\u6807\u5BA2\u6237\u7AEF\u65E0\u6CD5\u8FDE\u63A5\u7684\u65F6\u5019\u542F\u7528\u3002\r\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Id": "Render_SchedulingOverride",
+        "Value": "\u8986\u76D6\u672C\u6B21\u6E32\u67D3\u7684\u8C03\u5EA6\u8BBE\u7F6E",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "\u4EC5\u7528\u4E8E\u672C\u6B21\u6E32\u67D3\u53CA\u751F\u6210\u7684 CLI \u547D\u4EE4\uFF1B\u5173\u95ED\u540E\u4F7F\u7528\u5168\u5C40\u8BBE\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\u8C03\u5EA6\u8BBE\u7F6E\u4E2D\u7684\u201C{name}\u201D\u65E0\u6548\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -7009,6 +7062,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Buffer duration per batch (seconds)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "Per-clip preview pool limit (MiB)",
         "Mode": "ConstString",
@@ -7245,6 +7306,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Limit GPU buffer pool size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "GPU buffer pool limit (MiB)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Override scheduling for this render",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "Applies only to this render and the generated CLI command. Disable to use global settings.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "Invalid value for scheduling option \u201C{name}\u201D.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -10676,6 +10782,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "\u55AE\u6B21\u7DE9\u885D\u6642\u9577\uFF08\u79D2\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "\u6BCF\u500B\u7247\u6BB5\u9810\u89BD\u6C60\u4E0A\u9650\uFF08MiB\uFF09",
         "Mode": "ConstString",
@@ -10912,6 +11026,51 @@
         "Value": "\u9810\u89BD\u548C\u539F\u59CB\u756B\u683C",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "\u8986\u5BEB\u672C\u6B21\u7B97\u7E6A\u7684\u6392\u7A0B\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "\u50C5\u7528\u65BC\u672C\u6B21\u7B97\u7E6A\u53CA\u7522\u751F\u7684 CLI \u547D\u4EE4\uFF1B\u95DC\u9589\u5F8C\u4F7F\u7528\u5168\u57DF\u8A2D\u5B9A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\u6392\u7A0B\u8A2D\u5B9A\u4E2D\u7684\u300C{name}\u300D\u7121\u6548\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -14347,6 +14506,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "1\u56DE\u306E\u30D0\u30C3\u30D5\u30A1\u30EA\u30F3\u30B0\u6642\u9593\uFF08\u79D2\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "\u30AF\u30EA\u30C3\u30D7\u3054\u3068\u306E\u30D7\u30EC\u30D3\u30E5\u30FC\u30D7\u30FC\u30EB\u4E0A\u9650\uFF08MiB\uFF09",
         "Mode": "ConstString",
@@ -14583,6 +14750,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "\u4ECA\u56DE\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u306E\u30B9\u30B1\u30B8\u30E5\u30FC\u30EB\u8A2D\u5B9A\u3092\u4E0A\u66F8\u304D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "\u4ECA\u56DE\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u3068\u751F\u6210\u3055\u308C\u308B CLI \u30B3\u30DE\u30F3\u30C9\u306B\u306E\u307F\u9069\u7528\u3057\u307E\u3059\u3002\u30AA\u30D5\u306B\u3059\u308B\u3068\u5168\u4F53\u8A2D\u5B9A\u3092\u4F7F\u7528\u3057\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\u30B9\u30B1\u30B8\u30E5\u30FC\u30EB\u8A2D\u5B9A\u300C{name}\u300D\u306E\u5024\u304C\u7121\u52B9\u3067\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -18011,6 +18223,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "1\uD68C \uBC84\uD37C\uB9C1 \uAE38\uC774(\uCD08)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "\uD074\uB9BD\uBCC4 \uBBF8\uB9AC \uBCF4\uAE30 \uD480 \uD55C\uB3C4(MiB)",
         "Mode": "ConstString",
@@ -18247,6 +18467,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "\uC774\uBC88 \uB80C\uB354\uB9C1\uC758 \uC2A4\uCF00\uC904\uB9C1 \uC124\uC815 \uC7AC\uC815\uC758",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "\uC774\uBC88 \uB80C\uB354\uB9C1\uACFC \uC0DD\uC131\uB41C CLI \uBA85\uB839\uC5D0\uB9CC \uC801\uC6A9\uB429\uB2C8\uB2E4. \uB044\uBA74 \uC804\uC5ED \uC124\uC815\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\uC2A4\uCF00\uC904\uB9C1 \uC635\uC158 \u0027{name}\u0027\uC758 \uAC12\uC774 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -21676,6 +21941,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Dur\u00E9e de chaque mise en m\u00E9moire tampon (secondes)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "Limite du tampon d\u2019aper\u00E7u par clip (MiB)",
         "Mode": "ConstString",
@@ -21912,6 +22185,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Remplacer la planification pour ce rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "S\u2019applique uniquement \u00E0 ce rendu et \u00E0 la commande CLI g\u00E9n\u00E9r\u00E9e. D\u00E9sactivez pour utiliser les param\u00E8tres globaux.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "Valeur incorrecte pour l\u2019option de planification \u00AB {name} \u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -25344,6 +25662,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "\u0645\u062F\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0643\u0644 \u062F\u0641\u0639\u0629 (\u0628\u0627\u0644\u062B\u0648\u0627\u0646\u064A)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "\u062D\u062F \u0645\u062E\u0632\u0646 \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629 \u0644\u0643\u0644 \u0645\u0642\u0637\u0639 (MiB)",
         "Mode": "ConstString",
@@ -25580,6 +25906,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "\u062A\u062C\u0627\u0648\u0632 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u062A\u0635\u064A\u064A\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "\u064A\u0646\u0637\u0628\u0642 \u0641\u0642\u0637 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062A\u0635\u064A\u064A\u0631 \u0648\u0623\u0645\u0631 CLI \u0627\u0644\u0645\u064F\u0646\u0634\u0623. \u0639\u0637\u0651\u0644\u0647 \u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0639\u0627\u0645\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\u0642\u064A\u0645\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629 \u0644\u062E\u064A\u0627\u0631 \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u00AB{name}\u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -29008,6 +29379,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Pufferdauer pro Durchlauf (Sekunden)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "Vorschaupuffer pro Clip (MiB)",
         "Mode": "ConstString",
@@ -29244,6 +29623,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Planung f\u00FCr diesen Rendervorgang \u00FCberschreiben",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "Gilt nur f\u00FCr diesen Rendervorgang und den erzeugten CLI-Befehl. Deaktivieren, um globale Einstellungen zu verwenden.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "Ung\u00FCltiger Wert f\u00FCr die Planungsoption \u201E{name}\u201C.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -32675,6 +33099,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Duraci\u00F3n de cada b\u00FAfer (segundos)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "L\u00EDmite del b\u00FAfer de vista previa por clip (MiB)",
         "Mode": "ConstString",
@@ -32911,6 +33343,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Sobrescribir la planificaci\u00F3n de este renderizado",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "Solo se aplica a este renderizado y al comando CLI generado. Desact\u00EDvalo para usar los ajustes globales.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "El valor de la opci\u00F3n de planificaci\u00F3n \u00AB{name}\u00BB no es v\u00E1lido.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -36341,6 +36818,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Durata di ogni buffer (secondi)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "Limite del buffer di anteprima per clip (MiB)",
         "Mode": "ConstString",
@@ -36577,6 +37062,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Sostituisci la pianificazione per questo rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "Si applica solo a questo rendering e al comando CLI generato. Disattiva per usare le impostazioni globali.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "Valore non valido per l\u2019opzione di pianificazione \u00AB{name}\u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -40007,6 +40537,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Czas jednorazowego buforowania (sekundy)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "Limit bufora podgl\u0105du na klip (MiB)",
         "Mode": "ConstString",
@@ -40243,6 +40781,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Zast\u0105p planowanie dla tego renderowania",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "Dotyczy tylko tego renderowania i wygenerowanego polecenia CLI. Wy\u0142\u0105cz, aby u\u017Cy\u0107 ustawie\u0144 globalnych.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "Nieprawid\u0142owa warto\u015B\u0107 opcji planowania \u201E{name}\u201C.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -43673,6 +44256,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Dura\u00E7\u00E3o de cada buffer (segundos)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "Limite do buffer de pr\u00E9via por clipe (MiB)",
         "Mode": "ConstString",
@@ -43909,6 +44500,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Substituir o agendamento desta renderiza\u00E7\u00E3o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "Aplica-se apenas a esta renderiza\u00E7\u00E3o e ao comando CLI gerado. Desative para usar as configura\u00E7\u00F5es globais.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "Valor inv\u00E1lido para a op\u00E7\u00E3o de agendamento \u201C{name}\u201D.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -47343,6 +47979,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "\u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u043E\u0434\u043D\u043E\u0439 \u0431\u0443\u0444\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u0438 (\u0441\u0435\u043A\u0443\u043D\u0434\u044B)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "\u041B\u0438\u043C\u0438\u0442 \u0431\u0443\u0444\u0435\u0440\u0430 \u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0430 \u043D\u0430 \u043A\u043B\u0438\u043F (\u041C\u0438\u0411)",
         "Mode": "ConstString",
@@ -47579,6 +48223,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "\u041F\u0435\u0440\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "\u041F\u0440\u0438\u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043A \u044D\u0442\u043E\u043C\u0443 \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0443 \u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u043D\u043E\u0439 \u043A\u043E\u043C\u0430\u043D\u0434\u0435 CLI. \u041E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0434\u043B\u044F \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u044F \u0433\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u044B\u0445 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043A.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\u041D\u0435\u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430 \u043F\u043B\u0430\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F \u00AB{name}\u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -51011,6 +51700,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_DynamicPreviewBufferSeconds",
+        "Value": "Her arabelle\u011Fe alma s\u00FCresi (saniye)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DynamicPreviewClipPoolMiB",
         "Value": "Klip ba\u015F\u0131na \u00F6nizleme havuzu s\u0131n\u0131r\u0131 (MiB)",
         "Mode": "ConstString",
@@ -51247,6 +51944,51 @@
         "Value": "Preview and source frames",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableGpuBufferPoolLimit",
+        "Value": "Unset localization item:Render_EnableGpuBufferPoolLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_GpuBufferPoolMiB",
+        "Value": "Unset localization item:Render_GpuBufferPoolMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "Bu i\u015Fleme i\u00E7in zamanlama ayarlar\u0131n\u0131 ge\u00E7ersiz k\u0131l",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "Yaln\u0131zca bu i\u015Fleme ve olu\u015Fturulan CLI komutuna uygulan\u0131r. Genel ayarlar\u0131 kullanmak i\u00E7in kapat\u0131n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\u201C{name}\u201D zamanlama se\u00E7ene\u011Finin de\u011Feri ge\u00E7ersiz.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }

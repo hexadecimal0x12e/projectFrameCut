@@ -2,27 +2,9 @@ using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
-public sealed class HwAccelResourceBudget
-{
-    public const long DefaultBytes = 128L * 1024 * 1024;
-    private readonly object gate = new();
-    private long bytes;
-    public long Bytes { get { lock (gate) return bytes; } }
-    public bool TryReserve(long size)
-    {
-        lock (gate)
-        {
-            if (size > DefaultBytes - bytes) return false;
-            bytes += size;
-            return true;
-        }
-    }
-    public void Release(long size) { lock (gate) bytes -= size; }
-}
-
 public interface IHwAccelPictureResources
 {
-    void SetBudget(HwAccelResourceBudget budget);
+    void SetBufferPoolLimit(bool enabled, long maxBytes);
     void Complete();
     void TrimPool();
     string GetStatistics();
@@ -32,19 +14,22 @@ public interface IHwAccelPictureResources
 /// <summary>Renderer-owned device contexts and immutable uploads shared by its frames.</summary>
 public sealed class HwAccelPictureSession : IDisposable
 {
+    public const long DefaultBufferPoolBytes = 128L * 1024 * 1024;
+    public static bool DefaultEnableBufferPoolLimit { get; set; } = true;
+    public static long DefaultBufferPoolMaxBytes { get; set; } = DefaultBufferPoolBytes;
+    public bool EnableBufferPoolLimit { get; set; } = DefaultEnableBufferPoolLimit;
+    public long BufferPoolMaxBytes { get; set; } = DefaultBufferPoolMaxBytes;
     private readonly object gate = new();
-    private readonly HwAccelResourceBudget budget = new();
     private readonly List<IHwAccelPictureContext> contexts = [];
-    private readonly Dictionary<UploadKey, LinkedListNode<CachedUpload>> uploads = new();
-    private readonly LinkedList<CachedUpload> order = new();
+    private readonly Dictionary<UploadKey, CachedUpload> uploads = new();
     private int nextContext, activeUploads;
     private readonly Dictionary<UploadKey, UploadGate> uploading = new();
     private sealed class UploadGate { public readonly object Gate = new(); public int Users; }
-    private long hits, misses, uncached;
+    private long hits, misses, uncached, retainedBytes;
     private bool disposed;
     private string? finalStatistics;
     private readonly record struct UploadKey(object Identity, IHwAccelPictureContext Context, int Width, int Height, int Bits, bool Alpha, bool Hdr, Half Peak);
-    private sealed record CachedUpload(UploadKey Key, IHwAccelPicture Picture, long Bytes);
+    private sealed record CachedUpload(IHwAccelPicture Picture, WeakReference<IPicture> Source, long Bytes);
 
     internal IHwAccelPictureContext GetContext()
     {
@@ -59,8 +44,8 @@ public sealed class HwAccelPictureSession : IDisposable
                 {
                     if (first is IHwAccelPictureResources resources)
                         contexts.AddRange(resources.CreateSiblingContexts());
-                    foreach (var c in contexts)
-                        if (c is IHwAccelPictureResources r) r.SetBudget(budget);
+                    foreach (var c in contexts.OfType<IHwAccelPictureResources>())
+                        c.SetBufferPoolLimit(EnableBufferPoolLimit, BufferPoolMaxBytes > 0 ? BufferPoolMaxBytes : DefaultBufferPoolMaxBytes);
                 }
                 catch
                 {
@@ -106,9 +91,8 @@ public sealed class HwAccelPictureSession : IDisposable
                     if (uploads.TryGetValue(key, out var cached))
                     {
                         hits++;
-                        order.Remove(cached);
-                        order.AddLast(cached);
-                        return WithMetadata(cached.Value.Picture.Retain(), source);
+                        cached.Source.SetTarget(source);
+                        return WithMetadata(cached.Picture.Retain(), source);
                     }
                     misses++;
                 }
@@ -116,7 +100,7 @@ public sealed class HwAccelPictureSession : IDisposable
                 try
                 {
                     lock (gate)
-                        Cache(key, picture, checked((long)source.Pixels * (6 * sizeof(ushort))));
+                        Cache(key, picture, source, checked((long)source.Pixels * (6 * sizeof(ushort))));
                     return picture;
                 }
                 catch { picture.Dispose(); throw; }
@@ -133,34 +117,47 @@ public sealed class HwAccelPictureSession : IDisposable
         }
     }
 
-    private void Cache(UploadKey key, IHwAccelPicture picture, long size)
+    private void Cache(UploadKey key, IHwAccelPicture picture, IPicture source, long size)
     {
-        if (disposed || size > HwAccelResourceBudget.DefaultBytes) return;
-        bool reserved = budget.TryReserve(size);
-        if (!reserved)
-            foreach (var c in contexts)
-                if (c is IHwAccelPictureResources resources) resources.TrimPool();
-        while (!reserved && !(reserved = budget.TryReserve(size)))
-        {
-            if (order.First is not { } old) return;
-            Remove(old);
-            foreach (var c in contexts)
-                if (c is IHwAccelPictureResources resources) resources.TrimPool();
-        }
-        IHwAccelPicture? retained = null;
-        LinkedListNode<CachedUpload>? node = null;
+        if (disposed) return;
+        var retained = picture.Retain();
         try
         {
-            retained = picture.Retain();
-            node = order.AddLast(new CachedUpload(key, retained, size));
-            uploads.Add(key, node);
+            uploads.Add(key, new(retained, new(source), size));
+            retainedBytes += size;
         }
         catch
         {
-            if (node is not null) order.Remove(node);
-            retained?.Dispose();
-            budget.Release(size);
+            retained.Dispose();
             throw;
+        }
+    }
+
+    internal void ReleaseUnusedUploads()
+    {
+        var released = new List<IHwAccelPicture>();
+        lock (gate)
+        {
+            foreach (var entry in uploads.ToArray())
+            {
+                if (entry.Value.Source.TryGetTarget(out var source) && !source.Disposed)
+                {
+                    try
+                    {
+                        if (ReferenceEquals((source as ISharedPicture)?.ContentIdentity, entry.Key.Identity)) continue;
+                    }
+                    catch (ObjectDisposedException) { }
+                    catch (InvalidOperationException) { continue; }
+                }
+                uploads.Remove(entry.Key);
+                retainedBytes -= entry.Value.Bytes;
+                released.Add(entry.Value.Picture);
+            }
+        }
+        foreach (var picture in released)
+        {
+            try { picture.Dispose(); }
+            catch (Exception ex) { Logger.Log(ex, "Release unused hardware upload", nameof(HwAccelPictureSession)); }
         }
     }
 
@@ -171,18 +168,10 @@ public sealed class HwAccelPictureSession : IDisposable
         return picture;
     }
 
-    private void Remove(LinkedListNode<CachedUpload> node)
-    {
-        uploads.Remove(node.Value.Key);
-        order.Remove(node);
-        budget.Release(node.Value.Bytes);
-        node.Value.Picture.Dispose();
-    }
-
     public string GetStatistics()
     {
         lock (gate)
-            return finalStatistics ?? $"GPU uploads: {hits} hits, {misses} misses, {Interlocked.Read(ref uncached)} uncached, retained={budget.Bytes / 1024 / 1024} MiB; "
+            return finalStatistics ?? $"GPU uploads: {hits} hits, {misses} misses, {Interlocked.Read(ref uncached)} uncached, retained={retainedBytes / 1024 / 1024} MiB; "
                 + string.Join("; ", contexts.OfType<IHwAccelPictureResources>().Select(c => c.GetStatistics()));
     }
 
@@ -198,11 +187,13 @@ public sealed class HwAccelPictureSession : IDisposable
                 try { if (c is IHwAccelPictureResources resources) resources.Complete(); }
                 catch (Exception ex) { Logger.Log(ex, "Complete hardware picture session", nameof(HwAccelPictureSession)); }
             }
-            while (order.First is { } node)
+            foreach (var upload in uploads.Values)
             {
-                try { Remove(node); }
+                try { upload.Picture.Dispose(); }
                 catch (Exception ex) { Logger.Log(ex, "Release cached hardware upload", nameof(HwAccelPictureSession)); }
             }
+            uploads.Clear();
+            retainedBytes = 0;
             foreach (var c in contexts)
             {
                 try { c.Dispose(); }

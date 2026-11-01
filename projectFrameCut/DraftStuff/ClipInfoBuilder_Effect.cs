@@ -161,7 +161,7 @@ namespace projectFrameCut.DraftStuff
                         }
                         catch (Exception ex) { Log(ex, $"Close effect binding editor for {clip.Id}", this); }
                     }
-                    if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+                    if (page.IsMobileForm)
                     {
                         page.Popup.Content = bindView;
                         void OnPopupChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)

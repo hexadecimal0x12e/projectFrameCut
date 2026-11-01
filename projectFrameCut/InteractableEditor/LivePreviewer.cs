@@ -26,27 +26,6 @@ using projectFrameCut.InteractableEditor;
 
 namespace projectFrameCut.LivePreview
 {
-    public enum NativePreviewOutputMode
-    {
-        Disabled,
-        Automatic,
-        Required,
-    }
-
-    public sealed record PreviewFrameSource(
-        string VfdPath,
-        int Width,
-        int Height,
-        PreviewPixelFormat TargetPixelFormat,
-        bool RequireSwapChain)
-    {
-        internal ScRgbFrame? ScRgb { get; init; }
-        internal byte[]? Png { get; init; }
-        internal byte[]? AlphaMask { get; init; }
-        public string PreviewContainer { get; init; } = string.Empty;
-        public string PreviewEffectHash { get; init; } = string.Empty;
-    }
-
     public partial class LivePreviewer
     {
         public IClip[]? Clips;
@@ -183,6 +162,8 @@ namespace projectFrameCut.LivePreview
                         ProjectHeight = ProjectRelativeHeight,
                         PreferredPixelFormat = PreviewPixelFormat.PngImage,
                         BeforeLayout = true,
+                        DisableGpuBufferPoolLimit = !RenderSchedulingSettings.EnableGpuBufferPoolLimit,
+                        GpuBufferPoolMaxBytes = RenderSchedulingSettings.GpuBufferPoolMaxBytes,
                     }, cancellationToken).ConfigureAwait(false)
                     : await client.RenderTimelineFrameAsync(new TimelineFrameRequest
                     {
@@ -549,6 +530,8 @@ namespace projectFrameCut.LivePreview
                 PreferredPixelFormat = PreviewPixelFormat.PngImage,
                 UsePreviewMetadata = true,
                 DisableSourceFrameCache = !DynamicPreviewSettings.CacheSourceFrames,
+                DisableGpuBufferPoolLimit = !RenderSchedulingSettings.EnableGpuBufferPoolLimit,
+                GpuBufferPoolMaxBytes = RenderSchedulingSettings.GpuBufferPoolMaxBytes,
                 VectorClipJson = vectorClipJson,
             }, token).ConfigureAwait(false);
             if (artifact.PixelFormat != PreviewPixelFormat.EncodedImage)
@@ -556,99 +539,10 @@ namespace projectFrameCut.LivePreview
             return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
         }
 
-        public PreviewFrameSource RenderClipFrameForDisplay(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
-            => RenderClipFrameForDisplayAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson).GetAwaiter().GetResult();
-
-        public async Task<PreviewFrameSource> RenderClipFrameForDisplayAsync(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
-        {
-            if (DynamicPreviewSettings.MemoryOnly)
-            {
-                var name = $"projectFrameCut-preview-{Guid.NewGuid():N}";
-                var secret = Guid.NewGuid().ToString("N");
-                using var pipe = MemoryPreviewChannel.CreateServer(name);
-                using var pending = CancellationTokenSource.CreateLinkedTokenSource(token);
-                var receive = ReceiveAsync();
-                try
-                {
-                    var render = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new()
-                    {
-                        SessionId = RenderSessionId, ClipId = clipId, FrameIndex = frameIndex,
-                        CanvasWidth = canvasWidth, CanvasHeight = canvasHeight, ProjectWidth = projectWidth, ProjectHeight = projectHeight,
-                        PreferredPixelFormat = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled
-                            ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
-                        VectorClipJson = vectorClipJson, UsePreviewMetadata = true, DisableSourceFrameCache = true,
-                        PreviewPipeName = name, PreviewPipeToken = secret,
-                    }, pending.Token).AsTask();
-                    if (await Task.WhenAny(render, receive).ConfigureAwait(false) == receive && !receive.IsCompletedSuccessfully)
-                    {
-                        pending.Cancel();
-                        try { await render.ConfigureAwait(false); } catch { }
-                        return await receive.ConfigureAwait(false);
-                    }
-                    await render.ConfigureAwait(false);
-                    return await receive.ConfigureAwait(false);
-                }
-                finally
-                {
-                    pending.Cancel();
-                    try { await receive.ConfigureAwait(false); } catch { }
-                }
-
-                async Task<PreviewFrameSource> ReceiveAsync()
-                {
-                    await MemoryPreviewChannel.AuthenticateAsync(pipe, secret, pending.Token).ConfigureAwait(false);
-                    var (_, data) = await MemoryPreviewChannel.ReceiveAsync(pipe, pending.Token).ConfigureAwait(false);
-                    var source = PreviewFrameMaterializer.FromData(new("", data.Width, data.Height,
-                        data.ScRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage, false), data);
-                    await pipe.WriteAsync(new byte[] { 1 }, pending.Token).ConfigureAwait(false);
-                    return source;
-                }
-            }
-            var format = DefaultOutputMode != NativePreviewOutputMode.Disabled && OperatingSystem.IsWindows()
-                ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage;
-            try { return await PrepareDisplayAsync(format).ConfigureAwait(false); }
-            catch (Exception ex) when (format == PreviewPixelFormat.Rgba16FloatScRgb && ex is not OperationCanceledException && !token.IsCancellationRequested)
-            {
-                Log(ex, $"Render native preview for clip {clipId} at frame #{frameIndex}; using standard preview", this);
-                return await PrepareDisplayAsync(PreviewPixelFormat.EncodedImage).ConfigureAwait(false);
-            }
-
-            async Task<PreviewFrameSource> PrepareDisplayAsync(PreviewPixelFormat target)
-            {
-                for (int attempt = 0; ; attempt++)
-                {
-                    var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
-                    {
-                        SessionId = RenderSessionId, ClipId = clipId,
-                        FrameIndex = frameIndex, CanvasWidth = canvasWidth, CanvasHeight = canvasHeight,
-                        ProjectWidth = projectWidth, ProjectHeight = projectHeight,
-                        PreferredPixelFormat = target, VectorClipJson = vectorClipJson, UsePreviewMetadata = true,
-                        DisableSourceFrameCache = !DynamicPreviewSettings.CacheSourceFrames,
-                    }, token).ConfigureAwait(false);
-                    if (artifact.PixelFormat is not (PreviewPixelFormat.VfdPicture or PreviewPixelFormat.PreviewFrame))
-                        throw new InvalidDataException($"The render backend returned unsupported preview format {artifact.PixelFormat}.");
-                    try
-                    {
-                        var path = await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
-                        return await Task.Run(() => PreviewFrameMaterializer.Prepare(new(path, artifact.Width, artifact.Height, target, false)
-                        {
-                            PreviewContainer = artifact.PreviewContainer, PreviewEffectHash = artifact.PreviewEffectHash,
-                        }), token).ConfigureAwait(false);
-                    }
-                    catch (Exception ex) when (attempt == 0 && !token.IsCancellationRequested && (ex is IOException or InvalidDataException)) { }
-                }
-            }
-        }
-
         public bool HasAudioSources()
         {
             return SoundTracks?.Any(track => SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true)) ?? false;
         }
-
-        public bool CanCacheClipFrame(Guid clipId)
-            => Clips?.FirstOrDefault(c => c.Id == clipId) is { } clip
-                && !ClipInitializationFailure.IsMarked(clip)
-                && Timeline.CanCacheClipFrame(Clips, clip);
 
         public Task ResetAudioPlaybackSources() => Task.CompletedTask;
 

@@ -3923,6 +3923,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "\u9000\u51FA\u5168\u5C4F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "\u5168\u5C4F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_PrevResultion_Custom",
         "Value": "\u81EA\u5B9A\u4E49...",
         "Mode": "ConstString",
@@ -4726,7 +4742,7 @@
       },
       {
         "Id": "DraftSettingPage_AssetFiles_Title",
-        "Value": "\u7D20\u6750\u6587\u4EF6",
+        "Value": "\u7D20\u6750\u6E90",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4911,6 +4927,14 @@
       {
         "Id": "DraftSettingPage_General_TargetSize_Description",
         "Value": "\u914D\u7F6E\u9879\u76EE\u7684\u76EE\u6807\u5C3A\u5BF8\u548C\u5BFC\u51FA\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_TargetSize_ReadonlyAtProjectMode",
+        "Value": "\u8FD9\u4E9B\u8BBE\u7F6E\u5728\u5F53\u524D\u72B6\u6001\u4E0B\u4E3A\u53EA\u8BFB\uFF0C\u8BF7\u5728\u5173\u95ED\u9879\u76EE\u4E4B\u540E\u4FEE\u6539\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22705,6 +22729,22 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Full screen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Exit full screen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -33808,6 +33848,22 @@
             "Value": "n"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "\u5168\u87A2\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "\u7D50\u675F\u5168\u87A2\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -44921,6 +44977,22 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "\u5168\u753B\u9762\u8868\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "\u5168\u753B\u9762\u8868\u793A\u3092\u7D42\u4E86",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -56017,6 +56089,22 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "\uC804\uCCB4 \uD654\uBA74",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "\uC804\uCCB4 \uD654\uBA74 \uC885\uB8CC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -67109,6 +67197,22 @@
             "Value": "n"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Plein \u00E9cran",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Quitter le plein \u00E9cran",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -78214,6 +78318,22 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "\u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "\u0625\u0646\u0647\u0627\u0621 \u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -89316,6 +89436,22 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Vollbild",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Vollbild beenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -100412,6 +100548,22 @@
             "Value": "n"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Pantalla completa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Salir de pantalla completa",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -111517,6 +111669,22 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Schermo intero",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Esci da schermo intero",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -122611,6 +122779,22 @@
             "Value": "n"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Pe\u0142ny ekran",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Wyjd\u017A z pe\u0142nego ekranu",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -133709,6 +133893,22 @@
             "Value": "n"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Tela cheia",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Sair da tela cheia",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -144812,6 +145012,22 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "\u041F\u043E\u043B\u043D\u044B\u0439 \u044D\u043A\u0440\u0430\u043D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "\u0412\u044B\u0439\u0442\u0438 \u0438\u0437 \u043F\u043E\u043B\u043D\u043E\u044D\u043A\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0436\u0438\u043C\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -155908,6 +156124,22 @@
             "Value": "n"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_FullScreen",
+        "Value": "Tam ekran",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Preview_ExitFullScreen",
+        "Value": "Tam ekrandan \u00E7\u0131k",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }

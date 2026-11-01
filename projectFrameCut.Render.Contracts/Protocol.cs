@@ -496,6 +496,8 @@ public sealed class ClipPreviewRequest
     [ProtoMember(13)] public bool DisableSourceFrameCache { get; set; }
     [ProtoMember(14)] public string PreviewPipeName { get; set; } = "";
     [ProtoMember(15)] public string PreviewPipeToken { get; set; } = "";
+    [ProtoMember(16)] public bool DisableGpuBufferPoolLimit { get; set; }
+    [ProtoMember(17)] public long GpuBufferPoolMaxBytes { get; set; }
 
 }
 
@@ -503,6 +505,8 @@ public sealed class ClipPreviewRequest
 public sealed class ClipPreviewBatchRequest
 {
     [ProtoMember(1)] public List<ClipPreviewRequest> Requests { get; set; } = [];
+    [ProtoMember(2)] public bool UseRenderer { get; set; }
+    [ProtoMember(3)] public FrameSequenceRenderOptions? RenderOptions { get; set; }
 }
 
 [ProtoContract]
@@ -537,6 +541,9 @@ public sealed class StartDynamicPreviewRequest
     [ProtoMember(21)] public string PreviewPipeName { get; set; } = "";
     [ProtoMember(22)] public string PreviewPipeToken { get; set; } = "";
     [ProtoMember(23)] public long PreviewClipPoolMaxBytes { get; set; }
+    [ProtoMember(24)] public int PreviewBufferSeconds { get; set; } = 5;
+    [ProtoMember(25)] public bool DisableGpuBufferPoolLimit { get; set; }
+    [ProtoMember(26)] public long GpuBufferPoolMaxBytes { get; set; }
 
 }
 

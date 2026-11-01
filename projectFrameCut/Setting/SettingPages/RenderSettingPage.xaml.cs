@@ -161,6 +161,8 @@ public partial class RenderSettingPage : ContentPage
             .AddCheckbox("render_PreferDecoderCropResize", SettingLocalizedResources.Render_PreferDecoderCropResize, IsBoolSettingTrueOrDefault("render_PreferDecoderCropResize", true))
             .AddCheckbox("render_enableHwAccelRasterizer", SettingLocalizedResources.Render_EnableHwAccelRasterizer, IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true))
             .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture, IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
+            .AddCheckbox("render_enableGpuBufferPoolLimit", SettingLocalizedResources.Render_EnableGpuBufferPoolLimit, RenderSchedulingSettings.EnableGpuBufferPoolLimit)
+            .AppendWhen(RenderSchedulingSettings.EnableGpuBufferPoolLimit, p => p.AddEntry("render_gpuBufferPoolMiB", SettingLocalizedResources.Render_GpuBufferPoolMiB, (RenderSchedulingSettings.GpuBufferPoolMaxBytes / (1024 * 1024)).ToString(), "128", c => c.Keyboard = Keyboard.Numeric))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_Scheduling, SettingLocalizedResources.Render_Scheduling_Desc))
             .AddButton(SettingLocalizedResources.Render_ScheduleBenchmark, async (_, _) => await Navigation.PushAsync(new ScheduleBenchmarkPage()))
@@ -379,6 +381,21 @@ public partial class RenderSettingPage : ContentPage
                         WriteSetting("render_GCOption", key.Key.ToString());
                         return;
                     }
+                case "render_enableGpuBufferPoolLimit":
+                    if (args.Value is bool poolLimit)
+                    {
+                        WriteSetting(args.Id, poolLimit.ToString());
+                        HwAccelPictureSession.DefaultEnableBufferPoolLimit = poolLimit;
+                        BuildPPB();
+                    }
+                    return;
+                case "render_gpuBufferPoolMiB":
+                    if (long.TryParse(args.Value?.ToString(), out var poolMiB) && poolMiB > 0 && poolMiB <= long.MaxValue / (1024 * 1024))
+                    {
+                        WriteSetting(args.Id, poolMiB.ToString());
+                        HwAccelPictureSession.DefaultBufferPoolMaxBytes = poolMiB * 1024 * 1024;
+                    }
+                    return;
                 case "render_DefaultPostRenderAction":
                     {
                         if (args.Value is string localizedAction)

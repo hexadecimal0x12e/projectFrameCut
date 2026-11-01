@@ -19,6 +19,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -639,6 +640,7 @@ namespace projectFrameCut
                 var pipe = GetOption(args, "pipe") ?? string.Empty;
 #endif
                 var parentPid = GetOption(args, "parentPid", required: false);
+                var previewAcceleratorDeviceName = GetOption(args, "previewAcceleratorDeviceName", required: false);
                 var dataRoot = GetOption(args, "dataRoot");
                 if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(dataRoot))
                 {
@@ -687,7 +689,8 @@ namespace projectFrameCut
                     cancellation.Cancel();
                 };
 #endif
-                return RunRpcServerAsync(pipe, token, parentPid, dataRoot, httpListenUri, httpToken, httpProjectRoot, cancellation.Token).GetAwaiter().GetResult();
+                return RunRpcServerAsync(pipe, token, parentPid, dataRoot, httpListenUri, httpToken, httpProjectRoot,
+                    previewAcceleratorDeviceName, cancellation.Token).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException)
             {
@@ -708,12 +711,21 @@ namespace projectFrameCut
             Uri? httpListenUri,
             string? httpToken,
             string? httpProjectRoot,
+            string? previewAcceleratorDeviceName,
             CancellationToken cancellationToken)
         {
 #if HEADLESS
             ExternalRpcPipeSettings.EnsureAllowed(dataRoot);
 #endif
             InitializeRenderRuntime(dataRoot);
+#if WINDOWS || LINUX || HEADLESS
+            if (!string.IsNullOrWhiteSpace(previewAcceleratorDeviceName))
+            {
+                var accelerators = AcceleratorsManager.GetConfiguration();
+                AcceleratorsManager.ConfigureDevices(previewAcceleratorDeviceName, accelerators.RenderingAcceleratorNames, accelerators.EnableMultiAccel);
+            }
+            AcceleratorsManager.IsRendering = false;
+#endif
             // The named-pipe server and the optional HTTP RPC endpoint share this
             // render backend, so sessions opened through either channel are
             // visible to clients of the other one.
@@ -1092,6 +1104,10 @@ namespace projectFrameCut
                     AllowWorkerOversubscription = allowWorkerOversubscription,
                     RenderAheadFrames = int.TryParse(switches.GetValueOrDefault("renderAheadFrames"), out var ahead) ? Math.Max(0, ahead) : 0,
                     EnableMemoryBudget = bool.TryParse(switches.GetValueOrDefault("enableMemoryBudget"), out var budget) && budget,
+                    EnableGpuBufferPoolLimit = !bool.TryParse(switches.GetValueOrDefault("enableGpuBufferPoolLimit",
+                        RenderSchedulingSettings.EnableGpuBufferPoolLimit.ToString()), out var poolLimit) || poolLimit,
+                    GpuBufferPoolMaxBytes = long.TryParse(switches.GetValueOrDefault("gpuBufferPoolMaxBytes"), out var poolBytes)
+                        && poolBytes > 0 ? poolBytes : RenderSchedulingSettings.GpuBufferPoolMaxBytes,
                     MaxBufferedBytes = long.TryParse(switches.GetValueOrDefault("maxBufferedBytes"), out var bytes) ? Math.Max(0, bytes) : 0,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
                     EnableDeferredComposition = deferredComposition,
@@ -1116,6 +1132,8 @@ namespace projectFrameCut
                 {
                     renderer.PrepareRender(consoleCancellation.Token);
                     await renderer.GoRender(consoleCancellation.Token).ConfigureAwait(false);
+                    if (renderer.Composer is DeferredRenderComposer deferred)
+                        await deferred.WriteVideoAsync(builder, consoleCancellation.Token).ConfigureAwait(false);
                     consoleCancellation.Token.ThrowIfCancellationRequested();
                     if (builder is not null)
                     {
@@ -1134,6 +1152,7 @@ namespace projectFrameCut
                 {
                     if (clipSession is null)
                         foreach (var clip in clips) clip.Dispose();
+                    renderer.Composer?.Dispose();
                     renderer.builder = null;
                     foreach (var track in audioTracks) track.Dispose();
                     Console.WriteLine();
@@ -1896,6 +1915,8 @@ namespace projectFrameCut
             Drawing.Processing.Resizing.PictureResizer.Default = new EffectPictureResizer(resizeType);
             IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
             ClassicOverlayMixture.EnableApproximatePath = SettingsManager.IsBoolSettingTrue("render_preferApproximateMixture");
+            HwAccelPictureSession.DefaultEnableBufferPoolLimit = RenderSchedulingSettings.EnableGpuBufferPoolLimit;
+            HwAccelPictureSession.DefaultBufferPoolMaxBytes = RenderSchedulingSettings.GpuBufferPoolMaxBytes;
             IVectorContentClip.GlobalDefaultAntiAliasMode = SettingsManager.GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch
             {
                 "ssaa8x" => AntiAliasMode.SSAA8x,

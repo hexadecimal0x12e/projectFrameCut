@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Setting.SettingManager;
@@ -181,6 +182,9 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 startInfo.ArgumentList.Add($"--projectRoot={_projectRoot}");
             }
             startInfo.ArgumentList.Add($"--ffmpegRoot={ffmpeg.RootPath}");
+#if WINDOWS || LINUX || HEADLESS
+            startInfo.ArgumentList.Add($"--previewAcceleratorDeviceName={AcceleratorsManager.GetConfiguration().MainAcceleratorName}");
+#endif
             startInfo.ArgumentList.Add($"--locale={Localized._LocaleId_}");
             startInfo.ArgumentList.Add($"--preferHwAccelDecoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true)}");
             startInfo.ArgumentList.Add($"--preferHwAccelEncoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true)}");
@@ -447,6 +451,8 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("renderAheadFrames", options.RenderAheadFrames.ToString());
                 Add("enableMemoryBudget", options.EnableMemoryBudget.ToString());
                 Add("maxBufferedBytes", options.MaxBufferedBytes.ToString());
+                Add("enableGpuBufferPoolLimit", options.EnableGpuBufferPoolLimit.ToString());
+                Add("gpuBufferPoolMaxBytes", options.GpuBufferPoolMaxBytes.ToString());
                 Add("GCOptions", Math.Clamp(options.GcOption, 0, 2).ToString());
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
                 Add("coreAffinityOverride", string.Join(",", options.WorkerCPUCoreIndexs));
@@ -839,6 +845,8 @@ internal sealed record CliRenderProcessOptions
     public int RenderAheadFrames { get; init; }
     public bool EnableMemoryBudget { get; init; }
     public long MaxBufferedBytes { get; init; }
+    public bool EnableGpuBufferPoolLimit { get; init; } = true;
+    public long GpuBufferPoolMaxBytes { get; init; } = HwAccelPictureSession.DefaultBufferPoolBytes;
     public int GcOption { get; init; }
     public bool EnableThreadAffinity { get; init; } = true;
     public int[] WorkerCPUCoreIndexs { get; init; } = [];

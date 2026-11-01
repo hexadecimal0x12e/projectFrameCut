@@ -9,6 +9,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.PreviewAudio;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
@@ -657,7 +658,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         }
     }
 
-    private async ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken, bool registerArtifact = true, BackendSession? previewSession = null, IClip[]? previewClips = null)
+    private async ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken, bool registerArtifact = true, BackendSession? previewSession = null, IClip[]? previewClips = null, Func<IPicture>? preparedPreview = null)
     {
         var session = previewSession ?? GetSession(request.SessionId);
         using var operation = session.BeginOperation(cancellationToken);
@@ -710,12 +711,18 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 PixelMode = pixelMode.Value, Stage = request.BeforeLayout ? "before-layout" : "clip",
                 ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
             };
-            using var ownedHashContext = FrameHashContext.Current is null
-                ? new FrameHashContext(hashOptions, cancellationToken, session.NodeCache) { Clips = visualClips } : null;
+            using var gpuSession = FrameHashContext.Current is null
+                ? new HwAccelPictureSession
+                {
+                    EnableBufferPoolLimit = !request.DisableGpuBufferPoolLimit,
+                    BufferPoolMaxBytes = request.GpuBufferPoolMaxBytes,
+                } : null;
+            using var ownedHashContext = gpuSession is not null
+                ? new FrameHashContext(hashOptions, cancellationToken, session.NodeCache, gpuSession) { Clips = visualClips } : null;
             using var hashScope = ownedHashContext?.Enter();
             var stageStarted = Stopwatch.GetTimestamp();
             IClip[] hashDependencies = [clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })];
-            InitializePreviewClips(hashDependencies, pixelMode, request.FrameIndex, cancellationToken);
+            if (preparedPreview is null) InitializePreviewClips(hashDependencies, pixelMode, request.FrameIndex, cancellationToken);
             initializeMs = Stopwatch.GetElapsedTime(stageStarted).TotalMilliseconds;
             bool wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             using var previewCache = request.UsePreviewMetadata && request.PreviewPipeName.Length == 0
@@ -729,7 +736,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 long started = Stopwatch.GetTimestamp();
                 try
                 {
-                    return renderedPicture = ClipPreviewRenderer.Render(clip, visualClips, canvasWidth,
+                    return renderedPicture = preparedPreview?.Invoke() ?? ClipPreviewRenderer.Render(clip, visualClips, canvasWidth,
                         canvasHeight, projectWidth, projectHeight, request.FrameIndex, cancellationToken, pixelMode,
                         request.BeforeLayout, initializeClips: false, keepHwAccelPicture: request.UsePreviewMetadata && wantsScRgb)
                         ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
@@ -886,6 +893,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
 
     private async ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken cancellationToken)
     {
+        if (request.UseRenderer && request.Requests.Count > 0)
+            return await RenderPreviewBatchAsync(request, cancellationToken).ConfigureAwait(false);
         var response = new ClipPreviewBatchResponse();
         foreach (var item in request.Requests)
         {

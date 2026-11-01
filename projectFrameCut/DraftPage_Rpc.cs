@@ -1646,6 +1646,8 @@ public partial class DraftPage
             RenderAheadFrames = RenderSchedulingSettings.RenderAheadFrames,
             EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
             MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
+            DisableGpuBufferPoolLimit = !RenderSchedulingSettings.EnableGpuBufferPoolLimit,
+            GpuBufferPoolMaxBytes = RenderSchedulingSettings.GpuBufferPoolMaxBytes,
             EnableThreadAffinity = RenderSchedulingSettings.EnableThreadAffinity,
             WorkerCPUCoreIndexs = RenderSchedulingSettings.WorkerCPUCoreIndexs,
             GCOption = SettingsManager.GetSettingAs("render_GCOption", 0, 0),

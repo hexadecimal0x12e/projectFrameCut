@@ -13,6 +13,9 @@ public sealed record PreviewFrameInfo(string SourceHash, string EffectHash, bool
 public sealed record PreviewFrameData(string SourceHash, string EffectHash, bool ScRgb, int Width, int Height,
     int Stride, bool HasTransparency, string ContentHash, byte[] Pixels, byte[] AlphaMask)
 {
+    private static readonly float[] halfLinear = Enumerable.Range(0, 65536)
+        .Select(i => Linear((float)BitConverter.UInt16BitsToHalf((ushort)i))).ToArray();
+
     public PreviewFrameInfo Info => new(SourceHash, EffectHash, ScRgb, Width, Height, Stride,
         HasTransparency, ContentHash, Pixels.Length, AlphaMask.Length);
 
@@ -57,7 +60,8 @@ public sealed record PreviewFrameData(string SourceHash, string EffectHash, bool
                 {
                     Half a = Alpha(alpha, fp.HasAlphaChannel, i);
                     var color = pq ? PqToScRgb((float)c.Red[i], (float)c.Green[i], (float)c.Blue[i])
-                        : (Linear((float)c.Red[i]), Linear((float)c.Green[i]), Linear((float)c.Blue[i]));
+                        : (halfLinear[BitConverter.HalfToUInt16Bits(c.Red[i])], halfLinear[BitConverter.HalfToUInt16Bits(c.Green[i])],
+                            halfLinear[BitConverter.HalfToUInt16Bits(c.Blue[i])]);
                     if (hdr is not null)
                     {
                         float luma = .2126f * color.Item1 + .7152f * color.Item2 + .0722f * color.Item3;

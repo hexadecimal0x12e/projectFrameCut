@@ -30,6 +30,8 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
     private double _videoHeight = 1080;
     private uint _currentFrame;
     private int _generation;
+    private uint _pendingFrame;
+    private Dictionary<Guid, Rect>? _pendingFrameLayouts;
 
     public LightweightInteractableEditor()
     {
@@ -87,14 +89,32 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
         if (width <= 0 || height <= 0 || (_videoWidth == width && _videoHeight == height)) return;
         _videoWidth = width;
         _videoHeight = height;
+        _pendingFrameLayouts = null;
         LayoutPreviews();
     }
 
     public void SetCurrentFrame(uint frame)
     {
+        _pendingFrameLayouts = null;
         if (_currentFrame == frame) return;
         _currentFrame = frame;
         LayoutPreviews();
+    }
+
+    internal void PrepareFrameLayout(uint frame, IReadOnlyList<IClip>? clips, bool reusePrepared = false)
+    {
+        if (reusePrepared && _pendingFrame == frame && _pendingFrameLayouts is not null) return;
+        var layouts = new Dictionary<Guid, Rect>();
+        if (clips is not null)
+        {
+            foreach (var clip in clips)
+            {
+                if (clip.ClipType is ClipMode.AudioClip or ClipMode.MarkingClip || !clip.ContainsFrame(frame)) continue;
+                layouts[clip.Id] = ResolveClipRect(ClipArgumentBinding.InitializeFrame(clip, frame), frame);
+            }
+        }
+        _pendingFrame = frame;
+        _pendingFrameLayouts = layouts;
     }
 
     public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<PreparedPreview> previews)
@@ -112,15 +132,31 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
 
     public void ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> previews) => ApplyPreviews(previews);
 
-    private bool ApplyPreviews(IReadOnlyList<PreparedPreview> previews)
+    internal bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> previews, uint frame)
+        => ApplyPreviews(previews, frame);
+
+    private bool ApplyPreviews(IReadOnlyList<PreparedPreview> previews, uint? frame = null)
     {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var applyMark = new UserMarkRange("Preview.Apply", $"previews={previews.Count}, host=lightweight");
 #endif
         _generation++;
         var hasPreview = false;
+        var views = new View?[previews.Count];
+        var canvasIndex = -1;
+        for (var i = 0; i < previews.Count; i++)
+        {
+            views[i] = PreviewErrorView.GetView(previews[i]);
+            if (canvasIndex < 0 && previews[i].IsCanvasPreview) canvasIndex = i;
+        }
+        var layouts = frame.HasValue && _pendingFrame == frame.Value ? _pendingFrameLayouts : null;
+        if (frame.HasValue)
+        {
+            _pendingFrameLayouts = null;
+            _currentFrame = frame.Value;
+        }
 
-        if (previews.FirstOrDefault(p => p.IsCanvasPreview) is { } canvas)
+        if (canvasIndex >= 0)
         {
             foreach (var existing in _states.Values) existing.Clear();
             if (!_states.TryGetValue(Guid.Empty, out var state))
@@ -129,14 +165,15 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
                 _states[Guid.Empty] = state;
                 PreviewCanvas.Children.Add(state.Host);
             }
-            if (PreviewErrorView.GetView(canvas) is { } canvasView) state.SetView(canvasView);
+            if (views[canvasIndex] is { } canvasView) state.SetView(canvasView);
             state.Host.IsVisible = state.HasView;
             LayoutPreview(state);
             return state.HasView;
         }
 
-        foreach (var preview in previews)
+        for (var i = 0; i < previews.Count; i++)
         {
+            var preview = previews[i];
             if (preview.ClipId == Guid.Empty || preview.Source?.ClipType is ClipMode.AudioClip or ClipMode.MarkingClip) continue;
 
             if (!_states.TryGetValue(preview.ClipId, out var state))
@@ -153,13 +190,13 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             {
                 state.Host.ZIndex = ClipLayerOrder.GetPreviewZIndex(preview.Source.LayerIndex, preview.Source.SubLayerIndex);
             }
-            if (PreviewErrorView.GetView(preview) is { } previewView)
+            if (views[i] is { } previewView)
             {
                 state.SetView(previewView);
             }
 
             state.Host.IsVisible = state.HasView;
-            LayoutPreview(state);
+            LayoutPreview(state, layouts is not null && layouts.TryGetValue(preview.ClipId, out var rect) ? rect : null);
             hasPreview |= state.HasView;
         }
 
@@ -187,7 +224,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
         }
     }
 
-    private void LayoutPreview(PreviewState state)
+    private void LayoutPreview(PreviewState state, Rect? preparedRect = null)
     {
         if (_canvasWidth <= 0 || _canvasHeight <= 0 || _videoWidth <= 0 || _videoHeight <= 0) return;
 
@@ -205,13 +242,8 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
 
         if (state.Source is not null)
         {
-            x = state.Source.TargetX;
-            y = state.Source.TargetY;
-            if (state.Source.TargetWidth > 0) w = state.Source.TargetWidth;
-            if (state.Source.TargetHeight > 0) h = state.Source.TargetHeight;
-            float rotation = state.Source.Rotation;
-            ApplyPositionProviders(state.Source, ref x, ref y, ref w, ref h, ref rotation);
-            (x, y, w, h) = VideoClipRotation.GetBounds(rotation, x, y, w, h);
+            var rect = preparedRect ?? ResolveClipRect(state.Source, _currentFrame);
+            (x, y, w, h) = (rect.X, rect.Y, rect.Width, rect.Height);
         }
         else if (_elements.TryGetValue(state.Id, out var element))
         {
@@ -232,7 +264,19 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             Math.Max(0, h * scale)));
     }
 
-    private void ApplyPositionProviders(IClip clip, ref double x, ref double y, ref double w, ref double h, ref float rotation)
+    private Rect ResolveClipRect(IClip clip, uint frame)
+    {
+        double x = clip.TargetX;
+        double y = clip.TargetY;
+        double w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
+        double h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+        float rotation = clip.Rotation;
+        ApplyPositionProviders(clip, frame, ref x, ref y, ref w, ref h, ref rotation);
+        (x, y, w, h) = VideoClipRotation.GetBounds(rotation, x, y, w, h);
+        return new Rect(x, y, w, h);
+    }
+
+    private void ApplyPositionProviders(IClip clip, uint frame, ref double x, ref double y, ref double w, ref double h, ref float rotation)
     {
         if (clip.EffectsInstances is null) return;
 
@@ -241,7 +285,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             ClipPositionTuple position;
             if (effect is IContinuousClipPositionProvider continuous)
             {
-                position = continuous.GetPosition(clip, _currentFrame, (int)_videoWidth, (int)_videoHeight);
+                position = continuous.GetPosition(clip, frame, (int)_videoWidth, (int)_videoHeight);
             }
             else if (effect is IClipPositionProvider provider)
             {

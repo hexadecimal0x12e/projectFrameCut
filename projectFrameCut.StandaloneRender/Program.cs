@@ -11,6 +11,7 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -413,6 +414,8 @@ namespace projectFrameCut.StandaloneRender
                         [-ApproximateMixture=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
                         [-renderAheadFrames=<number>] [-enableMemoryBudget=<true|false>] [-maxBufferedBytes=<bytes>]
+                        [-enableGpuBufferPoolLimit=<true|false>]       (default: true)
+                        [-gpuBufferPoolMaxBytes=<bytes>]              (default: 134217728)
                         [-enableDiskCacheRouting=<true|false> or -forceUseDiskCache=<true|false>]
                         [-diskCacheThreshold=<0.1-0.95>] [-diskCacheMaxFrameCount=<number>] [-videoBuilderDiskCacheRoot=<path>]
                         [-chunkRender=<true|false>]
@@ -590,6 +593,10 @@ namespace projectFrameCut.StandaloneRender
                 }
             }
 
+            HwAccelPictureSession.DefaultEnableBufferPoolLimit = !bool.TryParse(
+                switches.GetValueOrDefault("enableGpuBufferPoolLimit", "true"), out var poolLimit) || poolLimit;
+            HwAccelPictureSession.DefaultBufferPoolMaxBytes = long.TryParse(switches.GetValueOrDefault("gpuBufferPoolMaxBytes"),
+                out var poolBytes) && poolBytes > 0 ? poolBytes : HwAccelPictureSession.DefaultBufferPoolBytes;
             PluginManager.Init(plugins);
             Log($"{PluginManager.LoadedPlugins.Count} plugins loaded.");
             #endregion
@@ -1063,7 +1070,8 @@ namespace projectFrameCut.StandaloneRender
 
             if (!bool.TryParse(switches.GetOrAdd("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
-            if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
+            var renderWorkerAffinityRaw = switches.GetValueOrDefault("renderWorkerAffinity") ?? switches.GetValueOrDefault("coreAffinityOverride");
+            if (!string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
                 if (!TryParseCpuIndexList(renderWorkerAffinityRaw, out renderWorkerAffinityCpuIndexes, out var renderWorkerAffinityError))
                 {
@@ -1342,6 +1350,8 @@ namespace projectFrameCut.StandaloneRender
                         Log(ex, "Load cover");
                     }
                     await localRenderer.GoRender(cts.Token, cover);
+                    if (localRenderer.Composer is DeferredRenderComposer deferred)
+                        await deferred.WriteVideoAsync(localBuilder, cts.Token);
                     sw1.Stop();
                     Log($"Render done,total elapsed {sw1.Elapsed}, avg elapsed {localRenderer.EachElapsedForPreparing.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to prepare and {localRenderer.EachElapsed.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to render");
                 }
@@ -1400,6 +1410,7 @@ namespace projectFrameCut.StandaloneRender
                     Log($"Releasing resources...");
                     if (clipSession is null)
                         foreach (var item in clips) item?.Dispose();
+                    localRenderer.Composer?.Dispose();
                     localRenderer.builder = null;
                     activeChunkBuilders.TryRemove(chunkIndex, out _);
                     activeChunkRenderers.TryRemove(chunkIndex, out _);
@@ -1874,7 +1885,8 @@ namespace projectFrameCut.StandaloneRender
             int[]? renderWorkerAffinityCpuIndexes = null;
             if (!bool.TryParse(switches.GetOrAdd("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
-            if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
+            var renderWorkerAffinityRaw = switches.GetValueOrDefault("renderWorkerAffinity") ?? switches.GetValueOrDefault("coreAffinityOverride");
+            if (!string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
                 if (!TryParseCpuIndexList(renderWorkerAffinityRaw, out renderWorkerAffinityCpuIndexes, out var renderWorkerAffinityError))
                 {

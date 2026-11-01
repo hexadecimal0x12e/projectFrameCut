@@ -20,4 +20,6 @@ public sealed class FrameSequenceRenderOptions
     [ProtoMember(13)] public int MaximumHDRBrightness { get; set; } = 1000;
     [ProtoMember(14)] public int SDRClipsBrightnessInHDRMode { get; set; } = 203;
     [ProtoMember(15)] public uint ChunkFrames { get; set; } = 0;
+    [ProtoMember(16)] public bool DisableGpuBufferPoolLimit { get; set; }
+    [ProtoMember(17)] public long GpuBufferPoolMaxBytes { get; set; }
 }

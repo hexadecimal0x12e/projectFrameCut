@@ -6,6 +6,8 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using projectFrameCut.Render.RenderAPIBase.Context;
 using System.IO;
 using System.Threading;
 using System.Runtime.InteropServices;
@@ -273,6 +275,7 @@ namespace projectFrameCut.Render.Rendering
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
             }
+            using var preview = CapturePreviewFrame(frame);
             if (!BlockWrite)
             {
                 if (ForceUseDiskCache || ShouldRouteToDisk())
@@ -294,9 +297,7 @@ namespace projectFrameCut.Render.Rendering
                 writer.Append(frame);
                 if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
             }
-
-            TryGeneratePreview(frame, index, requireIncreasingFrame: true);
-
+            TryGeneratePreview(preview ?? frame, index, requireIncreasingFrame: true);
         }
 
         public void Dispose()
@@ -632,6 +633,51 @@ namespace projectFrameCut.Render.Rendering
             if (DisposeFrameAfterEachWrite) frame.Dispose();
             if (DoGCAfterEachWrite) GC.Collect();
             if (!string.IsNullOrEmpty(logMessage)) Log(logMessage);
+        }
+
+        internal void BeginBufferedOutput(uint startFrame, uint duration)
+        {
+            if (Volatile.Read(ref buildStarted)) throw new InvalidOperationException("The builder already has an active writer.");
+            BlockWrite = false;
+            StartFrame = index = startFrame;
+            Duration = duration;
+        }
+
+        internal bool TryWriteNextBufferedFrame(CancellationToken token, out uint frameIndex, out TimeSpan elapsed)
+        {
+            token.ThrowIfCancellationRequested();
+            frameIndex = index;
+            elapsed = TimeSpan.Zero;
+            if (!Cache.TryRemove(frameIndex, out var frame) && !TryLoadDiskFrame(frameIndex, out frame)) return false;
+            long started = Stopwatch.GetTimestamp();
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                IRenderContext.CurrentFrameBuffer = frame;
+                IRenderContext.SetWorkerState(frameIndex, RenderWorkerStage.WritingOutput, "VideoBuilder");
+                WriteFrame(frameIndex, frame);
+            }
+            catch
+            {
+                frame.Dispose();
+                throw;
+            }
+            finally { IRenderContext.CurrentFrameBuffer = null; }
+            elapsed = Stopwatch.GetElapsedTime(started);
+            return true;
+        }
+
+        internal void DiscardBufferedFrame(uint frameIndex)
+        {
+            if (Cache.TryRemove(frameIndex, out var picture)) picture.Dispose();
+            if (_diskCache.TryRemove(frameIndex, out var path))
+            {
+                _diskCacheBpp.TryRemove(frameIndex, out _);
+                Interlocked.Decrement(ref _framesOnDisk);
+                try { File.Delete(path); }
+                catch (Exception ex) { Log(ex, "Discard buffered video frame", this); }
+            }
+            if (FramePendedToWrite.TryRemove(frameIndex, out _)) Interlocked.Decrement(ref _totalFramesCount);
         }
 
         internal void NotifyFrameWritten(uint frameIndex, IPicture frame)

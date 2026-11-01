@@ -5,11 +5,27 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:local="clr-namespace:projectFrameCut"
              xmlns:controls="clr-namespace:projectFrameCut.Controls"
+             xmlns:editor="clr-namespace:projectFrameCut.InteractableEditor"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:mw="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:DataType="local:DraftPage"
-             Shell.NavBarIsVisible="False"
+             Shell.NavBarIsVisible="{OnPlatform Default=True, Android=False, iOS=False}"
+             NavigationPage.HasNavigationBar="{OnPlatform Default=True, Android=False, iOS=False}"
              Title="">
+    <ContentPage.Resources>
+        <Style x:Key="DraftTitleBarButtonStyle" TargetType="Button">
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <Setter Property="FontFamily" Value="Font_Regular" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Style.Triggers>
+                <Trigger TargetType="Button" Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </ContentPage.Resources>
     <ContentPage.MenuBarItems>
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_Project}">
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe04b;}" Command="{Binding GoRenderCommand}" />
@@ -297,16 +313,41 @@
 
     </ContentPage.MenuBarItems>
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{l:Localized Key=DraftPage_CommandPanel}"  Command="{Binding ShowCommandPanelCommand}" />
+        <ToolbarItem x:Name="CommandPanelToolbarItem" Text="{l:Localized Key=DraftPage_CommandPanel}" Command="{Binding ShowCommandPanelCommand}" />
     </ContentPage.ToolbarItems>
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="25"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" x:Name="UpperContent">
+        <Grid x:Name="MobileTitleBar"
+              IsVisible="{Binding HasMobileTitleBar}"
+              ColumnDefinitions="*,44"
+              HeightRequest="24"
+              Padding="4,2"
+              BackgroundColor="{AppThemeBinding Light=#100B08, Dark=#D2D2CF}">
+
+            <ScrollView Grid.Column="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="2" BindableLayout.ItemsSource="{Binding MenuBarItems}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="MenuBarItem">
+                            <Button Style="{StaticResource DraftTitleBarButtonStyle}"
+                                    Text="{Binding Text}" IsEnabled="{Binding IsEnabled}"
+                                    Clicked="MobileMenu_Clicked" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+            <Button Grid.Column="1" Style="{StaticResource DraftTitleBarButtonStyle}"
+                    FontFamily="Icons" Text="&#xe9a9;" FontSize="22" Padding="0"
+                    Clicked="MobileCommandPanel_Clicked"
+                    SemanticProperties.Description="{l:Localized Key=DraftPage_CommandPanel}" />
+        </Grid>
+
+        <Grid Grid.Row="1" x:Name="UpperContent" IsVisible="{Binding IsWorkspaceForm}">
             <mw:MultiWindowView x:FieldModifier="public"
                                 x:Name="MainMultiWindowView"
                                 ZIndex="0"
@@ -333,10 +374,10 @@
             </Grid>
         </Grid>
 
-        <Grid x:Name="FixedLayoutRoot"
-              Grid.Row="0"
+        <Grid x:Name="MobileLayoutRoot"
+              Grid.Row="1"
               Grid.RowSpan="2"
-              IsVisible="False"
+              IsVisible="{Binding IsMobileForm}"
               ZIndex="20"
               BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
             <Grid.RowDefinitions>
@@ -360,9 +401,53 @@
                     VerticalOptions="End" />
         </Grid>
 
-        <Grid Grid.Row="1"
+        <Grid x:Name="PreviewLayoutRoot"
+              Grid.Row="1"
+              Grid.RowSpan="2"
+              RowDefinitions="*,Auto"
+              IsVisible="{Binding IsPreviewForm}"
+              BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
+            <editor:LightweightInteractableEditor x:Name="PreviewFormEditor" />
+            <Grid Grid.Row="1" Padding="12,4,12,8" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+                <Slider x:Name="PreviewFormProgress"
+                        Grid.ColumnSpan="4"
+                        Minimum="0"
+                        Maximum="1"
+                        ValueChanged="PreviewFormProgress_ValueChanged"
+                        DragStarted="PreviewFormProgress_DragStarted"
+                        DragCompleted="PreviewFormProgress_DragCompleted" />
+                <Button Grid.Row="1"
+                        Text="{l:Localized Key=_Back}"
+                        Clicked="PreviewFormExitButton_Clicked" />
+                <Button x:Name="PreviewFormPlayPauseButton"
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        FontFamily="Icons"
+                        Text="&#xe037;"
+                        FontSize="20"
+                        Padding="10,0"
+                        Clicked="PlayPauseButton_Clicked"
+                        ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}"
+                        SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" />
+                <Label x:Name="PreviewFormTimeLabel"
+                       Grid.Row="1"
+                       Grid.Column="2"
+                       Text="00:00.00 / 00:00.00"
+                       HorizontalOptions="End"
+                       VerticalOptions="Center" />
+                <Button x:Name="PreviewFormFullScreenButton"
+                        Grid.Row="1"
+                        Grid.Column="3"
+                        Text="{l:Localized Key=DraftPage_Preview_FullScreen}"
+                        IsVisible="{Binding SupportsPreviewFullScreen}"
+                        Clicked="PreviewFormFullScreenButton_Clicked" />
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="2"
               Margin="0,8,0,8"
               x:Name="MainControlGrid"
+              IsVisible="False"
               ZIndex="1"
               HeightRequest="44"
               MaximumHeightRequest="44"
@@ -403,7 +488,7 @@
             </HorizontalStackLayout>
         </Grid>
 
-        <Grid x:Name="LowerContent" Grid.Row="0">
+        <Grid x:Name="LowerContent" Grid.Row="1" IsClippedToBounds="True">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="18"/>
@@ -503,10 +588,10 @@
                             HeightRequest="80" />
                 </Grid>
             </ScrollView>
-            <BoxView Grid.Row="1" Grid.RowSpan="2" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
+            <BoxView Grid.Row="1" Grid.RowSpan="2" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="0" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
-        <Grid Grid.Row="2" BackgroundColor="#80001122" Margin="0,0,0,0">
+        <Grid Grid.Row="3" BackgroundColor="#80001122" Margin="0,0,0,0">
             <Grid x:Name="StatusBarGrid">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="25"/>
@@ -537,6 +622,7 @@
         </Grid>
 
         <AbsoluteLayout x:Name="OverlayLayer"
+                        Grid.Row="1"
                         Grid.RowSpan="3"
                         ZIndex="10000"
                         InputTransparent="True"

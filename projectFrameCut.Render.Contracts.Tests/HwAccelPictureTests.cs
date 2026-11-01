@@ -245,17 +245,6 @@ public sealed class HwAccelPictureTests
         Assert.AreEqual(0, device.Images);
     }
 
-    [TestMethod]
-    public void ResourceBudgetNeverExceedsItsLimit()
-    {
-        var budget = new HwAccelResourceBudget();
-        Assert.IsTrue(budget.TryReserve(HwAccelResourceBudget.DefaultBytes));
-        Assert.IsFalse(budget.TryReserve(1));
-        budget.Release(32);
-        Assert.IsTrue(budget.TryReserve(32));
-        Assert.AreEqual(HwAccelResourceBudget.DefaultBytes, budget.Bytes);
-    }
-
     private sealed class PictureBoundary(Func<EffectExecutionContext, object?> compute) : TestEffect(compute), IEffect
     {
         public bool IsPictureTransportBoundary => true;

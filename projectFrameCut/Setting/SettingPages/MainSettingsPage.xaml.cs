@@ -219,6 +219,8 @@ namespace projectFrameCut
                 IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
 
                 ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
+                HwAccelPictureSession.DefaultEnableBufferPoolLimit = RenderSchedulingSettings.EnableGpuBufferPoolLimit;
+                HwAccelPictureSession.DefaultBufferPoolMaxBytes = RenderSchedulingSettings.GpuBufferPoolMaxBytes;
                 IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
                 IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new projectFrameCut.Render.RenderAPIBase.VectorContent.CpuVectorPictureRasterizer();
                 NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && IsBoolSettingTrue("diag_TypesettingEngineDiagMode");

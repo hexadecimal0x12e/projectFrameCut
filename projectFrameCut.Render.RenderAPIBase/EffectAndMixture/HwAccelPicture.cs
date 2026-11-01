@@ -153,6 +153,7 @@ public sealed class HwAccelPictureScope : IDisposable
             }
 
             uploads.Clear();
+            session?.ReleaseUnusedUploads();
             foreach (var lease in contexts.Values)
             {
                 try

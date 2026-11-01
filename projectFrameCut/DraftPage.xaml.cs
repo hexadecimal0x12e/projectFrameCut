@@ -166,10 +166,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     private MultiWindowItem TimelineSubwindow = null!;
     private MultiWindowItem AssetSubwindow = null!;
     private MultiWindowItem AddClipSubwindow = null!;
-    private bool _fixedLayoutInitialized;
     private TabbedView? _fixedClipInfoTabs;
     private TabbedView? _fixedClipInfoPopupTabs;
     private bool _syncingFixedClipInfoTabs;
+    private int _fixedClipInfoVersion;
 
 
 
@@ -396,8 +396,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ObservableCollection<QuickCommandItem> QuickCommands { get; } = [];
     public ObservableCollection<QuickCommandSlot> QuickCommandSlots { get; } = [];
 
-    public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
-    public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
+    public bool _ShouldShowClipMoveControlInCenterInfoBar => !IsMobileForm || SelectedClip is null;
+    public bool _ShouldShowCenterCompactControlGrid => IsMobileForm && SelectedClip is not null;
     public bool IsClipMoving
     {
         get;
@@ -415,7 +415,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool SelectedAnyClip => _selected is not null || _selectedClipIds.Count > 0;
     public ClipElementUI? SelectedClip => _selected;
     public event EventHandler? SelectedClipChanged;
-    public bool UnNullUseCompactLayout => UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
+    public bool UnNullUseCompactLayout => IsMobileForm;
     public bool IsPopupShowing => Popup.IsVisible;
     public bool IsTimelineScrollEnabled { get; set { if (field == value) return; field = value; OnPropertyChanged(nameof(IsTimelineScrollEnabled)); RefreshToggleCommandStates(); } }
     public bool AllowExit { get; set; } = true;
@@ -423,7 +423,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region options
-    public string ProjectName { get; set; } = "Unknown project";
+    public string ProjectName { get; set { field = value; OnPropertyChanged(); } } = "Unknown project";
     public bool ShowShadow { get; set; } = true;
     public bool LogUIMessageToLogger { get; set; } = false;
     public bool Denoise { get; set; } = false;
@@ -441,17 +441,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     public string ProxyOption { get; set; }
     public double PreviewAreaHeight { get; set; } = 250;
     public bool AutoSavePreviewAreaHeight { get; set; } = true;
+    /// <summary>Initial form override. Use SwitchFormAsync to change the active form.</summary>
     public bool? UseCompactLayout { get; set; } = null;
-    public bool IsFixedLayout
-    {
-        get => field;
-        private set
-        {
-            if (field == value) return;
-            field = value;
-            OnPropertyChanged();
-        }
-    }
+    public bool IsFixedLayout => IsMobileForm;
     public int QuickCommandSlotCount { get; set; } = DeviceInfo.Idiom switch
     {
         var t when t == DeviceIdiom.Desktop => 8,
@@ -530,6 +522,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.SetAssets(Assets);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
+        ClipEditor.ConfigureFullScreenPreview(() => SwitchFormAsync(DraftPageForm.Preview));
         ClipEditor.ConfigureOverviewImageSource(RenderOverviewImageSourceAsync);
         ClipEditor.ConfigureManageReferenceLinesRequested(() =>
         {
@@ -618,6 +611,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync)
+                  .ConfigureFullScreenPreview(() => SwitchFormAsync(DraftPageForm.Preview))
                   .ConfigureOverviewImageSource(RenderOverviewImageSourceAsync)
                   .ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync)
                   .ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync)
@@ -657,7 +651,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.SetAssets(Assets);
         Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
         trackCount = initialTrackCount;
-        ProjectInfo.ProjectName ??= title;
+        ProjectName = ProjectInfo.ProjectName ??= title;
         IsReadonly = isReadonly;
 
         var page = this;
@@ -815,7 +809,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         EscapeCommand =
             new Command(async () =>
             {
-                if (IsClipMoving)
+                if (IsPreviewForm && _previewFormFullScreen)
+                {
+                    SetPreviewFormFullScreen(false);
+                }
+                else if (IsClipMoving)
                 {
                     CancelPendingClipPlacement();
                     SetStateOK();
@@ -1151,79 +1149,6 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         var safeZoneRad = UIServices.GetWindowCornerRadius();
         StatusBarGrid.Margin = new Thickness(safeZoneRad, StatusBarGrid.Margin.Top, safeZoneRad, StatusBarGrid.Margin.Bottom);
-        UseCompactLayout ??= (DeviceInfo.Idiom == DeviceIdiom.Phone);
-        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
-        {
-            MainMultiWindowView.CloseWindow(PropertiesSubwindow);
-            MainMultiWindowView.CloseWindow(AssisstantSubWindow);
-            MainMultiWindowView.CloseWindow(AddClipSubwindow);
-            PreviewSubwindow.IsTitleBarVisible = false;
-            PreviewSubwindow.IsResizable = false;
-            PreviewSubwindow.Maximize();
-            RightMenuBar.IsVisible = false;
-            RightContentBorder.IsVisible = false;
-            PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
-            MainControlGrid.ColumnDefinitions = new ColumnDefinitionCollection
-            {
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }
-            };
-            Grid.SetColumn(LeftMenuBar, 0);
-            Grid.SetColumn(PlayingControlLayout, 1);
-            PlayingControlLayout.Margin = new(0, 0, 8, 0);
-        }
-        else
-        {
-            PreviewSubwindow.IsTitleBarVisible = true;
-            RightMenuBar.IsVisible = true;
-            RightContentBorder.IsVisible = true;
-            (Content as Grid)?.Remove(MainControlGrid);
-            ToolbarItems.Clear();
-
-            foreach (var item in MainMultiWindowView.Windows)
-            {
-                ViewMenuBarItem.Insert(0, new MenuFlyoutItem
-                {
-                    Text = item.Title,
-                    IconImageSource = new FontImageSource { FontFamily = MaterialIconFontFamily, Glyph = "\uf71b" },
-                    Command = ManageWindowCommand,
-                    CommandParameter = item.WindowID.ToString()
-                });
-
-            }
-            MainMultiWindowView.WindowAdded += (s, e) =>
-            {
-                ViewMenuBarItem.Insert(0, new MenuFlyoutItem
-                {
-                    Text = e.Title,
-                    IconImageSource = new FontImageSource { FontFamily = MaterialIconFontFamily, Glyph = "\uf71b" },
-                    Command = ManageWindowCommand,
-                    CommandParameter = e.WindowID.ToString()
-                });
-                RefreshQuickCommands();
-            };
-            MainMultiWindowView.WindowClosed += (s, e) =>
-            {
-                try
-                {
-                    var wid = e.WindowID.ToString();
-                    if (ViewMenuBarItem.OfType<MenuFlyoutItem>().Where(c => c?.CommandParameter is string s && s == wid) is IEnumerable<MenuFlyoutItem> items)
-                    {
-                        foreach (var item in items.ToList())
-                        {
-                            ViewMenuBarItem.Remove(item);
-                        }
-                        RefreshQuickCommands();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "Handle window change", this);
-                }
-            };
-
-        }
-
         UpdateTrackHeaderLayoutForViewport();
 #if WINDOWS
         TimelineScrollView_HandlerChanged(TracksAndClipsLayout, EventArgs.Empty);
@@ -1251,10 +1176,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             await HidePopup();
         };
         CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
-        OnPropertyChanged(nameof(UnNullUseCompactLayout));
-        OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
-        OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
-        await SwitchEditorLayoutAsync(UseCompactLayout == true ? "fixed" : "workspace");
+        StartAdaptiveFormMonitoring();
+        await SwitchFormAsync(IsPreviewForm ? DraftPageForm.Preview : GetAdaptiveForm());
         RestoreInteractableEditorState();
         StartRenderBackendWatchdog();
         await DraftChangedAsync(sender, new ClipUpdateEventArgs { NoSave = true });
@@ -1454,6 +1377,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private void HookPreviewSurfaceSizeSync()
     {
         ClipEditorHost.SizeChanged += PreviewSurface_SizeChanged;
+        PreviewFormEditor.SizeChanged += PreviewSurface_SizeChanged;
         SyncPreviewSurfaceSize();
     }
 
@@ -1462,11 +1386,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         SyncPreviewSurfaceSize();
     }
 
-    private bool ShouldUseLightweightPreviewHost => UseDynamicPreview && UseLightweightDynamicPreviewHost && isPlaying;
+    private bool ShouldUseLightweightPreviewHost => !IsPreviewForm && UseDynamicPreview && UseLightweightDynamicPreviewHost && isPlaying;
 
-    private IInteractableEditor ActivePreviewEditor => ShouldUseLightweightPreviewHost
-        ? FastPreviewEditor
-        : ClipEditor;
+    private IInteractableEditor ActivePreviewEditor => IsPreviewForm
+        ? PreviewFormEditor
+        : ShouldUseLightweightPreviewHost ? FastPreviewEditor : ClipEditor;
 
     private void SwitchPreviewEditorHost()
     {
@@ -1482,7 +1406,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         FastPreviewEditor.SetVideoSize(ProjectInfo?.RelativeWidth > 0 ? ProjectInfo.RelativeWidth : 1920,
             ProjectInfo?.RelativeHeight > 0 ? ProjectInfo.RelativeHeight : 1080);
-        FastPreviewEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
+        PreviewFormEditor.SetVideoSize(ProjectInfo?.RelativeWidth > 0 ? ProjectInfo.RelativeWidth : 1920,
+            ProjectInfo?.RelativeHeight > 0 ? ProjectInfo.RelativeHeight : 1080);
+        SyncClipEditorCurrentFrame();
         SyncPreviewSurfaceSize();
     }
 
@@ -1500,7 +1426,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         var width = activeView.Width;
         var height = activeView.Height;
 
-        if (width <= 0 || height <= 0)
+        if (!IsPreviewForm && (width <= 0 || height <= 0))
         {
             width = Math.Max(0, ClipEditorHost.Width - ClipEditorHost.Padding.HorizontalThickness);
             height = Math.Max(0, ClipEditorHost.Height - ClipEditorHost.Padding.VerticalThickness);
@@ -1525,6 +1451,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         // calling it is race-free with the layout-driven path.
         ClipEditor.UpdateCanvasSize(width, height);
         FastPreviewEditor.SetCanvasSize(width, height);
+        if (IsPreviewForm) PreviewFormEditor.SetCanvasSize(width, height);
         DynamicPreviewProvider.UpdateCanvasSize(width, height);
     }
 
@@ -1541,7 +1468,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone)) return;
+        if (!IsWorkspaceForm || !MainMultiWindowView.IsVisible) return;
         if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0) return;
         try
         {
@@ -1700,11 +1627,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         // A fresh workspace starts with the media/add panel docked into the editor.
         // Restored projects keep their saved layout and can open it from the toolbar.
-        if (!_workspaceWindowHost.WasLayoutRestored
-            && !(UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone))
+        if (!_workspaceWindowHost.WasLayoutRestored)
         {
             _workspaceWindowHost.OpenWindow("clips.add");
         }
+        MainMultiWindowView.WindowAdded += WorkspaceWindowsChanged;
+        MainMultiWindowView.WindowClosed += WorkspaceWindowsChanged;
         cancellationToken.ThrowIfCancellationRequested();
     }
 
@@ -3022,10 +2950,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         var w = this.Window?.Width;
         if (w is not null && w > 0)
         {
-            return (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) || w <= NarrowTrackHeaderWindowThreshold;
+            return IsMobileForm || w <= NarrowTrackHeaderWindowThreshold;
         }
 
-        return (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) || (Width > 0 && Width <= NarrowTrackHeaderWindowThreshold);
+        return IsMobileForm || (Width > 0 && Width <= NarrowTrackHeaderWindowThreshold);
     }
 
     private string BuildTrackHeaderText(int trackId)
@@ -3082,11 +3010,14 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async void AddClip_Clicked(object sender, EventArgs e)
     {
         await (AddClipView.MainTabView.BindingContext as ProjectAddClipViewModel)?.Refresh();
-        _workspaceWindowHost.OpenWindow("clips.add");
-        if (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+        if (IsMobileForm)
         {
-            AddClipSubwindow.Maximize();
+            await HidePopup(true);
+            DetachViewFromParent(AddClipView);
+            AddClipView.IsVisible = true;
+            await ShowAPopup(new ContentView { Content = AddClipView }, disableScrollWrapping: true);
         }
+        else _workspaceWindowHost.OpenWindow("clips.add");
     }
 
     public void BeginClipPlacement(Func<int, double, ClipElementUI> clipFactory, Predicate<int>? trackFilter = null, string? name = null, Action? afterPlacement = null)
@@ -3103,14 +3034,14 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         Dispatcher.Dispatch(() =>
         {
-            if (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+            if (IsMobileForm)
             {
                 SetPlayPauseIconToClose();
                 CurrentPlayheadLabel.IsVisible = false;
             }
         });
 
-        LeftInfoLabel.Text = (UseCompactLayout ?? false) ? Localized.DraftPage_AddClipView_ClickToPlace_Compact(name ?? "Clip") : Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip");
+        LeftInfoLabel.Text = IsMobileForm ? Localized.DraftPage_AddClipView_ClickToPlace_Compact(name ?? "Clip") : Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip");
         SetStatusText(Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip"));
     }
 
@@ -3132,7 +3063,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             LeftInfoLabel.Text = "";
             AddClip.IsVisible = true;
             AssetPanelButton.IsVisible = true;
-            if (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+            if (IsMobileForm)
             {
                 SetPlayPauseIconToPlay();
                 CurrentPlayheadLabel.IsVisible = true;
@@ -3218,7 +3149,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             Dispatcher.Dispatch(() =>
             {
-                if (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+                if (IsMobileForm)
                 {
                     SetPlayPauseIconToPlay();
                     CurrentPlayheadLabel.IsVisible = true;
@@ -3378,7 +3309,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async void DoubleTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
-        if (DeviceInfo.Idiom != DeviceIdiom.Phone && !EnableClipInfoPopup) return;
+        if (!IsMobileForm && !EnableClipInfoPopup) return;
         if (sender is not Border border) return;
         if (!IsTapWithinBorderInteractiveBounds(border, e)) return;
         if (border.BindingContext is not ClipElementUI clip) return;
@@ -5216,6 +5147,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             var startedAt = Stopwatch.GetTimestamp();
             try
             {
+                await Dispatcher.DispatchAsync(SyncClipEditorCurrentFrame);
                 await RefreshPreviewFromCurrentProviderAsync(cancellationToken, throwOnFailure);
             }
             finally
@@ -5422,8 +5354,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             // Recreate the browser so its view model reflects the latest asset collection.
             // The provider is stable; only this window's content is refreshed.
+            await HidePopup(true);
             AssetSubwindow.Content = CreateWorkspaceAssetView();
-            _workspaceWindowHost.OpenWindow("assets.browser");
+            await OpenFormWindowAsync(AssetSubwindow);
         }
         catch (Exception ex)
         {
@@ -5711,6 +5644,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         search.Focus();
     }
 
+    #region quick command
     private void RefreshToggleCommandStates()
     {
         foreach (var command in QuickCommands.Where(x => x.IsToggle)) command.RefreshToggleState();
@@ -6031,6 +5965,147 @@ public partial class DraftPage : ContentPage, IDraftPage
         panel.Add(new ScrollView { Content = rows }, 0, 1);
         await ShowAPopup(panel, mode: "dialog", disableScrollWrapping: true);
     }
+    #endregion
+
+    #region custom title bar
+    private bool _forceCustomTitleBar;
+
+    public bool HasMobileTitleBar => _forceCustomTitleBar || DeviceInfo.Platform == DevicePlatform.Android || DeviceInfo.Platform == DevicePlatform.iOS;
+
+    private async void MobileBack_Clicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (IsGuiBatchOverlayVisible || !AllowExit) return;
+            if (popupShowingDirection != "none") await HidePopup(true);
+            else if (IsPreviewForm) await SwitchFormAsync(GetAdaptiveForm());
+            else SendBackButtonPressed();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Navigate back from mobile draft title bar", this);
+        }
+    }
+
+    private async void MobileMenu_Clicked(object? sender, EventArgs e)
+    {
+        if (AlreadyDisappeared || IsGuiBatchOverlayVisible || sender is not Button { BindingContext: MenuBarItem menu } || !menu.IsEnabled) return;
+        try
+        {
+            await HidePopup(true);
+            await ShowAPopup(BuildMobileMenuPanel(menu), disableScrollWrapping: true, mode: "dialog");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Open mobile draft menu '{menu.Text}'", this);
+        }
+    }
+
+    private async void MobileCommandPanel_Clicked(object? sender, EventArgs e)
+    {
+        if (AlreadyDisappeared || IsGuiBatchOverlayVisible) return;
+        try
+        {
+            await HidePopup(true);
+            await ShowCommandPanelAsync();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Open mobile draft command panel", this);
+        }
+    }
+
+    private View BuildMobileMenuPanel(MenuBarItem menu)
+    {
+        var style = (Style)Resources["DraftTitleBarButtonStyle"];
+        var back = new Button { Text = Localized._Back, Style = style, IsVisible = false };
+        var title = new Label { FontAttributes = FontAttributes.Bold, VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.TailTruncation };
+        var close = new Button { Text = ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized.MultiWindowView_Close, Style = style };
+        var header = new Grid
+        {
+            ColumnDefinitions = { new() { Width = GridLength.Auto }, new() { Width = GridLength.Star }, new() { Width = GridLength.Auto } },
+            ColumnSpacing = 8,
+            MinimumHeightRequest = 44
+        };
+        header.Add(back);
+        header.Add(title, 1);
+        header.Add(close, 2);
+        var rows = new VerticalStackLayout { Spacing = 4 };
+        var scroll = new ScrollView { Content = rows };
+        var panel = new Grid
+        {
+            RowDefinitions = { new() { Height = GridLength.Auto }, new() { Height = GridLength.Star } },
+            RowSpacing = 8
+        };
+        panel.Add(header);
+        panel.Add(scroll, 0, 1);
+
+        Action? previous = null;
+        back.Clicked += (_, _) => previous?.Invoke();
+        close.Clicked += async (_, _) =>
+        {
+            try
+            {
+                await HidePopup(true);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Close mobile draft menu", this);
+            }
+        };
+
+        void ShowItems(BindableObject owner, IEnumerable<IMenuElement> items, Action? goBack = null)
+        {
+            title.SetBinding(Label.TextProperty, new Binding(nameof(MenuItem.Text), source: owner));
+            previous = goBack;
+            back.IsVisible = goBack is not null;
+            rows.Children.Clear();
+            _ = scroll.ScrollToAsync(0, 0, false);
+            foreach (var child in items)
+            {
+                if (child is MenuFlyoutSeparator)
+                {
+                    rows.Add(new BoxView { HeightRequest = 1, Margin = new Thickness(8, 4), Opacity = 0.2 });
+                    continue;
+                }
+                if (child is not MenuFlyoutItem item) continue;
+                var button = new Button
+                {
+                    Style = style,
+                    Padding = new Thickness(12, 8),
+                    LineBreakMode = LineBreakMode.WordWrap,
+                    ContentLayout = new Button.ButtonContentLayout(Button.ButtonContentLayout.ImagePosition.Left, 12)
+                };
+                button.SetBinding(Button.TextProperty, new Binding(nameof(MenuItem.Text), source: item,
+                    stringFormat: item is MenuFlyoutSubItem ? "{0}  ›" : null));
+                button.SetBinding(Button.ImageSourceProperty, new Binding(nameof(MenuItem.IconImageSource), source: item));
+                button.SetBinding(Button.IsEnabledProperty, new Binding(nameof(MenuItem.IsEnabled), source: item));
+                button.Clicked += async (_, _) =>
+                {
+                    try
+                    {
+                        if (!item.IsEnabled) return;
+                        if (item is MenuFlyoutSubItem sub)
+                        {
+                            ShowItems(sub, sub, () => ShowItems(owner, items, goBack));
+                            return;
+                        }
+                        await HidePopup(true);
+                        if (!AlreadyDisappeared && item.IsEnabled) ((IMenuItemController)item).Activate();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Run mobile draft menu item '{item.Text}'", this);
+                    }
+                };
+                rows.Add(button);
+            }
+        }
+
+        ShowItems(menu, menu);
+        return panel;
+    }
+    #endregion
     #endregion
 
     #region adjust track and clip
@@ -7059,6 +7134,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         _popupHeightRatio = 0;
         _popupWidthRatio = 0;
         OverlayLayer.BackgroundColor = Colors.Transparent;
+        RestoreMobilePanelContent();
     }
 
     private async Task ShowAFullscreenPopupInBottom(double height, View content, bool disableScrollWrapping = false)
@@ -7327,8 +7403,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         MainMultiWindowView.BringToFront(window);
     }
 
-    private void ToggleAssistantSubWindow(MultiWindowItem item)
+    private async Task ToggleAssistantSubWindow(MultiWindowItem item)
     {
+        if (IsMobileForm)
+        {
+            if (_mobilePanelWindow == item && popupShowingDirection != "none") await HidePopup(true);
+            else await OpenFormWindowAsync(item);
+            return;
+        }
         var isOpened = MainMultiWindowView.Children.Contains(AssisstantSubWindow);
         if (isOpened && item.IsVisible)
         {
@@ -7339,7 +7421,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ActivateMultiWindowItem(item);
     }
 
-    private void ExecuteManageWindowCommand(string? action)
+    private async void ExecuteManageWindowCommand(string? action)
     {
         switch (action)
         {
@@ -7347,7 +7429,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     if (MainMultiWindowView.Windows.FirstOrDefault(x => x.WindowID == wid) is MultiWindowItem window)
                     {
-                        ActivateMultiWindowItem(window);
+                        await OpenFormWindowAsync(window);
                     }
                     break;
                 }
@@ -7411,7 +7493,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             //    break;
             case "assistant-toggle":
                 if (MauiProgram.IsStoreMode) return;
-                ToggleAssistantSubWindow(AssisstantSubWindow);
+                await ToggleAssistantSubWindow(AssisstantSubWindow);
                 break;
             case "close-extra":
                 foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
@@ -7437,7 +7519,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         _workspaceWindowHost.OpenWindow("preview.main");
         _workspaceWindowHost.OpenWindow("timeline.main");
         _workspaceWindowHost.OpenWindow("properties.main");
-        if (!(UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone))
+        if (IsWorkspaceForm)
         {
             _workspaceWindowHost.OpenWindow("clips.add");
         }
@@ -7845,7 +7927,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             Navigation.InsertPageBefore(replacement, this);
             Shell.SetTabBarIsVisible(replacement, false);
-            Shell.SetNavBarIsVisible(replacement, true);
+            Shell.SetNavBarIsVisible(replacement, !replacement.HasMobileTitleBar);
             await replacement.PostInit();
             Navigation.RemovePage(this);
             if (!string.IsNullOrEmpty(title) && App.Current?.Windows?[0] is { } window) window.Title = title;
@@ -7952,8 +8034,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             frame = 0;
         }
 
-        ClipEditor.SetCurrentFrame((uint)frame);
-        FastPreviewEditor.SetCurrentFrame((uint)frame);
+        PreparePreviewFrameLayout((uint)frame);
     }
 
     private Point GetAbsolutePosition(VisualElement element, VisualElement ancestor)
@@ -8063,12 +8144,16 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         PlayPauseButton.FontFamily = MaterialIconFontFamily;
         PlayPauseButton.Text = MaterialIconPlay;
+        PreviewFormPlayPauseButton.FontFamily = MaterialIconFontFamily;
+        PreviewFormPlayPauseButton.Text = MaterialIconPlay;
     }
 
     private void SetPlayPauseIconToPause()
     {
         PlayPauseButton.FontFamily = MaterialIconFontFamily;
         PlayPauseButton.Text = MaterialIconPause;
+        PreviewFormPlayPauseButton.FontFamily = MaterialIconFontFamily;
+        PreviewFormPlayPauseButton.Text = MaterialIconPause;
     }
 
     private void SetPlayPauseIconToClose()
@@ -8264,6 +8349,19 @@ public partial class DraftPage : ContentPage, IDraftPage
     private Dictionary<string, ICommand> GetDebugCommands() => new()
     {
         {
+            "Debug_SwitchForm", new Command(async () => await SelectFormAsync())
+        },
+        {
+            "Debug_ToggleCustomTitleBar", new Command(() =>
+            {
+                _forceCustomTitleBar = !_forceCustomTitleBar;
+                OnPropertyChanged(nameof(HasMobileTitleBar));
+                Shell.SetNavBarIsVisible(this, !HasMobileTitleBar);
+                NavigationPage.SetHasNavigationBar(this, !HasMobileTitleBar);
+                LogDiagnostic($"Custom draft title bar debug override: {_forceCustomTitleBar}.");
+            })
+        },
+        {
             "Debug_ToggleDebugViewForInteractableEditor", new Command(async () =>
             {
                 ClipEditor.ShowPreviewDebugOverlay = !ClipEditor.ShowPreviewDebugOverlay;
@@ -8273,9 +8371,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             "Debug_ReRenderLivePreview", new Command(async () =>
             {
                 var token = ResetDynamicPreviewToken();
-                var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, token);
+                var frame = (uint)_currentFrame;
+                var editor = ActivePreviewEditor;
+                PreparePreviewFrameLayout(frame);
+                var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync(frame, previewWidth, previewHeight, token);
                 token.ThrowIfCancellationRequested();
-                ActivePreviewEditor.ApplyPreparedPreviews(preparedPreviews);
+                if (frame == (uint)_currentFrame && ReferenceEquals(editor, ActivePreviewEditor))
+                    ApplyPreparedPreviewFrame(editor, preparedPreviews, frame);
             })
         },
         {
@@ -8494,6 +8596,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         // Clip overlay coordinates are always stored in project resolution.
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight, true);
         FastPreviewEditor.SetVideoSize(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
+        PreviewFormEditor.SetVideoSize(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
 
         await Dispatcher.DispatchAsync(() =>
         {
@@ -8590,12 +8693,13 @@ public partial class DraftPage : ContentPage, IDraftPage
 
 
     /// <summary>
-    /// 检查当前 AI 聊天窗口是否活跃（在 MultiWindowView 中可见且有打开的会话）。
+    /// 检查当前形态中 AI 聊天面板是否可见且有打开的会话。
     /// </summary>
     private bool IsChatActive()
     {
-        return MainMultiWindowView.Children.Contains(AssisstantSubWindow)
-            && AssisstantSubWindow.IsVisible
+        return (IsMobileForm
+                ? _mobilePanelWindow == AssisstantSubWindow && popupShowingDirection != "none"
+                : MainMultiWindowView.Children.Contains(AssisstantSubWindow) && AssisstantSubWindow.IsVisible)
             && ChatSessionsView.Current is not null;
     }
 
@@ -8824,6 +8928,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         // navigation begins. True when leaving for the export page (same project);
         // false when the project is actually being closed (back to HomePage/exit).
         bool leavingProject = !_navigatingToRenderPage;
+        if (_previewFormFullScreen) SetPreviewFormFullScreen(false);
 #if WINDOWS
         DisableExternalRpcCloseConfirmation();
 #endif
@@ -8835,9 +8940,43 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             Log(ex, "Save window layout", this);
         }
+
+        try
+        {
+            Content = new VerticalStackLayout
+            {
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                Children =
+                {
+                    new ActivityIndicator
+                    {
+                        IsRunning = true
+                    },
+                    new Label
+                    {
+                        Text = ExitNoSave ? Localized.DraftPage_Processing : Localized.DraftPage_SavingChanges,
+                        HorizontalTextAlignment = TextAlignment.Center,
+                        Margin = new Thickness(0,10,0,0)
+                    }
+                }
+            };
+            MenuBarItems.Clear();
+            App.Current?.Windows?[0]?.Title = Localized.AppBrand;
+
+            await Task.Delay(120);
+
+
+        }
+        catch
+        {
+            //the window maybe closed; just ignore any exception here
+        }
         AlreadyDisappeared = true;
+        StopAdaptiveFormMonitoring();
         await CloseGuiBatchAsync();
         StopRenderBackendWatchdog();
+        _previewFormSeekCts?.Cancel();
         CancelDynamicPreview();
         try { _renderOneFrameCts?.Cancel(); } catch (ObjectDisposedException) { }
         await _renderBackendRestartLock.WaitAsync();
@@ -8869,39 +9008,16 @@ public partial class DraftPage : ContentPage, IDraftPage
             Log(ex, "Close standalone draft windows", this);
         }
 
-        try
-        {
-            Content = new VerticalStackLayout
-            {
-                HorizontalOptions = LayoutOptions.Center,
-                VerticalOptions = LayoutOptions.Center,
-                Children =
-                {
-                    new ActivityIndicator
-                    {
-                        IsRunning = true
-                    },
-                    new Label
-                    {
-                        Text = ExitNoSave ? Localized.DraftPage_Processing : Localized.DraftPage_SavingChanges,
-                        HorizontalTextAlignment = TextAlignment.Center,
-                        Margin = new Thickness(0,10,0,0)
-                    }
-                }
-            };
-        }
-        catch
-        {
-            //the window maybe closed; just ignore any exception here
-        }
-
 
         if (this.Window is not null)
         {
             this.Window.SizeChanged -= Window_SizeChanged;
         }
         OverlayLayer.SizeChanged -= OverlayLayer_SizeChanged;
+        PreviewFormEditor.SizeChanged -= PreviewSurface_SizeChanged;
         MainMultiWindowView.SizeChanged -= MainMultiWindowView_SizeChanged;
+        MainMultiWindowView.WindowAdded -= WorkspaceWindowsChanged;
+        MainMultiWindowView.WindowClosed -= WorkspaceWindowsChanged;
         MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
 
         foreach (var item in PluginManager.LoadedPlugins)
@@ -9024,6 +9140,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public async void Window_SizeChanged(object? sender, EventArgs e)
     {
+        if (IsPreviewForm) UpdatePreviewFormFullScreenButton();
         double w = this.Window?.Width ?? 0;
         double h = this.Window?.Height ?? 0;
         WindowSize = new(w, h);
