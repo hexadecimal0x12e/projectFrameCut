@@ -51,7 +51,6 @@ namespace projectFrameCut.ApplicationPluginBase
 
         public Dictionary<string, Func<ITextClipStyleProvider, ITextClipStyleUIProvider>> TextClipStyleUIProvider => new()
         {
-            ["LlmTranslate"] = p => new LlmTranslateTextStyleUIProvider(),
             ["OldTextClipEntry"] = p => new OldTextClipEntryTextStyleUIProvider(),
         };
 

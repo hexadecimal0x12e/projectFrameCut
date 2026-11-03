@@ -2,6 +2,7 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Collections.Concurrent;
+using projectFrameCut.Shared;
 using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.Effect;
@@ -15,7 +16,9 @@ public static class ClipArgumentBinding
 
     internal static uint GetFrameIndex(IClip clip, uint fallback) => Copies.TryGetValue(clip, out var copy) ? copy.Frame : fallback;
 
-    public static bool ShouldRender(IClip frameClip) => !Copies.TryGetValue(frameClip, out var copy) || copy.ShouldRender;
+    public static bool ShouldRender(IClip frameClip) => Copies.TryGetValue(frameClip, out var copy) ? copy.ShouldRender
+        : frameClip.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render)
+            ?.ShouldRender(frameClip, (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? frameClip.StartFrame)) ?? true;
 
     internal static bool TryGetFrame(IClip clip, uint frame, out IClip? result)
     {
@@ -48,18 +51,23 @@ public static class ClipArgumentBinding
             var provider = clip.EffectProvidersInstances?.OfType<ClipArgumentProvider>().SingleOrDefault();
             if (provider is not { Enabled: true })
             {
-                clip.EffectStagePlan?.Complete(clip, Stage.ClipArguments, frame);
-                return clip;
+                var graph = clip.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render);
+                if (graph is null) return clip;
+                var frameClip = clip.CopyForFrame();
+                bool visible = graph.ShouldRender(clip, frame);
+                Copies.Add(frameClip, new(clip, frame, visible));
+                ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), frameClip);
+                return frameClip;
             }
             using var context = ValueProviderFrameContext.PushFrame(frame, clip.GetEffectiveDuration() > 0
                 ? Math.Clamp((float)((long)frame - clip.StartFrame) / clip.GetEffectiveDuration(), 0, 1) : 0);
-            bool shouldRender = provider.EvaluateShouldRender();
-            var result = shouldRender ? clip.HandleArguments(provider.Evaluate(clip)) : clip.CopyForFrame();
+            var result = clip.HandleArguments(provider.Evaluate(clip));
+            bool shouldRender = result.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render)?.ShouldRender(result, frame) ?? true;
             if (ReferenceEquals(result, clip) || result.Id != clip.Id)
                 throw new InvalidOperationException("The clip argument handler must return a frame copy with the same id.");
             Copies.Add(result, new(clip, frame, shouldRender));
             ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
-            result.EffectStagePlan?.Complete(result, Stage.ClipArguments, frame);
+            result.EffectStagePlan?.Complete(result, EffectStage.Text, frame);
             return result;
         }
         catch (OperationCanceledException) { throw; }

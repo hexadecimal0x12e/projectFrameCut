@@ -68,11 +68,6 @@ namespace projectFrameCut.Setting.SettingPages
                 .AddCheckbox(PluginLoopbackSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowLoopback, IsBoolSettingTrueOrDefault(PluginLoopbackSetting, false))
                 .AddSeparator()
 #endif
-                .AddText(new SingleLineLabel(SettingLocalizedResources.Security_AICapabilities, 25))
-                .AddCheckbox("Security_AICapabilities_AllowToolCall", SettingLocalizedResources.Security_AICapabilities_AllowToolCall, IsBoolSettingTrueOrDefault("Security_AICapabilities_AllowToolCall", true))
-                .AddCheckbox("Security_AICapabilities_AllowModifyProject", SettingLocalizedResources.Security_AICapabilities_AllowModifyProject, IsBoolSettingTrueOrDefault("Security_AICapabilities_AllowModifyProject", true))
-                .AddSeparator()
-
                 .AddText(new SingleLineLabel(SettingLocalizedResources.Security_RichText, 25))
                 .AddCheckbox("Security_RichText_EnableRendering", SettingLocalizedResources.Security_RichText_EnableRendering, IsBoolSettingTrueOrDefault("Security_RichText_EnableRendering", true))
                 .AddCheckbox("Security_RichText_EnableDisplayingImage", SettingLocalizedResources.Security_RichText_EnableDisplayingImage, IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingImage", true))

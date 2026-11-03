@@ -214,7 +214,7 @@ public static class FrameHashHelper
         else
         {
             var properties = ReadProperties(clip);
-            foreach (string name in new[] { "Effects", "EffectProviders", "EffectStagePlan", "Rotation", "TargetX", "TargetY" })
+            foreach (string name in new[] { "Effects", "EffectProviders", "EffectStagePlan", "Rotation", "Opacity", "TargetX", "TargetY" })
                 properties.Remove(name);
             state = properties;
         }

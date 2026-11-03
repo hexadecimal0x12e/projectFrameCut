@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Effect;
+﻿using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
@@ -69,6 +69,8 @@ namespace projectFrameCut.Render.Rendering
             int targetWidth, int targetHeight, IPicture.PicturePixelMode? targetPPB, int projectRelativeWidth,
             int projectRelativeHeight, bool applyTransforms, bool initializeClips, ClipArgumentFrameCache? argumentFrames)
         {
+            using var project = ValueProviderFrameContext.ProjectFrameCount is null
+                ? ValueProviderFrameContext.PushProject(ValueProviderFrameContext.GetTimelineFrameCount(video)) : null;
             argumentFrames ??= new();
             var ppb = targetPPB ?? IPicture.PicturePixelMode.Float16Picture;
             List<OneFrame> result = new List<OneFrame>();
@@ -124,18 +126,8 @@ namespace projectFrameCut.Render.Rendering
                         Log(ex, $"Read source for clip {clip.Name} ({clip.Id}); using fallback", "Timeline");
                         frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                     }
-                    bool isAI = false;
-                    if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
-                    {
-                        if (aiMark is bool) isAI = (bool)aiMark;
-                        else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
-                        else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
-                    }
-
                     if (frame is not null || clip is MaskClip)
                     {
-                        if (!PreviewSourceFrameContext.ReadingRaw && frame is not null && isAI && !TransformProcessing.IsCanvasFrame(frame))
-                            frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         try
                         {
                             result.Add(new OneFrame(targetFrame, clip, frame, resolveEffects: false) { ApplyTransforms = applyTransforms });
@@ -240,6 +232,8 @@ namespace projectFrameCut.Render.Rendering
                 frames = materialized;
                 allClips = materialized.Select(f => f.ParentClip).DistinctBy(c => c.Id).ToArray();
             }
+            using var project = ValueProviderFrameContext.ProjectFrameCount is null
+                ? ValueProviderFrameContext.PushProject(ValueProviderFrameContext.GetTimelineFrameCount(allClips)) : null;
             using var maskScope = MaskFrameContext.Open(allClips, frameIndex, targetWidth, targetHeight,
                 projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
             using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, targetWidth, targetHeight,
@@ -271,8 +265,6 @@ namespace projectFrameCut.Render.Rendering
                 foreach (var original in frames)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    // Don't resize the frame before applying effects!
-                    // The ResizeEffect and PlaceEffect will handle sizing and positioning.
                     ArgumentNullException.ThrowIfNull(original, nameof(frames));
                     ArgumentNullException.ThrowIfNull(original.ParentClip, nameof(original.ParentClip));
                     var clip = ClipArgumentBinding.InitializeFrame(original.ParentClip, frameIndex);
@@ -315,7 +307,7 @@ namespace projectFrameCut.Render.Rendering
                             srcFrame.Clip, targetPPB, 0, 0, targetWidth, targetHeight);
                         Track(result);
                         if (!PreviewSourceFrameContext.ReadingRaw)
-                            srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
+                            srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, EffectStage.Composition, frameIndex);
                         continue;
                     }
                     IPicture effected = source;
@@ -334,7 +326,7 @@ namespace projectFrameCut.Render.Rendering
                         srcFrame.ParentClip.TargetHeight > 0
                             ? ScaleDimensionToTarget(srcFrame.ParentClip.TargetHeight, layoutRelativeHeight, targetHeight)
                             : targetHeight,
-                        false, srcFrame.ParentClip.Rotation);
+                        false, srcFrame.ParentClip.Rotation, srcFrame.ParentClip.Opacity);
                     bool preserveAspect = true;
                     foreach (var effect in effectsList)
                     {
@@ -376,28 +368,13 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else if (effect is IClipPositionProvider p)
                         {
-                            (var x, var y, var w, var h, bool delta, float rotation) = FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, null, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight));
-                            if (delta)
-                            {
-                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false, clipPos.Rotation + rotation);
-                            }
-                            else
-                            {
-                                clipPos = new(x, y, w, h, false, rotation);
-                            }
+                            clipPos = clipPos.Apply(FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, null, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight)));
+                            preserveAspect &= p.PreserveAspectRatio;
                         }
                         else if (effect is IContinuousClipPositionProvider cp)
                         {
-                            (var x, var y, var w, var h, bool delta, float rotation) = FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, null, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight));
+                            clipPos = clipPos.Apply(FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, null, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight)));
                             preserveAspect &= cp.PreserveAspectRatio;
-                            if (delta)
-                            {
-                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false, clipPos.Rotation + rotation);
-                            }
-                            else
-                            {
-                                clipPos = new(x, y, w, h, false, rotation);
-                            }
                         }
                         else if (effect is ITransform or IMixture or ISpeedVarianceProvider //these will be processed later; skip here
                                         or ITextEffect or IContinuousTextEffect or IVectorComponentEffect or IVectorPictureEffect) //these are processed inside TextClip
@@ -411,7 +388,8 @@ namespace projectFrameCut.Render.Rendering
 
                         if (AfterEffectCallback is not null)
                         {
-                            IPicture d = Track(VideoClipRotation.Rotate(effected, clipPos.Rotation));
+                            IPicture d = Track(EffectRuntimeDefaults.ApplyOpacity(effected, clipPos.Opacity));
+                            d = Track(VideoClipRotation.Rotate(d, clipPos.Rotation));
                             int x = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
                             int y = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                             if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && y == 0 && effected.Height < targetHeight)
@@ -454,7 +432,7 @@ namespace projectFrameCut.Render.Rendering
                     }
 
                     if (!PreviewSourceFrameContext.ReadingRaw)
-                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Picture, frameIndex);
+                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, EffectStage.Render, frameIndex);
                     int clipX = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
                     int clipY = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
@@ -462,6 +440,7 @@ namespace projectFrameCut.Render.Rendering
                         clipY += (targetHeight - effected.Height) / 2;
                     }
                     cancellationToken.ThrowIfCancellationRequested();
+                    effected = Track(EffectRuntimeDefaults.ApplyOpacity(effected, clipPos.Opacity));
                     effected = Track(VideoClipRotation.Apply(effected, clipPos.Rotation));
                     cancellationToken.ThrowIfCancellationRequested();
                     if (clipLocalOutput)
@@ -477,7 +456,8 @@ namespace projectFrameCut.Render.Rendering
                         : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     if (result is null)
                     {
-                        if (!needsPlacement && mixer is not (DynamicMixtureGraph or ReferenceMixture))
+                        if (!needsPlacement && (transparentBackground || !effected.HasAlphaChannel)
+                            && mixer is not (DynamicMixtureGraph or ReferenceMixture))
                         {
                             result = effected;
                         }
@@ -506,7 +486,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                     if (result is not null) Track(result);
                     if (!PreviewSourceFrameContext.ReadingRaw)
-                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
+                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, EffectStage.Composition, frameIndex);
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)

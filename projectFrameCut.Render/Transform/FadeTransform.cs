@@ -40,7 +40,7 @@ public class FadeTransformProvider : TransformEffectProviderBase
 
 public abstract class TransformEffectProviderBase : EffectProviderBase
 {
-    public override IReadOnlyList<Stage> SupportedStages => [Stage.Transform];
+    public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Composition];
 
     public override bool IsDeterministic => true;
 

@@ -367,7 +367,8 @@ namespace projectFrameCut.Render.Effect
             Dictionary<string, IEffect>? rebuilt = null;
             try
             {
-                var providers = EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null);
+                var providers = EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null, out var diagnostics);
+                if (diagnostics.Count > 0) throw new InvalidOperationException(string.Join(" ", diagnostics.Select(d => d.Message)));
                 foreach (var provider in providers.Values.OfType<ClipArgumentProvider>()) provider.Attach(clip);
                 clip.EffectProvidersInstances = providers.Values.ToArray();
                 rebuilt = EffectBindingHelper.RebuildAllEffects(providers, existing, clip) ?? [];

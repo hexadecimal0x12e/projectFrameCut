@@ -8,7 +8,7 @@ public abstract class ClipValueEndpointProvider : EffectProviderBase, IClipValue
 {
     public override bool IsDeterministic => true;
 
-    public override IReadOnlyList<Stage> SupportedStages => EffectStages.Values;
+    public override IReadOnlyList<EffectStage> SupportedStages => EffectStages.Values;
     public abstract bool IsExport { get; }
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;

@@ -23,8 +23,8 @@ public class RemoteEffectProvider : IEffectProvider
         FromPlugin = descriptor.FromPlugin;
         TypeOfEffect = (EffectType)descriptor.EffectType;
         Target = (EffectTarget)descriptor.Target;
-        SupportedStages = descriptor.SupportedStages.Select(s => (Stage)s).ToArray();
-        Stage = (Stage)descriptor.Stage;
+        SupportedStages = descriptor.SupportedStages.Select(s => (EffectStage)s).ToArray();
+        Stage = (EffectStage)descriptor.Stage;
         EffectStages.Validate(this);
         Enabled = descriptor.Enabled;
         Id = Guid.TryParse(descriptor.InstanceId, out var id) ? id : Guid.NewGuid();
@@ -41,8 +41,8 @@ public class RemoteEffectProvider : IEffectProvider
     public string FromPlugin { get; }
     public EffectType TypeOfEffect { get; }
     public EffectTarget Target { get; }
-    public IReadOnlyList<Stage> SupportedStages { get; }
-    public Stage Stage { get; set; }
+    public IReadOnlyList<EffectStage> SupportedStages { get; }
+    public EffectStage Stage { get; set; }
     public bool Enabled { get; set; }
     public Guid Id { get; set; }
     public string Name { get; set; }
@@ -136,7 +136,8 @@ public class RemoteEffectProvider : IEffectProvider
         MetaData[EffectProviderBase.ImplementTypeParameterKey] = implementType;
         if (parameters is not null)
             foreach (var item in parameters)
-                if (Fields.TryGetValue(item.Key, out var field)) Fields[item.Key] = new StaticEffectArgumentField(item.Value, field.FieldType);
+                if (Fields.TryGetValue(item.Key, out var field))
+                    Fields[item.Key] = new StaticEffectArgumentField(item.Value, field.FieldType) { TypeContract = field.TypeContract };
         return Build().First();
     }
 
@@ -145,7 +146,8 @@ public class RemoteEffectProvider : IEffectProvider
         var fields = new List<IsolationFieldDescriptor>();
         foreach (var item in Fields)
         {
-            if (item.Value.FieldType.HasFlag(EffectArgumentFieldType.CustomType)) throw new NotSupportedException($"Custom effect field '{item.Key}' cannot run in isolation.");
+            if (item.Value.FieldType.HasFlag(EffectArgumentFieldType.CustomType) && item.Value.TypeContract is null)
+                throw new NotSupportedException($"Custom effect field '{item.Key}' requires a port type contract to run in isolation.");
             var dynamic = item.Value as DynamicEffectParamField;
             var value = dynamic?.StaticFallbackValue ?? item.Value.GetGetter()();
             var descriptor = new IsolationFieldDescriptor
@@ -154,6 +156,7 @@ public class RemoteEffectProvider : IEffectProvider
                 TypeName = item.Value.TypeName,
                 FromPlugin = item.Value.FromPlugin,
                 FieldType = (ulong)item.Value.FieldType,
+                TypeContract = IsolationFieldTypeCodec.WriteContract(item.Value.TypeContract),
                 DataFormat = item.Value.DataFormat is PictureDataFormat f ? (int)f : 0,
                 DefaultValue = item.Value.DefaultValue,
                 MinimumValue = item.Value.MinValue,
@@ -191,12 +194,13 @@ public class RemoteEffectProvider : IEffectProvider
     protected TResponse Invoke<TRequest, TResponse>(RenderOperation operation, TRequest request)
         => _session.InvokeAsync<TRequest, TResponse>(operation, request).AsTask().GetAwaiter().GetResult();
 
-    private static EffectArgumentFieldDescriptor ToDescriptor(IsolationFieldDescriptor value) => new()
+    internal static EffectArgumentFieldDescriptor ToDescriptor(IsolationFieldDescriptor value) => new()
     {
         Id = value.Id,
         TypeName = value.TypeName,
         FromPlugin = value.FromPlugin,
         FieldType = (EffectArgumentFieldType)value.FieldType,
+        TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
         DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
         DefaultValue = value.DefaultValue,
         MinValue = value.MinimumValue,
@@ -209,12 +213,18 @@ public class RemoteEffectProvider : IEffectProvider
     internal static IEffectArgumentField ToField(IsolationFieldDescriptor value)
     {
         var type = (EffectArgumentFieldType)value.FieldType;
-        var fieldValue = IsolationValueConverter.ToObject(value.Value) ?? value.DefaultValue;
+        var fieldValue = IsolationValueConverter.ToObject(value.Value) ?? (value.TypeContract is null ? value.DefaultValue : null);
         return value.IsDynamic
-            ? new DynamicEffectParamField(value.Id, type, value.BoundProviderId, fieldValue) { FieldType = type, DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat }
-            : new StaticEffectArgumentField(fieldValue, type)
+            ? new DynamicEffectParamField(value.Id, type, value.BoundProviderId, fieldValue)
+            {
+                FieldType = type,
+                TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
+                DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
+            }
+            : new StaticEffectArgumentField(fieldValue!, type)
             {
                 Id = value.Id,
+                TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
                 DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
                 DefaultValue = value.DefaultValue,
                 MinValue = value.MinimumValue,
@@ -228,13 +238,7 @@ public class RemoteEffectProvider : IEffectProvider
 public class RemoteMultipleOutputEffectProvider : RemoteEffectProvider, IMultipleOutputEffectProvider
 {
     public RemoteMultipleOutputEffectProvider(IPluginIsolationSession session, IsolationProviderDescriptor descriptor) : base(session, descriptor)
-        => OutFields = descriptor.OutputFields.ToDictionary(x => x.Id, x => new EffectArgumentFieldDescriptor
-        {
-            Id = x.Id, TypeName = x.TypeName, FromPlugin = x.FromPlugin, FieldType = (EffectArgumentFieldType)x.FieldType,
-            DataFormat = x.DataFormat == 0 ? null : (PictureDataFormat)x.DataFormat,
-            DefaultValue = x.DefaultValue, MinValue = x.MinimumValue, MaxValue = x.MaximumValue,
-            PresetOptions = x.PresetOptions.ToArray(), Remarks = x.Remarks, IsDynamic = x.IsDynamic,
-        });
+        => OutFields = descriptor.OutputFields.ToDictionary(x => x.Id, ToDescriptor);
 
     public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields { get; }
 }

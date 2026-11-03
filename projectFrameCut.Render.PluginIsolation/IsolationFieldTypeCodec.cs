@@ -8,6 +8,14 @@ namespace projectFrameCut.Render.PluginIsolation;
 
 internal static class IsolationFieldTypeCodec
 {
+    public static IsolationPortTypeContract? WriteContract(EffectPortTypeContract? contract) => contract is null ? null : new()
+    {
+        Id = contract.Id, DisplayName = contract.DisplayName, Description = contract.Description ?? "",
+    };
+
+    public static EffectPortTypeContract? ReadContract(IsolationPortTypeContract? contract) => contract is null ? null
+        : new(contract.Id, contract.DisplayName, string.IsNullOrEmpty(contract.Description) ? null : contract.Description);
+
     public static IsolationFieldTypeState Write(EffectProviderTypeState state, IPluginIsolationSession session, List<IsolationPayloadLease> leases)
     {
         var fields = new List<IsolationFieldDescriptor>();
@@ -71,6 +79,7 @@ internal static class IsolationFieldTypeCodec
     private static IsolationFieldDescriptor WriteField(EffectArgumentFieldDescriptor field) => new()
     {
         Id = field.Id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = (ulong)field.FieldType,
+        TypeContract = WriteContract(field.TypeContract),
         DataFormat = field.DataFormat is PictureDataFormat f ? (int)f : 0,
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinimumValue = field.MinValue,
         MaximumValue = field.MaxValue, PresetOptions = field.PresetOptions?.ToList() ?? [], Remarks = field.Remarks ?? "",
@@ -79,6 +88,7 @@ internal static class IsolationFieldTypeCodec
     private static EffectArgumentFieldDescriptor ReadField(IsolationFieldDescriptor field) => new()
     {
         Id = field.Id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = (EffectArgumentFieldType)field.FieldType,
+        TypeContract = ReadContract(field.TypeContract),
         DataFormat = field.DataFormat == 0 ? null : (PictureDataFormat)field.DataFormat,
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinValue = field.MinimumValue,
         MaxValue = field.MaximumValue, PresetOptions = field.PresetOptions.ToArray(), Remarks = field.Remarks,

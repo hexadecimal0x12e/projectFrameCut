@@ -10,7 +10,7 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 
 public sealed class MaskClip : IRotatableClip
 {
-    [JsonIgnore] public IReadOnlyList<Stage> SupportedStages => EffectStages.Picture;
+    [JsonIgnore] public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Picture;
     [JsonIgnore] public IEffectStagePlan? EffectStagePlan { get; set; }
     public const string SourceTypeKey = "MaskSourceType";
     public const string ArgumentPrefix = "Source.";
@@ -34,6 +34,7 @@ public sealed class MaskClip : IRotatableClip
     public int TargetX { get; set; }
     public int TargetY { get; set; }
     public float Rotation { get; set; }
+    public float Opacity { get; set; } = 1;
     public int StartingX { get; set; }
     public int StartingY { get; set; }
     public bool ExtendToWholeDraft { get; set; }
@@ -48,37 +49,33 @@ public sealed class MaskClip : IRotatableClip
     [JsonIgnore] public Dictionary<string, object> SourceArguments { get; private set; } = new();
     [JsonIgnore] public string SourceType => ExtraData.GetValueOrDefault(SourceTypeKey)?.ToString() ?? "Blur";
 
-    [JsonIgnore]
-    public IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields
-    {
-        get
-        {
-            var fields = new Dictionary<string, ClipArgumentFieldDescriptor>(ClipArgumentHandler.DefaultFields);
-            foreach (var f in MaskSources.Create(SourceType).Fields)
-            {
-                string id = f.Id;
-                fields.Add(ArgumentPrefix + id, new()
-                {
-                    Id = ArgumentPrefix + id, FieldType = f.FieldType, DefaultValue = f.DefaultValue,
-                    MinValue = f.MinValue, MaxValue = f.MaxValue, PresetOptions = f.PresetOptions,
-                    Remarks = f.Remarks,
-                    ReadValue = c => ((MaskClip)c).SourceArguments.GetValueOrDefault(id) ??
-                        MaskSources.Create(((MaskClip)c).SourceType).ReadArgument(id, null)
-                });
-            }
-            return fields;
-        }
-    }
+    [JsonIgnore] public IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields => SourceFields(ExtraData);
 
     public IClip HandleArguments(IReadOnlyDictionary<string, object> arguments)
     {
-        var copy = (MaskClip)ClipArgumentHandler.Handle(this,
-            arguments.Where(p => !p.Key.StartsWith(ArgumentPrefix, StringComparison.Ordinal)).ToDictionary());
+        var copy = (MaskClip)ClipArgumentHandler.Copy(this);
         copy.SourceArguments = new(SourceArguments);
         var source = MaskSources.Create(SourceType);
-        foreach (var (key, value) in arguments.Where(p => p.Key.StartsWith(ArgumentPrefix, StringComparison.Ordinal)))
+        foreach (var (key, value) in arguments)
+        {
+            if (!key.StartsWith(ArgumentPrefix, StringComparison.Ordinal)) throw new ArgumentException($"Unknown source property '{key}'.");
             copy.SourceArguments[key[ArgumentPrefix.Length..]] = source.ReadArgument(key[ArgumentPrefix.Length..], value);
+        }
         return copy;
+    }
+
+    public const string SourceArgumentKeyPrefix = "__MaskSource_";
+
+    public static IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> SourceFields(Dictionary<string, object> data)
+    {
+        var source = MaskSources.Create(data.GetValueOrDefault(SourceTypeKey)?.ToString() ?? "Blur");
+        return source.Fields.ToDictionary(f => ArgumentPrefix + f.Id, f => new ClipArgumentFieldDescriptor
+        {
+            Id = ArgumentPrefix + f.Id, FieldType = f.FieldType | EffectArgumentFieldType.CannotBeDynamic,
+            DefaultValue = f.DefaultValue, MinValue = f.MinValue, MaxValue = f.MaxValue,
+            PresetOptions = f.PresetOptions, Remarks = f.Remarks,
+            ReadValue = _ => source.ReadArgument(f.Id, data.GetValueOrDefault(SourceArgumentKeyPrefix + f.Id)),
+        });
     }
 
     public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight,
@@ -117,7 +114,9 @@ public sealed class MaskClip : IRotatableClip
 
     public void ReInit(IPicture.PicturePixelMode pixelMode)
     {
-        _ = MaskSources.Create(SourceType);
+        var source = MaskSources.Create(SourceType);
+        SourceArguments = source.Fields.ToDictionary(f => f.Id, f => source.ReadArgument(f.Id,
+            ExtraData.GetValueOrDefault(SourceArgumentKeyPrefix + f.Id)));
         EffectHelper.ResolveClipEffects(this);
     }
 

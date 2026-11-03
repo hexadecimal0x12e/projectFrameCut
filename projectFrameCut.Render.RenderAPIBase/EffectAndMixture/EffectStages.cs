@@ -9,88 +9,48 @@ public sealed record StageTerminal(string Id, string Name, IReadOnlyList<IEffect
 public interface IEffectStagePlan : IDisposable
 {
     IClip Owner { get; }
-    void Complete(IClip clip, Stage stage, uint frame);
+    void Complete(IClip clip, EffectStage stage, uint frame);
 }
 
 public static class EffectStages
 {
-    public static IReadOnlyList<Stage> Values { get; } = [Stage.Picture, Stage.ClipArguments, Stage.Text,
-        Stage.VectorComponent, Stage.VectorPicture, Stage.SourceReplacement, Stage.SpeedVariance,
-        Stage.Audio, Stage.Transform, Stage.Mixture];
-    public static IReadOnlyList<Stage> Picture { get; } = [Stage.ClipArguments, Stage.SpeedVariance,
-        Stage.SourceReplacement, Stage.Picture, Stage.Transform, Stage.Mixture];
-    public static IReadOnlyList<Stage> Text { get; } = [Stage.ClipArguments, Stage.SpeedVariance, Stage.Text,
-        Stage.VectorPicture, Stage.SourceReplacement, Stage.Picture, Stage.Transform, Stage.Mixture];
-    public static IReadOnlyList<Stage> Vector { get; } = [Stage.ClipArguments, Stage.SpeedVariance, Stage.VectorComponent,
-        Stage.VectorPicture, Stage.SourceReplacement, Stage.Picture, Stage.Transform, Stage.Mixture];
-    public static IReadOnlyList<Stage> VectorImage { get; } = [Stage.ClipArguments, Stage.SpeedVariance,
-        Stage.VectorPicture, Stage.SourceReplacement, Stage.Picture, Stage.Transform, Stage.Mixture];
-    public static IReadOnlyList<Stage> Audio { get; } = [Stage.Audio, Stage.Transform];
+    public static IReadOnlyList<EffectStage> Values { get; } = [EffectStage.Render, EffectStage.Composition, EffectStage.Text, EffectStage.VectorContent, EffectStage.SourceReplacement];
+    public static IReadOnlyList<EffectStage> Picture { get; } = [EffectStage.SourceReplacement, EffectStage.Render, EffectStage.Composition];
+    public static IReadOnlyList<EffectStage> Text { get; } = [EffectStage.Text, EffectStage.VectorContent, EffectStage.SourceReplacement, EffectStage.Render, EffectStage.Composition];
+    public static IReadOnlyList<EffectStage> Vector { get; } = [EffectStage.VectorContent, EffectStage.SourceReplacement, EffectStage.Render, EffectStage.Composition];
+    public static IReadOnlyList<EffectStage> VectorImage => Vector;
+    public static IReadOnlyList<EffectStage> Audio { get; } = [EffectStage.Render, EffectStage.Composition];
 
-    public static bool HasContent(this Stage stage) => stage is Stage.Picture or Stage.VectorPicture
-        or Stage.Text or Stage.VectorComponent or Stage.Audio;
+    public static bool HasContent(this EffectStage stage) => stage is EffectStage.Render or EffectStage.Text or EffectStage.VectorContent;
 
-    public static EffectArgumentFieldType GetContentType(this Stage stage) => stage switch
+    public static EffectArgumentFieldType GetContentType(this EffectStage stage) => stage switch
     {
-        Stage.Picture or Stage.SourceReplacement or Stage.Transform or Stage.Mixture => EffectArgumentFieldType.IPicture,
-        Stage.VectorPicture => EffectArgumentFieldType.VectorPicture,
-        Stage.Text or Stage.VectorComponent => EffectArgumentFieldType.VectorPicture,
-        _ => EffectArgumentFieldType.Unknown,
+        EffectStage.Text or EffectStage.VectorContent => EffectArgumentFieldType.VectorPicture,
+        _ => EffectArgumentFieldType.IPicture,
     };
 
-    public static Stage GetStage(this EffectType type) => type switch
+    public static EffectStage GetStage(this EffectType type) => type switch
     {
-        EffectType.TextEffect or EffectType.ContinuousTextEffect => Stage.Text,
-        EffectType.VectorComponentEffect => Stage.VectorComponent,
-        EffectType.VectorPictureEffect => Stage.VectorPicture,
-        EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect => Stage.Audio,
-        EffectType.SpeedVarianceProvider => Stage.SpeedVariance,
-        EffectType.SourceReplacement => Stage.SourceReplacement,
-        EffectType.Transform => Stage.Transform,
-        EffectType.MixtureProvider => Stage.Mixture,
-        _ => Stage.Picture,
+        EffectType.TextEffect or EffectType.ContinuousTextEffect => EffectStage.Text,
+        EffectType.VectorComponentEffect or EffectType.VectorPictureEffect => EffectStage.VectorContent,
+        EffectType.SpeedVarianceProvider or EffectType.Transform or EffectType.MixtureProvider => EffectStage.Composition,
+        EffectType.SourceReplacement => EffectStage.SourceReplacement,
+        _ => EffectStage.Render,
     };
 
-    // Audio and timing have independent evaluation clocks; enum order is not execution order.
-    public static bool Precedes(Stage source, Stage target, bool transformBeforeEffects = false)
-    {
-        if (source == target || source is Stage.Audio or Stage.SpeedVariance
-            || target is Stage.Audio or Stage.SpeedVariance) return false;
-        if (source == Stage.Transform) return target == Stage.Mixture || transformBeforeEffects && target == Stage.Picture;
-        if (target == Stage.Transform) return source is Stage.ClipArguments or Stage.Text or Stage.VectorComponent
-            or Stage.VectorPicture or Stage.SourceReplacement || !transformBeforeEffects && source == Stage.Picture;
-        return source switch
+    public static bool Precedes(EffectStage source, EffectStage target, bool transformBeforeEffects = false)
+        => source != target && ((source, target) switch
         {
-            Stage.ClipArguments => target is Stage.Text or Stage.VectorComponent or Stage.VectorPicture
-                or Stage.SourceReplacement or Stage.Picture or Stage.Mixture,
-            Stage.Text or Stage.VectorComponent => target is Stage.VectorPicture or Stage.SourceReplacement or Stage.Picture or Stage.Mixture,
-            Stage.VectorPicture => target is Stage.SourceReplacement or Stage.Picture or Stage.Mixture,
-            Stage.SourceReplacement => target is Stage.Picture or Stage.Mixture,
-            Stage.Picture => target == Stage.Mixture,
+            (EffectStage.Text, _) => true,
+            (EffectStage.VectorContent, EffectStage.SourceReplacement or EffectStage.Render or EffectStage.Composition) => true,
+            (EffectStage.SourceReplacement, EffectStage.Render or EffectStage.Composition) => true,
+            (EffectStage.Render, EffectStage.Composition) => !transformBeforeEffects,
             _ => false,
-        };
-    }
+        });
 
-    public static IReadOnlyList<StageTerminal> GetTerminals(Stage stage, IEnumerable<IEffectProvider> providers)
-    {
-        if (stage == Stage.ClipArguments)
-            return providers.OfType<ClipArgumentProvider>().SelectMany(p => p.InFields.Values.GroupBy(f => f.Id switch
-            {
-                nameof(IClip.TargetX) or nameof(IClip.TargetY) => "Position",
-                nameof(IClip.TargetWidth) or nameof(IClip.TargetHeight) => "Size",
-                _ => f.Id,
-            }).Select(g => new StageTerminal(g.Key, g.Key, g.Cast<IEffectArgumentField>().ToArray(), p.Id))).ToArray();
-        if (stage is Stage.Picture or Stage.VectorPicture or Stage.Text or Stage.VectorComponent)
-            return [new("content", stage.ToString(), [new EffectArgumentFieldDescriptor
-            {
-                Id = EffectProviderAnchorExtensions.InputKey, FieldType = stage.GetContentType(),
-            }])];
-        return providers.Where(p => p.Stage == stage && !p.Target.HasFlag(EffectTarget.ValueProvider))
-            .Select(p => new StageTerminal(p.Id.ToString(), p.Name,
-                p.InFields.Values.Cast<IEffectArgumentField>().Concat(p.Fields.Values)
-                    .Where(f => f.Id is not (EffectProviderAnchorExtensions.InputKey or EffectProviderAnchorExtensions.OutputKey))
-                    .DistinctBy(f => f.Id).ToArray(), p.Id)).ToArray();
-    }
+    public static IReadOnlyList<StageTerminal> GetTerminals(EffectStage stage, IEnumerable<IEffectProvider> providers)
+        => providers.Where(p => p.Stage == stage && p is ClipArgumentProvider or RenderOutputProvider)
+            .SelectMany(p => p.InFields.Values.Select(f => new StageTerminal(f.Id, f.Id, [f], p.Id))).ToArray();
 
     public static void Validate(IEffectProvider provider)
     {

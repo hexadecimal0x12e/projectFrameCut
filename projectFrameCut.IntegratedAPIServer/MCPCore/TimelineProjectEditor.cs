@@ -248,6 +248,9 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
                 case "rotation":
                     clip.Rotation = Convert.ToSingle(normalizedValue);
                     break;
+                case "opacity":
+                    clip.Opacity = Math.Clamp(Convert.ToSingle(normalizedValue), 0, 1);
+                    break;
                 case "fromplugin":
                     clip.FromPlugin = normalizedValue?.ToString() ?? string.Empty;
                     break;

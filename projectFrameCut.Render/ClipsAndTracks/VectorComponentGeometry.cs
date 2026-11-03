@@ -186,6 +186,7 @@ public partial class VectorComponentWrapperClip : IClip
     public int TargetY { get; set; }
 
     public float Rotation { get; set; }
+    public float Opacity { get; set; } = 1;
 
     public int StartingX { get; set; }
 
@@ -203,7 +204,7 @@ public partial class VectorComponentWrapperClip : IClip
     [JsonIgnore]
     public IEffectProvider[]? EffectProvidersInstances { get; set; } = Array.Empty<IEffectProvider>();
     [System.Text.Json.Serialization.JsonIgnore]
-    public IReadOnlyList<Stage> SupportedStages => EffectStages.Vector;
+    public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Vector;
     [System.Text.Json.Serialization.JsonIgnore]
     public IEffectStagePlan? EffectStagePlan { get; set; }
 

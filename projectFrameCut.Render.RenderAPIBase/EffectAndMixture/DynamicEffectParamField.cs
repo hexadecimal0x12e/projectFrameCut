@@ -22,6 +22,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public bool IsDynamic => true;
 
         public required EffectArgumentFieldType FieldType { get; set; }
+        public EffectPortTypeContract? TypeContract { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public object? DataFormat { get; set; }
 
@@ -57,8 +58,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public Func<object> GetGetter()
         {
             var boundId = BoundProviderId ?? string.Empty;
-            var fallback = StaticFallbackValue;
-            return () => ValueProviderFrameContext.Get(boundId) ?? fallback ?? new object();
+            var fallback = TypeContract is null ? StaticFallbackValue : EffectFieldTypes.ConvertInput(FieldType, StaticFallbackValue);
+            return () => ValueProviderFrameContext.Get(boundId) ?? fallback ?? (TypeContract is null ? new object() : null!);
         }
     }
 }

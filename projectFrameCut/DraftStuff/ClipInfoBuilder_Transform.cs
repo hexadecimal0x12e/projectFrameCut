@@ -246,33 +246,6 @@ public partial class ClipInfoBuilder
                 });
             }
             
-            if (!MauiProgram.IsStoreMode && !audio && saved is null && connected && page.AddClipView.BindingContext is ProjectAddClipViewModel ai)
-            {
-                ppb.AddSeparator();
-                ppb.AddEntry("AIPrompt", Localized.DraftPage_AddClipView_AddTransform_AITransform, ai.AITransitionPrompt ?? "",
-                    Localized.DraftPage_AddClipView_AIGC_InputPlaceholder,
-                    c => c.SetBinding(Entry.TextProperty, new Binding(nameof(ai.AITransitionPrompt), source: ai, mode: BindingMode.TwoWay)));
-                ppb.AddPicker("AIDuration", Localized.DraftPage_AddClipView_AIGC_Duration, ["1", "2", "3", "5"],
-                    PickerSetter: c =>
-                    {
-                        c.SelectedIndex = ai.AITransitionDuration;
-                        c.SelectedIndexChanged += (_, _) => ai.AITransitionDuration = c.SelectedIndex;
-                    });
-                ppb.AddButton("GenerateAI", Localized.DraftPage_AddClipView_AddTransform_AITransform);
-                var generate = (Button)ppb.Components["GenerateAI"];
-                generate.Clicked += async (_, _) =>
-                {
-                    generate.IsEnabled = false;
-                    try
-                    {
-                        await page.SelectAClip(clip.Id);
-                        await ai.GenerateAITransition(side == TransformSide.Left ? "left" : "right", RenderOrder());
-                        Rebuild();
-                    }
-                    catch (Exception ex) { error.Text = ex.Message; Log(ex, $"Generate AI transform for {clip.Id}/{side}", this); }
-                    finally { generate.IsEnabled = true; }
-                };
-            }
             host.Content = ppb.BuildWithScrollView();
             if (saved is null) LoadTypes();
             else

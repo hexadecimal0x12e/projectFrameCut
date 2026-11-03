@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Versioning;
+using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
@@ -1222,8 +1223,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // Reset margin just in case
             this.Margin = new Thickness(0);
 
-            // Disconnect handler to avoid context mismatch issues
-            this.Handler = null;
+            this.DisconnectHandlers();
 
             // 3. Restore to Original Parent
             if (_originalParent is Layout layout)
@@ -1524,6 +1524,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 contentPage.Content = null;
             }
+
+            // Disconnect the old handlers before the new window replaces them.
+            this.DisconnectHandlers();
 
             // 2. Disable MDI-style interactions (Internal gestures)
             IsDraggable = false;

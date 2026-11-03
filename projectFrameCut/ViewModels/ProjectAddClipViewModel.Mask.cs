@@ -66,7 +66,6 @@ public partial class ProjectAddClipViewModel
             clip.TargetY = (_draftPage.ProjectInfo.RelativeHeight - clip.TargetHeight) / 2;
             clip.AllowFreeScaleResize = true;
             clip.ExtraData[MaskClip.SourceTypeKey] = sourceType;
-            ClipInfoBuilder.EnsureClipArgumentProvider(clip, _draftPage);
             Log($"Created mask {clip.Id}, source {sourceType}.");
             return clip;
         }, name: name);

@@ -40,6 +40,12 @@ public static class ClipValuePassThrough
             if (evaluate is not null) { evaluate(source); return; }
             if (ClipsAndTracks.ClipInitializationFailure.IsMarked(source))
                 throw new ClipValueBindingException($"Source clip {source.Id} failed to initialize at {frame}.");
+            if (source.ClipType == projectFrameCut.Shared.ClipMode.AudioClip)
+            {
+                source.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == projectFrameCut.Shared.EffectStage.Render)
+                    ?.EvaluateRenderValue(source, frame, RenderOutputProvider.AudioKey, token: token);
+                return;
+            }
             using var picture = ClipPreviewRenderer.Render(source, clips, width, height, projectWidth, projectHeight,
                 frame, token, pixelMode, initializeClips: false);
             if (picture is null || ClipsAndTracks.ClipInitializationFailure.IsMarked(source))

@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System.Text.Json;
 
@@ -22,7 +23,19 @@ internal sealed class OldTextClipEntryTextStyleUIProvider : ITextClipStyleUIProv
     public PropertyPanelBuilder CreateUI(ITextClipStyleProvider source)
     {
         var fonts = projectFrameCut.Services.TextServices.LoadedFonts.Select(c => c.Value);
-        var entries = LoadEntries(source);
+        List<TextEntry>? native = null;
+        if (source.GetParameters().TryGetValue(EntriesJsonKey, out var json))
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement is { ValueKind: JsonValueKind.Array } array && array.GetArrayLength() > 0
+                && array[0].TryGetProperty("FontName", out _))
+            {
+                native = JsonSerializer.Deserialize<List<TextEntry>>(json);
+                foreach (var entry in native ?? [])
+                    entry.ExtraData = entry.ExtraData.ToDictionary(p => p.Key, p => EffectParamConvert.Normalize(p.Value) ?? "");
+            }
+        }
+        var entries = native?.Select(ToLegacy).ToList() ?? LoadEntries(source);
 
         var ppb = new PropertyPanelBuilder();
 
@@ -34,10 +47,10 @@ internal sealed class OldTextClipEntryTextStyleUIProvider : ITextClipStyleUIProv
             {
                 try
                 {
-                    source.GetParameters()[EntriesJsonKey] = System.Text.Json.JsonSerializer.Serialize(entries);
+                    source.GetParameters()[EntriesJsonKey] = JsonSerializer.Serialize((object?)native ?? entries);
                 }
-                catch { }
-                invoker(entries);
+                catch (Exception ex) { Logger.Log(ex, "Update text style entries", typeof(OldTextClipEntryTextStyleUIProvider)); }
+                invoker((object?)native ?? entries);
             }
 
             void RebuildEntriesUI()
@@ -48,8 +61,13 @@ internal sealed class OldTextClipEntryTextStyleUIProvider : ITextClipStyleUIProv
                     int idx = i;
                     var e = entries[idx];
                     var view = projectFrameCut.DraftStuff.ClipInfoBuilder.BuildTextEntryUI(e, idx, fonts,
-                        (id, newE) => { entries[id] = newE; UpdateStoredEntries(); },
-                        (id) => { entries.RemoveAt(id); UpdateStoredEntries(); RebuildEntriesUI(); },
+                        (id, newE) =>
+                        {
+                            if (native is not null) native[id] = UpdateNative(native[id], newE);
+                            entries[id] = newE;
+                            UpdateStoredEntries();
+                        },
+                        (id) => { entries.RemoveAt(id); native?.RemoveAt(id); UpdateStoredEntries(); RebuildEntriesUI(); },
                         entries.Count > 1,
                         false, null, null);
                     entriesContainer.Children.Add(view);
@@ -75,6 +93,7 @@ internal sealed class OldTextClipEntryTextStyleUIProvider : ITextClipStyleUIProv
                         a = 1f
                     };
                     entries.Add(value);
+                    native?.Add(TextEntryMigration.MigrateFromTextClipEntry(value));
                     UpdateStoredEntries();
                     RebuildEntriesUI();
                 };
@@ -85,9 +104,50 @@ internal sealed class OldTextClipEntryTextStyleUIProvider : ITextClipStyleUIProv
 
             var scroll = new Microsoft.Maui.Controls.ScrollView { Content = entriesContainer, VerticalOptions = LayoutOptions.Start };
             return scroll;
-        }, "TextEntries", System.Text.Json.JsonSerializer.Serialize(LoadEntries(source)));
+        }, "TextEntries", JsonSerializer.Serialize((object?)native ?? entries));
 
         return ppb;
+    }
+
+    private static TextClipEntry ToLegacy(TextEntry e) => new()
+    {
+        text = e.Text, fontFamily = e.FontName, fontSize = e.FontSize,
+        x = (int)Math.Round(e.X), y = (int)Math.Round(e.Y),
+        fontStyle = Enum.TryParse<ClipFontStyle>(e.FontStyle, out var style) ? style : ClipFontStyle.Regular,
+        r = e.FillR, g = e.FillG, b = e.FillB, a = (float)e.FillA,
+        strokeR = e.StrokeR, strokeG = e.StrokeG, strokeB = e.StrokeB, strokeWidth = e.StrokeThickness,
+        rotation = e.Rotation * 180f / MathF.PI, lineSpacing = e.LineSpacing + 1,
+        horizontalAlignment = Enum.TryParse<ClipHorizontalAlignment>(e.Alignment.ToString(), out var alignment) ? alignment : ClipHorizontalAlignment.Left,
+        verticalAlignment = e.GetVerticalAlignment(), wrappingWidth = e.GetWrappingWidth(),
+        ScaleWithTarget = e.GetScaleWithTarget(), dpi = e.GetDpi(),
+        UseVerticalLayout = e.GetUseVerticalLayout(), KeepNonCJKTextAsHorizontal = e.GetKeepNonCJKTextAsHorizontal(),
+    };
+
+    private static TextEntry UpdateNative(TextEntry original, TextClipEntry value)
+    {
+        var previous = ToLegacy(original);
+        var edited = TextEntryMigration.MigrateFromTextClipEntry(value);
+        var entry = original with
+        {
+            Text = edited.Text, FontName = edited.FontName, FontSize = edited.FontSize,
+            X = previous.x == value.x ? original.X : edited.X, Y = previous.y == value.y ? original.Y : edited.Y,
+            FontStyle = previous.fontStyle == value.fontStyle ? original.FontStyle : edited.FontStyle,
+            FillR = edited.FillR, FillG = edited.FillG, FillB = edited.FillB, FillA = edited.FillA,
+            StrokeR = edited.StrokeR, StrokeG = edited.StrokeG, StrokeB = edited.StrokeB,
+            StrokeThickness = edited.StrokeThickness,
+            StrokeA = previous.strokeWidth == value.strokeWidth ? original.StrokeA : edited.StrokeA,
+            Rotation = previous.rotation == value.rotation ? original.Rotation : edited.Rotation,
+            LineSpacing = previous.lineSpacing == value.lineSpacing ? original.LineSpacing : edited.LineSpacing,
+            Alignment = previous.horizontalAlignment == value.horizontalAlignment ? original.Alignment : edited.Alignment,
+            ExtraData = new(original.ExtraData),
+        };
+        entry.SetVerticalAlignment(value.verticalAlignment);
+        entry.SetWrappingWidth(value.wrappingWidth);
+        entry.SetScaleWithTarget(value.ScaleWithTarget);
+        entry.SetDpi(value.dpi);
+        entry.SetUseVerticalLayout(value.UseVerticalLayout);
+        entry.SetKeepNonCJKTextAsHorizontal(value.KeepNonCJKTextAsHorizontal);
+        return entry;
     }
 
 

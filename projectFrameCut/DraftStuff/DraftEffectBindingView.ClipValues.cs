@@ -1,4 +1,4 @@
-using projectFrameCut.Render.Effect;
+﻿using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -80,25 +80,36 @@ public partial class DraftEffectBindingView
         }
         ClipValuesPanel.Children.Add(new Label { Text = Localized.Effect_EndpointInputs, FontAttributes = FontAttributes.Bold });
         bool any = false;
-        foreach (var source in _page.Clips.Values.Where(c => c.EffectProviders?.Values.Any(p => p is IClipValueEndpointProvider { IsExport: true }) == true))
+        foreach (var (source, output) in GetAvailableClipValueInputs())
         {
-            if (source.Id != _clip.Id && !Precedes(source, _clip)) continue;
-            foreach (var output in source.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.CanPassTo(_pipeline, source.Id == _clip.Id, _clip.EffectProviders?.Values)) ?? [])
-            {
-                any = true;
-                ClipValuesPanel.Children.Add(new Label { Text = $"{source.DisplayName} / {EffectStageUI.Name(output.Stage)}: {output.Name} ({PortTypeHelper.HumanizeTypeName(output.ValueType)})" });
-                var add = new Button { Text = Localized.Effect_AddEndpointInput, IsEnabled = output.Enabled };
-                add.Clicked += (_, _) => AddEndpointNode(new ClipValueImportProvider
-                {
-                    Name = $"{source.DisplayName}: {output.Name}", SourceClipId = source.Id,
-                    SourceEndpointId = output.Id, ValueType = output.ValueType,
-                });
-                ClipValuesPanel.Children.Add(add);
-            }
+            any = true;
+            ClipValuesPanel.Children.Add(new Label { Text = $"{source.DisplayName} / {EffectStageUI.Name(output.Stage)}: {output.Name} ({PortTypeHelper.HumanizeTypeName(output.ValueType)})" });
+            var add = new Button { Text = Localized.Effect_AddEndpointInput, IsEnabled = output.Enabled };
+            add.Clicked += (_, _) => AddEndpointInput(source, output);
+            ClipValuesPanel.Children.Add(add);
         }
         if (!any) ClipValuesPanel.Children.Add(new Label { Text = Localized.Effect_NoAvailableEndpoints });
+        UpdateSourcesAndOutputsPanel();
         Dispatcher.Dispatch(async () => await ClipValuesScrollView.ScrollToAsync(0, scroll, false));
     }
+
+    private IEnumerable<(ClipElementUI Source, IClipValueEndpointProvider Output)> GetAvailableClipValueInputs()
+    {
+        if (_clip is null || _page is null) yield break;
+        foreach (var source in _page.Clips.Values.Where(c => c.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Any(p => p.IsExport) == true))
+        {
+            if (source.Id != _clip.Id && !Precedes(source, _clip)) continue;
+            foreach (var output in source.EffectProviders?.Values.OfType<IClipValueEndpointProvider>()
+                .Where(p => p.IsExport && p.CanPassTo(_pipeline, source.Id == _clip.Id, _clip.EffectProviders?.Values)) ?? [])
+                yield return (source, output);
+        }
+    }
+
+    private void AddEndpointInput(ClipElementUI source, IClipValueEndpointProvider output) => AddEndpointNode(new ClipValueImportProvider
+    {
+        Name = $"{source.DisplayName}: {output.Name}", SourceClipId = source.Id,
+        SourceEndpointId = output.Id, ValueType = output.ValueType,
+    });
 
     private void OnCreateClipValueEndpointClicked(object? sender, EventArgs e) => AddEndpointNode(new ClipValueExportProvider
     {
@@ -175,14 +186,14 @@ public partial class DraftEffectBindingView
             var output = source?.EffectProviders?.GetValueOrDefault(endpoint.SourceEndpointId);
             PropertiesPanel.Children.Add(new Label
             {
-                Text = $"{Localized.Effect_EndpointSource}: {(source is null ? Localized.Effect_EndpointSourceMissing : $"{source.DisplayName} / {output?.Name ?? Localized.Effect_EndpointMissing}")}\n{Localized.Effect_EndpointType}: {endpoint.ValueType}",
+                Text = $"{Localized.Effect_EndpointSource}: {(source is null ? Localized.Effect_EndpointSourceMissing : $"{source.DisplayName} / {output?.Name ?? Localized.Effect_EndpointMissing}")}\n{Localized.Effect_EndpointType}: {PortTypeHelper.HumanizeTypeName(endpoint.ValueType)}",
             });
         }
     }
 
     private void UpdateEndpointNode(NodeViewModel node)
     {
-        node.DisplayName = node.Provider!.Name;
+        node.DisplayName = ProviderNodeName(node.Provider!);
         node.BuildPortsFromProvider();
         RecreateNodeView(node);
         RebuildConnections();
@@ -230,7 +241,7 @@ public partial class DraftEffectBindingView
         var clips = new List<IClip>();
         try
         {
-            foreach (var element in _page.Clips.Values.Where(c => c.ClipType is not (ClipMode.AudioClip or ClipMode.MarkingClip)))
+            foreach (var element in _page.Clips.Values.Where(c => c.ClipType != ClipMode.MarkingClip))
             {
                 var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(_page, element, rebuildEffects: false);
                 clips.Add(PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto)));

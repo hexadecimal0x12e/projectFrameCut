@@ -55,28 +55,12 @@ internal static class PictureCalculation<TPicture> where TPicture : IPicture
         return PictureAlgorithms.FlipEffect.Process(p, horizontal, vertical);
     }
 
-    public static IPicture Place(TPicture p, int x, int y, int width, int height)
-    {
-        if (IsFP16 || p is IPicture<Half>) return PictureAlgorithms.PlaceEffect.Process((IPicture<Half>)(object)p, x, y, width, height);
-        if (Is16) return PictureAlgorithms.PlaceEffect.Process((IPicture<ushort>)(object)p, x, y, width, height);
-        if (Is8) return PictureAlgorithms.PlaceEffect.Process((IPicture<byte>)(object)p, x, y, width, height);
-        return PictureAlgorithms.PlaceEffect.Process(p, x, y, width, height);
-    }
-
     public static IPicture Crop(TPicture p, int x, int y, int width, int height)
     {
         if (IsFP16 || p is IPicture<Half>) return PictureAlgorithms.CropEffect.Process((IPicture<Half>)(object)p, x, y, width, height);
         if (Is16) return PictureAlgorithms.CropEffect.Process((IPicture<ushort>)(object)p, x, y, width, height);
         if (Is8) return PictureAlgorithms.CropEffect.Process((IPicture<byte>)(object)p, x, y, width, height);
         return PictureAlgorithms.CropEffect.Process(p, x, y, width, height);
-    }
-
-    public static IPicture Rotate(TPicture p, float angle, bool expand)
-    {
-        if (IsFP16 || p is IPicture<Half>) return PictureAlgorithms.RotationEffect.Process((IPicture<Half>)(object)p, angle, expand);
-        if (Is16) return PictureAlgorithms.RotationEffect.Process((IPicture<ushort>)(object)p, angle, expand);
-        if (Is8) return PictureAlgorithms.RotationEffect.Process((IPicture<byte>)(object)p, angle, expand);
-        return PictureAlgorithms.RotationEffect.Process(p, angle, expand);
     }
 
     public static IPicture Resize(TPicture p, int width, int height, bool preserveAspect)

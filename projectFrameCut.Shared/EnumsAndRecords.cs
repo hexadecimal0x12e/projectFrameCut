@@ -88,18 +88,13 @@ namespace projectFrameCut.Shared
         InternalUse = 1 << 19,
     }
 
-    public enum Stage
+    public enum EffectStage
     {
-        SpeedVariance,
-        ClipArguments,
-        Text,
-        VectorComponent,
-        VectorPicture,
+        Text = 100,
+        VectorContent,
         SourceReplacement,
-        Picture,
-        Audio,
-        Transform,
-        Mixture,
+        Render,
+        Composition,
     }
 
     public enum EffectPipeline
@@ -285,6 +280,15 @@ namespace projectFrameCut.Shared
     /// <param name="TargetHeight">The height of the clip.</param>
     /// <param name="IsDelta">Indicates whether the position is a delta relative to the previous position.</param>
     /// <param name="Rotation">Clockwise rotation in degrees around the target rectangle's center.</param>
-    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta, float Rotation = 0);
+    /// <param name="Opacity">Opacity from 0 to 1; multiplied with the previous opacity when IsDelta is true.</param>
+    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta, float Rotation = 0, float Opacity = 1)
+    {
+        public ClipPositionTuple() : this(0, 0, 0, 0, false) { }
+
+        public readonly ClipPositionTuple Apply(ClipPositionTuple value) => value.IsDelta
+            ? new(TargetX + value.TargetX, TargetY + value.TargetY, TargetWidth + value.TargetWidth,
+                TargetHeight + value.TargetHeight, false, Rotation + value.Rotation, Opacity * value.Opacity)
+            : value;
+    }
 
 }

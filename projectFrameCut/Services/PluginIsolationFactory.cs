@@ -46,12 +46,11 @@ internal static class PluginIsolationFactory
     public static async ValueTask<IPluginBase> CreateAsync(IPluginBase local, PluginPackageVerificationResult verification, string pluginRoot, PluginIsolationMode mode, CancellationToken cancellationToken = default)
     {
         bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.VectorPictureEffect or EffectType.Transform);
-        bool hasAIProviders = local is IAIProviderPlugin aiPlugin && aiPlugin.AIProviderFactories.Count > 0;
         bool hasIsolatableCapabilities = hasPictureProviders || local.VideoSourceProvider.Count > 0 ||
             local.AudioSourceProvider.Count > 0 || local.VideoWriterProvider.Count > 0 ||
             local.SoundTrackProvider.Count > 0 ||
             HasCustomImplementation(local, nameof(IPluginBase.ClipCreator)) ||
-            HasCustomImplementation(local, nameof(IPluginBase.VectComponentCreator)) || hasAIProviders;
+            HasCustomImplementation(local, nameof(IPluginBase.VectComponentCreator));
         if (!hasIsolatableCapabilities || mode == PluginIsolationMode.None) return local;
         PluginIsolationClient client;
         switch (mode)
@@ -71,13 +70,11 @@ internal static class PluginIsolationFactory
                     cancellationToken);
                 break;
 #else
-                if (hasAIProviders) throw new PlatformNotSupportedException("The configured AppContainer isolation mode is unavailable for this AI provider.");
                 return local;
 #endif
             case PluginIsolationMode.ProcessIsolation:
                 if (!DesktopPluginIsolationPlatform.IsSupported)
                 {
-                    if (hasAIProviders) throw new PlatformNotSupportedException("The configured process isolation mode is unavailable for this AI provider.");
                     return local;
                 }
                 client = await StartClientAsync(
@@ -132,8 +129,6 @@ internal static class PluginIsolationFactory
             cancellationToken);
         try
         {
-            if (client.Descriptor.AIProviders.Count > 0)
-                throw new NotSupportedException("Project plugins cannot declare AI providers.");
             Logger.Log($"Project plugin '{verification.Metadata.PluginID}' is running in an AppContainer isolation session.");
             return new RemoteProjectPluginProxy(verification.Metadata, client, declaration, configuration);
         }
@@ -164,7 +159,7 @@ internal static class PluginIsolationFactory
             PluginRoot = pluginRoot,
             SessionRoot = sessionRoot,
             AuthenticationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
-            PluginEncryptionKey = PluginTrustValidator.DerivePluginEncryptionKey(verification.SigningCertificate),
+            PluginEncryptionKey = verification.PluginEncryptionKey,
             InstancePackageName = instanceName,
         }, cancellationToken).ConfigureAwait(false);
         try

@@ -90,7 +90,7 @@ public partial class DraftPage
         _transformMenuActivatedHandle == "left", _transformMenuActivatedHandle == "right");
 
     internal bool SetClipTransform(ClipElementUI center, TransformSide side, TransformInputMode mode, IEffectProvider provider,
-        uint duration, bool isAI = false, TransformRenderOrder? order = null, bool notify = true)
+        uint duration, TransformRenderOrder? order = null, bool notify = true)
     {
         bool audio = center.ClipType == ClipMode.AudioClip;
         var neighbors = FindTransformNeighbors(center, audio);
@@ -109,7 +109,7 @@ public partial class DraftPage
         var ownerSide = mode == TransformInputMode.TwoInput ? TransformSide.Right : side;
         TransformProcessing.Configure(provider, ownerSide, mode, Math.Max(1u, duration),
             mode == TransformInputMode.TwoInput ? (side == TransformSide.Left ? center.Id : neighbor!.Id) : Guid.Empty,
-            order ?? TransformServices.DefaultRenderOrder, isAI);
+            order ?? TransformServices.DefaultRenderOrder);
         var infos = GetTransformClipInfos(audio);
         var replaced = new HashSet<Guid>();
         if (TransformProcessing.Find(infos, center.Id, side) is { } old) replaced.Add(old.Provider.Id);

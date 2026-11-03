@@ -7,7 +7,6 @@ using LocalizedResources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -776,14 +775,8 @@ namespace projectFrameCut
                 });
 
                 EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
-                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
-                {
-                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
-                    var loc = map.TryGetValue(locate, out var l) ? l
-                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
-                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
-                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
-                };
+                EffectProviderDisplayDefaults.AppPackageFileNamesResolver = FileSystemService.GetAppPackageFileNames;
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = ResolveEffectLocalizedString;
 
 
 
@@ -812,15 +805,19 @@ namespace projectFrameCut
                 PluginManager.CurrentLocale = "en-US";
                 PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                 EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
-                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
-                {
-                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
-                    var loc = map.TryGetValue(locate, out var l) ? l
-                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
-                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
-                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
-                };
+                EffectProviderDisplayDefaults.AppPackageFileNamesResolver = FileSystemService.GetAppPackageFileNames;
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = ResolveEffectLocalizedString;
             }
+        }
+
+        private static string ResolveEffectLocalizedString(string key, string fallback, string locate)
+        {
+            var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+            var loc = map.GetValueOrDefault(locate) ?? map.GetValueOrDefault(PluginManager.CurrentLocale);
+            var text = loc?.IsItemExist(key) == true ? loc.DynamicLookup(key, key) : null;
+            if (!string.IsNullOrEmpty(text) && !text.StartsWith("Unset localization item:", StringComparison.Ordinal)) return text;
+            var defaultLoc = map.First().Value;
+            return defaultLoc.IsItemExist(key) ? defaultLoc.DynamicLookup(key, key) : fallback;
         }
 
         public static CultureInfo ReadCultureFromSetting(string locate, CultureInfo culture)
@@ -1033,21 +1030,6 @@ namespace projectFrameCut
                     Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}", new AggregateException(ex, ex1)));
 #pragma warning restore CS0618
                 }
-            }
-
-            try
-            {
-                var aiRegistry = new AIProviderRegistry();
-                aiRegistry.Rebuild(BuiltInAIProviders.CreateRegistrations());
-                var aiProfiles = Task.Run(() => AIProfileStore.LoadAsync(BasicDataPath, new MauiAISecretStore())).GetAwaiter().GetResult();
-                AIProviderService.Initialize(aiRegistry, aiProfiles);
-            }
-            catch (Exception ex)
-            {
-                Log($"AI profile initialization failed with {ex.GetType().FullName}.", "error");
-                var aiRegistry = new AIProviderRegistry();
-                aiRegistry.Rebuild(BuiltInAIProviders.CreateRegistrations());
-                AIProviderService.Initialize(aiRegistry, AIProfileStore.CreateEmpty(BasicDataPath, new MauiAISecretStore(), ex));
             }
 
             try

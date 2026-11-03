@@ -17,6 +17,8 @@ public abstract class TextClipStyleProviderBase : ITextClipStyleProvider
     public abstract bool CanSnapWhileResizing { get; }
     public abstract TextClipLayoutMode LayoutMode { get; set; }
     public abstract TextEntry[] BuildEntries();
+    public virtual TextClipStyleState ExportStyle() => TextClipStyleState.Export(this);
+    public virtual void ImportStyle(TextClipStyleState state) => TextClipStyleState.Import(this, state);
     public abstract void HandleClipResize(bool isInRatio, int TargetX, int TargetY, int TargetWidth, int TargetHeight);
     public abstract ClipPositionTuple GetViewRect(int canvasWidth, int canvasHeight);
 

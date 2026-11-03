@@ -1,4 +1,4 @@
-using projectFrameCut.Shared;
+﻿using projectFrameCut.Shared;
 using projectFrameCut.Drawing.Processing.Converting;
 using projectFrameCut.Drawing.Base.ReadWriteConvert;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -367,6 +367,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             if (clips.FirstOrDefault(clip => clip.Id == dto.Id) is not { } clip) continue;
             if (reusable?.Clips.Contains(clip, ReferenceEqualityComparer.Instance) != true) continue;
             clip.Rotation = VideoClipRotation.Normalize(dto.Rotation);
+            clip.Opacity = dto.Opacity;
             if (dto.FromPlugin != InternalPluginBase.InternalPluginBaseID || dto.ClipType != ClipMode.VideoClip) continue;
             clip.TargetX = dto.TargetX;
             clip.TargetY = dto.TargetY;
@@ -383,9 +384,11 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private string GetClipSignature(ClipDraftDTO dto, IReadOnlyDictionary<string, string> assets, string projectRoot)
     {
         VideoClipRotation.Migrate(dto);
-        var json = (JsonObject)JsonSerializer.SerializeToNode(dto, _jsonOptions)!;
+        // Extension-data keys are case-sensitive, unlike DTO property lookup.
+        var json = JsonNode.Parse(JsonSerializer.SerializeToUtf8Bytes(dto, _jsonOptions))!.AsObject();
         json["__ResolvedSourcePath"] = ResolveSignatureSource(dto.FilePath ?? dto.MetaData?.GetValueOrDefault("FilePath")?.ToString(), assets, projectRoot);
         json.Remove(nameof(dto.Rotation));
+        json.Remove(nameof(dto.Opacity));
         if (dto.FromPlugin == InternalPluginBase.InternalPluginBaseID && dto.ClipType == ClipMode.VideoClip)
         {
             json.Remove(nameof(dto.TargetX));
@@ -1114,9 +1117,10 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 var renderer = new Renderer
                 {
                     AudioSamples = new AudioSampleSource(session.Clips, session.SoundTracks, frameRate,
-                        Math.Max(8000, request.AudioSampleRate), Math.Clamp(request.AudioChannels, 1, 8)),
+                        Math.Max(8000, request.AudioSampleRate), Math.Clamp(request.AudioChannels, 1, 8)) { TotalProjectFrames = session.Duration },
                     StartFrame = request.StartFrame,
                     Duration = length,
+                    TotalProjectFrames = session.Duration,
                     builder = builder,
                     Clips = GetVisualClips(session.Clips),
                     Use16Bit = false,
@@ -1704,7 +1708,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         public uint Duration { get; } = duration;
         public IClip[] Clips { get; } = clips;
         public ISoundTrack[] SoundTracks { get; } = soundTracks;
-        public AudioSampleSource AudioSamples { get; } = new(clips, soundTracks, frameRate);
+        public AudioSampleSource AudioSamples { get; } = new(clips, soundTracks, frameRate) { TotalProjectFrames = duration };
         public IReadOnlyDictionary<string, string> Assets { get; } = assets;
         public string SnapshotHash { get; } = snapshotHash;
         public FrameHashIndex HashIndex { get; } = hashIndex;

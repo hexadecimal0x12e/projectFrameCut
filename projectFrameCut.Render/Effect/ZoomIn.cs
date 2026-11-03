@@ -87,7 +87,7 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ZoomInEffectProvider : EffectProviderBase
     {
-        public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
 
         public override bool IsDeterministic => true;
 

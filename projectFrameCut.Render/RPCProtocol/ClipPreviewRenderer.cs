@@ -1,10 +1,9 @@
-using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Rendering;
-using System.Text.Json;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
@@ -26,6 +25,8 @@ public static class ClipPreviewRenderer
         bool beforeLayout, bool initializeClips, bool keepHwAccelPicture, bool canvasOutput, bool ignoreMixture)
     {
         token.ThrowIfCancellationRequested();
+        using var project = ValueProviderFrameContext.ProjectFrameCount is null
+            ? ValueProviderFrameContext.PushProject(ValueProviderFrameContext.GetTimelineFrameCount(allClips)) : null;
         canvasOutput |= ProjectReferenceRuntime.IsCanvasClip(clip);
         using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,
             projectWidth, projectHeight, pixelMode, token);
@@ -78,7 +79,6 @@ public static class ClipPreviewRenderer
         }
 
         if (frame is null) return null;
-        if (IsAiGeneratedClip(clip)) frame = EffectProcessing.ProcessAIWatermark(frame, frameIndex);
 
         OneFrame oneFrame;
         try
@@ -113,15 +113,4 @@ public static class ClipPreviewRenderer
             ? Math.Max(1, canvasDimension)
             : Math.Max(1, (int)Math.Round((double)clipDimension * canvasDimension / projectDimension, MidpointRounding.AwayFromZero));
 
-    private static bool IsAiGeneratedClip(IClip clip)
-    {
-        if (clip.ExtraData is null || !clip.ExtraData.TryGetValue("IsAI", out var raw)) return false;
-        return raw switch
-        {
-            bool value => value,
-            string value when bool.TryParse(value, out var parsed) => parsed,
-            JsonElement value => value.ValueKind == JsonValueKind.True,
-            _ => false,
-        };
-    }
 }

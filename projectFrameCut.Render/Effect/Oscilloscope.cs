@@ -18,7 +18,7 @@ public sealed class OscilloscopeEffectProvider : EffectProviderBase
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
     public override EffectTarget Target => EffectTarget.Video;
-    public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+    public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
     public override bool IsDeterministic => true;
 
     protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() =>

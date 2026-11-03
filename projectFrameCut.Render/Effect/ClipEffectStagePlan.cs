@@ -7,7 +7,7 @@ namespace projectFrameCut.Render.Effect;
 internal sealed class ClipEffectStagePlan : IEffectStagePlan
 {
     private readonly InlineValueGraph values;
-    private readonly Dictionary<Stage, (Guid Id, string Source)[]> exports;
+    private readonly Dictionary<EffectStage, (Guid Id, string Source)[]> exports;
     private bool disposed;
     public IClip Owner { get; }
 
@@ -16,7 +16,7 @@ internal sealed class ClipEffectStagePlan : IEffectStagePlan
         Owner = owner;
         this.values = values;
         exports = providers.Values.OfType<IClipValueEndpointProvider>()
-            .Where(p => p.IsExport && p.Enabled && p.Stage is not (Stage.Picture or Stage.VectorPicture or Stage.Mixture))
+            .Where(p => p.IsExport && p.Enabled && p.Stage is not (EffectStage.Render or EffectStage.VectorContent or EffectStage.Composition))
             .GroupBy(p => p.Stage).ToDictionary(g => g.Key,
                 g => g.Where(p => p.GetMainInputSource() != IEffectProvider.NoConnectionGUID.ToString())
                     .Select(p => (p.Id, p.GetMainInputSource())).ToArray());
@@ -30,7 +30,7 @@ internal sealed class ClipEffectStagePlan : IEffectStagePlan
         values.AddOwner();
     }
 
-    public void Complete(IClip clip, Stage stage, uint frame)
+    public void Complete(IClip clip, EffectStage stage, uint frame)
     {
         if (!exports.TryGetValue(stage, out var endpoints) || endpoints.Length == 0) return;
         var context = ClipValueFrameContext.Current

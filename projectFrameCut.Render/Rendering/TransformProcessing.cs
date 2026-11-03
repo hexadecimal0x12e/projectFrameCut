@@ -30,7 +30,6 @@ public static class TransformProcessing
     public const string DurationKey = "TransformDuration";
     public const string NextClipKey = "TransformNextClipId";
     public const string OrderKey = "TransformRenderOrder";
-    public const string AIKey = "TransformIsAI";
     private static readonly ConditionalWeakTable<IPicture, object> CanvasFrames = new();
 
     public static T ReadEnum<T>(Dictionary<string, object>? metadata, string key, T fallback = default) where T : struct, Enum =>
@@ -39,11 +38,9 @@ public static class TransformProcessing
         metadata?.TryGetValue(DurationKey, out var value) == true && uint.TryParse(value?.ToString(), out var frames) ? frames : 0;
     public static Guid ReadNextClip(Dictionary<string, object>? metadata) =>
         metadata?.TryGetValue(NextClipKey, out var value) == true && Guid.TryParse(value?.ToString(), out var id) ? id : Guid.Empty;
-    public static bool IsAI(Dictionary<string, object>? metadata) =>
-        metadata?.TryGetValue(AIKey, out var value) == true && bool.TryParse(value?.ToString(), out var ai) && ai;
 
     public static void Configure(IEffectProvider provider, TransformSide side, TransformInputMode mode, uint duration,
-        Guid nextClipId, TransformRenderOrder order, bool isAI = false)
+        Guid nextClipId, TransformRenderOrder order)
     {
         if (provider.TypeOfEffect != EffectType.Transform || !Enum.IsDefined(side) || !Enum.IsDefined(mode) || !Enum.IsDefined(order) || duration == 0 ||
             mode == TransformInputMode.TwoInput && (side != TransformSide.Right || nextClipId == Guid.Empty))
@@ -53,7 +50,6 @@ public static class TransformProcessing
         provider.MetaData[DurationKey] = duration;
         provider.MetaData[NextClipKey] = nextClipId;
         provider.MetaData[OrderKey] = order;
-        provider.MetaData[AIKey] = isAI;
         provider.DisconnectMainInput();
         provider.SetFinalOutputSource(false);
     }
@@ -242,7 +238,7 @@ public static class TransformProcessing
                         Progress(frameIndex, resolved.Start, resolved.Duration),
                         ReadEnum<TransformSide>(resolved.Provider.MetaData, SideKey), inputWidth, inputHeight);
                 if (ReferenceEquals(transformed, left) || ReferenceEquals(transformed, right)) transformed = CopyPicture(transformed);
-                owner.EffectStagePlan?.Complete(owner, Stage.Transform, frameIndex);
+                owner.EffectStagePlan?.Complete(owner, EffectStage.Composition, frameIndex);
                 if (before)
                 {
                     result = Timeline.MixtureLayers([new OneFrame(frameIndex, clip, transformed, resolveEffects: false)],
@@ -255,12 +251,6 @@ public static class TransformProcessing
                 {
                     result = transformed;
                     transformed = null;
-                }
-                if (IsAI(resolved.Provider.MetaData))
-                {
-                    var marked = EffectProcessing.ProcessAIWatermark(result, frameIndex);
-                    if (!ReferenceEquals(marked, result)) result.Dispose();
-                    result = marked;
                 }
                 if (!keepHwAccelPicture && result is IHwAccelPicture gpu)
                 {
@@ -314,12 +304,6 @@ public static class TransformProcessing
             : CopyPicture(preparedSource);
         try
         {
-            if (preparedSource is null && clip.ExtraData.TryGetValue("IsAI", out var ai) && bool.TryParse(ai?.ToString(), out var isAI) && isAI)
-            {
-                var marked = EffectProcessing.ProcessAIWatermark(source, clamped);
-                if (!ReferenceEquals(marked, source)) source.Dispose();
-                source = marked;
-            }
             var resized = !align || source.Width == width && source.Height == height ? source
                 : EffectPictureProcessing.Resize(source, width, height, false);
             if (!ReferenceEquals(resized, source)) source.Dispose();

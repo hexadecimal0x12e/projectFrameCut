@@ -75,8 +75,21 @@ namespace projectFrameCut.Render.Text
 
         public override TextEntry[] BuildEntries()
         {
-            var oldEntries = LoadOldEntriesFromParameters();
-            return TextEntryMigration.MigrateFromTextClipEntries(oldEntries).ToArray();
+            TextEntry[] entries;
+            if (_parameters.TryGetValue(EntriesJsonKey, out var json) && !string.IsNullOrWhiteSpace(json))
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(json);
+                var root = document.RootElement;
+                if (root.ValueKind == System.Text.Json.JsonValueKind.Array && root.GetArrayLength() > 0
+                    && root[0].TryGetProperty("FontName", out _))
+                    entries = System.Text.Json.JsonSerializer.Deserialize<TextEntry[]>(json) ?? [];
+                else entries = TextEntryMigration.MigrateFromTextClipEntries(LoadOldEntriesFromParameters()).ToArray();
+            }
+            else entries = TextEntryMigration.MigrateFromTextClipEntries(LoadOldEntriesFromParameters()).ToArray();
+            foreach (var entry in entries)
+                entry.ExtraData = entry.ExtraData.ToDictionary(p => p.Key, p => EffectParamConvert.Normalize(p.Value) ?? "");
+            if (entries.Length > 0 && MetaData.ContainsKey("Text")) entries[0] = entries[0] with { Text = BasicText };
+            return entries;
         }
 
         public override ClipPositionTuple GetViewRect(int canvasWidth, int canvasHeight)

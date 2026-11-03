@@ -281,6 +281,7 @@ public static class ProjectPluginService
 #else
         var loaded = new List<string>();
         var failed = new Dictionary<string, string>(StringComparer.Ordinal);
+        var trustDisabled = PluginService.IsPluginTrustDisabled;
         activeStageRoot = Path.Combine(Platforms.Windows.WindowsPluginIsolationPlatform.ProjectPluginDirectory, project.ProjectUniqueId.ToString("N"));
         Directory.CreateDirectory(activeStageRoot);
         foreach (var reference in project.ProjectPlugins.Where(x => x.Enabled))
@@ -289,13 +290,18 @@ public static class ProjectPluginService
             {
                 ValidateReference(projectRoot, reference);
                 var packagePath = Path.GetFullPath(Path.Combine(projectRoot, reference.PackagePath.Replace('/', Path.DirectorySeparatorChar)));
-                if (!string.Equals(await ComputeFileHashAsync(packagePath, cancellationToken), reference.PackageSha256, StringComparison.OrdinalIgnoreCase))
-                    throw new CryptographicException("The project plugin package hash does not match project metadata.");
-                var publisherDer = Convert.FromBase64String(reference.PublisherCertificateDer);
-                using var publisher = X509CertificateLoader.LoadCertificate(publisherDer);
-                var publisherFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(publisher);
-                if (!string.Equals(publisherFingerprint, reference.PublisherCertificateFingerprint, StringComparison.OrdinalIgnoreCase))
-                    throw new CryptographicException("The project plugin publisher certificate fingerprint does not match project metadata.");
+                byte[] publisherDer = [];
+                var publisherFingerprint = reference.PublisherCertificateFingerprint;
+                if (!trustDisabled)
+                {
+                    if (!string.Equals(await ComputeFileHashAsync(packagePath, cancellationToken), reference.PackageSha256, StringComparison.OrdinalIgnoreCase))
+                        throw new CryptographicException("The project plugin package hash does not match project metadata.");
+                    publisherDer = Convert.FromBase64String(reference.PublisherCertificateDer);
+                    using var publisher = X509CertificateLoader.LoadCertificate(publisherDer);
+                    publisherFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(publisher);
+                    if (!string.Equals(publisherFingerprint, reference.PublisherCertificateFingerprint, StringComparison.OrdinalIgnoreCase))
+                        throw new CryptographicException("The project plugin publisher certificate fingerprint does not match project metadata.");
+                }
 
                 var pluginRoot = Path.Combine(activeStageRoot, reference.PluginId);
                 if (Directory.Exists(pluginRoot)) Directory.Delete(pluginRoot, true);
@@ -310,7 +316,7 @@ public static class ProjectPluginService
                     throw new InvalidDataException("The signed project plugin declaration does not match project metadata.");
                 ValidateDeclaration(declaration);
 
-                if (!await IsTrustedAsync(project.ProjectUniqueId, reference.PluginId, publisherFingerprint))
+                if (!trustDisabled && !await IsTrustedAsync(project.ProjectUniqueId, reference.PluginId, publisherFingerprint))
                 {
                     var accepted = await confirmTrust(new(
                         project.ProjectUniqueId,

@@ -51,6 +51,7 @@ public sealed class SetProjectClipGeometryCommand : ProjectWriteCmdlet
     [Parameter] public int? XPixels { get; set; }
     [Parameter] public int? YPixels { get; set; }
     [Parameter] public float? RotationDegrees { get; set; }
+    [Parameter][ValidateRange(0.0, 1.0)] public float? Opacity { get; set; }
     [Parameter] public bool? CropEnabled { get; set; }
     [Parameter][ValidateRange(0, int.MaxValue)] public int? CropXPixels { get; set; }
     [Parameter][ValidateRange(0, int.MaxValue)] public int? CropYPixels { get; set; }

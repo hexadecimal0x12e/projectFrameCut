@@ -29,6 +29,7 @@ public sealed class GetProjectClipEffectBindingSourceCommand : ProjectCmdlet
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? ProviderId { get; set; }
     [Parameter] public string? FieldId { get; set; }
     [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
 }
 
 [Cmdlet("Set", "ProjectClipEffectBinding", SupportsShouldProcess = true, DefaultParameterSetName = "Source")]
@@ -62,6 +63,7 @@ public sealed class ClearProjectClipEffectBindingCommand : ProjectWriteCmdlet
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? ProviderId { get; set; }
     [Parameter] public string? OutputFieldId { get; set; }
     [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
 }
 
 [Cmdlet("Set", "ProjectClipEffectOutput", SupportsShouldProcess = true)]
@@ -72,6 +74,7 @@ public sealed class SetProjectClipEffectOutputCommand : ProjectWriteCmdlet
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? ProviderId { get; set; }
     [Parameter] public string? OutputFieldId { get; set; }
     [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
 }
 
 [Cmdlet("Get", "ProjectClipArgument")]
@@ -99,6 +102,7 @@ public sealed class GetProjectClipValueEndpointCommand : ProjectCmdlet
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? EndpointId { get; set; }
     [Parameter] public SwitchParameter Available { get; set; }
     [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
 }
 
 [Cmdlet("Add", "ProjectClipValueEndpoint", SupportsShouldProcess = true, DefaultParameterSetName = "Output")]
@@ -111,6 +115,7 @@ public sealed class AddProjectClipValueEndpointCommand : ProjectWriteCmdlet
     [Parameter(Mandatory = true, ParameterSetName = "Input")] public Guid SourceClipId { get; set; }
     [Parameter(Mandatory = true, ParameterSetName = "Input")] public Guid SourceEndpointId { get; set; }
     [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
 }
 
 [Cmdlet("Set", "ProjectClipValueEndpoint", SupportsShouldProcess = true)]
@@ -125,6 +130,7 @@ public sealed class SetProjectClipValueEndpointCommand : ProjectWriteCmdlet
     [Parameter] public Guid? SourceClipId { get; set; }
     [Parameter] public Guid? SourceEndpointId { get; set; }
     [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
 }
 
 [Cmdlet("Remove", "ProjectClipValueEndpoint", SupportsShouldProcess = true)]

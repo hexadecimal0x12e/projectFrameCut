@@ -71,7 +71,7 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class FadeOpacityEffectProvider : EffectProviderBase
     {
-        public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
 
         public override bool IsDeterministic => true;
 
@@ -97,7 +97,7 @@ namespace projectFrameCut.Render.Effect
             ];
         }
 
-        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 
 
     }

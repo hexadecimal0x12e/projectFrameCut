@@ -15,6 +15,7 @@ internal static class IsolationKeyFrameCodec
             {
                 Id = p.Key, TypeName = p.Value.TypeName, FromPlugin = p.Value.FromPlugin,
                 FieldType = (ulong)p.Value.FieldType, DefaultValue = p.Value.DefaultValue,
+                TypeContract = IsolationFieldTypeCodec.WriteContract(p.Value.TypeContract),
                 MinimumValue = p.Value.MinValue, MaximumValue = p.Value.MaxValue,
                 PresetOptions = p.Value.PresetOptions?.ToList() ?? [], Remarks = p.Value.Remarks ?? "",
                 Value = IsolationValueConverter.FromObject(p.Value.GetGetter()()),
@@ -54,7 +55,7 @@ public class RemoteKeyFramedEffectProvider(IPluginIsolationSession session, Isol
             {
                 Fields = result.Provider.Fields.ToDictionary(f => f.Id, f =>
                     Fields.TryGetValue(f.Id, out var old) && old.GetGetter()() is projectFrameCut.Drawing.Base.IPicture ? old : ToField(f));
-                Stage = (Stage)result.Provider.Stage;
+                Stage = (EffectStage)result.Provider.Stage;
                 MetaData = result.Provider.Metadata.ToDictionary(p => p.Key, p => IsolationValueConverter.ToObject(p.Value)!);
                 AnchorsBindingState = new(result.Provider.AnchorBindings);
                 Name = result.Provider.Name;
@@ -72,11 +73,5 @@ public class RemoteKeyFramedEffectProvider(IPluginIsolationSession session, Isol
 public sealed class RemoteKeyFramedMultipleOutputEffectProvider(IPluginIsolationSession session, IsolationProviderDescriptor descriptor)
     : RemoteKeyFramedEffectProvider(session, descriptor), IMultipleOutputEffectProvider
 {
-    public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields { get; } = descriptor.OutputFields.ToDictionary(f => f.Id,
-        f => new EffectArgumentFieldDescriptor
-        {
-            Id = f.Id, TypeName = f.TypeName, FromPlugin = f.FromPlugin, FieldType = (EffectArgumentFieldType)f.FieldType,
-            DefaultValue = f.DefaultValue, MinValue = f.MinimumValue, MaxValue = f.MaximumValue,
-            PresetOptions = f.PresetOptions.ToArray(), Remarks = f.Remarks,
-        });
+    public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields { get; } = descriptor.OutputFields.ToDictionary(f => f.Id, ToDescriptor);
 }

@@ -1,12 +1,10 @@
-using CommunityToolkit.Maui;
+﻿using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
-using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics.Text;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -36,6 +34,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -70,10 +69,12 @@ namespace projectFrameCut.DraftStuff
         #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
+            clip.EffectProviders ??= new();
+            RenderOutputProvider.Ensure(clip.EffectProviders);
             EffectGroupBindingGuard.Synchronize(clip);
             if (clip.Effects?.TryGetValue(InternalRotationID, out var rotation) == true && rotation.TypeName == "Rotation")
             {
-                if (rotation.Enabled) clip.Rotation += ReadEffectFloatParameter(rotation, "Angle", rotation is RotationEffect_IPicture r ? r.Angle : 0);
+                if (rotation.Enabled) clip.Rotation += ReadEffectFloatParameter(rotation, "Angle", 0);
                 clip.Rotation = VideoClipRotation.Normalize(clip.Rotation);
                 clip.Effects.Remove(InternalRotationID);
                 Log($"Migrated rotation for clip {clip.Id}: {clip.Rotation} degrees.");
@@ -87,16 +88,16 @@ namespace projectFrameCut.DraftStuff
 
         public Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectPipeline? pipeline)
             => BuildEffectStageTab(clip, handler, pipeline is null ? null
-                : pipeline == EffectPipeline.NativeContent ? Stage.VectorPicture : Stage.Picture);
+                : pipeline == EffectPipeline.NativeContent ? EffectStage.VectorContent : EffectStage.Render);
 
-        public async Task<View> BuildEffectStageTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, Stage? pipeline)
+        public async Task<View> BuildEffectStageTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectStage? pipeline)
         {
             ArgumentNullException.ThrowIfNull(clip);
             EffectStageUI.Resolve(clip, page);
             if (pipeline is null)
             {
                 var items = new List<TabbedViewItem>();
-                foreach (var stage in clip.SupportedStages.Where(s => s != Stage.SourceReplacement))
+                foreach (var stage in clip.SupportedStages.Where(s => s != EffectStage.SourceReplacement))
                     items.Add(new TabbedViewItem
                     {
                         Header = EffectStageUI.Name(stage),
@@ -117,7 +118,7 @@ namespace projectFrameCut.DraftStuff
         }
 
         private async Task<PropertyPanelBuilder> BuildEffectStagePanel(ClipElementUI clip,
-            EventHandler<PropertyPanelPropertyChangedEventArgs> handler, Stage pipeline)
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectStage pipeline)
         {
             var sw = Stopwatch.StartNew();
             var selectionTarget = clip.GetEffectSelectionTarget(pipeline);
@@ -205,7 +206,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     var provider = p.Value();
                     return provider.SupportedStages.Contains(pipeline)
-                        && (pipeline != Stage.SourceReplacement || provider.TypeOfEffect == EffectType.SourceReplacement);
+                        && (pipeline != EffectStage.SourceReplacement || provider.TypeOfEffect == EffectType.SourceReplacement);
                 })
                 .ToDictionary(p => p.Key, p => p.Value);
             var inputSources = new Dictionary<(Guid ProviderId, string Display), string>();
@@ -217,13 +218,13 @@ namespace projectFrameCut.DraftStuff
             {
                 var filteredProviders = providerSnapshot
                      .Where(c => c.Value.Stage == pipeline
-                         && (pipeline != Stage.SourceReplacement || c.Value.TypeOfEffect == EffectType.SourceReplacement)
+                         && (pipeline != EffectStage.SourceReplacement || c.Value.TypeOfEffect == EffectType.SourceReplacement)
                          && c.Value.TypeOfEffect != EffectType.Transform && (
                          showAllEffect
                          || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
                               && (c.Value.Target.HasFlag(EffectTarget.ValueProvider)
                                   || EffectBindingHelper.AreTargetsCompatible(c.Value.Target,
-                                      pipeline == Stage.SourceReplacement ? selectionTarget : clip.GetEffectTarget())))
+                                      pipeline == EffectStage.SourceReplacement ? selectionTarget : clip.GetEffectTarget())))
                          || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider)
                          || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider)))
                      .ToList();
@@ -314,7 +315,11 @@ namespace projectFrameCut.DraftStuff
                         if (id == IEffectProvider.InputAnchorGUID.ToString()) return PPLocalizedResources.EffectBind_SourcePicture;
                         if (id == ValueProviderFrameContext.BuiltInFrameProviderId) return PPLocalizedResources.EffectBindView_BoundSource_FrameIndex;
                         if (id == ValueProviderFrameContext.BuiltInProgressProviderId) return PPLocalizedResources.EffectBindView_BoundSource_Progress;
-                        if (id == ValueProviderFrameContext.BuiltInAudioSampleProviderId) return PPLocalizedResources.EffectBind_FinalAudio;
+                        if (id == ValueProviderFrameContext.ClipAudioProviderId) return Localized.Effect_RenderSourceAudio;
+                        if (id == ValueProviderFrameContext.ClipPositionProviderId) return Localized.Effect_RenderSourcePosition;
+                        if (id == ValueProviderFrameContext.BuiltInClipFrameProviderId) return Localized.Effect_ClipCurrentFrame;
+                        if (id == ValueProviderFrameContext.BuiltInProjectProgressProviderId) return Localized.Effect_ProjectProgress;
+                        if (id == ValueProviderFrameContext.BuiltInAudioSampleProviderId) return Localized.Effect_GlobalMix;
                         if (EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var providerId, out var outputId)
                             && providerSnapshot.TryGetValue(providerId, out var b))
                         {
@@ -554,7 +559,11 @@ namespace projectFrameCut.DraftStuff
                                         {
                                             var v when v == PPLocalizedResources.EffectBindView_BoundSource_FrameIndex => ValueProviderFrameContext.BuiltInFrameProviderId,
                                             var v when v == PPLocalizedResources.EffectBindView_BoundSource_Progress => ValueProviderFrameContext.BuiltInProgressProviderId,
-                                            var v when v == PPLocalizedResources.EffectBind_FinalAudio => ValueProviderFrameContext.BuiltInAudioSampleProviderId,
+                                            var v when v == Localized.Effect_RenderSourceAudio => ValueProviderFrameContext.ClipAudioProviderId,
+                                            var v when v == Localized.Effect_RenderSourcePosition => ValueProviderFrameContext.ClipPositionProviderId,
+                                            var v when v == Localized.Effect_ClipCurrentFrame => ValueProviderFrameContext.BuiltInClipFrameProviderId,
+                                            var v when v == Localized.Effect_ProjectProgress => ValueProviderFrameContext.BuiltInProjectProgressProviderId,
+                                            var v when v == Localized.Effect_GlobalMix => ValueProviderFrameContext.BuiltInAudioSampleProviderId,
                                             _ => null,
                                         };
                                         Guid newSourceId = IEffectProvider.NoConnectionGUID;
@@ -636,7 +645,7 @@ namespace projectFrameCut.DraftStuff
                             {
                                 var instance = factory();
                                 instance.Stage = pipeline;
-                                if ((pipeline == Stage.SourceReplacement && instance.TypeOfEffect != EffectType.SourceReplacement)
+                                if ((pipeline == EffectStage.SourceReplacement && instance.TypeOfEffect != EffectType.SourceReplacement)
                                     || !CanSelectEffectProvider(instance, selectionTarget, hideKeyFramedProviders: true))
                                 {
                                     Log($"Rejected effect provider {bundleTypeName} for clip {clip.Id} ({clip.ClipType}).", "warning");
@@ -715,11 +724,13 @@ namespace projectFrameCut.DraftStuff
                         && candidate.AreInputsCompatible(target)) sources.Add(output.Source);
                 }
                 foreach (var source in new[] { IEffectProvider.InputAnchorGUID.ToString(), ValueProviderFrameContext.BuiltInFrameProviderId,
-                    ValueProviderFrameContext.BuiltInProgressProviderId, ValueProviderFrameContext.BuiltInAudioSampleProviderId })
+                    ValueProviderFrameContext.BuiltInProgressProviderId, ValueProviderFrameContext.BuiltInClipFrameProviderId,
+                    ValueProviderFrameContext.BuiltInProjectProgressProviderId, ValueProviderFrameContext.BuiltInAudioSampleProviderId,
+                    ValueProviderFrameContext.ClipAudioProviderId, ValueProviderFrameContext.ClipPositionProviderId })
                 {
                     var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, source);
                     var sourceType = source == IEffectProvider.InputAnchorGUID.ToString() ? target.Stage.GetContentType()
-                        : source == ValueProviderFrameContext.BuiltInAudioSampleProviderId ? EffectArgumentFieldType.AudioSample : EffectArgumentFieldType.Numeric;
+                        : ValueProviderFrameContext.SourceType(source);
                     if (candidate is not null && EffectFieldTypes.AreCompatible(sourceType, candidate.GetInputType(target, EffectProviderAnchorExtensions.InputKey))
                         && candidate.AreInputsCompatible(target)) sources.Add(source);
                 }
@@ -929,7 +940,7 @@ namespace projectFrameCut.DraftStuff
             {
                 int width = clip.TargetWidth > 0 ? clip.TargetWidth : (int)Math.Max(1, page.ProjectInfo.RelativeWidth);
                 int height = clip.TargetHeight > 0 ? clip.TargetHeight : (int)Math.Max(1, page.ProjectInfo.RelativeHeight);
-                return new ClipPositionTuple(clip.TargetX, clip.TargetY, width, height, false, clip.Rotation);
+                return new ClipPositionTuple(clip.TargetX, clip.TargetY, width, height, false, clip.Rotation, clip.Opacity);
             }
 
             bool hasAnyProvider = false;
@@ -1196,6 +1207,7 @@ namespace projectFrameCut.DraftStuff
                         ["TargetX"] = position.TargetX, ["TargetY"] = position.TargetY,
                         ["TargetWidth"] = Math.Max(1, position.TargetWidth), ["TargetHeight"] = Math.Max(1, position.TargetHeight),
                         ["Rotation"] = position.Rotation,
+                        ["Opacity"] = position.Opacity,
                     });
                 }
                 provider.AddStep(step);
@@ -1376,6 +1388,38 @@ namespace projectFrameCut.DraftStuff
             public required string EffectTypeName { get; init; }
         }
 
+        private sealed class EffectProviderCardLayout(double cardWidth, double cardHeight) : Microsoft.Maui.Controls.Layout
+        {
+            protected override ILayoutManager CreateLayoutManager() => new CardLayoutManager(this, cardWidth, cardHeight);
+
+            private sealed class CardLayoutManager(EffectProviderCardLayout layout, double cardWidth, double cardHeight) : LayoutManager(layout)
+            {
+                private int columns = 1;
+
+                public override Size Measure(double widthConstraint, double heightConstraint)
+                {
+                    double width = double.IsFinite(widthConstraint) ? Math.Max(0, widthConstraint) : Layout.Count * cardWidth;
+                    columns = (int)Math.Max(1, Math.Min(Layout.Count, Math.Floor(width / cardWidth)));
+                    foreach (var child in Layout)
+                        child.Measure(Math.Min(cardWidth, width), cardHeight);
+
+                    // Arrangement reuses these columns so fractional width rounding cannot change the row count.
+                    return new Size(
+                        ResolveConstraints(widthConstraint, Layout.Width, width, Layout.MinimumWidth, Layout.MaximumWidth),
+                        ResolveConstraints(heightConstraint, Layout.Height, (Layout.Count + columns - 1) / columns * cardHeight,
+                            Layout.MinimumHeight, Layout.MaximumHeight));
+                }
+
+                public override Size ArrangeChildren(Rect bounds)
+                {
+                    for (int i = 0; i < Layout.Count; i++)
+                        Layout[i].Arrange(new Rect(bounds.X + i % columns * cardWidth, bounds.Y + i / columns * cardHeight,
+                            Math.Min(cardWidth, Math.Max(0, bounds.Width)), cardHeight));
+                    return bounds.Size;
+                }
+            }
+        }
+
         private static string GetEffectTypeName(EffectTarget target)
         {
             StringBuilder result = new();
@@ -1526,14 +1570,23 @@ namespace projectFrameCut.DraftStuff
                 .OrderBy(c => c)
                 .ToList();
 
-            var flex = new FlexLayout
+            var cardLayout = new EffectProviderCardLayout(cardWidth + cardMargin * 2, cardHeight + cardMargin * 2);
+            var emptyLabel = new Label
             {
-                Wrap = FlexWrap.Wrap,
-                Direction = FlexDirection.Row,
-                JustifyContent = FlexJustify.Start,
-                AlignItems = FlexAlignItems.Start,
-                AlignContent = FlexAlignContent.Start
+                Text = emptyText ?? PPLocalizedResources.Add_Effect_None,
+                FontSize = 18,
+                IsVisible = cards.Count == 0
             };
+            cardLayout.IsVisible = cards.Count > 0;
+
+#if WINDOWS
+            cardLayout.Loaded += (_, _) =>
+            {
+                for (Element? e = cardLayout.Parent; e is not null; e = e.Parent)
+                    if (e is ScrollView scroll && scroll.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
+                        sv.BringIntoViewOnFocusChange = false;
+            };
+#endif
 
             // Filter state
             string? filterSearchText = null;
@@ -1559,7 +1612,10 @@ namespace projectFrameCut.DraftStuff
                 }
 
                 selectedCard = null;
-                BindableLayout.SetItemsSource(flex, filtered.ToList());
+                var items = filtered.ToList();
+                emptyLabel.IsVisible = items.Count == 0;
+                cardLayout.IsVisible = items.Count > 0;
+                BindableLayout.SetItemsSource(cardLayout, items);
             }
 
             // ─── Search bar ───
@@ -1607,13 +1663,8 @@ namespace projectFrameCut.DraftStuff
             }, 0, 0);
             filterBar.Add(categoryPicker, 1, 0);
 
-            BindableLayout.SetItemsSource(flex, cards);
-            BindableLayout.SetEmptyView(flex, new Label
-            {
-                Text = emptyText ?? PPLocalizedResources.Add_Effect_None,
-                FontSize = 18,
-            });
-            BindableLayout.SetItemTemplate(flex, new DataTemplate(() =>
+            BindableLayout.SetItemsSource(cardLayout, cards);
+            BindableLayout.SetItemTemplate(cardLayout, new DataTemplate(() =>
             {
                 // ─── Preview image ───
                 var image = new Image
@@ -1676,7 +1727,8 @@ namespace projectFrameCut.DraftStuff
                     FontSize = 13,
                     FontAttributes = FontAttributes.Bold,
                     TextColor = Colors.White,
-                    LineBreakMode = LineBreakMode.TailTruncation
+                    LineBreakMode = LineBreakMode.TailTruncation,
+                    MaxLines = 2
                 };
                 hoverTitle.SetBinding(Label.TextProperty, nameof(EffectProviderCardItem.Title));
 
@@ -1711,9 +1763,6 @@ namespace projectFrameCut.DraftStuff
 
                 var border = new Border
                 {
-                    WidthRequest = cardWidth,
-                    HeightRequest = cardHeight,
-                    Margin = new Thickness(cardMargin),
                     Padding = 0,
                     StrokeShape = new RoundRectangle { CornerRadius = 12 },
                     Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f)),
@@ -1721,8 +1770,13 @@ namespace projectFrameCut.DraftStuff
                     Background = new SolidColorBrush(Colors.Transparent),
                     Content = cardContent
                 };
-                FlexLayout.SetBasis(border, new FlexBasis((float)(cardWidth + cardMargin * 2)));
+                var card = new Grid
+                {
+                    Padding = new Thickness(cardMargin),
+                    Children = { border }
+                };
                 bool hovered = false, loaded = false;
+                var visibilityParents = new List<VisualElement>();
                 CancellationTokenSource? previewCts = null;
                 var loading = new ActivityIndicator
                 {
@@ -1762,59 +1816,118 @@ namespace projectFrameCut.DraftStuff
                         cts.Dispose();
                     }
                 }
-                if (loadPreview is not null)
+                void StopPreview()
                 {
-                    previewGrid.Children.Add(loading);
-                    border.Loaded += (_, _) => loaded = true;
-                    border.BindingContextChanged += async (_, _) =>
+                    previewCts?.Cancel();
+                    loading.IsRunning = loading.IsVisible = false;
+                    try
                     {
-                        previewCts?.Cancel();
-                        loading.IsRunning = loading.IsVisible = false;
+                        if (mediaPlayer.Source is not null) mediaPlayer.Stop();
                         mediaPlayer.Source = null;
-                        mediaPlayer.IsVisible = false;
-                        image.IsVisible = true;
-                        if (loaded && hovered) await ShowPreview();
-                    };
-                    border.Unloaded += (_, _) =>
+                    }
+                    catch (Exception ex)
                     {
-                        loaded = false;
-                        hovered = false;
-                        previewCts?.Cancel();
-                        loading.IsRunning = loading.IsVisible = false;
-                        mediaPlayer.Stop();
-                        mediaPlayer.Source = null;
-                    };
+                        Log(ex, "Stop provider preview", typeof(ClipInfoBuilder));
+                    }
+                    mediaPlayer.IsVisible = false;
+                    image.IsVisible = true;
                 }
+
+                bool IsCardVisible()
+                {
+                    if (card.Width <= 0 || card.Height <= 0) return false;
+                    var bounds = new Rect(0, 0, card.Width, card.Height);
+                    for (Element? e = card; e is not null; e = e.Parent)
+                    {
+                        if (e is not VisualElement v) continue;
+                        if (!v.IsVisible || v.Opacity <= 0 || v.Width <= 0 || v.Height <= 0) return false;
+                        if (v is ScrollView scroll)
+                        {
+                            bounds.X -= scroll.ScrollX;
+                            bounds.Y -= scroll.ScrollY;
+                        }
+                        double left = Math.Max(0, bounds.Left), top = Math.Max(0, bounds.Top);
+                        double right = Math.Min(v.Width, bounds.Right), bottom = Math.Min(v.Height, bounds.Bottom);
+                        if (right <= left || bottom <= top) return false;
+                        bounds = new Rect(left, top, right - left, bottom - top);
+                        bounds.X += v.X + v.TranslationX;
+                        bounds.Y += v.Y + v.TranslationY;
+                    }
+                    return true;
+                }
+
+                void UpdateVideoPreview(object? sender = null, EventArgs? args = null)
+                {
+                    if (border.BindingContext is not EffectProviderCardItem item || item.VideoThumbnail is null) return;
+                    if (!loaded || !IsCardVisible())
+                    {
+                        if (mediaPlayer.Source is not null) StopPreview();
+                        return;
+                    }
+                    if (ReferenceEquals(mediaPlayer.Source, item.VideoThumbnail)) return;
+                    try
+                    {
+                        mediaPlayer.IsVisible = true;
+                        image.IsVisible = false;
+                        mediaPlayer.Source = item.VideoThumbnail;
+                        mediaPlayer.Play();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Play provider preview {item.ProviderTypeName}", typeof(ClipInfoBuilder));
+                        StopPreview();
+                    }
+                }
+
+                void OnPreviewLayoutChanged(object? sender, PropertyChangedEventArgs args)
+                {
+                    if (args.PropertyName is "IsVisible" or "Opacity" or "Bounds" or "X" or "Y" or "Width" or "Height" or "TranslationX" or "TranslationY")
+                        UpdateVideoPreview();
+                }
+
+                if (loadPreview is not null) previewGrid.Children.Add(loading);
+                card.Loaded += (_, _) =>
+                {
+                    if (loaded) return;
+                    loaded = true;
+                    for (Element? e = card; e is not null; e = e.Parent)
+                    {
+                        if (e is not VisualElement v) continue;
+                        visibilityParents.Add(v);
+                        v.PropertyChanged += OnPreviewLayoutChanged;
+                        if (v is ScrollView scroll) scroll.Scrolled += UpdateVideoPreview;
+                    }
+                    UpdateVideoPreview();
+                };
+                border.BindingContextChanged += async (_, _) =>
+                {
+                    StopPreview();
+                    UpdateVideoPreview();
+                    if (loaded && hovered && border.BindingContext is EffectProviderCardItem { VideoThumbnail: null })
+                        await ShowPreview();
+                };
+                card.Unloaded += (_, _) =>
+                {
+                    loaded = false;
+                    hovered = false;
+                    foreach (var v in visibilityParents)
+                    {
+                        v.PropertyChanged -= OnPreviewLayoutChanged;
+                        if (v is ScrollView scroll) scroll.Scrolled -= UpdateVideoPreview;
+                    }
+                    visibilityParents.Clear();
+                    hoverOverlay.IsVisible = false;
+                    StopPreview();
+                };
 
                 // ─── Hover handling ───
                 async void OnHover(bool isHovered)
                 {
                     hovered = isHovered;
-                    if (border.BindingContext is EffectProviderCardItem item)
-                    {
-                        if (isHovered)
-                        {
-                            hoverOverlay.IsVisible = true;
-                            if (loadPreview is not null) await ShowPreview();
-                            else if (item.VideoThumbnail is not null)
-                            {
-                                mediaPlayer.Source = item.VideoThumbnail;
-                                mediaPlayer.IsVisible = true;
-                                image.IsVisible = false;
-                                mediaPlayer.Play();
-                            }
-                        }
-                        else
-                        {
-                            hoverOverlay.IsVisible = false;
-                            previewCts?.Cancel();
-                            loading.IsRunning = loading.IsVisible = false;
-                            mediaPlayer.Pause();
-                            mediaPlayer.Source = null;
-                            mediaPlayer.IsVisible = false;
-                            image.IsVisible = true;
-                        }
-                    }
+                    hoverOverlay.IsVisible = isHovered;
+                    if (loadPreview is null || border.BindingContext is not EffectProviderCardItem { VideoThumbnail: null }) return;
+                    if (isHovered) await ShowPreview();
+                    else StopPreview();
                 }
 
 #if MACCATALYST || WINDOWS
@@ -1870,7 +1983,7 @@ namespace projectFrameCut.DraftStuff
                     }
                 );
 
-                return border;
+                return card;
             }));
 
             return new VerticalStackLayout
@@ -1885,7 +1998,8 @@ namespace projectFrameCut.DraftStuff
                         FontSize = 13
                     },
                     filterBar,
-                    flex
+                    cardLayout,
+                    emptyLabel
                 }
             };
         }

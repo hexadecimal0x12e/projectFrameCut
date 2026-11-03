@@ -2192,7 +2192,7 @@ namespace projectFrameCut.InteractableEditor
                 (int)Math.Round(y, MidpointRounding.AwayFromZero),
                 Math.Max(1, (int)Math.Round(w, MidpointRounding.AwayFromZero)),
                 Math.Max(1, (int)Math.Round(h, MidpointRounding.AwayFromZero)),
-                false, GetClipRotation(_currentClip));
+                false, GetClipRotation(_currentClip), GetClipOpacity(_currentClip));
 
             callback(_currentClip.Id.ToString(), _currentFrame, keyframePosition, handle);
         }
@@ -4701,6 +4701,15 @@ namespace projectFrameCut.InteractableEditor
             if (GetClipArgumentPreview(clip.Id) is { } frameClip)
                 return VideoClipRotation.GetAngle(frameClip, _currentFrame, (int)_videoWidth, (int)_videoHeight);
             return VideoClipRotation.GetAngle(clip.Rotation, GetClipInstance(clip), clip.Effects?.Values,
+                _currentFrame, (int)_videoWidth, (int)_videoHeight);
+        }
+
+        private float GetClipOpacity(ClipElementUI clip)
+        {
+            if (GetClipArgumentPreview(clip.Id) is { } frameClip)
+                return VideoClipRotation.GetOpacity(frameClip.Opacity, frameClip, frameClip.EffectsInstances,
+                    _currentFrame, (int)_videoWidth, (int)_videoHeight);
+            return VideoClipRotation.GetOpacity(clip.Opacity, GetClipInstance(clip), clip.Effects?.Values,
                 _currentFrame, (int)_videoWidth, (int)_videoHeight);
         }
 

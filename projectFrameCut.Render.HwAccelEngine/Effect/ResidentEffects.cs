@@ -98,20 +98,6 @@ public partial class VignetteEffect_HwAccel : IHwAccelPictureEffect
     }
 }
 
-public partial class FadeOpacityEffect_HwAccel : IHwAccelPictureEffect
-{
-    public IHwAccelPicture RenderHwAccel(IHwAccelPicture source, EffectExecutionContext context)
-    {
-        using var scope = nativeLock.EnterScope();
-        ObjectDisposedException.ThrowIf(disposed, this);
-        return ResidentEffectResult.Render(this, context, () =>
-        {
-            Half opacity = Half.Clamp((Half)DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity), Half.Zero, Half.One);
-            return ResidentPictureOperations.Run(source, ResidentOperation.Opacity, [(float)opacity], alpha: source.HasAlphaChannel || opacity < Half.One);
-        });
-    }
-}
-
 public partial class ColorAdjustmentEffect_HwAccel : IHwAccelPictureEffect
 {
     public IHwAccelPicture RenderHwAccel(IHwAccelPicture source, EffectExecutionContext context)
@@ -125,64 +111,6 @@ public partial class ColorAdjustmentEffect_HwAccel : IHwAccelPictureEffect
             if (p[0] == 1 && p[1] == 1 && p[2] == 1 && p[3] == 0 && p[4] == 1 && p[5] == 0 && p[6] == 0 && p[7] == 0 && p[8] == 0 && p[9] == 1)
                 return source.Retain();
             return ResidentPictureOperations.Run(source, ResidentOperation.ColorAdjustment, p, alpha: source.HasAlphaChannel || opacity < Half.One);
-        });
-    }
-}
-
-public partial class RotationEffect_HwAccel : IHwAccelPictureEffect
-{
-    public IHwAccelPicture RenderHwAccel(IHwAccelPicture source, EffectExecutionContext context)
-    {
-        using var scope = nativeLock.EnterScope();
-        ObjectDisposedException.ThrowIf(disposed, this);
-        return ResidentEffectResult.Render(this, context, () =>
-        {
-            float angle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
-            if (Math.Abs(angle % 360) < float.Epsilon)
-                return source.Retain();
-            return ResidentPictureOperations.Rotate(source, angle, DynamicParam.Resolve(Parameters.GetValueOrDefault("ExpandCanvas"), ExpandCanvas));
-        });
-    }
-}
-
-public partial class ResizeEffect_HwAccel : IHwAccelPictureEffect
-{
-    public IHwAccelPicture RenderHwAccel(IHwAccelPicture source, EffectExecutionContext context)
-    {
-        using var scope = nativeLock.EnterScope();
-        ObjectDisposedException.ThrowIf(disposed, this);
-        return ResidentEffectResult.Render(this, context, () =>
-        {
-            int width = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
-            int height = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
-            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != context.TargetWidth || RelativeHeight != context.TargetHeight))
-            {
-                width = (int)Math.Round((double)width * context.TargetWidth / RelativeWidth, MidpointRounding.AwayFromZero);
-                height = (int)Math.Round((double)height * context.TargetHeight / RelativeHeight, MidpointRounding.AwayFromZero);
-            }
-
-            return ResidentPictureOperations.Resize(source, width, height, DynamicParam.Resolve(Parameters.GetValueOrDefault("PreserveAspectRatio"), PreserveAspectRatio));
-        });
-    }
-}
-
-public partial class PlaceEffect_HwAccel : IHwAccelPictureEffect
-{
-    public IHwAccelPicture RenderHwAccel(IHwAccelPicture source, EffectExecutionContext context)
-    {
-        using var scope = nativeLock.EnterScope();
-        ObjectDisposedException.ThrowIf(disposed, this);
-        return ResidentEffectResult.Render(this, context, () =>
-        {
-            int x = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
-            int y = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
-            if (RelativeWidth > 0 && RelativeHeight > 0)
-            {
-                x = (int)Math.Round((double)x * context.TargetWidth / RelativeWidth);
-                y = (int)Math.Round((double)y * context.TargetHeight / RelativeHeight);
-            }
-
-            return ResidentPictureOperations.Run(source, ResidentOperation.Place, [x, y], context.TargetWidth, context.TargetHeight, true);
         });
     }
 }

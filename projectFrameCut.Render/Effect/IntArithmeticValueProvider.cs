@@ -127,7 +127,7 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntArithmeticValueProviderProvider : EffectProviderBase
     {
-        public override IReadOnlyList<Stage> SupportedStages => EffectStages.Values;
+        public override IReadOnlyList<EffectStage> SupportedStages => EffectStages.Values;
 
         public override bool IsDeterministic => true;
 

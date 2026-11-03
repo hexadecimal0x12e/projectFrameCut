@@ -26,6 +26,18 @@ namespace projectFrameCut.Services
     /// </summary>
     public static class FileSystemService
     {
+        public static IEnumerable<string> GetAppPackageFileNames(params string[] paths)
+        {
+#if ANDROID
+            return global::Android.App.Application.Context.Assets?.List(string.Join('/', paths)) ?? [];
+#else
+            var directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.Combine(paths));
+            return Directory.Exists(directory)
+                ? Directory.EnumerateFiles(directory).Select(path => Path.GetFileName(path))
+                : [];
+#endif
+        }
+
         public static string GetAppPackageFileSync(params string[] paths)
         {
             if (!OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.Combine(paths));

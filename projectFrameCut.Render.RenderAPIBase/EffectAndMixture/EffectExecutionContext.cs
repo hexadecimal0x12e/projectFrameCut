@@ -13,6 +13,7 @@ public sealed class EffectExecutionContext
     internal bool PicturesPrepared { get; init; }
     public IClip? Clip { get; init; }
     public uint FrameIndex { get; init; }
+    public int AudioSampleIndex { get; init; }
     public float Progress { get; init; }
     public float ClipProgress { get; init; }
     public int TargetWidth { get; init; }
@@ -42,10 +43,20 @@ public static class EffectFieldTypes
             : type.IsHwAccelPicture() ? EffectArgumentFieldType.HwAccelPicture
             : type.IsPicture() ? EffectArgumentFieldType.IPicture : type & (EffectArgumentFieldType)0xFFFF;
 
-    public static bool AreCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target)
+    public static bool AreCompatible(IEffectArgumentField source, IEffectArgumentField target) =>
+        AreCompatible(source.FieldType, target.FieldType, source.TypeContract, target.TypeContract);
+
+    public static bool AreCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target) =>
+        AreCompatible(source, target, null, null);
+
+    public static bool AreCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target,
+        EffectPortTypeContract? sourceContract, EffectPortTypeContract? targetContract)
     {
         if (source.HasFlag(EffectArgumentFieldType.Any)) return false;
         if (target.HasFlag(EffectArgumentFieldType.Any)) return true;
+        if (source.HasFlag(EffectArgumentFieldType.CustomType) || target.HasFlag(EffectArgumentFieldType.CustomType))
+            return source.BaseType() == EffectArgumentFieldType.CustomType && target.BaseType() == EffectArgumentFieldType.CustomType
+                && sourceContract?.IsCompatibleWith(targetContract) == true;
         if (source.IsPicture() && target.IsPicture()) return true;
         source = source.BaseType();
         target = target.BaseType();
@@ -58,7 +69,9 @@ public static class EffectFieldTypes
     private static bool IsNumeric(EffectArgumentFieldType type) => type is EffectArgumentFieldType.Integer
         or EffectArgumentFieldType.UnsignedInteger or EffectArgumentFieldType.Long or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric;
 
-    public static object? DefaultValue(IEffectArgumentField field) => field.FieldType.BaseType() switch
+    public static object? DefaultValue(IEffectArgumentField field) => field.TypeContract is { } contract
+        ? string.IsNullOrWhiteSpace(field.DefaultValue) ? null : contract.CreateValue(JsonSerializer.Deserialize<JsonElement>(field.DefaultValue))
+        : field.FieldType.BaseType() switch
     {
         EffectArgumentFieldType.IPicture or EffectArgumentFieldType.HwAccelPicture or EffectArgumentFieldType.VectorPicture or EffectArgumentFieldType.AudioSample => null,
         EffectArgumentFieldType.Integer => EffectParamConvert.TryConvertToInt(field.DefaultValue, out var i) ? i : 0,
@@ -70,9 +83,13 @@ public static class EffectFieldTypes
         _ => field.DefaultValue,
     };
 
-    public static bool Accepts(EffectArgumentFieldType type, object? value)
+    public static bool Accepts(EffectArgumentFieldType type, object? value) => Accepts(type, value, null);
+
+    public static bool Accepts(EffectArgumentFieldType type, object? value, EffectPortTypeContract? contract)
     {
         if (value is null) return true;
+        if (type.BaseType() == EffectArgumentFieldType.CustomType && contract is not null)
+            return value is CustomEffectPortValue custom && string.Equals(custom.ContractId, contract.Id, StringComparison.Ordinal);
         return type.BaseType() switch
         {
             EffectArgumentFieldType.Unknown or EffectArgumentFieldType.Any => true,
@@ -94,7 +111,13 @@ public static class EffectFieldTypes
     {
         if (value is projectFrameCut.Shared.IAudioSamples<float> audio)
             return CopyAudio(audio);
+        if (value is JsonElement { ValueKind: JsonValueKind.Object } custom
+            && custom.TryGetProperty(nameof(CustomEffectPortValue.ContractId), out _)
+            && custom.TryGetProperty(nameof(CustomEffectPortValue.Data), out _))
+            return custom.Deserialize<CustomEffectPortValue>();
         if (type.HasFlag(EffectArgumentFieldType.Any)) return value;
+        if (type.BaseType() == EffectArgumentFieldType.CustomType)
+            return value is JsonElement { ValueKind: JsonValueKind.Null } ? null : value;
         if (convertPictures && type.IsPicture() && value is IPicture picture)
             return type.IsHwAccelPicture() ? EffectPictureProcessing.Upload(picture) : EffectPictureProcessing.Materialize(picture);
         if (value is JsonElement json) value = json.ValueKind switch

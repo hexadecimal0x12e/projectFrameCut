@@ -93,7 +93,7 @@ public class JellyEffect : IContinuousClipPositionProvider
 
 public class JellyEffectProvider : EffectProviderBase
 {
-    public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+    public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
 
     public override bool IsDeterministic => true;
 

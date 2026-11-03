@@ -43,7 +43,6 @@ namespace projectFrameCut
 #endif
             VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
-            if (MauiProgram.IsStoreMode) AISettingButton.IsVisible = false;
             if (IsBoolSettingTrue("DeveloperMode"))
             {
                 TestPageButton.IsVisible = true;
@@ -59,10 +58,6 @@ namespace projectFrameCut
         private async void OnEditSettingClicked(object sender, EventArgs e)
         {
             await NavigateAsync(new EditSettingPage());
-        }
-        private async void OnAISettingClicked(object sender, EventArgs e)
-        {
-            await NavigateAsync(new AISettingPage());
         }
         private async void OnSecuritySettingClicked(object sender, EventArgs e)
         {

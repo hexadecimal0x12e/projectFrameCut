@@ -116,7 +116,7 @@ public sealed class ClipTransformTests
     public void ProviderJsonPreservesBindingsImplementationAndStaticConfiguration()
     {
         var provider = new ExternalSourceTransformProvider();
-        TransformProcessing.Configure(provider, TransformSide.Right, TransformInputMode.TwoInput, 5, Guid.NewGuid(), TransformRenderOrder.BeforeEffects, true);
+        TransformProcessing.Configure(provider, TransformSide.Right, TransformInputMode.TwoInput, 5, Guid.NewGuid(), TransformRenderOrder.BeforeEffects);
         provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = EffectImplementType.IPicture;
         provider.Fields = new() { ["SourcePath"] = new StaticEffectArgumentField("generated.mp4", EffectArgumentFieldType.String) };
         provider.AnchorsBindingState["SourcePath"] = Guid.NewGuid().ToString();
@@ -129,7 +129,6 @@ public sealed class ClipTransformTests
         Assert.AreEqual(TransformProcessing.ReadNextClip(saved.MetaData), TransformProcessing.ReadNextClip(loaded.MetaData));
         Assert.AreEqual(TransformRenderOrder.BeforeEffects, TransformProcessing.ReadEnum<TransformRenderOrder>(loaded.MetaData, TransformProcessing.OrderKey));
         Assert.AreEqual(EffectImplementType.IPicture, TransformProcessing.ReadEnum<EffectImplementType>(loaded.MetaData, EffectProviderBase.ImplementTypeParameterKey));
-        Assert.IsTrue(TransformProcessing.IsAI(loaded.MetaData));
     }
 
     [TestMethod]

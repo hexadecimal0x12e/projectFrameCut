@@ -1,4 +1,4 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -40,12 +40,20 @@ namespace projectFrameCut.DraftStuff
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex),
                 new(ValueProviderFrameContext.BuiltInProgressProviderId,
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Progress),
+                new(ValueProviderFrameContext.BuiltInClipFrameProviderId, Localized.Effect_ClipCurrentFrame),
+                new(ValueProviderFrameContext.BuiltInProjectProgressProviderId, Localized.Effect_ProjectProgress),
                 new(IEffectProvider.InputAnchorGUID.ToString(),
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_SourcePicture, "IPicture"),
             };
+            if (_provider.Stage == EffectStage.Render)
+            {
+                sources.Add(new(ValueProviderFrameContext.ClipPositionProviderId, Localized.Effect_RenderSourcePosition, "SizeAndPosition"));
+                if (_clip.ClipType == ClipMode.AudioClip || !string.IsNullOrWhiteSpace(_clip.BindedSoundTrack))
+                    sources.Add(new(ValueProviderFrameContext.ClipAudioProviderId, Localized.Effect_RenderSourceAudio, "AudioSample"));
+            }
             if (ValueProviderFrameContext.SupportsAudioSample(_provider.Stage))
                 sources.Add(new(ValueProviderFrameContext.BuiltInAudioSampleProviderId,
-                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_FinalAudio, "AudioSample"));
+                    Localized.Effect_GlobalMix, "AudioSample"));
             if (_clip.EffectProviders is { } bundles)
             {
                 foreach (var (id, bundle) in bundles)
@@ -68,8 +76,11 @@ namespace projectFrameCut.DraftStuff
         {
             switch (sourceId)
             {
-                case ValueProviderFrameContext.BuiltInAudioSampleProviderId:
-                    return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_FinalAudio;
+                case ValueProviderFrameContext.ClipAudioProviderId: return Localized.Effect_RenderSourceAudio;
+                case ValueProviderFrameContext.ClipPositionProviderId: return Localized.Effect_RenderSourcePosition;
+                case ValueProviderFrameContext.BuiltInClipFrameProviderId: return Localized.Effect_ClipCurrentFrame;
+                case ValueProviderFrameContext.BuiltInProjectProgressProviderId: return Localized.Effect_ProjectProgress;
+                case ValueProviderFrameContext.BuiltInAudioSampleProviderId: return Localized.Effect_GlobalMix;
                 case ValueProviderFrameContext.BuiltInFrameProviderId:
                     return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex;
                 case ValueProviderFrameContext.BuiltInProgressProviderId:

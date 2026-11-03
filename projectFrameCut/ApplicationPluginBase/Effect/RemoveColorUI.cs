@@ -45,7 +45,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
             // Color swatch that opens the ColorPicker overlay on DraftPage
             panel.AddCustomChild(
-                EffectProviderHelper.ParamLabel("Color"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Color", "_Color"),
                 (invoker) =>
                 {
                     var currentColor = Color.FromRgba(
@@ -121,7 +121,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             // Keep the Tolerance slider as-is
             panel.AddSlider(
                 "Tolerance",
-                EffectProviderHelper.ParamLabel("Tolerance"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Tolerance", "_Tolerance"),
                 0,
                 ushort.MaxValue,
                 tolerance,

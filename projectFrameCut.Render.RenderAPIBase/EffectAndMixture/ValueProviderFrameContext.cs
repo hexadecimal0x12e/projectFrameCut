@@ -40,6 +40,35 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The built-in binding source id for the current clip progress (0..1, exposed as <see cref="float"/>).
         /// </summary>
         public const string BuiltInProgressProviderId = "builtin://progress";
+        public const string BuiltInClipFrameProviderId = "builtin://clip-frame";
+        public const string BuiltInProjectProgressProviderId = "builtin://project-progress";
+
+        private static readonly AsyncLocal<uint?> projectFrames = new();
+        public static uint? ProjectFrameCount => projectFrames.Value;
+
+        public static IDisposable PushProject(uint frameCount)
+        {
+            var scope = new ProjectScope(projectFrames.Value);
+            projectFrames.Value = frameCount;
+            return scope;
+        }
+
+        private sealed class ProjectScope(uint? previous) : IDisposable
+        {
+            public void Dispose() => projectFrames.Value = previous;
+        }
+
+        public static uint GetTimelineFrameCount(IEnumerable<IClip> clips) => (uint)Math.Min(uint.MaxValue,
+            clips.Where(c => !c.ExtendToWholeDraft).Select(c => (ulong)c.StartFrame + c.GetEffectiveDuration()).DefaultIfEmpty(0UL).Max());
+
+        public const string ClipAudioProviderId = "builtin://clip-audio";
+        public const string ClipPositionProviderId = "builtin://clip-position";
+        public static EffectArgumentFieldType SourceType(string id) => id switch
+        {
+            BuiltInAudioSampleProviderId or ClipAudioProviderId => EffectArgumentFieldType.AudioSample,
+            ClipPositionProviderId => EffectArgumentFieldType.SizeAndPosition,
+            _ => EffectArgumentFieldType.Numeric,
+        };
 
         public const string BuiltInAudioSampleProviderId = "builtin://audio-sample";
 
@@ -49,12 +78,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             get => audio.Value;
             set => audio.Value = value;
         }
+        public static readonly AsyncLocal<int> AudioIndex = new();
+        public static int AudioSampleIndex => AudioIndex.Value;
         [ThreadStatic] private static uint currentFrame;
 
-        public static bool IsBuiltInSource(string? id) => id is BuiltInFrameProviderId or BuiltInProgressProviderId or BuiltInAudioSampleProviderId;
+        public static bool IsBuiltInSource(string? id) => id is BuiltInFrameProviderId or BuiltInProgressProviderId
+            or BuiltInClipFrameProviderId or BuiltInProjectProgressProviderId or BuiltInAudioSampleProviderId or ClipAudioProviderId or ClipPositionProviderId;
 
-        public static bool SupportsAudioSample(Stage stage) => stage is Stage.Picture or Stage.VectorPicture
-            or Stage.Text or Stage.VectorComponent or Stage.Mixture;
+        public static bool SupportsAudioSample(EffectStage stage) => stage is EffectStage.Render or EffectStage.VectorContent or EffectStage.Text or EffectStage.Composition;
 
         public static IDisposable PushAudioSource(Func<uint, CancellationToken, projectFrameCut.Shared.IAudioSamples<float>>? source)
         {
@@ -132,6 +163,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static object? Get(string key)
         {
             if (_values is not null && _values.TryGetValue(key, out var value)) return value;
+            if (_values is not null && key == BuiltInClipFrameProviderId)
+                return (float)Math.Max(0L, (long)currentFrame - (clip?.StartFrame ?? 0));
+            if (_values is not null && key == BuiltInProjectProgressProviderId)
+                return ProjectFrameCount is > 1 ? Math.Clamp((float)currentFrame / (ProjectFrameCount.Value - 1), 0f, 1f) : 0f;
             if (key == BuiltInAudioSampleProviderId && audioSource is not null)
             {
                 var samples = audioSource(currentFrame, _cancellationToken);

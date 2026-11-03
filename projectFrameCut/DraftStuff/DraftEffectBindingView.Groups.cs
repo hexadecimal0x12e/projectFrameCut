@@ -1,4 +1,4 @@
-using Microsoft.Maui.Controls.Shapes;
+﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.Effect;
@@ -172,6 +172,9 @@ public partial class DraftEffectBindingView
     {
         if (_clip?.EffectProviders is not { } providers) return;
         var owner = _clip;
+        PropertiesTabHeader.Text = Localized.PropertyPanel;
+        SourcesAndOutputsPanel.IsVisible = false;
+        PropertiesPanel.IsVisible = true;
         PropertiesPanel.Children.Clear();
         RightTabView.SelectedIndex = 0;
         PropertiesPanel.Children.Add(new Label { Text = Localized.EffectGroup_PublicPorts, FontAttributes = FontAttributes.Bold });
@@ -234,7 +237,7 @@ public partial class DraftEffectBindingView
         };
         PropertiesPanel.Children.Add(save);
         var cancel = new Button { Text = Localized._Cancel };
-        cancel.Clicked += (_, _) => PropertiesPanel.Children.Clear();
+        cancel.Clicked += (_, _) => RefreshSelectedNode();
         PropertiesPanel.Children.Add(cancel);
     }
 
@@ -371,6 +374,8 @@ public partial class DraftEffectBindingView
         return new() { Id = port.ProviderId, Key = port.FieldId, DisplayName = port.Name, Index = index,
             Kind = port.IsInput ? IsNodeInput(provider, port.FieldId) ? PortKind.AnchorInput : PortKind.ParamBind
                 : PortKind.AnchorOutput, DeclaredFieldType = field.FieldType,
+            TypeContract = port.IsInput ? _fieldTypes?.GetInputContract(provider, port.FieldId) ?? field.TypeContract
+                : _fieldTypes?.GetOutputContract(provider, port.FieldId) ?? field.TypeContract,
             FieldType = port.IsInput ? _fieldTypes?.GetInputType(provider, port.FieldId) ?? field.FieldType
                 : _fieldTypes?.GetOutputType(provider, port.FieldId) ?? field.FieldType };
     }
@@ -415,7 +420,7 @@ public partial class DraftEffectBindingView
             if (_selectedNode == node)
             {
                 _selectedNode = null;
-                PropertiesPanel.Children.Clear();
+                UpdateSourcesAndOutputsPanel();
             }
         }
         foreach (var node in _nodes.Values)

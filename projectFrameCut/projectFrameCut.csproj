@@ -170,9 +170,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
-		<PackageReference Include="OpenAI" Version="2.13.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="$(ExtensionsVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
@@ -198,7 +195,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\projectFrameCut.AIContracts\projectFrameCut.AIContracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
 		<ProjectReference Include="..\projectFrameCut.IntegratedAPIServer\projectFrameCut.IntegratedAPIServer.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
@@ -302,11 +298,11 @@
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
 		<Compile Remove="**\*.xaml.cs;MauiProgram.cs;DraftPage*.cs;ProjectPluginPage.cs" />
-		<Compile Remove="AIAssistance\**\*.cs;ApplicationPluginBase\**\*.cs;Controls\**\*.cs;Converters\**\*.cs;InteractableEditor\**\*.cs;ViewModels\**\*.cs;Platforms\**\*.cs;Setting\SettingPages\**\*.cs" />
+		<Compile Remove="ApplicationPluginBase\**\*.cs;Controls\**\*.cs;Converters\**\*.cs;InteractableEditor\**\*.cs;ViewModels\**\*.cs;Platforms\**\*.cs;Setting\SettingPages\**\*.cs" />
 		<Compile Remove="DraftStuff\**\*.cs" />
 		<Compile Include="DraftStuff\DraftImportAndExportHelper.cs" />
 		<Compile Remove="Localize\MAUILocalizedHelper.cs;Template\TemplateVariableItem.cs" />
-		<Compile Remove="Services\EffectServices.cs;Services\TextServices.cs;Services\TextStyleServices.cs;Services\UIServices.cs;Services\UIThreadWatchdogService*.cs;Services\ScreenReaderService.cs;Services\IntegratedApiBackend.cs;Services\TimelineMcpLiveService.cs;Services\RemoteProjectSession.cs;Services\VectorComponentHandlerServices.cs;Services\VectorClipServices*.cs;Services\TransformServices.cs;Services\WebBrowsingService.cs;Services\FileSystemService.cs" />
+		<Compile Remove="Services\EffectServices.cs;Services\TextServices.cs;Services\TextStyleServices.cs;Services\UIServices.cs;Services\UIThreadWatchdogService*.cs;Services\ScreenReaderService.cs;Services\IntegratedApiBackend.cs;Services\TimelineMcpLiveService.cs;Services\RemoteProjectSession.cs;Services\VectorComponentHandlerServices.cs;Services\VectorClipServices*.cs;Services\TransformServices.cs;Services\FileSystemService.cs" />
 		<MauiXaml Remove="**\*.xaml" />
 		<MauiIcon Remove="@(MauiIcon)" />
 		<MauiSplashScreen Remove="@(MauiSplashScreen)" />
@@ -343,9 +339,6 @@
 	</Target>
 
 	<ItemGroup>
-		<MauiXaml Update="AIAssistance\AssistanceChatView.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
 		<MauiXaml Update="AssetsLibraryPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>

@@ -21,7 +21,7 @@ internal sealed class DeferredRenderCache : IDisposable
             is_delta INTEGER NOT NULL, rotation REAL NOT NULL, preserve_aspect INTEGER NOT NULL,
             is_canvas INTEGER NOT NULL, center_implicit INTEGER NOT NULL,
             width INTEGER NOT NULL, height INTEGER NOT NULL, bits INTEGER NOT NULL, hdr INTEGER NOT NULL,
-            length INTEGER NOT NULL, checksum BLOB NOT NULL, hash TEXT
+            length INTEGER NOT NULL, checksum BLOB NOT NULL, hash TEXT, opacity REAL NOT NULL DEFAULT 1
         );
         CREATE TABLE IF NOT EXISTS hashes (
             clip TEXT NOT NULL, frame INTEGER NOT NULL, hash TEXT NOT NULL, reusable INTEGER NOT NULL,
@@ -36,6 +36,7 @@ internal sealed class DeferredRenderCache : IDisposable
     private readonly string fingerprint;
     private readonly Dictionary<(string Hash, bool Composed), List<(CacheIndexDatabase Index, string Directory, string Path)>> reusableFrames = new();
     private readonly List<CacheIndexDatabase> previousIndexes = new();
+    private readonly ConcurrentDictionary<CacheIndexDatabase, bool> opacityColumns = new();
     private bool disposed;
     private string stage = "rendering";
 
@@ -83,7 +84,7 @@ internal sealed class DeferredRenderCache : IDisposable
                 try
                 {
                     handle = OpenLock(candidate);
-                    index = new(candidate, Schema, keepOpen: true);
+                    index = OpenIndex(candidate);
                     using var connection = index.Open();
                     using var query = CacheIndexDatabase.Command(connection,
                         "SELECT 1 FROM task WHERE id=1 AND version=$version AND fingerprint=$fingerprint AND stage!='completed';",
@@ -115,7 +116,7 @@ internal sealed class DeferredRenderCache : IDisposable
         jobLock = OpenLock(DirectoryPath);
         try
         {
-            database = new(DirectoryPath, Schema, keepOpen: true);
+            database = OpenIndex(DirectoryPath);
             SetStage("rendering");
         }
         catch { database?.Dispose(); jobLock.Dispose(); throw; }
@@ -123,6 +124,30 @@ internal sealed class DeferredRenderCache : IDisposable
 
     private static FileStream OpenLock(string path) => new(Path.Combine(path, "job.lock"), FileMode.OpenOrCreate,
         FileAccess.ReadWrite, FileShare.None);
+
+    private bool HasOpacityColumn(CacheIndexDatabase index) => opacityColumns.GetOrAdd(index, static db =>
+    {
+        using var connection = db.Open();
+        using var command = CacheIndexDatabase.Command(connection, "SELECT 1 FROM pragma_table_info('frames') WHERE name='opacity';");
+        return command.ExecuteScalar() is not null;
+    });
+
+    private CacheIndexDatabase OpenIndex(string directory)
+    {
+        var index = new CacheIndexDatabase(directory, Schema, keepOpen: true);
+        try
+        {
+            if (!HasOpacityColumn(index))
+            {
+                using var connection = index.Open();
+                using var command = CacheIndexDatabase.Command(connection, "ALTER TABLE frames ADD COLUMN opacity REAL NOT NULL DEFAULT 1;");
+                command.ExecuteNonQuery();
+                opacityColumns[index] = true;
+            }
+            return index;
+        }
+        catch { index.Dispose(); throw; }
+    }
 
     public string ClipPath(Guid clip, string hash) => Path.Combine(DirectoryPath, "clips", clip.ToString("N"), $"{hash}.vfd");
     public string ComposedPath(uint frame) => Path.Combine(DirectoryPath, "composed", $"{frame}.vfd");
@@ -227,9 +252,10 @@ internal sealed class DeferredRenderCache : IDisposable
             byte[] checksum;
             long length;
             using (var connection = index.Open())
-            using (var query = CacheIndexDatabase.Command(connection, """
+            using (var query = CacheIndexDatabase.Command(connection, $"""
                 SELECT version, clip, frame, composed, has_picture, reusable, x, y, target_width, target_height,
-                    is_delta, rotation, preserve_aspect, is_canvas, center_implicit, width, height, bits, hdr, length, checksum, hash
+                    is_delta, rotation, preserve_aspect, is_canvas, center_implicit, width, height, bits, hdr, length, checksum, hash,
+                    {(HasOpacityColumn(index) ? "opacity" : "1")}
                 FROM frames WHERE path=$path AND ($hash IS NULL OR hash=$hash);
                 """, ("$path", Path.GetRelativePath(directory, path)), ("$hash", hash)))
             using (var reader = query.ExecuteReader())
@@ -241,7 +267,7 @@ internal sealed class DeferredRenderCache : IDisposable
                     Frame = checked((uint)reader.GetInt64(2)), Composed = reader.GetBoolean(3),
                     HasPicture = reader.GetBoolean(4), Reusable = reader.GetBoolean(5),
                     Position = new(reader.GetInt32(6), reader.GetInt32(7), reader.GetInt32(8), reader.GetInt32(9),
-                        reader.GetBoolean(10), reader.GetFloat(11)),
+                        reader.GetBoolean(10), reader.GetFloat(11), reader.GetFloat(22)),
                     PreserveAspect = reader.GetBoolean(12), IsCanvas = reader.GetBoolean(13), CenterImplicit = reader.GetBoolean(14),
                     Width = reader.GetInt32(15), Height = reader.GetInt32(16), Bits = reader.GetInt32(17), Hdr = reader.GetBoolean(18),
                     Hash = reader.IsDBNull(21) ? null : reader.GetString(21),
@@ -325,14 +351,14 @@ internal sealed class DeferredRenderCache : IDisposable
             using var command = CacheIndexDatabase.Command(connection, """
                 INSERT OR REPLACE INTO frames(path, version, clip, frame, composed, has_picture, reusable,
                     x, y, target_width, target_height, is_delta, rotation, preserve_aspect, is_canvas, center_implicit,
-                    width, height, bits, hdr, length, checksum, hash)
+                    width, height, bits, hdr, length, checksum, hash, opacity)
                 VALUES ($path, $version, $clip, $frame, $composed, $picture, $reusable,
                     $x, $y, $tw, $th, $delta, $rotation, $aspect, $canvas, $center,
-                    $width, $height, $bits, $hdr, $length, $checksum, $hash);
+                    $width, $height, $bits, $hdr, $length, $checksum, $hash, $opacity);
                 """, ("$path", Path.GetRelativePath(DirectoryPath, path)), ("$version", info.Version), ("$clip", info.Clip.ToString("N")),
                 ("$frame", (long)info.Frame), ("$composed", info.Composed), ("$picture", info.HasPicture), ("$reusable", info.Reusable),
                 ("$x", info.Position.TargetX), ("$y", info.Position.TargetY), ("$tw", info.Position.TargetWidth), ("$th", info.Position.TargetHeight),
-                ("$delta", info.Position.IsDelta), ("$rotation", info.Position.Rotation), ("$aspect", info.PreserveAspect),
+                ("$delta", info.Position.IsDelta), ("$rotation", info.Position.Rotation), ("$opacity", info.Position.Opacity), ("$aspect", info.PreserveAspect),
                 ("$canvas", info.IsCanvas), ("$center", info.CenterImplicit), ("$width", info.Width), ("$height", info.Height),
                 ("$bits", info.Bits), ("$hdr", info.Hdr), ("$length", new FileInfo(path).Length), ("$checksum", checksum), ("$hash", info.Hash));
             command.ExecuteNonQuery();

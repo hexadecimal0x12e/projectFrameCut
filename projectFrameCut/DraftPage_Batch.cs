@@ -776,13 +776,14 @@ public partial class DraftPage
         public Guid Id => Dto.Id;
         public ClipMode ClipType => Dto.ClipType;
         public Dictionary<string, object> ExtraData => Dto.MetaData ??= new();
-        public IReadOnlyList<Stage> SupportedStages { get; set; }
+        public IReadOnlyList<EffectStage> SupportedStages { get; set; }
         public Dictionary<Guid, IEffectProvider>? EffectProviders { get; set; }
         public int TargetX => Live?.TargetX ?? Dto.TargetX;
         public int TargetY => Live?.TargetY ?? Dto.TargetY;
         public int TargetWidth => Live?.TargetWidth ?? Dto.TargetWidth;
         public int TargetHeight => Live?.TargetHeight ?? Dto.TargetHeight;
         public float Rotation => Live?.Rotation ?? Dto.Rotation;
+        public float Opacity => Live?.Opacity ?? Dto.Opacity;
 
         public GuiEffectClip(DraftPage page, ClipElementUI clip)
         {
@@ -805,17 +806,15 @@ public partial class DraftPage
                     ? EffectStages.VectorImage : EffectStages.Picture;
         }
 
-        public EffectTarget GetEffectSelectionTarget(Stage stage) => Live?.GetEffectSelectionTarget(stage) ?? (stage switch
+        public EffectTarget GetEffectSelectionTarget(EffectStage stage) => Live?.GetEffectSelectionTarget(stage) ?? (stage switch
         {
-            Stage.ClipArguments => EffectTarget.ValueProvider,
-            Stage.Text => EffectTarget.Text | EffectTarget.ValueProvider,
-            Stage.VectorComponent => EffectTarget.VectorComponent | EffectTarget.ValueProvider,
-            Stage.VectorPicture => EffectTarget.VectorPicture | EffectTarget.ValueProvider,
-            Stage.SpeedVariance => EffectTarget.SpeedVariance | EffectTarget.ValueProvider,
-            Stage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
-            Stage.Audio => EffectTarget.Audio | EffectTarget.ValueProvider,
-            Stage.Transform => EffectTarget.Transform | EffectTarget.ValueProvider,
-            Stage.Mixture => EffectTarget.Mixture | EffectTarget.ValueProvider,
+            EffectStage.Text => EffectTarget.Text | EffectTarget.ValueProvider,
+            EffectStage.VectorContent => EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.ValueProvider,
+            EffectStage.Composition => EffectTarget.SpeedVariance | EffectTarget.Transform | EffectTarget.ValueProvider
+                | (ClipType == ClipMode.AudioClip ? 0 : EffectTarget.Mixture),
+            EffectStage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
+            EffectStage.Render => EffectTarget.ValueProvider | (ClipType == ClipMode.AudioClip ? EffectTarget.Audio
+                : EffectTarget.Video | EffectTarget.ColorAdjustment | (!string.IsNullOrWhiteSpace(Dto.BindedSoundTrack) ? EffectTarget.Audio : 0)),
             _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider,
         });
 
@@ -825,7 +824,7 @@ public partial class DraftPage
             ClipMode.AudioClip => EffectTarget.Audio,
             ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video | EffectTarget.VectorPicture,
             ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent | EffectTarget.VectorPicture,
-            _ => EffectTarget.Video | (SupportedStages.Contains(Stage.VectorPicture) ? EffectTarget.VectorPicture : 0),
+            _ => EffectTarget.Video | (SupportedStages.Contains(EffectStage.VectorContent) ? EffectTarget.VectorPicture : 0),
         });
     }
 
@@ -923,23 +922,16 @@ public partial class DraftPage
 
     private void ApplyGuiBatchSourceArguments(ClipDraftDTO dto, GuiEditArgs a)
     {
-        var clip = new GuiEffectClip(dto);
-        var providers = CopyGuiEffectProviders(clip);
+        dto.MetaData ??= new();
         if (a.Has("MaskSourceType"))
         {
             _ = MaskSources.Create(a.String("MaskSourceType")!);
-            dto.MetaData![MaskClip.SourceTypeKey] = a.String("MaskSourceType")!;
-            foreach (var existing in providers.Values.OfType<ClipArgumentProvider>())
-            {
-                existing.RestoreStaticValues(existing.StaticValues.Where(x => !x.Key.StartsWith(MaskClip.ArgumentPrefix, StringComparison.Ordinal)).ToDictionary());
-                foreach (string key in existing.AnchorsBindingState.Keys.Where(k => k.StartsWith(MaskClip.ArgumentPrefix, StringComparison.Ordinal)).ToArray()) existing.ClearFieldBinding(key);
-            }
+            dto.MetaData[MaskClip.SourceTypeKey] = a.String("MaskSourceType")!;
         }
-        var provider = providers.Values.OfType<ClipArgumentProvider>().SingleOrDefault() ?? CreateGuiClipArguments(new GuiEffectClip(dto), Guid.NewGuid());
-        if (a.Has("SourceArguments")) ApplyGuiProviderFields(provider,
-            a.Fields("SourceArguments").ToDictionary(x => MaskClip.ArgumentPrefix + x.Key, x => x.Value), false);
-        providers[provider.Id] = provider;
-        dto.EffectProviders = providers.Values.Select(EffectBindingHelper.SerializeProvider).ToArray();
+        if (a.Has("SourceArguments"))
+            foreach (var (key, value) in a.Fields("SourceArguments"))
+                dto.MetaData[MaskClip.SourceArgumentKeyPrefix + key] = value;
+
     }
 
     private object ExecuteGuiBatchProperties(GuiProjectOperation operation, GuiEditArgs a, GuiBatchState batch)
@@ -985,10 +977,16 @@ public partial class DraftPage
                 if (a.Has("XPixels")) clip.TargetX = a.Int("XPixels");
                 if (a.Has("YPixels")) clip.TargetY = a.Int("YPixels");
                 if (a.Has("RotationDegrees")) clip.Rotation = VideoClipRotation.Normalize((float)a.Number("RotationDegrees"));
+                if (a.Has("Opacity"))
+                {
+                    float opacity = (float)a.Number("Opacity");
+                    if (!float.IsFinite(opacity) || opacity < 0 || opacity > 1) throw new ArgumentException("Invalid opacity.");
+                    clip.Opacity = opacity;
+                }
                 if (a.Has("WidthPixels") && clip.TargetWidth <= 0 || a.Has("HeightPixels") && clip.TargetHeight <= 0 || !float.IsFinite(clip.Rotation)) throw new ArgumentException("Invalid clip geometry.");
                 foreach (var arguments in providers.Values.OfType<ClipArgumentProvider>())
                 {
-                    var fields = new[] { ("XPixels", "TargetX"), ("YPixels", "TargetY"), ("WidthPixels", "TargetWidth"), ("HeightPixels", "TargetHeight"), ("RotationDegrees", "Rotation") }
+                    var fields = new[] { ("XPixels", "TargetX"), ("YPixels", "TargetY"), ("WidthPixels", "TargetWidth"), ("HeightPixels", "TargetHeight"), ("RotationDegrees", "Rotation"), ("Opacity", "Opacity") }
                         .Where(p => a.Has(p.Item1)).Select(p => p.Item2).ToHashSet();
                     arguments.RestoreStaticValues(arguments.StaticValues.Where(p => !fields.Contains(p.Key)).ToDictionary());
                     foreach (string key in fields) arguments.ClearFieldBinding(key);
@@ -999,7 +997,7 @@ public partial class DraftPage
             }
             return new { ClipId = clip.Id, WidthPixels = clip.TargetWidth > 0 ? clip.TargetWidth : batch.Project.RelativeWidth,
                 HeightPixels = clip.TargetHeight > 0 ? clip.TargetHeight : batch.Project.RelativeHeight, AutomaticWidth = clip.TargetWidth <= 0,
-                AutomaticHeight = clip.TargetHeight <= 0, XPixels = clip.TargetX, YPixels = clip.TargetY, RotationDegrees = clip.Rotation,
+                AutomaticHeight = clip.TargetHeight <= 0, XPixels = clip.TargetX, YPixels = clip.TargetY, RotationDegrees = clip.Rotation, clip.Opacity,
                 CropEnabled = enabled, CropXPixels = x, CropYPixels = y, CropWidthPixels = cw, CropHeightPixels = ch, CropRotationDegrees = angle };
         }
         var audio = clip.ClipType == ClipMode.AudioClip ? clip : Guid.TryParse(clip.BindedSoundTrack, out var audioId) ? batch.Clips.GetValueOrDefault(audioId) : null;
@@ -1215,7 +1213,7 @@ public partial class DraftPage
     private static ISpeedVarianceProvider? GuiBatchSpeed(ClipDraftDTO clip)
     {
         if (clip.ClipType == ClipMode.ProjectReferenceClip || clip.MetaData?.ContainsKey(ProjectReferencePart.MetadataKey) == true) return null;
-        if (clip.EffectProviders?.Any(p => p.Stage == Stage.SpeedVariance) != true) return null;
+        if (clip.EffectProviders?.Any(p => p.Stage == EffectStage.Composition) != true) return null;
         return EffectBindingHelper.RebuildAllEffects(EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null), null)
             ?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
     }

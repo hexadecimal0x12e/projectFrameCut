@@ -54,7 +54,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Brightness",
-                EffectProviderHelper.L("ColorAdjust_TabTone_Brightness", "Brightness"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Brightness", "ColorAdjust_TabTone_Brightness"),
                 0,
                 2,
                 brightness,
@@ -62,7 +62,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Contrast",
-                EffectProviderHelper.L("ColorAdjust_TabTone_Contrast", "Contrast"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Contrast", "ColorAdjust_TabTone_Contrast"),
                 0,
                 3,
                 contrast,
@@ -80,7 +80,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Saturation",
-                EffectProviderHelper.L("ColorAdjust_TabColor_Saturation", "Saturation"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Saturation", "ColorAdjust_TabColor_Saturation"),
                 0,
                 3,
                 saturation,
@@ -88,7 +88,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Hue",
-                EffectProviderHelper.L("ColorAdjust_TabColor_Hue", "Hue"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Hue", "ColorAdjust_TabColor_Hue"),
                 0,
                 360,
                 hue,
@@ -96,7 +96,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Vibrance",
-                EffectProviderHelper.L("ColorAdjust_TabColor_Vibrance", "Vibrance"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Vibrance", "ColorAdjust_TabColor_Vibrance"),
                 -1,
                 1,
                 vibrance,
@@ -113,7 +113,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddSlider(
                 "Gamma",
-                EffectProviderHelper.L("ColorAdjust_TabAdvanced_Gamma", "Gamma"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Gamma", "ColorAdjust_TabAdvanced_Gamma"),
                 0.5f,
                 2f,
                 gamma,
@@ -121,7 +121,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Temperature",
-                EffectProviderHelper.L("ColorAdjust_TabAdvanced_Temperature", "Temperature"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Temperature", "ColorAdjust_TabAdvanced_Temperature"),
                 -100,
                 100,
                 temperature,
@@ -139,11 +139,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var panel = new PropertyPanelBuilder();
             panel.AddCheckbox(
                 "Invert",
-                EffectProviderHelper.L("ColorAdjust_TabEffects_Invert", "Invert Colors"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Invert", "ColorAdjust_TabEffects_Invert"),
                 invert);
             panel.AddSlider(
                 "Grayscale",
-                EffectProviderHelper.L("ColorAdjust_TabEffects_Grayscale", "Grayscale"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Grayscale", "ColorAdjust_TabEffects_Grayscale"),
                 0,
                 1,
                 grayscale,
@@ -151,7 +151,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 SliderUpdateEventCallMode.OnMouseUp);
             panel.AddSlider(
                 "Opacity",
-                EffectProviderHelper.L("ColorAdjust_TabEffects_Opacity", "Opacity"),
+                EffectProviderUIHelper.FieldLabel(Inner, "Opacity", "ColorAdjust_TabEffects_Opacity"),
                 0,
                 1,
                 opacity,

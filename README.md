@@ -70,40 +70,23 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 
 对于MacCatalyst目标，我们支持MacOS 14.0\(macOS Sonoma\) 或者更新的系统上运行，同时支持Intel或者Apple芯片的Mac。**我们建议使用至少有16GB的统一内存Apple芯片的Mac。**
 
-### AI支持
-我们知道，现在什么软件都在搞AI集成和扩展。
-
-软件支持基础的AI聊天、Agent、图片与视频生成。所有的服务你都需要自备一个API Key。
-软件内有一个基础的AI Agent，叫做'Assistant P'，它可以帮助你完成一些基础的操作（比如剪辑管理，效果管理，甚至是一些简单的编辑任务）。你可以直接和它对话来让它帮你完成一些任务。
-我们适配了大部分主流的API服务提供商，包括OpenAI、Azure OpenAI、Anthropic、DeepSeek官方API、以及一些云平台的私有接口（比如阿里云和腾讯云）。
-请注意，目前AI模型有以下限制：
-* 不支持Anthropic的API模式、DeepSeek官方API在思考模式下的ToolCall，以及一些云平台的私有接口。
-* 第三方API要求使用兼容OpenAI API的接口（比如Azure OpenAI），但是我们不保证所有的API都能正常工作。
-
 ### Agent 自动化
 外部的AI Agent也可以使用脚本引擎 (详见[projectFrameCut.PowerShell](tools/projectFrameCut.PowerShell/README.md))和 MCP 服务，允许他们（例如Codex，Claude Code等）为你自动完成一些任务，甚至帮你完成整个视频创作。
-
-软件内的AI支持ToolCall，允许让AI代替你完成项目编辑和一些操作。你可以直接询问'Assistant P' “你能用ToolCall干什么”，来了解他们能做什么。
 
 #### 脚本引擎
 [projectFrameCut.PowerShell](tools/projectFrameCut.PowerShell/README.md) 提供了一组PowerShell脚本接口，允许你使用PowerShell连接到客户端，并且完成一些任务。
 按照指南连接到客户端后，你可以直接使用PowerShell来完成一些任务。
 
-#### 软件内AI Skill
-软件内支持AI Skill，并且内置了几个简单的skill，允许你在软件内使用AI来完成一些任务。
-你可以直接询问'Assistant P' “你能用Skill干什么”，来了解他们能做什么。
-
-我们还支持自定义的Claude风格的Skill，你只需要把他们放在`<用户数据>\My Skills`目录下，软件会自动加载他们。
+#### Agent Skill
+仓库的 [`.agents/skills`](.agents/skills) 提供外部 Agent 使用的 Skill，包含视频创作、PowerShell 和 MCP 操作指南。
 
 #### MCP Server
 > [!NOTE]
 > 由于工具切换可能带来的兼容性问题，我们建议在可用的情况下，优先考虑使用PowerShell集成而不是MCP服务。
 > 一部分Agent可能会在使用 MCP 服务时遇到一些问题，如果你遇到了问题，请尝试使用PowerShell集成。
-想要在第三方Agent里使用软件的功能？没问题，我们提供了一个MCP Server，通过WebSocket连接到软件，和STDIO/HTTP连接到Agent应用程序来实现对软件的控制。
+MCP 服务支持 STDIO、HTTP 和命名管道，允许第三方 Agent 连接并控制软件。
 
-你可以在Release里找到它。MCP服务器和软件内AI ToolCall使用了同一套接口，它也可以实现大部分的功能。
-
-关于MCP Server、Skill和AI ToolCall的更多信息，你可以[去这里看看](./projectFrameCut.IntegratedAPIServer/README.md)
+MCP 服务提供项目、时间轴、素材和效果等操作接口，连接方式见 [MCP Server 文档](./projectFrameCut.IntegratedAPIServer/README.md)。
 
 ### 可扩展性
 你可以使用插件来扩展projectFrameCut，
@@ -128,7 +111,7 @@ GUI RPC 使用命名管道连接。调用方可以发起一次性授权请求，
 
 RPC 还支持外部视频源：外部程序保持运行并注册视频源目录，projectFrameCut 在读取素材帧时通过同一条双工命名管道向调用方请求创建、初始化、读取和释放。协议支持 8/16 位数据、Alpha 和 HDR 帧，项目中保存的是虚拟源引用而不是管道凭据，因此外部程序可以在重新授权并重新注册后恢复源的读取。
 
-MCP Server 和软件内 AI ToolCall 使用同一套项目接口；如果目标是让第三方 Agent 编辑项目，可以根据使用场景选择 MCP、PowerShell 或直接实现 Render RPC 客户端。
+第三方 Agent 可以根据使用场景选择 MCP、PowerShell 或直接实现 Render RPC 客户端来编辑项目。
 
 
 

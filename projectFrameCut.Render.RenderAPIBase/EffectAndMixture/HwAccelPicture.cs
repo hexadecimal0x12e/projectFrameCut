@@ -36,6 +36,7 @@ public interface IHwAccelPictureGeometry
 {
     IHwAccelPicture Resize(IHwAccelPicture source, int width, int height, bool preserveAspect);
     IHwAccelPicture Rotate(IHwAccelPicture source, float angle, bool expandCanvas);
+    IHwAccelPicture Opacity(IHwAccelPicture source, Half opacity);
     IHwAccelPicture ToHdr(IHwAccelPicture source, int brightness);
 }
 
@@ -364,6 +365,7 @@ public static class EffectPictureProcessing
                 Parameters = parameters,
                 Clip = context.Clip,
                 FrameIndex = context.FrameIndex,
+                AudioSampleIndex = context.AudioSampleIndex,
                 Progress = context.Progress,
                 ClipProgress = context.ClipProgress,
                 TargetWidth = context.TargetWidth,

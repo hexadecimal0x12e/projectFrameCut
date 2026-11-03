@@ -166,6 +166,7 @@ namespace projectFrameCut.DraftStuff
                     .AddPositionTupleInputBox("place", new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 25), PositionTupleMode.XYWH, (valX, valY, valW, valH), entryWidth: 70)
                     .AddCheckbox("allowFreeScaleResize", PPLocalizedResources.General_LocationAndSize_FreeZoom, allowFreeScaleResize)
                     .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
+                    .AddSlider("opacity", PPLocalizedResources.General_Opacity, 0, 1, float.IsNaN(clip.Opacity) ? 1 : Math.Clamp(clip.Opacity, 0, 1))
                     .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
                     .AddCheckbox("cropEnable", PPLocalizedResources._Enabled, currentCropProvider.Enabled)
                     .AppendWhen(currentCropProvider.Enabled,
@@ -333,6 +334,15 @@ namespace projectFrameCut.DraftStuff
                                 break;
                         }
 
+                        handler?.Invoke(s, e);
+                        return;
+                    }
+
+                    if (e.Id == "opacity")
+                    {
+                        clip.Opacity = Math.Clamp(Convert.ToSingle(e.Value), 0, 1);
+                        if (clip.EffectProviders?.Values.OfType<ClipArgumentProvider>().SingleOrDefault() is { } arguments)
+                            arguments.RestoreStaticValues(arguments.StaticValues.Where(p => p.Key != nameof(IClip.Opacity)).ToDictionary());
                         handler?.Invoke(s, e);
                         return;
                     }

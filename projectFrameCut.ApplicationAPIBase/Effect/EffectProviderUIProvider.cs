@@ -26,8 +26,7 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
 
         /// <summary>
         /// Returns the static display configuration for the given provider, including thumbnail sources
-        /// and localization keys. The default implementation uses key conventions and the thumbnail
-        /// mapping table.
+        /// and localization keys. The default implementation uses key conventions and matching sample files.
         /// </summary>
         public EffectProviderDisplayItem GetDisplayItem(IEffectProvider source) => EffectProviderDisplayDefaults.BuildDefault(source);
 
@@ -67,11 +66,14 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
 
             source.InFields.TryGetValue(fieldId, out var descriptor);
             if (descriptor is null) source.GetOutputFields().TryGetValue(fieldId, out descriptor);
-            nameKey ??= descriptor?.LocalizedNameKey ?? $"_{fieldId}";
-            descKey ??= $"Description_Field_{source.TypeName}_{fieldId}";
+            nameKey ??= descriptor?.LocalizedNameKey ?? $"Effect_{source.TypeName}_{fieldId.Replace('.', '_')}";
 
-            var name = EffectProviderDisplayDefaults.ResolveLocalized(nameKey, descriptor?.DisplayName ?? fieldId, locate);
-            var desc = EffectProviderDisplayDefaults.ResolveLocalized(descKey, "", locate);
+            var name = EffectProviderDisplayDefaults.ResolveLocalized(nameKey,
+                EffectProviderDisplayDefaults.ResolveLocalized($"_{fieldId}", descriptor?.DisplayName ?? fieldId, locate), locate);
+            var desc = EffectProviderDisplayDefaults.ResolveLocalized($"Description_Field_{source.TypeName}_{fieldId}",
+                descriptor?.Remarks ?? source.Fields.GetValueOrDefault(fieldId)?.Remarks ?? "", locate);
+            descKey ??= descriptor?.LocalizedNameKey is { } contextualKey ? "Description_" + contextualKey : null;
+            if (descKey is not null) desc = EffectProviderDisplayDefaults.ResolveLocalized(descKey, desc, locate);
             return (name, desc);
         }
     }

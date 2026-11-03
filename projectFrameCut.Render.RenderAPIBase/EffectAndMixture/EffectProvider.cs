@@ -60,8 +60,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public EffectTarget Target { get; }
 
-        public IReadOnlyList<Stage> SupportedStages { get; }
-        public Stage Stage { get; set; }
+        public IReadOnlyList<EffectStage> SupportedStages { get; }
+        public EffectStage Stage { get; set; }
 
         /// <summary>
         /// Determine whether this effect is enabled.
@@ -270,6 +270,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static string FieldTypeToParamType(EffectArgumentFieldType fieldType)
         {
             if (fieldType.HasFlag(EffectArgumentFieldType.Any)) return "object";
+            if (fieldType.BaseType() == EffectArgumentFieldType.CustomType) return "object";
             if (fieldType.IsVector()) return nameof(projectFrameCut.Drawing.Vector.VectorPicture);
             if (fieldType.IsPicture()) return nameof(IPicture);
             if (fieldType.BaseType() == EffectArgumentFieldType.AudioSample) return "object";

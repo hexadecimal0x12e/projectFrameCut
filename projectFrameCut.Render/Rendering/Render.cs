@@ -1,4 +1,4 @@
-using projectFrameCut.Render.Contracts;
+﻿using projectFrameCut.Render.Contracts;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base.ReadWriteConvert;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -101,7 +101,6 @@ namespace projectFrameCut.Render.Rendering
         public int MaximumHDRBrightness { get; set; } = 1000;
 
         Dictionary<Guid, int> PerClipHDRBrightness = new();
-        Dictionary<Guid, bool> IsClipGeneratedByAI = new();
 
         public event Action<double, TimeSpan>? OnProgressChanged;
         public event Action<long, long>? OnHashPreparationProgressChanged;
@@ -347,8 +346,6 @@ namespace projectFrameCut.Render.Rendering
                         () => InitializeClip(clip)));
                     PerClipHDRBrightness[clip.Id] = clip.ExtraData.TryGetValue("HDRBrightness", out var brightness)
                         ? Convert.ToInt32(brightness) : SDRClipsBrightnessInHDRMode;
-                    IsClipGeneratedByAI[clip.Id] = clip.ExtraData.TryGetValue("IsAI", out var ai) &&
-                        (ai is bool b ? b : bool.TryParse(ai?.ToString(), out var value) && value);
                 }
                 foreach (var worker in clipWorkers.Values)
                     worker.Dependencies = Timeline.CollectHashDependencies(Clips, worker.Clip, new HashSet<Guid> { worker.Clip.Id }).ToArray();
@@ -372,7 +369,7 @@ namespace projectFrameCut.Render.Rendering
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public async Task GoRender(CancellationToken token, IPicture? cover = null)
         {
-            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples);
+            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples, TotalProjectFrames > 0 ? TotalProjectFrames : AudioSamples?.TotalProjectFrames ?? Duration);
             using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
             using var registration = cancellation.Token.Register(() =>
             {
@@ -732,7 +729,7 @@ namespace projectFrameCut.Render.Rendering
                     clip.TargetY,
                     clip.TargetWidth > 0 ? ScaleDimensionToTarget(clip.TargetWidth, layoutRelativeWidth, TargetWidth) : TargetWidth,
                     clip.TargetHeight > 0 ? ScaleDimensionToTarget(clip.TargetHeight, layoutRelativeHeight, TargetHeight) : TargetHeight,
-                    false, clip.Rotation);
+                    false, clip.Rotation, clip.Opacity);
                 bool preserveAspect = true;
 
                 if (EffectCache.TryGetValue(clip.Id, out var effects) && effects is not null)
@@ -783,37 +780,14 @@ namespace projectFrameCut.Render.Rendering
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
                                     var pos = FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight));
                                     preserveAspect &= cp.PreserveAspectRatio;
-                                    if (pos.IsDelta)
-                                    {
-                                        targetPos = new ClipPositionTuple(
-                                            targetPos.TargetX + pos.TargetX,
-                                            targetPos.TargetY + pos.TargetY,
-                                            targetPos.TargetWidth + pos.TargetWidth,
-                                            targetPos.TargetHeight + pos.TargetHeight,
-                                            false, targetPos.Rotation + pos.Rotation);
-                                    }
-                                    else
-                                    {
-                                        targetPos = pos;
-                                    }
+                                    targetPos = targetPos.Apply(pos);
                                     continue;
 
                                 case EffectType.ClipPositionProvider:
                                     if (item is not IClipPositionProvider p) goto notdefined;
-                                    var pos1 = FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(clip, TargetWidth, TargetHeight));
-                                    if (pos1.IsDelta)
-                                    {
-                                        targetPos = new ClipPositionTuple(
-                                            targetPos.TargetX + pos1.TargetX,
-                                            targetPos.TargetY + pos1.TargetY,
-                                            targetPos.TargetWidth + pos1.TargetWidth,
-                                            targetPos.TargetHeight + pos1.TargetHeight,
-                                            false, targetPos.Rotation + pos1.Rotation);
-                                    }
-                                    else
-                                    {
-                                        targetPos = pos1;
-                                    }
+                                    var pos1 = FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(clip, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight));
+                                    preserveAspect &= p.PreserveAspectRatio;
+                                    targetPos = targetPos.Apply(pos1);
                                     continue;
                                 case EffectType.NonIPictureOutputValueProvider:
                                     throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a NonIPictureOutputValueProvider and should have been handled in the EffectBindingHelper.RebuildAllEffects or dynamically in the dynamic pipeline. This indicates a logic error.");
@@ -868,28 +842,13 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else if (item is IClipPositionProvider p)
                         {
-                            (var x, var y, var w, var h, bool delta, float rotation) = FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(clip, TargetWidth, TargetHeight));
-                            if (delta)
-                            {
-                                targetPos = new ClipPositionTuple(targetPos.TargetX + x, targetPos.TargetY + y, targetPos.TargetWidth + w, targetPos.TargetHeight + h, false, targetPos.Rotation + rotation);
-                            }
-                            else
-                            {
-                                targetPos = new(x, y, w, h, false, rotation);
-                            }
+                            targetPos = targetPos.Apply(FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(clip, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight)));
+                            preserveAspect &= p.PreserveAspectRatio;
                         }
                         else if (item is IContinuousClipPositionProvider cp)
                         {
-                            (var x, var y, var w, var h, bool delta, float rotation) = FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight));
+                            targetPos = targetPos.Apply(FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight)));
                             preserveAspect &= cp.PreserveAspectRatio;
-                            if (delta)
-                            {
-                                targetPos = new ClipPositionTuple(targetPos.TargetX + x, targetPos.TargetY + y, targetPos.TargetWidth + w, targetPos.TargetHeight + h, false, targetPos.Rotation + rotation);
-                            }
-                            else
-                            {
-                                targetPos = new(x, y, w, h, false, rotation);
-                            }
                         }
                         else if (item is IValueProviderEffect)
                         {
@@ -908,7 +867,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                 }
 
-                clip.EffectStagePlan?.Complete(clip, Stage.Picture, targetFrame);
+                clip.EffectStagePlan?.Complete(clip, EffectStage.Render, targetFrame);
                 if (UseHDR)
                 {
                     using var hdrTiming = RenderFrameDiagnostics.Current?.Measure("HDR conversion");
@@ -973,7 +932,7 @@ namespace projectFrameCut.Render.Rendering
         // Source-dependent composition (masks and single-frame requests) stays in Renderer.
         private IPicture Composite(IEnumerable<RenderClipContent?> clips, uint frameIndex, CancellationToken token)
         {
-            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples);
+            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples, TotalProjectFrames > 0 ? TotalProjectFrames : AudioSamples?.TotalProjectFrames ?? Duration);
             using var endpoints = ClipValuePassThrough.Open(Clips, frameIndex, TargetWidth, TargetHeight,
                 ProjectRelativeWidth, ProjectRelativeHeight, _ppb, token, source =>
                 {
@@ -1074,8 +1033,9 @@ namespace projectFrameCut.Render.Rendering
         private IDisposable EnterComposerRuntime()
         {
             var runtime = effectRuntime.Enter();
+            var project = ValueProviderFrameContext.PushProject(TotalProjectFrames > 0 ? TotalProjectFrames : AudioSamples?.TotalProjectFrames ?? Duration);
             var progress = EnterComposerProgress("Render composer");
-            return new RenderInputLease(() => { progress.Dispose(); runtime.Dispose(); });
+            return new RenderInputLease(() => { progress.Dispose(); project.Dispose(); runtime.Dispose(); });
         }
 
         private IDisposable EnterComposerOutput()
@@ -1270,7 +1230,7 @@ namespace projectFrameCut.Render.Rendering
 
         private RenderClipContent? RenderClip(IClip clip, uint frameIndex, CancellationToken token)
         {
-            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples);
+            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples, TotalProjectFrames > 0 ? TotalProjectFrames : AudioSamples?.TotalProjectFrames ?? Duration);
             using var diagnostic = RenderFrameDiagnostics.Current?.Measure($"Clip {clip.Name} ({clip.Id}), frame {frameIndex}", "Clip");
             EnsureClipDependencies(clip, frameIndex, token);
             if (FrameHashContext.Current is { } context)
@@ -1351,8 +1311,6 @@ namespace projectFrameCut.Render.Rendering
                     if (!frame.CanBeDisposed) frame = DynamicEffectGraph.CopyPicture(frame);
                     if (frame.Width != width || frame.Height != height)
                         frame = ReplaceFrame(frame, Resize(frame, width, height, true));
-                    if (IsClipGeneratedByAI.GetValueOrDefault(clip.Id))
-                        frame = ReplaceFrame(frame, EffectProcessing.ProcessAIWatermark(frame, frameIndex));
                 }
             }
             catch (Exception ex) when (UseClipInitializationFallback && ex is not OperationCanceledException)
@@ -1726,7 +1684,7 @@ namespace projectFrameCut.Render.Rendering
             Interlocked.Exchange(ref _currentFps, fps);
             var eta = GetEstimatedRemaining((EnableDeferredComposition ? 2d : 1d) * Duration - completedWork, fps);
             OnProgressChanged?.Invoke(prog, eta);
-            uint projectFrames = TotalProjectFrames > 0 ? TotalProjectFrames : Duration;
+            uint projectFrames = TotalProjectFrames > 0 ? TotalProjectFrames : AudioSamples?.TotalProjectFrames ?? Duration;
             double globalProgress = projectFrames > 0
                 ? Math.Clamp((CompletedFramesBeforeChunk + prog * Duration) / projectFrames, 0, 1)
                 : prog;

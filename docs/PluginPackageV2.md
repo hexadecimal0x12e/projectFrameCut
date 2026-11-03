@@ -57,6 +57,21 @@ dependencies must always be present in the signed file list.
 The reference packer is `tools/PluginPackageUtility`. It keeps the signing private key
 outside the application and generates the package files and signatures described above.
 
+## Plugin trust options
+
+Settings > Extensibility > Advanced includes controls to import or remove custom PEM/DER
+CA certificates in both Debug and Release builds. Custom roots are stored in the application's
+secure storage. With validation enabled, custom-root packages still require valid signatures
+and publisher approval. The option to disable plugin trust validation is available only in Debug builds.
+
+Disabling validation skips certificate, signature, file hash, revocation, and publisher
+trust checks for user and project plugins. Reports return `Bypassed`, and installing a
+bypassed package does not grant publisher trust. Managed packages still need valid
+`metadata.json` and `<PluginID>.dll.enc`, decrypted with the metadata's `PluginKey`;
+manifest, certificate chain, and signature files can be omitted. Package/API compatibility,
+safe extraction, and isolation remain enforced. Reload plugins or restart to apply changes
+to already loaded plugins. Release builds always enforce trust validation.
+
 ## External backend package v3
 
 Format version 3 represents a pure external backend and does not contain an encrypted

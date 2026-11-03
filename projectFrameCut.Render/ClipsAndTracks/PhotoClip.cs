@@ -46,7 +46,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
-        public IReadOnlyList<Stage> SupportedStages => EffectStages.Picture;
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Picture;
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectStagePlan? EffectStagePlan { get; set; }
         public int TargetWidth { get; set; }
@@ -54,8 +54,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields => ClipArgumentHandler.SourceCropFields;
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public ISourceReplacementEffect? AlternativeSource { get; set; }

@@ -71,9 +71,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         public abstract EffectTarget Target { get; }
 
-        public abstract IReadOnlyList<Stage> SupportedStages { get; }
-        private Stage? stage;
-        public virtual Stage Stage
+        public abstract IReadOnlyList<EffectStage> SupportedStages { get; }
+        private EffectStage? stage;
+        public virtual EffectStage Stage
         {
             get => stage ?? SupportedStages[0];
             set => stage = SupportedStages.Contains(value) ? value
@@ -141,6 +141,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                     object value = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null
                         ? raw
                         : ParseDefault(desc);
+                    if (desc.TypeContract is not null) value = EffectFieldTypes.ConvertInput(desc.FieldType, value)!;
                     var bindingKey = BoundParameterKey(desc.Id);
                     if (_fieldValues.TryGetValue(bindingKey, out var bsRaw) && bsRaw is not null)
                     {
@@ -149,6 +150,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         {
                             Id = desc.Id,
                             FieldType = desc.FieldType,
+                            TypeContract = desc.TypeContract,
                             DataFormat = _fieldDataFormats.GetValueOrDefault(desc.Id) ?? desc.DataFormat,
                             BoundProviderId = boundSourceId,
                             StaticFallbackValue = value,
@@ -165,6 +167,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         {
                             Id = desc.Id,
                             FieldType = desc.FieldType,
+                            TypeContract = desc.TypeContract,
                             DataFormat = _fieldDataFormats.GetValueOrDefault(desc.Id) ?? desc.DataFormat,
                             Value = value,
                             DefaultValue = desc.DefaultValue,
@@ -240,16 +243,19 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Define the input fields (anchors) of the effect. Defaults to a single IPicture input.
         /// </summary>
-        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() 
-            => new Dictionary<string, EffectArgumentFieldDescriptor>
-            {
-                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, Stage.GetContentType(), "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
-            };
+        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() => new Dictionary<string, EffectArgumentFieldDescriptor>
+        {
+            [PrimaryInputAnchorKey] = Field(PrimaryInputAnchorKey, ContentType, ""),
+        };
 
-        /// <summary>
-        /// Define the output field (anchor) of the effect. Defaults to an IPicture output.
-        /// </summary>
-        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, Stage.GetContentType(), "", remarks: "The output of the effect. This is a mandatory output.");
+        private EffectArgumentFieldType ContentType => TypeOfEffect switch
+        {
+            EffectType.ClipPositionProvider or EffectType.ContinuousClipPositionProvider => EffectArgumentFieldType.SizeAndPosition,
+            EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect => EffectArgumentFieldType.AudioSample,
+            _ => Stage.GetContentType(),
+        };
+
+        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, ContentType, "");
 
         /// <summary>
         /// A compact helper for subclasses to declare a settable argument field.
@@ -382,7 +388,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Stateful build: resolves the <see cref="ImplementTypeParameterKey"/> from the current
         /// <see cref="_fieldValues"/> and creates the effect(s). Returns the effect stack in render order.
         /// </summary>
-        public IEffect[] Build()
+        public virtual IEffect[] Build()
         {
             var imp = ResolveImplementType(SupportedImplementTypes(), DefaultImplementType);
             var p = BuildDynamicParameters();
@@ -428,6 +434,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                     {
                         Id = desc.Id,
                         FieldType = desc.FieldType,
+                        TypeContract = desc.TypeContract,
                         BoundProviderId = boundSourceId,
                         StaticFallbackValue = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null ? raw : ParseDefault(desc),
                     };
@@ -438,7 +445,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                     var value = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null
                         ? raw
                         : ParseDefault(desc);
-                    result[desc.Id] = value; // static bare value
+                    result[desc.Id] = desc.TypeContract is null ? value : EffectFieldTypes.ConvertInput(desc.FieldType, value)!;
                 }
             }
             return result;
@@ -462,6 +469,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         private static object ParseDefault(EffectArgumentFieldDescriptor desc)
         {
+            if (desc.TypeContract is not null) return EffectFieldTypes.DefaultValue(desc)!;
             if (desc.FieldType.BaseType() == EffectArgumentFieldType.AudioSample) return null!;
             if (desc.FieldType.HasFlag(EffectArgumentFieldType.Any)) return desc.DefaultValue;
             var baseType = desc.FieldType & (EffectArgumentFieldType)0x3FF;

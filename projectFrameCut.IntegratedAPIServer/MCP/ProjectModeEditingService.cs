@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -173,7 +173,6 @@ internal static class ProjectModeEditingService
         clip.IsInfiniteLength = infinite;
         clip.TargetWidth = Math.Max(0, asset.Width);
         clip.TargetHeight = Math.Max(0, asset.Height);
-        if (asset.IsAIGenerated) clip.MetaData!["IsAI"] = true;
         return AddClip(workspace, clip);
     }
 
@@ -430,10 +429,10 @@ internal static class ProjectModeEditingService
         {
             [target.Id] = new Dictionary<string, string>(target.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = source },
         });
-        if (source is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
+        if (ValueProviderFrameContext.IsBuiltInSource(source))
         {
             if (!target.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input)
-                || !EffectFieldTypes.AreCompatible(EffectArgumentFieldType.Numeric, types.GetInputType(target, EffectProviderAnchorExtensions.InputKey)))
+                || !EffectFieldTypes.AreCompatible(ValueProviderFrameContext.SourceType(source), types.GetInputType(target, EffectProviderAnchorExtensions.InputKey)))
                 throw new ArgumentException($"Built-in source cannot feed the primary input of '{target.Id}'.");
         }
         else if (source != IEffectProvider.InputAnchorGUID.ToString() && source != IEffectProvider.NoConnectionGUID.ToString())
@@ -474,8 +473,8 @@ internal static class ProjectModeEditingService
         if (targetField.FieldType.HasFlag(EffectArgumentFieldType.CannotBeDynamic))
             throw new ArgumentException($"Field '{fieldId}' does not support dynamic bindings.");
         EffectArgumentFieldType sourceType;
-        if (source is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
-            sourceType = EffectArgumentFieldType.Numeric;
+        if (ValueProviderFrameContext.IsBuiltInSource(source))
+            sourceType = ValueProviderFrameContext.SourceType(source);
         else if (source == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.GetPipeline().GetContentType();
         else
         {
@@ -492,7 +491,7 @@ internal static class ProjectModeEditingService
         });
         if (EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var resolvedSourceId, out var resolvedOutputId)
             && providers.TryGetValue(resolvedSourceId, out var resolvedSource)) sourceType = types.GetOutputType(resolvedSource, resolvedOutputId);
-        if (!sourceType.HasFlag(EffectArgumentFieldType.Any) && !ArePortTypesCompatible(sourceType, types.GetInputType(target, fieldId)))
+        if (!types.IsBindingCompatible(target, fieldId, source))
             throw new ArgumentException($"Port type '{sourceType}' cannot be bound to '{targetField.FieldType}'.");
         target.SetFieldBinding(fieldId, source);
         CommitProviders(clip, providers);
@@ -597,6 +596,7 @@ internal static class ProjectModeEditingService
                     ["TargetX"] = item.Position.TargetX, ["TargetY"] = item.Position.TargetY,
                     ["TargetWidth"] = item.Position.TargetWidth, ["TargetHeight"] = item.Position.TargetHeight,
                     ["IsDelta"] = item.Position.IsDelta, ["Rotation"] = item.Position.Rotation,
+                    ["Opacity"] = item.Position.Opacity,
                 });
                 return step;
             }).ToArray();
@@ -856,7 +856,8 @@ internal static class ProjectModeEditingService
                 .Where(item => !item.Value.FieldType.IsContent())
                 .Where(item => GetFieldValue(item.Value) is not projectFrameCut.Drawing.Base.IPicture and not projectFrameCut.Drawing.Vector.VectorPicture)
                 .ToDictionary(item => item.Key, item => (item.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)
-                    ? GetFieldValue(item.Value) : EffectParamConvert.Normalize(GetFieldValue(item.Value))) ?? new object()),
+                    ? GetFieldValue(item.Value) : EffectParamConvert.Normalize(GetFieldValue(item.Value)))
+                    ?? (item.Value.TypeContract is null ? new object() : null!)),
             MetaData = provider.MetaData is { Count: > 0 } ? new(provider.MetaData) : null,
         };
 
@@ -875,8 +876,8 @@ internal static class ProjectModeEditingService
             {
                 if (!target.Fields.TryGetValue(binding.Key, out var targetField)) continue;
                 EffectArgumentFieldType sourceType;
-                if (binding.Value is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
-                    sourceType = EffectArgumentFieldType.Numeric;
+                if (ValueProviderFrameContext.IsBuiltInSource(binding.Value))
+                    sourceType = ValueProviderFrameContext.SourceType(binding.Value);
                 else if (binding.Value == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.GetPipeline().GetContentType();
                 else if (binding.Value.StartsWith("builtin://", StringComparison.Ordinal))
                 {
@@ -894,7 +895,7 @@ internal static class ProjectModeEditingService
                 else continue;
                 if (targetField.FieldType.HasFlag(EffectArgumentFieldType.CannotBeDynamic))
                     yield return new BindingDiagnostic(target.Id, "FieldCannotBeDynamic", $"Field '{binding.Key}' does not support dynamic bindings.");
-                if (!sourceType.HasFlag(EffectArgumentFieldType.Any) && !ArePortTypesCompatible(sourceType, types.GetInputType(target, binding.Key)))
+                if (!types.IsBindingCompatible(target, binding.Key, binding.Value))
                     yield return new BindingDiagnostic(target.Id, "IncompatibleFieldPort", $"Field '{binding.Key}' cannot accept source type '{sourceType}'.");
             }
 
@@ -982,25 +983,25 @@ internal static class ProjectModeEditingService
             configuredImplementType = provider.MetaData is not null && provider.MetaData.TryGetValue(EffectProviderBase.ImplementTypeParameterKey, out object? configuredImplementType)
                 ? configuredImplementType?.ToString()
                 : null,
-            inputPorts = provider.InFields.Values.Select(field => DescribeDescriptor(field, types.GetInputType(provider, field.Id))).ToArray(),
-            outputPort = provider is IMultipleOutputEffectProvider ? null : DescribeDescriptor(provider.OutField, types.GetOutputType(provider)),
-            outputPorts = provider.GetOutputFields().Values.Select(field => DescribeDescriptor(field, types.GetOutputType(provider, field.Id))).ToArray(),
+            inputPorts = provider.InFields.Values.Select(field => DescribeDescriptor(field, types.GetInputType(provider, field.Id), types.GetInputContract(provider, field.Id))).ToArray(),
+            outputPort = provider is IMultipleOutputEffectProvider ? null : DescribeDescriptor(provider.OutField, types.GetOutputType(provider), types.GetOutputContract(provider)),
+            outputPorts = provider.GetOutputFields().Values.Select(field => DescribeDescriptor(field, types.GetOutputType(provider, field.Id), types.GetOutputContract(provider, field.Id))).ToArray(),
             finalOutputFieldId = provider.GetFinalOutputFieldId(),
             fields = provider.Fields.Values.Select(field => new
             {
                 field.Id, fieldType = field.FieldType.ToString(), value = GetFieldValue(field),
                 resolvedFieldType = types.GetInputType(provider, field.Id).HasFlag(EffectArgumentFieldType.Any) ? null : types.GetInputType(provider, field.Id).ToString(),
                 bindingSource = provider.TryGetFieldBinding(field.Id, out string source) ? source : null,
-                field.DefaultValue, field.MinValue, field.MaxValue, field.PresetOptions, field.Remarks,
+                TypeContract = types.GetInputContract(provider, field.Id), field.DefaultValue, field.MinValue, field.MaxValue, field.PresetOptions, field.Remarks,
             }).ToArray(),
             anchorsBindingState = provider.AnchorsBindingState,
             metadata = provider.MetaData,
         };
     }
 
-    private static object DescribeDescriptor(EffectArgumentFieldDescriptor descriptor, EffectArgumentFieldType type)
+    private static object DescribeDescriptor(EffectArgumentFieldDescriptor descriptor, EffectArgumentFieldType type, EffectPortTypeContract? contract)
         => new { descriptor.Id, fieldType = descriptor.FieldType.ToString(), resolvedFieldType = type.HasFlag(EffectArgumentFieldType.Any) ? null : type.ToString(),
-            descriptor.TypeName, descriptor.DefaultValue, descriptor.MinValue, descriptor.MaxValue, descriptor.PresetOptions, descriptor.Remarks };
+            descriptor.TypeName, TypeContract = contract, descriptor.DefaultValue, descriptor.MinValue, descriptor.MaxValue, descriptor.PresetOptions, descriptor.Remarks };
 
     private static object? GetFieldValue(IEffectArgumentField field) => field switch
     {
@@ -1023,6 +1024,7 @@ internal static class ProjectModeEditingService
             fields[fieldId] = new StaticEffectArgumentField
             {
                 Id = fieldId, FieldType = field.FieldType, Value = converted,
+                TypeContract = field.TypeContract,
                 DefaultValue = field.DefaultValue, MinValue = field.MinValue, MaxValue = field.MaxValue,
                 PresetOptions = field.PresetOptions, Remarks = field.Remarks,
             };
@@ -1059,6 +1061,13 @@ internal static class ProjectModeEditingService
 
     private static object ConvertFieldValue(IEffectArgumentField field, JsonElement raw)
     {
+        if (field.TypeContract is { } contract)
+        {
+            var customValue = EffectFieldTypes.ConvertInput(field.FieldType, raw);
+            if (customValue is not CustomEffectPortValue custom || !string.Equals(custom.ContractId, contract.Id, StringComparison.Ordinal))
+                throw new ArgumentException($"Field '{field.Id}' requires a value with port contract '{contract.Id}'.");
+            return custom;
+        }
         if (field.FieldType.HasFlag(EffectArgumentFieldType.Any))
         {
             if (raw.ValueKind == JsonValueKind.Null) throw new ArgumentException($"Field '{field.Id}' cannot be null.");

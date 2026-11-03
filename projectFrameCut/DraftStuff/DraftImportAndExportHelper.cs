@@ -71,6 +71,16 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
         }
 
 #if !HEADLESS
+        internal static void ApplyTextStyleEffects(ClipElementUI element, ClipDraftDTO dto, int width, int height)
+        {
+            element.Effects = dto.Effects?.ToDictionary(e => string.IsNullOrWhiteSpace(e.Name) ? Guid.NewGuid().ToString() : e.Name,
+                e => PluginManager.CreateEffect(e, width, height)) ?? new();
+            element.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, null, out var diagnostics);
+            if (diagnostics.Count != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
+            ClipInfoBuilder.EnsureClipArgumentProvider(element, null);
+            ClipInfoBuilder.RebuildAllEffects(element);
+        }
+
         private static void InitializeEffects(ClipElementUI element, ClipDraftDTO dto, int relativeWidth, int relativeHeight)
         {
             try
@@ -82,6 +92,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     element.DeclaredStages = owner.SupportedStages.ToArray();
                 }
                 element.Rotation = dto.Rotation;
+                element.Opacity = dto.Opacity;
                 element.Effects = dto.Effects?.ToDictionary(
                     effect => string.IsNullOrWhiteSpace(effect.Name) ? $"Effect-{Guid.NewGuid()}" : effect.Name,
                     effect => PluginManager.CreateEffect(effect, relativeWidth, relativeHeight))
@@ -325,6 +336,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     TargetX = elem.TargetX,
                     TargetY = elem.TargetY,
                     Rotation = elem.Rotation,
+                    Opacity = elem.Opacity,
                     StartingX = elem.StartingX,
                     StartingY = elem.StartingY,
                     MetaData = normalizedMeta,
@@ -401,6 +413,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 TargetX = elem.TargetX,
                 TargetY = elem.TargetY,
                 Rotation = elem.Rotation,
+                Opacity = elem.Opacity,
                 StartingX = elem.StartingX,
                 StartingY = elem.StartingY,
                 MetaData = normalizedMeta2,
@@ -415,12 +428,6 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             return elem.Effects?.Where(kv => !DynamicEffectBindings.IsGraphEffect(kv.Value)).Select(kv =>
             {
                 var effect = kv.Value;
-                if (kv.Key == "__Internal_Rotation__" && effect is RotationEffect_IPicture rotation)
-                {
-                    rotation.Parameters ??= new();
-                    rotation.Parameters.TryAdd("Angle", rotation.Angle);
-                    rotation.Parameters.TryAdd("ExpandCanvas", rotation.ExpandCanvas);
-                }
                 return new EffectAndMixtureJSONStructure
                 {
                     Name = kv.Key,

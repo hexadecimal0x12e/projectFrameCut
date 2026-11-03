@@ -116,6 +116,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 EffectProviders = track.EffectProviders
             };
             track.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip, syncClipState: false);
+            clip.EffectsInstances = track.EffectsInstances;
             track.EffectStagePlan = clip.EffectStagePlan;
         }
 
@@ -186,7 +187,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
     public class NormalSoundTrack : ISoundTrack
     {
-        [JsonIgnore] public IReadOnlyList<Stage> SupportedStages => EffectStages.Audio;
+        [JsonIgnore] public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Audio;
         [JsonIgnore] public IEffectStagePlan? EffectStagePlan { get; set; }
         private bool disposedValue;
         private ProjectExternalSourceHost? externalSourceHost;
@@ -285,7 +286,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
-        public IReadOnlyList<Stage> SupportedStages => EffectStages.Audio;
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Audio;
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }
@@ -297,6 +298,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -310,6 +312,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            EffectHelper.ReleaseClipEffects(this);
             SoundTrack?.Dispose();
         }
 
@@ -356,6 +359,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            EffectHelper.ResolveClipEffects(this);
         }
     }
 }

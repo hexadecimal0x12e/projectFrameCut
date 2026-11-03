@@ -66,7 +66,6 @@ public class InternalPluginBase : IPluginBase
         ["Basic"] = () => new BasicTextStyleProvider(),
         ["Title"] = () => new TitleTextStyleProvider(),
         ["Pinyin"] = () => new PinyinTextStyleProvider(),
-        ["LlmTranslate"] = () => new LlmTranslateTextStyleProvider(),
         ["OldTextClipEntry"] = () => new OldTextClipEntryTextStyleProvider(),
     };
 
@@ -83,8 +82,7 @@ public class InternalPluginBase : IPluginBase
         { "Jelly", () => new JellyEffectProvider() },
         { "Blur", () => new BlurEffectProvider() },
         { "Crop", () => new CropEffectProvider() },
-        { "Place", () => new PlaceEffectProvider() },
-        { "Resize", () => new ResizeEffectProvider() },
+        { "ClipPosition", () => new ClipPositionProvider() },
         { "Flip", () => new FlipEffectProvider() },
         { "Sharpen", () => new SharpenEffectProvider() },
         { "Vignette", () => new VignetteEffectProvider() },
@@ -92,6 +90,7 @@ public class InternalPluginBase : IPluginBase
         { "ColorAdjustment", () => new ColorAdjustmentEffectProvider() },
         { "ClassicSpeedVarianceProvider", () => new ClassicSpeedVarianceProviderEffectProvider() },
         { "ClassicOverlayMixture", () => new ClassicOverlayMixtureProvider() },
+        { RenderOutputProvider.ProviderTypeName, () => new RenderOutputProvider() },
         { MixtureSourceProvider.SelfTypeName, () => new MixtureSourceProvider(false) },
         { MixtureSourceProvider.UnderTypeName, () => new MixtureSourceProvider(true) },
         { "ProgressPlacer", () => new ProgressPlacerProvider() },
@@ -117,7 +116,6 @@ public class InternalPluginBase : IPluginBase
         { "Oscilloscope", () => new OscilloscopeEffectProvider() },
         { "ClipValueOutput", () => new ClipValueExportProvider() },
         { "ClipValueInput", () => new ClipValueImportProvider() },
-        { "Rotation", () => new RotationEffectProvider() },
         { "BlendModeMixture", () => new BlendModeMixtureProvider { ProviderTypeName = "BlendModeMixture" } },
         { "AddMixture", () => new BlendModeMixtureProvider { MixtureType = "Add" } },
         { "SubtractMixture", () => new BlendModeMixtureProvider { MixtureType = "Subtract" } },
@@ -137,7 +135,7 @@ public class InternalPluginBase : IPluginBase
             [new("AudioFade", EffectImplementType.NotSpecified)] = () => new AudioFadeTransform(),
             [new("AudioCrossfade", EffectImplementType.NotSpecified)] = () => new AudioCrossfadeTransform(),
             [new("ExternalSourceTransform", EffectImplementType.IPicture)] = () => new ExternalSourceTransform(),
-            [new("Place", EffectImplementType.IPicture)] = () => new PlaceEffect_IPicture(),
+            [new("ClipPosition", EffectImplementType.NotSpecified)] = () => new ClipPositionEffect(),
             [new("RemoveColor", EffectImplementType.IPicture)] = () => new RemoveColorEffect_IPicture(),
             [new("ClassicOverlayMixture", EffectImplementType.IPicture)] = () => new ClassicOverlayMixture(),
             [new("AddMixture", EffectImplementType.IPicture)] = () => new AddMixture(),
@@ -151,13 +149,11 @@ public class InternalPluginBase : IPluginBase
             [new("Blur", EffectImplementType.IPicture)] = () => new BlurEffect_IPicture(),
             [new("Crop", EffectImplementType.IPicture)] = () => new CropEffect_IPicture(),
             [new("ProgressCrop", EffectImplementType.IPicture)] = () => new ProgressCropper_IPicture(),
-            [new("Resize", EffectImplementType.IPicture)] = () => new ResizeEffect_IPicture(),
             [new("Flip", EffectImplementType.IPicture)] = () => new FlipEffect_IPicture(),
             [new("Sharpen", EffectImplementType.IPicture)] = () => new SharpenEffect_IPicture(),
             [new("Vignette", EffectImplementType.IPicture)] = () => new VignetteEffect_IPicture(),
             [new("FadeOpacity", EffectImplementType.IPicture)] = () => new FadeOpacityEffect_IPicture(),
             [new("ColorAdjustment", EffectImplementType.IPicture)] = () => new ColorAdjustmentEffect_IPicture(),
-            [new("Rotation", EffectImplementType.IPicture)] = () => new RotationEffect_IPicture(),
             [new("ZoomIn", EffectImplementType.IPicture)] = () => new ZoomInContinuousEffect(),
             [new("TextFadeIn", EffectImplementType.IPicture)] = () => new TextFadeInContinuousEffect(),
             [new("Jitter", EffectImplementType.NotSpecified)] = () => new JitterEffect(),
@@ -342,9 +338,11 @@ public class InternalPluginBase : IPluginBase
     string? IPluginBase.ReadLocalizationItem(string key, string locate)
     {
         if (key == "DisplayName_Transform_Fade" && locate == "zh-CN") return "淡入淡出";
-        var loc = ISimpleLocalizerBase_PropertyPanel.GetMapping().FirstOrDefault(x => x.Key == locate, ISimpleLocalizerBase_PropertyPanel.GetMapping().First()).Value;
-        if (!loc.IsItemExist(key)) return null;
-        return loc.DynamicLookup(key, key);
+        var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+        var loc = map.GetValueOrDefault(locate) ?? map.First().Value;
+        var text = loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : null;
+        if (!string.IsNullOrEmpty(text) && !text.StartsWith("Unset localization item:", StringComparison.Ordinal)) return text;
+        return map.First().Value.IsItemExist(key) ? map.First().Value.DynamicLookup(key, key) : null;
     }
 
     bool IPluginBase.OnLoaded(out string FailedReason)

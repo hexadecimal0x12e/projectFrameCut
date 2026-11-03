@@ -30,7 +30,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 bool isBound = field.IsDynamic;
                 var componentId = ComponentId(provider, field.Id);
                 if (field.FieldType.IsContent() || field.FieldType.HasFlag(EffectArgumentFieldType.Any)
-                    || field.FieldType.BaseType() == EffectArgumentFieldType.AudioSample)
+                    || field.TypeContract is not null
+                    || field.FieldType.BaseType() is EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SizeAndPosition)
                 {
                     panel.AddText(Label(provider, field), componentId);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
@@ -146,7 +147,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             if (isBound && field is DynamicEffectParamField df && df.BoundProviderId is { } boundSource
                 && bindingHost.GetSourceDisplayName(boundSource) is { } sourceName)
             {
-                Microsoft.Maui.Controls.ToolTipProperties.SetText(button, $"Bound to: {sourceName}");
+                Microsoft.Maui.Controls.ToolTipProperties.SetText(button, $"{FieldName(provider, field.Id, true)} ← {sourceName}");
             }
             button.Clicked += async (s, e) => await bindingHost.EditBinding(field.Id);
 
@@ -238,6 +239,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             switch (baseType)
             {
                 case EffectArgumentFieldType.Any:
+                case EffectArgumentFieldType.CustomType when field.TypeContract is not null:
                     convertedValue = value;
                     converted = true;
                     break;
@@ -281,6 +283,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 Id = id,
                 FieldType = field.FieldType,
+                TypeContract = field.TypeContract,
                 Value = convertedValue!,
                 DefaultValue = field.DefaultValue,
                 MinValue = field.MinValue,
@@ -309,11 +312,14 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         private sealed class PresetOptionConverter(string prefix) : IValueConverter
         {
             public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-                PluginManager.GetLocalizationItem(prefix + value, value?.ToString() ?? string.Empty);
+                PresetOptionName(prefix, value);
 
             public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
                 throw new NotSupportedException();
         }
+
+        internal static string PresetOptionName(string prefix, object? value) => PluginManager.GetLocalizationItem(
+            (prefix == "Effect_Jitter_Direction_" ? "_Effect_Jitter_" : prefix) + value, value?.ToString() ?? string.Empty);
 
         private static PropertyPanelItemLabel Label(IEffectProvider provider, IEffectArgumentField field)
         {
@@ -324,15 +330,20 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 && TextClipStyles.Create(from.ToString()!, type.ToString()!) is { } style
                 && style.SettableFields.ContainsKey(id))
                 return TextStyleServices.GetUIProvider(style).GetLocalizedFieldInfo(style, id, PluginManager.CurrentLocale).name;
-            return FieldName(provider, field.Id, true);
+            return FieldLabel(provider, field.Id);
+        }
+
+        internal static PropertyPanelItemLabel FieldLabel(IEffectProvider provider, string id, string? nameKey = null)
+        {
+            var (name, description) = EffectServices.GetUIProvider(provider).GetLocalizedFieldInfo(provider, id, PluginManager.CurrentLocale);
+            if (nameKey is not null) name = PluginManager.GetLocalizationItem(nameKey, name);
+            return string.IsNullOrWhiteSpace(description) ? new SingleLineLabel(name) : new InfoSingleLineLabel(name, description);
         }
 
         internal static string FieldName(IEffectProvider provider, string id, bool isInput, string? fallback = null)
         {
-            var fields = isInput ? provider.InFields : provider.GetOutputFields();
-            fields.TryGetValue(id, out var descriptor);
-            return PluginManager.GetLocalizationItem(descriptor?.LocalizedNameKey
-                ?? $"Effect_{provider.TypeName}_{id.Replace('.', '_')}", descriptor?.DisplayName ?? fallback ?? id);
+            var name = EffectServices.GetUIProvider(provider).GetLocalizedFieldInfo(provider, id, PluginManager.CurrentLocale).name;
+            return name == id ? fallback ?? name : name;
         }
 
         private static string ComponentId(IEffectProvider provider, string fieldId)

@@ -5,9 +5,6 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              x:Class="projectFrameCut.DraftStuff.DraftEffectBindingView">
-    <ContentView.Resources>
-        <x:String x:Key="ClipArgumentsNodeTitle">Clip 参数</x:String>
-    </ContentView.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition x:Name="TopRow" Height="*"/>
@@ -22,6 +19,7 @@
             <Grid.GestureRecognizers>
                 <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated" />
                 <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated" />
+                <TapGestureRecognizer Tapped="OnCanvasTapped" />
             </Grid.GestureRecognizers>
 
             <HorizontalStackLayout x:Name="TopCommandBar" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" Spacing="4" ZIndex="10">
@@ -68,11 +66,15 @@
         <Grid x:Name="RightPanel" Grid.Column="{OnIdiom Phone=0, Default=2}" Grid.ColumnSpan="{OnIdiom Phone=3, Default=1}" Grid.Row="0" RowDefinitions="*, Auto" BackgroundColor="#252526">
 
             <tv:TabbedView Grid.Row="0" x:Name="RightTabView">
-                <tv:TabbedViewItem Header="{l:Localized Key=PropertyPanel}">
+                <tv:TabbedViewItem>
+                    <tv:TabbedViewItem.Header>
+                        <Label x:Name="PropertiesTabHeader" Text="{l:Localized Key=Effect_SourcesAndOutputs}"
+                               TextColor="Black" Margin="8,4" VerticalOptions="Center" HorizontalOptions="Center"/>
+                    </tv:TabbedViewItem.Header>
                     <ScrollView Padding="10" VerticalScrollBarVisibility="Default">
                         <VerticalStackLayout Spacing="10">
+                            <VerticalStackLayout x:Name="SourcesAndOutputsPanel" Spacing="10"/>
                             <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10">
-                                <Label HorizontalOptions="Center" VerticalOptions="Center" Text="{l:Localized Key=DraftPage_PropertyPanel_SelectToContinue}"/>
                             </VerticalStackLayout>
                             <Border Stroke="Transparent" StrokeThickness="1" StrokeShape="RoundRectangle 4" Margin="4">
                                 <Image x:Name="AfterEffectBigPreview" Background="Black" />

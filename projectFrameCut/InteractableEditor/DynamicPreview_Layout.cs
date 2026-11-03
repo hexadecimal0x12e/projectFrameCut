@@ -128,22 +128,6 @@ public sealed partial class DynamicPreview
         return Math.Max(1, (int)Math.Round((double)clipDimension * canvasDimension / projectDimension, MidpointRounding.AwayFromZero));
     }
 
-    private static bool IsAiGeneratedClip(IClip clip)
-    {
-        if (clip.ExtraData is null || !clip.ExtraData.TryGetValue("IsAI", out var raw))
-        {
-            return false;
-        }
-
-        return raw switch
-        {
-            bool value => value,
-            string value when bool.TryParse(value, out var parsed) => parsed,
-            JsonElement value => value.ValueKind == JsonValueKind.True,
-            _ => false,
-        };
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public IReadOnlyList<PreviewRequest> ResolveRequests(IReadOnlyList<IClip>? clips, uint frameIndex, int projectWidth = 0, int projectHeight = 0)
     {

@@ -1,4 +1,4 @@
-using projectFrameCut.Render.Contracts;
+﻿using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Rendering;
 
@@ -37,7 +37,7 @@ public sealed partial class RenderBackendService
                     ChunkIndex = (int)(completed / chunkSize),
                     ChunkCount = (int)(((ulong)request.FrameCount + chunkSize - 1) / chunkSize),
                     CompletedFramesBeforeChunk = completed,
-                    TotalProjectFrames = request.FrameCount,
+                    TotalProjectFrames = session.Duration,
                     DynamicPreviewCacheProjectRoot = session.ProjectRoot,
                     DynamicPreviewCacheProjectWidth = session.Width,
                     DynamicPreviewCacheProjectHeight = session.Height,

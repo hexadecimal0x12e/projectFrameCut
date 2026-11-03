@@ -392,6 +392,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
@@ -452,7 +453,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public DateTime CreatedAt { get; set; }
 
         public Guid CreatedBy { get; set; }
-        public bool IsAIGenerated { get; set; } = false;
 
 
         public int Width { get; set; }

@@ -15,7 +15,7 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
     private static readonly HashSet<string> layoutProperties = new(StringComparer.Ordinal)
     {
         nameof(IClip.TargetX), nameof(IClip.TargetY), nameof(IClip.TargetWidth), nameof(IClip.TargetHeight),
-        nameof(IClip.Rotation), nameof(IClip.LayerIndex), nameof(IClip.SubLayerIndex), nameof(IClip.PositionTuple),
+        nameof(IClip.Rotation), nameof(IClip.Opacity), nameof(IClip.LayerIndex), nameof(IClip.SubLayerIndex), nameof(IClip.PositionTuple),
     };
     private readonly Dictionary<object, object> states = new();
     private readonly HashSet<object> visiting = new();
@@ -43,8 +43,8 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
                 Source = DescribeSource(clip),
                 Arguments = clip.ArgumentFields.Where(p => layout || !layoutProperties.Contains(p.Key))
                     .ToDictionary(p => p.Key, p => p.Value.ReadValue(clip)),
-                Providers = providers.Where(p => p.Enabled && (layout && mixture || p.Stage != Stage.Mixture)
-                        && (p is ClipArgumentProvider or IClipValueEndpointProvider { IsExport: true }
+                Providers = providers.Where(p => p.Enabled && (layout && mixture || p.Stage != EffectStage.Composition)
+                        && (p is ClipArgumentProvider or RenderOutputProvider or IClipValueEndpointProvider { IsExport: true }
                             || p.IsFinalOutputSource()
                             || !DynamicEffectBindings.IsGraphProvider(p) && !p.Target.HasFlag(EffectTarget.ValueProvider)))
                     .OrderBy(p => p.Stage).ThenBy(p => p.Id).Select(p => DescribeProvider(clip, p, layout)).ToArray(),
@@ -203,13 +203,12 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
     private static object? DescribeFallback(object? value) => IsMutableInput(value)
         ? throw new UnhashableInputException() : value;
 
-    private object DescribeStageInput(IClip clip, Stage stage, bool layout) => stage == Stage.SpeedVariance
+    private object DescribeStageInput(IClip clip, EffectStage stage, bool layout) => stage == EffectStage.Composition
         ? new { clip.StartFrame, clip.Duration, clip.FrameTime }
         : Read(("stage", clip.Id, stage, layout), () => new
         {
-            Source = stage == Stage.ClipArguments ? null : DescribeSource(clip),
-            Providers = (clip.EffectProvidersInstances ?? []).Where(p => p.Enabled && (int)p.Stage < (int)stage
-                    && p.Stage != Stage.ClipArguments && (p.IsFinalOutputSource()
+            Source = stage == EffectStage.Text ? null : DescribeSource(clip),
+            Providers = (clip.EffectProvidersInstances ?? []).Where(p => p.Enabled && EffectStages.Precedes(p.Stage, stage) && (p.IsFinalOutputSource()
                         || !DynamicEffectBindings.IsGraphProvider(p) && !p.Target.HasFlag(EffectTarget.ValueProvider)))
                 .OrderBy(p => p.Stage).ThenBy(p => p.Id).Select(p => DescribeProvider(clip, p, layout)).ToArray(),
         });
@@ -217,9 +216,13 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
     private object DescribeBinding(IClip clip, string? binding, bool layout)
     {
         if (binding == IEffectProvider.InputAnchorGUID.ToString()) return DescribeSource(clip);
-        if (binding is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
+        if (binding is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId
+            or ValueProviderFrameContext.BuiltInClipFrameProviderId)
             return new { BuiltIn = binding, clip.StartFrame, clip.Duration, clip.FrameTime };
-        if (binding == ValueProviderFrameContext.BuiltInAudioSampleProviderId)
+        if (binding == ValueProviderFrameContext.BuiltInProjectProgressProviderId)
+            return new { BuiltIn = binding, Frames = ValueProviderFrameContext.ProjectFrameCount ?? throw new UnhashableInputException() };
+        if (binding == ValueProviderFrameContext.ClipPositionProviderId) return clip.PositionTuple;
+        if (binding is ValueProviderFrameContext.BuiltInAudioSampleProviderId or ValueProviderFrameContext.ClipAudioProviderId)
             return EffectProcessing.CurrentAudioSource?.DescribeHashInputs(token) ?? throw new UnhashableInputException();
         if (!EffectProviderOutputExtensions.TryParseOutputSourceId(binding, out var id, out var outputId))
             throw new UnhashableInputException();

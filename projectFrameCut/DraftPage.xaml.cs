@@ -161,7 +161,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     private WorkspaceWindowHost _workspaceWindowHost = null!;
     private MultiWindowItem PreviewSubwindow = null!;
     private MultiWindowItem PropertiesSubwindow = null!;
-    private MultiWindowItem AssisstantSubWindow = null!;
     private MultiWindowItem HistorySubWindow = null!;
     private MultiWindowItem TimelineSubwindow = null!;
     private MultiWindowItem AssetSubwindow = null!;
@@ -320,7 +319,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public InteractableEditor.DynamicPreview DynamicPreviewProvider;
     private CancellationTokenSource? _dynamicPreviewCts;
     private readonly object _dynamicPreviewCtsLock = new();
-    public AIAssistance.AssistanceChatSessionsView ChatSessionsView = null!;
     public ProjectAddClipView AddClipView = null!;
 
     public ProjectJSONStructure ProjectInfo { get; set; }
@@ -1517,23 +1515,15 @@ public partial class DraftPage : ContentPage, IDraftPage
             .RegisterModule(new HistoryModule(MaximumSaveSlot))
             .RegisterModule(new AssetModule(Assets.Values))
             .RegisterModule(new PreviewModule())
-            .RegisterModule(new PropertyModule())
-            .RegisterModule(new AssistanceModule());
+            .RegisterModule(new PropertyModule());
         foreach (var pluginModule in PluginManager.LoadedPlugins.Values.OfType<IWorkspaceModule>())
             _workspace.RegisterModule(pluginModule);
         if (yieldToDispatcher) await Task.Delay(1, cancellationToken);
 
-        var page = this;
-        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(WorkingPath, ProjectName, _workspace)
-        {
-            GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged)
-        };
-        AssistanceHost.Content = ChatSessionsView;
         AddClipHost.Content = AddClipView;
 
         WorkspaceViewPool.Remove(ClipEditorHost);
         WorkspaceViewPool.Remove(RightContentBorder);
-        WorkspaceViewPool.Remove(AssistanceHost);
         WorkspaceViewPool.Remove(AddClipHost);
         if (LowerContent.Parent is Grid timelineParent) timelineParent.Remove(LowerContent);
         if (yieldToDispatcher) await Task.Delay(1, cancellationToken);
@@ -1598,15 +1588,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                     IsInitiallyVisible = false, IsNavigationVisible = false,  CreateContent = () => new DraftSettingPage(this, historyOnly: true).HistoryTabContent,
                     DefaultPlacement = new WorkspaceWindowPlacement { Width = 880, Height = 620, X = 40, Y = 40 }
                 }
-            ]),
-            new DraftWorkspaceExperienceProvider(AssistanceModule.ModuleId,
-            [
-                new WorkspaceExperienceDefinition
-                {
-                    WindowKey = "assistance.chat", ModuleId = AssistanceModule.ModuleId, Title = Localized.AIAssistant_ChatViewTitle,
-                    IsInitiallyVisible = false, IsNavigationVisible = false,  CreateContent = () => AssistanceHost,
-                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 400, Height = 500, X = 56, Y = 56 }
-                }
             ])
         };
         workspaceExperienceProviders.AddRange(PluginManager.LoadedPlugins.Values.OfType<IWorkspaceExperienceProvider>());
@@ -1623,7 +1604,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         HistorySubWindow = _workspaceWindowHost.GetWindow("history.main");
         HistorySubWindow.MinimumWindowWidth = 560;
         HistorySubWindow.MinimumWindowHeight = 400;
-        AssisstantSubWindow = _workspaceWindowHost.GetWindow("assistance.chat");
 
         // A fresh workspace starts with the media/add panel docked into the editor.
         // Restored projects keep their saved layout and can open it from the toolbar.
@@ -1840,10 +1820,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         elem.sourceSecondPerFrame = asset.SecondPerFrame;
         //elem.SecondPerFrameRatio = 1f;
         elem.ExtraData = new();
-        if (asset.IsAIGenerated)
-        {
-            elem.ExtraData["IsAI"] = true;
-        }
 
         try
         {
@@ -5131,7 +5107,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private static bool ShouldWarmClipPreview(string? propertyId)
         => !string.IsNullOrWhiteSpace(propertyId)
-            && propertyId is not ("rotationDeg" or "allowFreeScaleResize" or "ExtendToWholeDraft")
+            && propertyId is not ("rotationDeg" or "opacity" or "allowFreeScaleResize" or "ExtendToWholeDraft")
             && !propertyId.StartsWith("place_", StringComparison.Ordinal);
 
     private async Task RefreshPreviewAfterPropertyChangeAsync(bool throwOnFailure = false, CancellationToken cancellationToken = default)
@@ -7403,24 +7379,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         MainMultiWindowView.BringToFront(window);
     }
 
-    private async Task ToggleAssistantSubWindow(MultiWindowItem item)
-    {
-        if (IsMobileForm)
-        {
-            if (_mobilePanelWindow == item && popupShowingDirection != "none") await HidePopup(true);
-            else await OpenFormWindowAsync(item);
-            return;
-        }
-        var isOpened = MainMultiWindowView.Children.Contains(AssisstantSubWindow);
-        if (isOpened && item.IsVisible)
-        {
-            MainMultiWindowView.CloseWindow(item);
-            return;
-        }
-
-        ActivateMultiWindowItem(item);
-    }
-
     private async void ExecuteManageWindowCommand(string? action)
     {
         switch (action)
@@ -7488,13 +7446,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             //case "properties":
             //    ActivateMultiWindowItem(PropertiesSubwindow);
             //    break;
-            //case "assistant":
-            //    ActivateMultiWindowItem(AssisstantSubWindow);
-            //    break;
-            case "assistant-toggle":
-                if (MauiProgram.IsStoreMode) return;
-                await ToggleAssistantSubWindow(AssisstantSubWindow);
-                break;
             case "close-extra":
                 foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
                 {
@@ -7502,11 +7453,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 }
                 break;
         }
-    }
-
-    private void AssistantToggleButton_Clicked(object sender, EventArgs e)
-    {
-        ExecuteManageWindowCommand("assistant-toggle");
     }
 
 
@@ -7989,7 +7935,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             position.TargetY,
             Math.Max(1, position.TargetWidth),
             Math.Max(1, position.TargetHeight),
-            false, position.Rotation);
+            false, position.Rotation, position.Opacity);
 
         provider.UpsertStep(progress, safePosition);
         ClipInfoBuilder.RebuildAllEffects(clip);
@@ -8691,17 +8637,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         return new Size(widthDp, heightDp);
     }
 
-
-    /// <summary>
-    /// 检查当前形态中 AI 聊天面板是否可见且有打开的会话。
-    /// </summary>
-    private bool IsChatActive()
-    {
-        return (IsMobileForm
-                ? _mobilePanelWindow == AssisstantSubWindow && popupShowingDirection != "none"
-                : MainMultiWindowView.Children.Contains(AssisstantSubWindow) && AssisstantSubWindow.IsVisible)
-            && ChatSessionsView.Current is not null;
-    }
 
     private CancellationTokenSource? _frameExportCts;
 

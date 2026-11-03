@@ -1,7 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -20,6 +21,7 @@ public partial class DraftPage
         {
             Id = id,
             FieldType = field.FieldType,
+            TypeContract = field.TypeContract,
             Value = value,
             DefaultValue = field.DefaultValue,
             MinValue = field.MinValue,
@@ -60,6 +62,8 @@ public partial class DraftPage
             FieldId = id,
             FieldType = fieldType.ToString(),
             DeclaredFieldType = field.FieldType.ToString(),
+            TypeContract = types is null ? field.TypeContract : input
+                ? types.GetInputContract(provider, id) : types.GetOutputContract(provider, id),
             field.DefaultValue,
             field.MinValue,
             field.MaxValue,
@@ -73,6 +77,14 @@ public partial class DraftPage
 
     private ClipArgumentProvider CreateGuiClipArguments(GuiEffectClip clip, Guid id)
     {
+        if (clip.ClipType == ClipMode.MaskClip)
+        {
+            var sourceProperties = new ClipArgumentProvider { Id = id };
+            var sourceFields = MaskClip.SourceFields(clip.ExtraData);
+            sourceProperties.Attach(sourceFields, key => sourceFields[key].ReadValue(null!));
+            return sourceProperties;
+        }
+        if (clip.ClipType is not (ClipMode.TextClip or ClipMode.SubtitleClip)) throw new NotSupportedException("Only text clips expose bindable text properties.");
         var provider = new ClipArgumentProvider { Id = id };
         IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> fields = ClipArgumentHandler.DefaultFields;
         var values = new Dictionary<string, object>();
@@ -109,9 +121,9 @@ public partial class DraftPage
         var result = new Dictionary<Guid, IEffectProvider>();
         if (clip.EffectProviders is null)
         {
+            RenderOutputProvider.Ensure(result);
             return result;
         }
-
         var factories = EffectServices.GetAvailableEffectProviders();
         foreach (var original in clip.EffectProviders.Values)
         {
@@ -121,6 +133,7 @@ public partial class DraftPage
             {
                 copy = CreateGuiClipArguments(clip, original.Id);
             }
+            else if (original is RenderOutputProvider) copy = new RenderOutputProvider();
             else
             {
                 if (!factories.TryGetValue(original.TypeName, out var factory))
@@ -154,6 +167,7 @@ public partial class DraftPage
             copy.AnchorsBindingState = new Dictionary<string, string>(original.AnchorsBindingState);
             result.Add(copy.Id, copy);
         }
+        RenderOutputProvider.Ensure(result);
         EffectBindingHelper.MaterializeFields(result.Values);
         return result;
     }
@@ -383,7 +397,7 @@ public partial class DraftPage
             source = id.GetString()!;
         }
 
-        if (source == ValueProviderFrameContext.BuiltInFrameProviderId || source == ValueProviderFrameContext.BuiltInProgressProviderId)
+        if (ValueProviderFrameContext.IsBuiltInSource(source))
         {
             return source;
         }
@@ -497,10 +511,10 @@ public partial class DraftPage
             return pipeline;
         }
 
-        Stage GetStage()
+        EffectStage GetStage()
         {
-            if (!HasParameter("Stage")) return GetPipeline() == EffectPipeline.NativeContent ? Stage.VectorPicture : Stage.Picture;
-            return Enum.TryParse<Stage>(GetString("Stage"), true, out var stage) && Enum.IsDefined(stage)
+            if (!HasParameter("Stage")) return GetPipeline() == EffectPipeline.NativeContent ? EffectStage.VectorContent : EffectStage.Render;
+            return Enum.TryParse<EffectStage>(GetString("Stage"), true, out var stage) && Enum.IsDefined(stage)
                 ? stage : throw new ArgumentException("Invalid stage.");
         }
 
@@ -557,6 +571,7 @@ public partial class DraftPage
 
         ClipArgumentProvider GetClipArguments()
         {
+            if (clip.ClipType is not (ClipMode.TextClip or ClipMode.SubtitleClip)) throw new NotSupportedException("Only text clips expose bindable text properties.");
             var arguments = providers.Values.OfType<ClipArgumentProvider>().SingleOrDefault();
             if (arguments is null)
             {
@@ -572,6 +587,9 @@ public partial class DraftPage
             {
                 return GetProvider(GetGuid("ProviderId"));
             }
+            if (clip.ClipType is not (ClipMode.TextClip or ClipMode.SubtitleClip)
+                || GetString("FieldId") is RenderOutputProvider.AudioKey or RenderOutputProvider.PositionKey or RenderOutputProvider.ShouldRenderKey)
+                return RenderOutputProvider.Ensure(providers);
             return GetClipArguments();
         }
 
@@ -795,7 +813,7 @@ public partial class DraftPage
                     }
                     if (HasParameter("Stage"))
                     {
-                        if (!Enum.TryParse<Stage>(GetString("Stage"), true, out var stage) || !Enum.IsDefined(stage))
+                        if (!Enum.TryParse<EffectStage>(GetString("Stage"), true, out var stage) || !Enum.IsDefined(stage))
                             throw new ArgumentException("Invalid stage.");
                         provider.Stage = stage;
                     }
@@ -1336,7 +1354,7 @@ public partial class DraftPage
     }
 
     private static async Task<object[]> GuiBindingSourcesAsync(GuiEffectClip clip, Dictionary<Guid, IEffectProvider> providers,
-        IEffectProvider? target, string? fieldId, Stage pipeline, bool filterPipeline, CancellationToken ct)
+        IEffectProvider? target, string? fieldId, EffectStage pipeline, bool filterPipeline, CancellationToken ct)
     {
         if (filterPipeline && !clip.SupportedStages.Contains(pipeline))
         {
@@ -1349,12 +1367,22 @@ public partial class DraftPage
         var types = await EffectFieldTypeResolution.ResolveAsync(providers, ct);
         var inputPipeline = target?.Stage ?? pipeline;
         var sources = new List<(string SourceId, Guid? ProviderId, string? OutputFieldId,
-            string Name, EffectArgumentFieldType FieldType, Stage Pipeline)>
+            string Name, EffectArgumentFieldType FieldType, EffectStage Pipeline)>
         {
             (ValueProviderFrameContext.BuiltInFrameProviderId, null, null, "Frame", EffectArgumentFieldType.Numeric, pipeline),
             (ValueProviderFrameContext.BuiltInProgressProviderId, null, null, "Progress", EffectArgumentFieldType.Numeric, pipeline),
+            (ValueProviderFrameContext.BuiltInClipFrameProviderId, null, null, "Clip frame", EffectArgumentFieldType.Numeric, pipeline),
+            (ValueProviderFrameContext.BuiltInProjectProgressProviderId, null, null, "Project progress", EffectArgumentFieldType.Numeric, pipeline),
             (IEffectProvider.InputAnchorGUID.ToString(), IEffectProvider.InputAnchorGUID, null, "Clip input", inputPipeline.GetContentType(), inputPipeline),
         };
+        if (inputPipeline == EffectStage.Render)
+        {
+            sources.Add((ValueProviderFrameContext.ClipPositionProviderId, null, null, "Clip position", EffectArgumentFieldType.SizeAndPosition, inputPipeline));
+            if (clip.ClipType == ClipMode.AudioClip || !string.IsNullOrWhiteSpace(clip.Dto.BindedSoundTrack))
+                sources.Add((ValueProviderFrameContext.ClipAudioProviderId, null, null, "Clip audio", EffectArgumentFieldType.AudioSample, inputPipeline));
+        }
+        if (ValueProviderFrameContext.SupportsAudioSample(inputPipeline))
+            sources.Add((ValueProviderFrameContext.BuiltInAudioSampleProviderId, null, null, "Global mix", EffectArgumentFieldType.AudioSample, inputPipeline));
         foreach (var provider in providers.Values)
         {
             if (provider.Id == target?.Id || !DynamicEffectBindings.CanBindOutput(provider))
@@ -1407,7 +1435,7 @@ public partial class DraftPage
                     source.Name,
                     FieldType = source.FieldType.ToString(),
                     Stage = source.Pipeline.ToString(),
-                    Pipeline = (source.Pipeline is Stage.Text or Stage.VectorComponent or Stage.VectorPicture ? EffectPipeline.NativeContent : EffectPipeline.Picture).ToString(),
+                    Pipeline = (source.Pipeline is EffectStage.Text or EffectStage.VectorContent ? EffectPipeline.NativeContent : EffectPipeline.Picture).ToString(),
                 });
             }
             return result.ToArray();

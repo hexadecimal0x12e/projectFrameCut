@@ -3,6 +3,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -94,6 +95,9 @@ namespace projectFrameCut.Render.Compose
                 var (contexts, count) = BuildAudioContexts(videoFramerate, samplerate);
                 var transforms = BuildTransforms(contexts, videoFramerate, samplerate);
                 totalSamples = count;
+                int cachedFrame = -1;
+                FloatAudioSamples? cachedSamples = null;
+                int origin = FrameToSample(StartFrame, videoFramerate, samplerate);
                 return (start, length, token) =>
                 {
                     ArgumentOutOfRangeException.ThrowIfNegative(start);
@@ -104,29 +108,50 @@ namespace projectFrameCut.Render.Compose
                         token.ThrowIfCancellationRequested();
                         using var audioScope = ValueProviderFrameContext.PushAudioSource(null);
                         using var frameScope = ValueProviderFrameContext.PushFrame(0, 0, false, token);
-                        var mixed = CreateZeroChannels(channels, length);
-                        foreach (var context in contexts)
+                        FloatAudioSamples ReadWindow(int start, int length)
                         {
-                            token.ThrowIfCancellationRequested();
-                            int first = Math.Max(start, context.TimelineStartSample);
-                            int end = Math.Min(start + length, context.TimelineEndSample);
-                            if (end <= first) continue;
-                            foreach (var transform in context.Transforms)
+                            var mixed = CreateZeroChannels(channels, length);
+                            foreach (var context in contexts)
                             {
-                                if (transform.StartSample >= end) break;
-                                if (transform.EndSample <= first) continue;
-                                MixContextIntoChunk(context, start, first, Math.Min(end, transform.StartSample), samplerate, channels, mixed);
-                                first = Math.Min(end, transform.EndSample);
+                                token.ThrowIfCancellationRequested();
+                                int first = Math.Max(start, context.TimelineStartSample);
+                                int end = Math.Min(start + length, context.TimelineEndSample);
+                                if (end <= first) continue;
+                                foreach (var transform in context.Transforms)
+                                {
+                                    if (transform.StartSample >= end) break;
+                                    if (transform.EndSample <= first) continue;
+                                    MixContextIntoChunk(context, start, first, Math.Min(end, transform.StartSample), samplerate, channels, mixed);
+                                    first = Math.Min(end, transform.EndSample);
+                                }
+                                MixContextIntoChunk(context, start, first, end, samplerate, channels, mixed);
                             }
-                            MixContextIntoChunk(context, start, first, end, samplerate, channels, mixed);
+                            foreach (var transform in transforms)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (transform.StartSample < start + length && transform.EndSample > start)
+                                    MixTransformIntoChunk(transform, start, length, videoFramerate, samplerate, channels, mixed);
+                            }
+                            return new FloatAudioSamples { Channels = mixed, SampleCount = length, SamplePerSecond = samplerate };
                         }
-                        foreach (var transform in transforms)
+                        var result = new FloatAudioSamples { Channels = CreateZeroChannels(channels, length), SampleCount = length, SamplePerSecond = samplerate };
+                        for (int position = start; position < start + length;)
                         {
                             token.ThrowIfCancellationRequested();
-                            if (transform.StartSample < start + length && transform.EndSample > start)
-                                MixTransformIntoChunk(transform, start, length, videoFramerate, samplerate, channels, mixed);
+                            int frame = SampleToFrame(checked(origin + position), videoFramerate, samplerate);
+                            int first = FrameToSample(frame, videoFramerate, samplerate) - origin;
+                            int end = FrameToSample(frame + 1, videoFramerate, samplerate) - origin;
+                            if (cachedSamples is null || cachedFrame != frame)
+                            {
+                                cachedSamples = ReadWindow(first, end - first);
+                                cachedFrame = frame;
+                            }
+                            int n = Math.Min(start + length, end) - position;
+                            for (int c = 0; c < channels; c++)
+                                cachedSamples.Channels[c].AsSpan(position - first, n).CopyTo(result.Channels[c].AsSpan(position - start, n));
+                            position += n;
                         }
-                        return new FloatAudioSamples { Channels = mixed, SampleCount = length, SamplePerSecond = samplerate };
+                        return result;
                     }
                 };
             }
@@ -186,9 +211,20 @@ namespace projectFrameCut.Render.Compose
                         .Where(e => e.Enabled)
                         .OrderBy(e => e.Index)
                         .ToArray();
+                    var owner = Clips.FirstOrDefault(c => c.BindedSoundTrack == track.Id || c.Id.ToString() == track.Id)
+                        ?? Clips.FirstOrDefault(c => c.Id == SoundTrackMetadata.ReadSourceClipId(track.ExtraData)
+                            && !SoundTrackMetadata.ReadBool(c.ExtraData, SoundTrackMetadata.DetachedKey));
+                    if (owner is not null && owner.EffectProviders is { Length: > 0 })
+                    {
+                        if (owner.EffectProvidersInstances is not { Length: > 0 }) EffectHelper.ResolveClipEffects(owner);
+                        if (owner.EffectsInstances?.OfType<DynamicEffectGraph>().Any(g => g.AudioNeedsPicture) == true
+                            && owner is VideoClip { Decoder: null } or PhotoClip { source: null })
+                            owner.ReInit(projectFrameCut.Drawing.Base.IPicture.PicturePixelMode.Float16Picture);
+                    }
                     contexts.Add(new SoundTrackContext
                     {
                         SoundTrack = track,
+                        Owner = owner ?? track.EffectStagePlan?.Owner,
                         ClipInfo = new TransformClipInfo(Guid.TryParse(track.Id, out var id) ? id :
                             SoundTrackMetadata.ReadSourceClipId(track.ExtraData) ?? Guid.Empty,
                             track.StartFrame, (uint)durationFrames, track.LayerIndex, track.SubLayerIndex, track.EffectProviders ?? []),
@@ -199,17 +235,17 @@ namespace projectFrameCut.Render.Compose
                         SourceStartSample = sourceStartSample,
                         Volume = track.Volume,
                         Ratio = ratio,
-                        Effects = effects,
-                        HasAudioEffects = effects.Any(e => e is IAudioNormalEffect or IAudioContinuousEffect)
+                        Effects = effects
                     });
                 }
             }
 
-            var stageClips = contexts.Select(c => c.SoundTrack.EffectStagePlan?.Owner).OfType<IClip>()
+            var stageClips = Clips.Concat(contexts.Select(c => c.Owner).OfType<IClip>()).DistinctBy(c => c.Id)
                 .Where(ClipValuePassThrough.HasEndpoints).ToArray();
             foreach (var context in contexts)
             {
                 context.StageClips = stageClips;
+                context.AudioContexts = contexts;
                 if (context.SoundTrack.EffectStagePlan is { } plan) plan.Owner.Duration = context.ClipInfo.Duration;
             }
             return (contexts, totalSamples);
@@ -232,16 +268,36 @@ namespace projectFrameCut.Render.Compose
                 return;
             }
 
-            int clipLocalOffset = overlapStart - context.TimelineStartSample;
-            int localChunkOffset = overlapStart - chunkStart;
-            int overlapLength = overlapEnd - overlapStart;
-            FloatAudioSamples clipWindow = ReadClipWindowToFloat(context, clipLocalOffset, overlapLength, outputSampleRate, outputChannels);
-            clipWindow = ApplyAudioEffects(context, clipWindow, clipLocalOffset);
-
-            for (int c = 0; c < outputChannels; c++)
+            while (overlapStart < overlapEnd)
             {
-                MixSamples(clipWindow.GetSamples(c).AsSpan(0, overlapLength), mixed[c].AsSpan(localChunkOffset, overlapLength), context.Volume);
+                int absolute = FrameToSample(context.ClipInfo.Start, context.FrameRate, outputSampleRate) + overlapStart - context.TimelineStartSample;
+                int frame = SampleToFrame(absolute, context.FrameRate, outputSampleRate);
+                int boundary = overlapStart + FrameToSample(frame + 1, context.FrameRate, outputSampleRate) - absolute;
+                int length = Math.Min(overlapEnd, boundary) - overlapStart;
+                int offset = overlapStart - context.TimelineStartSample;
+                int frameStart = FrameToSample(frame, context.FrameRate, outputSampleRate);
+                int frameLength = FrameToSample(frame + 1, context.FrameRate, outputSampleRate) - frameStart;
+                if (context.RenderedFrame != frame || context.RenderedSamples is null)
+                {
+                    int localStart = offset - (absolute - frameStart);
+                    context.RenderedSamples = ApplyAudioEffects(context,
+                        ReadClipWindowToFloat(context, localStart, frameLength, outputSampleRate, outputChannels), localStart);
+                    context.RenderedFrame = frame;
+                }
+                for (int c = 0; c < outputChannels; c++)
+                    MixSamples(context.RenderedSamples.GetSamples(c).AsSpan(absolute - frameStart, length),
+                        mixed[c].AsSpan(overlapStart - chunkStart, length), context.Volume);
+                overlapStart += length;
             }
+        }
+
+        internal Func<IClip, int, int, FloatAudioSamples> CreateClipSourceReader(int fps, int sampleRate, int channels)
+        {
+            var contexts = BuildAudioContexts(fps, sampleRate).contexts;
+            var owners = contexts.Where(c => c.Owner is not null).GroupBy(c => c.Owner!.Id).ToDictionary(g => g.Key, g => g.First());
+            return (clip, start, length) => owners.TryGetValue(clip.Id, out var context)
+                ? ReadClipWindowToFloat(context, start - context.TimelineStartSample, length, sampleRate, channels)
+                : new FloatAudioSamples { Channels = CreateZeroChannels(channels, length), SampleCount = length, SamplePerSecond = sampleRate };
         }
 
         private List<AudioTransformContext> BuildTransforms(List<SoundTrackContext> contexts, int fps, int sampleRate)
@@ -293,9 +349,11 @@ namespace projectFrameCut.Render.Compose
                 var active = context.Right is { } right && start >= right.TimelineStartSample ? right : context.Left;
                 int length = context.BeforeEffects && context.Right is { } next && start < next.TimelineStartSample
                     ? Math.Min(end, next.TimelineStartSample) - start : end - start;
+                int absolute = FrameToSample(StartFrame, fps, sampleRate) + start;
+                length = Math.Min(length, Math.Max(1, FrameToSample(SampleToFrame(absolute, fps, sampleRate) + 1, fps, sampleRate) - absolute));
                 try
                 {
-                    uint frame = StartFrame + (uint)Math.Max(0, Math.Floor(start * (double)fps / sampleRate));
+                    uint frame = (uint)SampleToFrame(absolute, fps, sampleRate);
                     using var frameContext = ValueProviderFrameContext.PushFrame(frame,
                         Math.Clamp((start - context.Left.TimelineStartSample) / (float)Math.Max(1, context.Left.TimelineEndSample - context.Left.TimelineStartSample), 0, 1));
                     var left = ReadInput(context.Left);
@@ -409,20 +467,49 @@ namespace projectFrameCut.Render.Compose
             FloatAudioSamples input,
             int clipLocalSampleIndex)
         {
-            if (!context.HasAudioEffects)
-            {
-                return input;
-            }
-
             IAudioSamples current = input;
-            using var clipScope = ValueProviderFrameContext.PushClip(context.SoundTrack.EffectStagePlan?.Owner);
+            using var clipScope = ValueProviderFrameContext.PushClip(context.Owner);
             using var frameContext = ValueProviderFrameContext.PushFrame(
-                (uint)Math.Clamp(context.ClipInfo.Start + Math.Floor(clipLocalSampleIndex * (double)context.FrameRate / input.SamplePerSecond), 0, uint.MaxValue),
+                (uint)SampleToFrame(FrameToSample(context.ClipInfo.Start, context.FrameRate, input.SamplePerSecond)
+                    + clipLocalSampleIndex, context.FrameRate, input.SamplePerSecond),
                 Math.Clamp(clipLocalSampleIndex / (float)Math.Max(1, context.TimelineEndSample - context.TimelineStartSample), 0, 1));
 
             uint frame = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f);
             using var endpoints = context.StageClips.Count == 0 ? null : new ClipValueFrameContext(context.StageClips, frame,
-                source => source.EffectStagePlan?.Complete(source, Stage.Audio, frame), Effect.DynamicEffectGraph.CopyPicture);
+                source =>
+                {
+                    if (source.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render) is { } render)
+                    {
+                        var audioContext = context.AudioContexts.FirstOrDefault(c => c.Owner?.Id == source.Id);
+                        FloatAudioSamples? samples = null;
+                        if (audioContext is not null)
+                        {
+                            int start = FrameToSample(frame, context.FrameRate, input.SamplePerSecond);
+                            int length = FrameToSample((double)frame + 1, context.FrameRate, input.SamplePerSecond) - start;
+                            samples = ReadClipWindowToFloat(audioContext,
+                                start - FrameToSample(source.StartFrame, context.FrameRate, input.SamplePerSecond), length, input.SamplePerSecond, input.channelCount);
+                        }
+                        render.EvaluateRenderValue(source, frame, RenderOutputProvider.AudioKey, samples, ValueProviderFrameContext.CancellationToken);
+                    }
+                    else source.EffectStagePlan?.Complete(source, EffectStage.Render, frame);
+                }, Effect.DynamicEffectGraph.CopyPicture);
+            int previousSample = ValueProviderFrameContext.AudioIndex.Value;
+            ValueProviderFrameContext.AudioIndex.Value = clipLocalSampleIndex;
+            try
+            {
+                var owner = context.Owner;
+                var graph = owner?.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render)
+                    ?? context.Effects.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render);
+                if (graph is not null && owner is not null)
+                {
+                    var output = (IAudioSamples)graph.EvaluateRenderValue(owner, frame, RenderOutputProvider.AudioKey, input,
+                        ValueProviderFrameContext.CancellationToken);
+                    if (output.SampleCount != input.SampleCount || output.SamplePerSecond != input.SamplePerSecond || output.channelCount != input.channelCount)
+                        throw new InvalidOperationException($"Render audio for clip {owner.Id} changed the sample layout.");
+                    return ToFloatSamples(output);
+                }
+            }
+            finally { ValueProviderFrameContext.AudioIndex.Value = previousSample; }
             foreach (var effect in context.Effects)
             {
                 if (!effect.Enabled)
@@ -448,7 +535,7 @@ namespace projectFrameCut.Render.Compose
                 }
             }
 
-            if (context.SoundTrack.EffectStagePlan is { } plan) plan.Complete(plan.Owner, Stage.Audio, frame);
+            if (context.SoundTrack.EffectStagePlan is { } plan) plan.Complete(plan.Owner, EffectStage.Render, frame);
             return ToFloatSamples(current);
         }
 
@@ -461,6 +548,14 @@ namespace projectFrameCut.Render.Compose
 
             int end = start + Math.Max(0, length);
             return end > effectStart && start <= effectEnd;
+        }
+
+        private static int SampleToFrame(int sample, int fps, int sampleRate)
+        {
+            int frame = Math.Max(0, (int)Math.Floor(sample * (double)fps / sampleRate));
+            while (FrameToSample(frame + 1, fps, sampleRate) <= sample) frame++;
+            while (frame > 0 && FrameToSample(frame, fps, sampleRate) > sample) frame--;
+            return frame;
         }
 
         private static int FrameToSample(double frame, int fps, int sampleRate)
@@ -578,8 +673,11 @@ namespace projectFrameCut.Render.Compose
             public float Volume { get; init; }
             public float Ratio { get; init; }
             public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
-            public bool HasAudioEffects { get; init; }
+            public IClip? Owner { get; init; }
+            public int RenderedFrame { get; set; } = -1;
+            public FloatAudioSamples? RenderedSamples { get; set; }
             public IReadOnlyList<IClip> StageClips { get; set; } = [];
+            public IReadOnlyList<SoundTrackContext> AudioContexts { get; set; } = [];
             public List<AudioTransformContext> Transforms { get; } = [];
         }
 

@@ -1,6 +1,5 @@
 using Microsoft.Maui.Hosting;
 using Microsoft.Maui.Platforms.Linux.Gtk4.Platform;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;

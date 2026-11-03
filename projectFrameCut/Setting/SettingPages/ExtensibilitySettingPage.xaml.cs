@@ -3,7 +3,6 @@ using projectFrameCut.ApplicationAPIBase.Plugins;
 
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationPluginBase;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.Contracts;
@@ -82,8 +81,7 @@ public partial class ExtensibilitySettingPage : ContentPage
             TabItems = new ObservableCollection<TabbedViewItem>
             {
                 new() { Header = SettingLocalizedResources.Plugin_ManagePlugins, Tag = "UserPlugins", Content = new ScrollView { Content = userPlugins } },
-                new() { Header = SettingLocalizedResources.Plugin_AIProviderPlugin, Tag = "AIProviders", LazyContentFactory = BuildAIProviders().BuildWithScrollView },
-                new() { Header = Localized.MainSettingsPage_Tab_Advanced, Tag = "Advanced", LazyContentFactory = BuildPluginAdvanced().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView }
+                new() { Header = Localized.MainSettingsPage_Tab_Advanced, Tag = "Advanced", LazyContentFactory = (await BuildPluginAdvanced()).ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView }
             }
         };
         if (externalRpcAllowed)
@@ -121,7 +119,7 @@ public partial class ExtensibilitySettingPage : ContentPage
         return ppb.AddButton("addButton", SettingLocalizedResources.Plugin_AddOne);
     }
 
-    private PropertyPanelBuilder BuildPluginAdvanced()
+    private async Task<PropertyPanelBuilder> BuildPluginAdvanced()
     {
         var ppb = new PropertyPanelBuilder();
         ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_InternalPlugins, 20));
@@ -154,8 +152,10 @@ public partial class ExtensibilitySettingPage : ContentPage
                         },
                         ..MauiProgram.IntegratedPlugins,
                     ];
+                    PluginService.FailedLoadPlugin.Clear();
                     plugins.AddRange(PluginService.LoadUserPlugins(internalPlugins: plugins));
                     PluginManager.Init(plugins);
+                    BuildPPB();
                     await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
                 }
                 catch (Exception ex)
@@ -165,20 +165,31 @@ public partial class ExtensibilitySettingPage : ContentPage
             })
             .AddCheckbox("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"));
 
-        return ppb;
-    }
-
-    private static PropertyPanelBuilder BuildAIProviders()
-    {
-        var ppb = new PropertyPanelBuilder();
-        var providers = AIProviderService.Current?.Registry.Providers.Values;
-        if (providers is null) return ppb;
-        foreach (var item in providers.OrderBy(c => c.Provider.Descriptor.DisplayName))
+#if DEBUG
+        ppb.AddSeparator()
+            .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DevelopmentTrust, 20))
+            .AddCheckbox(PluginService.DisablePluginTrustSetting,
+                new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DisableTrust, SettingLocalizedResources.Plugin_DisableTrust_Description),
+                PluginService.IsPluginTrustDisabled);
+#endif
+        ppb.AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DevelopmentRoots, SettingLocalizedResources.Plugin_DevelopmentRoots_Description))
+            .AddButton("PluginAddDevelopmentRoot", SettingLocalizedResources.Plugin_AddDevelopmentRoot);
+        try
         {
-            var provider = item.Provider.Descriptor;
-            ppb.AddSeparator()
-                .AddText(new TitleAndDescriptionLineLabel(provider.DisplayName, provider.Description))
-                .AddText(new SingleLineLabel($"{item.Key}{Environment.NewLine}{provider.Capabilities}", 12));
+            var roots = await PluginService.GetDevelopmentRootCertificatesAsync();
+            if (roots.Count == 0)
+                ppb.AddText(SettingLocalizedResources.Plugin_NoDevelopmentRoots);
+            foreach (var root in roots)
+            {
+                ppb.AddText(new TitleAndDescriptionLineLabel(root.Label ?? root.Fingerprint, root.Fingerprint))
+                    .AddButton($"PluginRemoveDevelopmentRoot,{root.Fingerprint}", SettingLocalizedResources.Plugin_RemoveDevelopmentRoot);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "List development plugin roots", this);
+            ppb.AddText(Localized._ExceptionTemplate(ex));
         }
         return ppb;
     }
@@ -359,6 +370,31 @@ public partial class ExtensibilitySettingPage : ContentPage
         try
         {
             currentPage ??= this;
+#if DEBUG
+            if (args.Id == PluginService.DisablePluginTrustSetting)
+            {
+                WriteSetting(args.Id, Convert.ToBoolean(args.Value).ToString());
+                Log($"Debug plugin trust validation disabled: {PluginService.IsPluginTrustDisabled}.", "warn");
+                return;
+            }
+#endif
+            if (args.Id == "PluginAddDevelopmentRoot")
+            {
+                var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = SettingLocalizedResources.Plugin_AddDevelopmentRoot });
+                if (file is null) return;
+                using var source = await file.OpenReadAsync();
+                using var stream = new MemoryStream();
+                await source.CopyToAsync(stream);
+                await PluginService.RegisterDevelopmentRootCertificateAsync(stream.ToArray(), file.FileName);
+                BuildPPB();
+                return;
+            }
+            if (args.Id.StartsWith("PluginRemoveDevelopmentRoot,", StringComparison.Ordinal))
+            {
+                await PluginService.RemoveDevelopmentRootCertificateAsync(args.Id.Split(',', 2)[1]);
+                BuildPPB();
+                return;
+            }
             if (args.Id.StartsWith("ExternalRpcRevoke,", StringComparison.Ordinal))
             {
                 var eid = Guid.Parse(args.Id.Split(',', 2)[1]);
@@ -528,6 +564,7 @@ public partial class ExtensibilitySettingPage : ContentPage
         }
         catch (Exception ex)
         {
+            Log(ex, $"Change plugin setting '{args.Id}'", this);
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

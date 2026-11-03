@@ -66,7 +66,7 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class TextFadeInEffectProvider : EffectProviderBase
     {
-        public override IReadOnlyList<Stage> SupportedStages => [Stage.Text];
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Text];
 
         public override bool IsDeterministic => true;
 

@@ -154,6 +154,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 {
                     Id = key,
                     FieldType = existing.FieldType,
+                    TypeContract = existing.TypeContract,
                     Value = value,
                     DefaultValue = existing.DefaultValue,
                     MinValue = existing.MinValue,

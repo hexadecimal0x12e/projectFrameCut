@@ -15,35 +15,8 @@ public static class ClipArgumentHandler
     private static readonly MethodInfo CloneMethod = typeof(object).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     public static IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> DefaultFields { get; } =
-        new Dictionary<string, ClipArgumentFieldDescriptor>
-        {
-            [ShouldRenderKey] = new()
-            {
-                Id = ShouldRenderKey,
-                FieldType = EffectArgumentFieldType.Boolean,
-                DefaultValue = "true",
-                ReadValue = _ => true,
-            },
-            [nameof(IClip.TargetX)] = Integer(nameof(IClip.TargetX), c => c.TargetX),
-            [nameof(IClip.TargetY)] = Integer(nameof(IClip.TargetY), c => c.TargetY),
-            [nameof(IClip.TargetWidth)] = Integer(nameof(IClip.TargetWidth), c => c.TargetWidth),
-            [nameof(IClip.TargetHeight)] = Integer(nameof(IClip.TargetHeight), c => c.TargetHeight),
-            [nameof(IClip.Rotation)] = new()
-            {
-                Id = nameof(IClip.Rotation),
-                FieldType = EffectArgumentFieldType.Numeric,
-                DefaultValue = "0",
-                ReadValue = c => c.Rotation,
-            },
-        };
-
-    private static ClipArgumentFieldDescriptor Integer(string id, Func<IClip, object> read) => new()
-    {
-        Id = id,
-        FieldType = EffectArgumentFieldType.Integer,
-        DefaultValue = "0",
-        ReadValue = read,
-    };
+        new Dictionary<string, ClipArgumentFieldDescriptor>();
+    public static IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> SourceCropFields => DefaultFields;
 
     // Frame copies retain their concrete interfaces and borrow the source's resources.
     public static IClip Copy(IClip clip) => (IClip)CloneMethod.Invoke(clip, null)!;
@@ -53,11 +26,12 @@ public static class ClipArgumentHandler
         var result = clip.CopyForFrame();
         foreach (var (key, value) in arguments)
         {
-            if (key == nameof(IClip.Rotation))
+            if (key is nameof(IClip.Rotation) or nameof(IClip.Opacity))
             {
-                if (!EffectParamConvert.TryConvertToFloat(value, out float angle) || !float.IsFinite(angle))
+                if (!EffectParamConvert.TryConvertToFloat(value, out float f) || !float.IsFinite(f))
                     throw new ArgumentException($"Invalid clip argument '{key}': {value}.");
-                result.Rotation = angle;
+                if (key == nameof(IClip.Opacity)) result.Opacity = Math.Clamp(f, 0, 1);
+                else result.Rotation = f;
                 continue;
             }
             if (!EffectParamConvert.TryConvertToInt(value, out int n))
@@ -75,6 +49,12 @@ public static class ClipArgumentHandler
                     break;
                 case nameof(IClip.TargetHeight):
                     result.TargetHeight = n;
+                    break;
+                case nameof(IClip.StartingX):
+                    result.StartingX = Math.Max(0, n);
+                    break;
+                case nameof(IClip.StartingY):
+                    result.StartingY = Math.Max(0, n);
                     break;
                 default:
                     throw new ArgumentException($"Clip '{clip.TypeName}' has no handler for '{key}'.");

@@ -315,9 +315,13 @@ public sealed class MaskClipTests
             => backdrop.Clone();
     }
 
-    private sealed class InspectEffect(Action<IPicture> inspect) : RotationEffect_IPicture, INormalEffect
+    private sealed class InspectEffect(Action<IPicture> inspect) : DynamicEffectGraphTests.TestEffect(c => c.Input)
     {
-        IPicture INormalEffect.Render(IPicture source, int width, int height) { inspect(source); return source; }
+        public override object? Compute(EffectExecutionContext context)
+        {
+            inspect((IPicture)context.Input!);
+            return context.Input;
+        }
     }
 
     private sealed class TestSource(Func<uint, IPicture> generate) : IVirtualVideoSource

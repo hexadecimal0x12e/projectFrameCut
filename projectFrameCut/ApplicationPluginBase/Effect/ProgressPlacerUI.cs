@@ -18,6 +18,7 @@ public class ProgressPlacerUI(IEffectProvider inner) : KeyFramedEffectUI(inner)
                 TargetWidth = Convert.ToInt32(step.Fields["TargetWidth"].GetGetter()()),
                 TargetHeight = Convert.ToInt32(step.Fields["TargetHeight"].GetGetter()()),
                 Rotation = Convert.ToSingle(step.Fields["Rotation"].GetGetter()()),
+                ClipOpacity = Convert.ToSingle(step.Fields["Opacity"].GetGetter()()),
                 RelativeWidth = 1920, RelativeHeight = 1080,
             };
             return (editor, () =>

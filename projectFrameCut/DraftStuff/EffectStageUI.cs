@@ -24,18 +24,13 @@ internal static class EffectStageUI
         }
     }
 
-    public static string Name(Stage stage) => stage switch
+    public static string Name(EffectStage stage) => stage switch
     {
-        Stage.SpeedVariance => Localized.Effect_Stage_SpeedVariance,
-        Stage.ClipArguments => Localized.Effect_Stage_ClipArguments,
-        Stage.Text => Localized.Effect_Stage_Text,
-        Stage.VectorComponent => Localized.Effect_Stage_VectorComponent,
-        Stage.VectorPicture => Localized.Effect_Stage_VectorPicture,
-        Stage.SourceReplacement => Localized.Effect_Stage_SourceReplacement,
-        Stage.Picture => Localized.Effect_Stage_Picture,
-        Stage.Audio => Localized.Effect_Stage_Audio,
-        Stage.Transform => Localized.Effect_Stage_Transform,
-        Stage.Mixture => Localized.Effect_Stage_Mixture,
+        EffectStage.Render => Localized.Effect_Stage_Render,
+        EffectStage.Composition => Localized.Effect_Stage_Composition,
+        EffectStage.Text => Localized.Effect_Stage_Text,
+        EffectStage.VectorContent => Localized.Effect_Stage_VectorContent,
+        EffectStage.SourceReplacement => Localized.Effect_Stage_SourceReplacement,
         _ => stage.ToString(),
     };
 }

@@ -18,6 +18,7 @@ public enum IsolationValueKind
     [ProtoEnum] Position = 10,
     [ProtoEnum] VectorPicture = 11,
     [ProtoEnum] Half = 12,
+    [ProtoEnum] CustomPort = 13,
 }
 
 [ProtoContract]
@@ -40,6 +41,8 @@ public sealed class IsolationValue
     [ProtoMember(14)] public List<IsolationVectorElement> VectorElements { get; set; } = [];
     [ProtoIgnore] public Half HalfValue { get; set; }
     [ProtoMember(15)] private ushort HalfBits { get => BitConverter.HalfToUInt16Bits(HalfValue); set => HalfValue = BitConverter.UInt16BitsToHalf(value); }
+    [ProtoMember(16), System.ComponentModel.DefaultValue(1f)] public float Opacity { get; set; } = 1;
+    [ProtoMember(17)] public string ContractId { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -121,7 +124,6 @@ public sealed class IsolationPluginDescriptor
     [ProtoMember(21)] public List<string> VideoWriters { get; set; } = [];
     [ProtoMember(22)] public bool ProvidesClips { get; set; }
     [ProtoMember(23)] public bool ProvidesVectorComponents { get; set; }
-    [ProtoMember(24)] public List<IsolationAIProviderDescriptor> AIProviders { get; set; } = [];
     [ProtoMember(25)] public List<IsolationEffectImplementationCatalogItem> EffectImplementations { get; set; } = [];
 }
 
@@ -131,61 +133,6 @@ public sealed class IsolationEffectImplementationCatalogItem
     [ProtoMember(3)] public int PictureDataFormat { get; set; }
     [ProtoMember(1)] public string TypeName { get; set; } = string.Empty;
     [ProtoMember(2)] public int ImplementType { get; set; }
-}
-
-[ProtoContract]
-public sealed class IsolationAIProviderDescriptor
-{
-    [ProtoMember(1)] public string ProviderId { get; set; } = string.Empty;
-    [ProtoMember(2)] public string DescriptorJson { get; set; } = string.Empty;
-}
-
-[ProtoContract]
-public sealed class IsolationAIProviderContext
-{
-    [ProtoMember(1)] public string ProfileId { get; set; } = string.Empty;
-    [ProtoMember(2)] public string ProviderKey { get; set; } = string.Empty;
-    [ProtoMember(3)] public string ModelId { get; set; } = string.Empty;
-    [ProtoMember(4)] public Dictionary<string, string> Configuration { get; set; } = [];
-    [ProtoMember(5)] public Dictionary<string, string> Secrets { get; set; } = [];
-}
-
-[ProtoContract]
-public sealed class IsolationAIInvokeRequest
-{
-    [ProtoMember(1)] public string ProviderId { get; set; } = string.Empty;
-    [ProtoMember(2)] public IsolationAIProviderContext Context { get; set; } = new();
-    [ProtoMember(3)] public string RequestJson { get; set; } = string.Empty;
-    [ProtoMember(4)] public string OperationKind { get; set; } = string.Empty;
-    [ProtoMember(5)] public List<IsolationPayloadReference> Payloads { get; set; } = [];
-}
-
-[ProtoContract]
-public sealed class IsolationAIJsonResponse
-{
-    [ProtoMember(1)] public string Json { get; set; } = string.Empty;
-    [ProtoMember(2)] public List<IsolationPayloadReference> Payloads { get; set; } = [];
-}
-
-[ProtoContract]
-public sealed class IsolationAIBeginResponse
-{
-    [ProtoMember(1)] public string OperationId { get; set; } = string.Empty;
-}
-
-[ProtoContract]
-public sealed class IsolationAIOperationRequest
-{
-    [ProtoMember(1)] public string OperationId { get; set; } = string.Empty;
-    [ProtoMember(2)] public int WaitMilliseconds { get; set; } = 15000;
-    [ProtoMember(3)] public int MaximumEvents { get; set; } = 32;
-}
-
-[ProtoContract]
-public sealed class IsolationAIPollResponse
-{
-    [ProtoMember(1)] public List<IsolationAIJsonResponse> Events { get; set; } = [];
-    [ProtoMember(2)] public bool Completed { get; set; }
 }
 
 [ProtoContract]
@@ -383,8 +330,17 @@ public sealed class IsolationCreateProviderRequest
 }
 
 [ProtoContract]
+public sealed class IsolationPortTypeContract
+{
+    [ProtoMember(1)] public string Id { get; set; } = string.Empty;
+    [ProtoMember(2)] public string DisplayName { get; set; } = string.Empty;
+    [ProtoMember(3)] public string Description { get; set; } = string.Empty;
+}
+
+[ProtoContract]
 public sealed class IsolationFieldDescriptor
 {
+    [ProtoMember(16)] public IsolationPortTypeContract? TypeContract { get; set; }
     [ProtoMember(15)] public int DataFormat { get; set; }
     [ProtoMember(1)] public string Id { get; set; } = string.Empty;
     [ProtoMember(2)] public string TypeName { get; set; } = string.Empty;
@@ -613,6 +569,7 @@ public sealed class IsolationEffectComputeRequest
     [ProtoMember(6)] public int RelativeHeight { get; set; }
     [ProtoMember(7)] public Dictionary<string, int> InputTypes { get; set; } = [];
     [ProtoMember(8)] public IsolationAudioSamplesResponse? InputAudio { get; set; }
+    [ProtoMember(9)] public int AudioSampleIndex { get; set; }
 }
 
 [ProtoContract]
@@ -677,6 +634,7 @@ public sealed class IsolationClipSnapshot
     [ProtoMember(23)] public string FilePath { get; set; } = string.Empty;
     [ProtoMember(24)] public float Rotation { get; set; }
     [ProtoMember(25)] public List<int> SupportedStages { get; set; } = [];
+    [ProtoMember(26), System.ComponentModel.DefaultValue(1f)] public float Opacity { get; set; } = 1;
 }
 
 [ProtoContract]
@@ -817,4 +775,5 @@ public sealed class IsolationEffectInvokeResponse
     [ProtoMember(7)] public int TargetHeight { get; set; }
     [ProtoMember(8)] public bool IsDelta { get; set; }
     [ProtoMember(9)] public float Rotation { get; set; }
+    [ProtoMember(10), System.ComponentModel.DefaultValue(1f)] public float Opacity { get; set; } = 1;
 }

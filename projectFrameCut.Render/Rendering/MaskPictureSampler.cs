@@ -11,20 +11,20 @@ internal static class MaskPictureSampler
     {
         var rect = new ClipPositionTuple(clip.TargetX, clip.TargetY,
             clip.TargetWidth > 0 ? Scale(clip.TargetWidth, context.ProjectWidth, context.Width) : context.Width,
-            clip.TargetHeight > 0 ? Scale(clip.TargetHeight, context.ProjectHeight, context.Height) : context.Height, false, clip.Rotation);
+            clip.TargetHeight > 0 ? Scale(clip.TargetHeight, context.ProjectHeight, context.Height) : context.Height, false, clip.Rotation, clip.Opacity);
         foreach (var effect in (clip.EffectsInstances ?? []).Where(e => e.Enabled).OrderBy(e => e.Index))
         {
             ClipPositionTuple position;
             if (effect is IClipPositionProvider p)
                 position = FrameHashContext.Compute(effect, clip, frame, null, context.Width, context.Height,
-                    context.ProjectWidth, context.ProjectHeight, () => p.GetPosition(clip, context.Width, context.Height));
+                    context.ProjectWidth, context.ProjectHeight,
+                    () => p.GetPosition(clip, context.Width, context.Height, context.ProjectWidth, context.ProjectHeight));
             else if (effect is IContinuousClipPositionProvider cp)
                 position = FrameHashContext.Compute(effect, clip, frame, null, context.Width, context.Height,
                     context.ProjectWidth, context.ProjectHeight,
                     () => cp.GetPosition(clip, frame, context.Width, context.Height, context.ProjectWidth, context.ProjectHeight));
             else continue;
-            rect = position.IsDelta ? new(rect.TargetX + position.TargetX, rect.TargetY + position.TargetY,
-                rect.TargetWidth + position.TargetWidth, rect.TargetHeight + position.TargetHeight, false, rect.Rotation + position.Rotation) : position;
+            rect = rect.Apply(position);
         }
         IPicture result = source switch
         {

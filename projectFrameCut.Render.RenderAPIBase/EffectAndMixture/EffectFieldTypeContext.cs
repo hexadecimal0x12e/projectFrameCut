@@ -64,6 +64,7 @@ public sealed class EffectProviderTypeState
     private static EffectArgumentFieldDescriptor Describe(string id, IEffectArgumentField field) => new()
     {
         Id = id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = field.FieldType, DataFormat = field.DataFormat,
+        TypeContract = field.TypeContract,
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinValue = field.MinValue,
         MaxValue = field.MaxValue, PresetOptions = field.PresetOptions?.ToArray(), Remarks = field.Remarks,
     };
@@ -84,6 +85,7 @@ public sealed class EffectFieldTypeResolution
 {
     public sealed record Diagnostic(Guid ProviderId, string Code, string Message);
     private readonly Dictionary<(Guid Provider, bool Input, string Field), EffectArgumentFieldType> types = new();
+    private readonly Dictionary<(Guid Provider, bool Input, string Field), EffectPortTypeContract?> contracts = new();
     private readonly Dictionary<Guid, EffectFieldTypeContext> contexts = new();
     private readonly Dictionary<(Guid Provider, bool Input, string Field), object?> formats = new();
     private readonly object? inputDataFormat;
@@ -169,6 +171,22 @@ public sealed class EffectFieldTypeResolution
                 }
             }
             types[(provider.Id, input, key)] = type;
+            var contract = field.TypeContract;
+            if (contract is null && field.FieldType.HasFlag(EffectArgumentFieldType.Any) && type.BaseType() == EffectArgumentFieldType.CustomType)
+            {
+                if (input) contract = GetSourceContract(context.State.Bindings.GetValueOrDefault(key));
+                else
+                {
+                    var candidates = context.InputTypes.Where(p => p.Value.BaseType() == EffectArgumentFieldType.CustomType)
+                        .Select(p => GetSourceContract(context.State.Bindings.GetValueOrDefault(p.Key)))
+                        .Where(c => c is not null).DistinctBy(c => c!.Id).ToArray();
+                    if (candidates.Length == 1) contract = candidates[0];
+                }
+            }
+            contracts[(provider.Id, input, key)] = contract;
+            if (contract is not null && type.BaseType() != EffectArgumentFieldType.CustomType
+                || !input && type.BaseType() == EffectArgumentFieldType.CustomType && contract is null)
+                diagnostics.Add(new(provider.Id, "InvalidPortTypeContract", $"Field '{key}' on provider {provider.Id} must declare CustomType with a port type contract."));
             try { formats[(provider.Id, input, key)] = provider.ResolveDataFormat(key, input, context); }
             catch (Exception ex)
             {
@@ -276,10 +294,34 @@ public sealed class EffectFieldTypeResolution
     }
 
     public bool AreInputsCompatible(IEffectProvider provider) =>
-        (ValueProviderFrameContext.SupportsAudioSample(provider.Stage)
+        (provider.Stage != EffectStage.Render || !GetContext(provider.Id).State.Bindings.Values.Contains(ValueProviderFrameContext.BuiltInAudioSampleProviderId))
+        && (ValueProviderFrameContext.SupportsAudioSample(provider.Stage)
             || !GetContext(provider.Id).State.Bindings.Values.Contains(ValueProviderFrameContext.BuiltInAudioSampleProviderId))
         && GetContext(provider.Id).InputTypes.All(p => p.Value.HasFlag(EffectArgumentFieldType.Any)
-            || EffectFieldTypes.AreCompatible(p.Value, GetInputType(provider, p.Key)));
+            || EffectFieldTypes.AreCompatible(p.Value, GetInputType(provider, p.Key),
+                GetSourceContract(GetContext(provider.Id).State.Bindings.GetValueOrDefault(p.Key)), GetInputContract(provider, p.Key)));
+
+    public EffectPortTypeContract? GetInputContract(IEffectProvider provider, string fieldId)
+    {
+        if (contexts.TryGetValue(provider.Id, out var context))
+            return GetResolvedContract(provider.Id, true, fieldId, context.State.Fields.GetValueOrDefault(fieldId)?.TypeContract);
+        return parent is not null ? parent.GetInputContract(provider, fieldId)
+            : provider.InFields.GetValueOrDefault(fieldId)?.TypeContract ?? provider.Fields.GetValueOrDefault(fieldId)?.TypeContract;
+    }
+
+    public EffectPortTypeContract? GetOutputContract(IEffectProvider provider, string? outputId = null) =>
+        TryGetOutputField(provider, outputId, out var field) ? field.TypeContract : null;
+
+    public bool IsBindingCompatible(IEffectProvider provider, string fieldId, string source)
+    {
+        var type = source == IEffectProvider.InputAnchorGUID.ToString() ? provider.GetPipeline().GetContentType() : GetSourceType(source, providers);
+        return type.HasFlag(EffectArgumentFieldType.Any) || EffectFieldTypes.AreCompatible(type, GetInputType(provider, fieldId),
+            GetSourceContract(source), GetInputContract(provider, fieldId));
+    }
+
+    private EffectPortTypeContract? GetSourceContract(string? source) =>
+        EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out var outputId) && providers.TryGetValue(id, out var provider)
+            ? GetOutputContract(provider, outputId) : null;
 
     public EffectArgumentFieldType GetInputType(IEffectProvider provider, string fieldId) =>
         GetResolvedType(provider.Id, true, fieldId, EffectArgumentFieldType.Unknown);
@@ -290,6 +332,9 @@ public sealed class EffectFieldTypeResolution
 
     private EffectArgumentFieldType GetResolvedType(Guid id, bool input, string field, EffectArgumentFieldType fallback) =>
         types.TryGetValue((id, input, field), out var type) ? type : parent?.GetResolvedType(id, input, field, fallback) ?? fallback;
+
+    private EffectPortTypeContract? GetResolvedContract(Guid id, bool input, string field, EffectPortTypeContract? fallback) =>
+        contracts.TryGetValue((id, input, field), out var contract) ? contract : parent?.GetResolvedContract(id, input, field, fallback) ?? fallback;
 
     public bool TryGetOutputField(IEffectProvider provider, string? outputId, out EffectArgumentFieldDescriptor field)
     {
@@ -302,7 +347,11 @@ public sealed class EffectFieldTypeResolution
         if (provider is IMultipleOutputEffectProvider && outputId is null) return false;
         outputId ??= context.State.Outputs.Keys.SingleOrDefault();
         if (outputId is null || !context.State.Outputs.TryGetValue(outputId, out field!)) return false;
-        field = field with { DataFormat = GetDataFormat(provider.Id, false, outputId) };
+        field = field with
+        {
+            DataFormat = GetDataFormat(provider.Id, false, outputId),
+            TypeContract = GetResolvedContract(provider.Id, false, outputId, field.TypeContract),
+        };
         return true;
     }
 
@@ -318,8 +367,7 @@ public sealed class EffectFieldTypeResolution
     private EffectArgumentFieldType GetSourceType(string source, IReadOnlyDictionary<Guid, IEffectProvider> providers)
     {
         if (source == IEffectProvider.InputAnchorGUID.ToString()) return EffectArgumentFieldType.IPicture;
-        if (source == ValueProviderFrameContext.BuiltInAudioSampleProviderId) return EffectArgumentFieldType.AudioSample;
-        if (source is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId) return EffectArgumentFieldType.Numeric;
+        if (ValueProviderFrameContext.IsBuiltInSource(source)) return ValueProviderFrameContext.SourceType(source);
         return EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out var outputId) && providers.TryGetValue(id, out var provider)
             ? GetOutputType(provider, outputId) : EffectArgumentFieldType.Any;
     }
@@ -353,7 +401,8 @@ public sealed class EffectFieldTypeResolution
         var type = input ? GetInputType(provider, fieldId) : GetOutputType(provider, fieldId);
         if (!input && type.HasFlag(EffectArgumentFieldType.Any))
             throw new InvalidOperationException($"Provider {provider.Id} output '{fieldId}' has an unresolved type, frame {frame}.");
-        if (value is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory) || !EffectFieldTypes.Accepts(type, value))
-            throw new InvalidOperationException($"Provider {provider.Id} {(input ? "input" : "output")} '{fieldId}' expects {type}, received {value?.GetType().FullName ?? "null"}, frame {frame}.");
+        var contract = input ? GetInputContract(provider, fieldId) : GetOutputContract(provider, fieldId);
+        if (value is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory) || !EffectFieldTypes.Accepts(type, value, contract))
+            throw new InvalidOperationException($"Provider {provider.Id} {(input ? "input" : "output")} '{fieldId}' expects {contract?.Id ?? type.ToString()}, received {value?.GetType().FullName ?? "null"}, frame {frame}.");
     }
 }

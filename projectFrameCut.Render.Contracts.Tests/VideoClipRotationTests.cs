@@ -207,12 +207,12 @@ public sealed class VideoClipRotationTests
         Assert.AreEqual(90f, JsonSerializer.Deserialize<ClipDraftDTO>(JsonSerializer.Serialize(dto))!.Rotation);
     }
 
-    private sealed class InspectEffect(Action<IPicture> inspect) : RotationEffect_IPicture, INormalEffect
+    private sealed class InspectEffect(Action<IPicture> inspect) : DynamicEffectGraphTests.TestEffect(c => c.Input)
     {
-        IPicture INormalEffect.Render(IPicture source, int width, int height)
+        public override object? Compute(EffectExecutionContext context)
         {
-            inspect(source);
-            return source;
+            inspect((IPicture)context.Input!);
+            return context.Input;
         }
     }
 

@@ -140,6 +140,7 @@ namespace projectFrameCut.DraftStuff
         public int TargetX { get; set; } = 0;
         public int TargetY { get; set; } = 0;
         public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; } = 0;
         public int StartingY { get; set; } = 0;
         public int SubLayerIndex { get; set; } = 0;
@@ -322,23 +323,21 @@ namespace projectFrameCut.DraftStuff
         public bool SupportsNativeEffects => ClipType is ClipMode.TextClip or ClipMode.SubtitleClip or ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip
             || ClipType == ClipMode.PhotoClip && (TypeName == nameof(VectorPhotoClip) || string.Equals(Path.GetExtension(SourcePath), ".svg", StringComparison.OrdinalIgnoreCase));
 
-        public IReadOnlyList<Stage>? DeclaredStages { get; set; }
-        public IReadOnlyList<Stage> SupportedStages => DeclaredStages ?? (ClipType == ClipMode.AudioClip ? EffectStages.Audio
+        public IReadOnlyList<EffectStage>? DeclaredStages { get; set; }
+        public IReadOnlyList<EffectStage> SupportedStages => DeclaredStages ?? (ClipType == ClipMode.AudioClip ? EffectStages.Audio
             : ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectStages.Text
             : ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip ? EffectStages.Vector
             : SupportsNativeEffects ? EffectStages.VectorImage : EffectStages.Picture);
 
-        public EffectTarget GetEffectSelectionTarget(Stage stage) => stage switch
+        public EffectTarget GetEffectSelectionTarget(EffectStage stage) => stage switch
         {
-            Stage.ClipArguments => EffectTarget.ValueProvider,
-            Stage.Text => EffectTarget.Text | EffectTarget.ValueProvider,
-            Stage.VectorComponent => EffectTarget.VectorComponent | EffectTarget.ValueProvider,
-            Stage.VectorPicture => EffectTarget.VectorPicture | EffectTarget.ValueProvider,
-            Stage.SpeedVariance => EffectTarget.SpeedVariance | EffectTarget.ValueProvider,
-            Stage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
-            Stage.Audio => EffectTarget.Audio | EffectTarget.ValueProvider,
-            Stage.Transform => EffectTarget.Transform | EffectTarget.ValueProvider,
-            Stage.Mixture => EffectTarget.Mixture | EffectTarget.ValueProvider,
+            EffectStage.Text => EffectTarget.Text | EffectTarget.ValueProvider,
+            EffectStage.VectorContent => EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.ValueProvider,
+            EffectStage.Composition => EffectTarget.SpeedVariance | EffectTarget.Transform | EffectTarget.ValueProvider
+                | (ClipType == ClipMode.AudioClip ? 0 : EffectTarget.Mixture),
+            EffectStage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
+            EffectStage.Render => EffectTarget.ValueProvider | (ClipType == ClipMode.AudioClip ? EffectTarget.Audio
+                : EffectTarget.Video | EffectTarget.ColorAdjustment | (!string.IsNullOrWhiteSpace(BindedSoundTrack) ? EffectTarget.Audio : 0)),
             _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider,
         };
 

@@ -20,11 +20,11 @@ public static class EffectPipelineExtensions
     public const string PipelineKey = "__EffectPipeline__";
 
     public static EffectPipeline GetPipeline(this IEffectProvider provider) => provider.Stage is
-        Stage.Text or Stage.VectorComponent or Stage.VectorPicture ? EffectPipeline.NativeContent : EffectPipeline.Picture;
+        EffectStage.Text or EffectStage.VectorContent ? EffectPipeline.NativeContent : EffectPipeline.Picture;
 
     public static void SetPipeline(this IEffectProvider provider, EffectPipeline pipeline)
     {
-        var stage = pipeline == EffectPipeline.NativeContent ? Stage.VectorPicture : Stage.Picture;
+        var stage = pipeline == EffectPipeline.NativeContent ? EffectStage.VectorContent : EffectStage.Render;
         if (provider.SupportedStages.Contains(stage)) provider.Stage = stage;
     }
 
@@ -51,7 +51,9 @@ public static class EffectPipelineExtensions
                 && source.TryGetOutputField(outputId, out var output)
                 && ((types?.GetOutputType(source, outputId) ?? output.FieldType).HasFlag(EffectArgumentFieldType.Any)
                     || EffectFieldTypes.AreCompatible(types?.GetOutputType(source, outputId) ?? output.FieldType,
-                        types?.GetInputType(target, EffectProviderAnchorExtensions.InputKey) ?? input.FieldType));
+                        types?.GetInputType(target, EffectProviderAnchorExtensions.InputKey) ?? input.FieldType,
+                        types?.GetOutputContract(source, outputId) ?? output.TypeContract,
+                        types?.GetInputContract(target, EffectProviderAnchorExtensions.InputKey) ?? input.TypeContract));
         if (!source.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var sourceInput)
             || !(sourceInput.FieldType.IsContent() || sourceInput.FieldType.HasFlag(EffectArgumentFieldType.Any))
             || !(input.FieldType.IsContent() || input.FieldType.HasFlag(EffectArgumentFieldType.Any))

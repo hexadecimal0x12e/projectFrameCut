@@ -40,11 +40,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
-        public IReadOnlyList<Stage> SupportedStages => EffectStages.Text;
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Text;
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectStagePlan? EffectStagePlan { get; set; }
         public bool NeedFilePath => false;
-        public Dictionary<string, object> ExtraData { get; set; }
+        public Dictionary<string, object> ExtraData { get; set; } = new();
         public bool ExtendToWholeDraft { get; set; }
 
         public string BindedSoundTrack { get; init; } = "";
@@ -264,6 +264,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get => 0; set { if (value != 0) Log("Cannot modify StartingX for a TextClip.", "warn"); } }
         public int StartingY { get => 0; set { if (value != 0) Log("Cannot modify StartingY for a TextClip.", "warn"); } }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -419,7 +420,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         : Duration <= 1 ? 0 : Math.Clamp(targetFrame / (float)(Duration - 1), 0, 1));
                 }
             }
-            EffectStagePlan?.Complete(this, Stage.Text, VectorPictureEffectProcessing.GetTargetFrame(this, targetFrame));
+            EffectStagePlan?.Complete(this, EffectStage.Text, VectorPictureEffectProcessing.GetTargetFrame(this, targetFrame));
             return raw;
         }
 

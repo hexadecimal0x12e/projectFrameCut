@@ -1,4 +1,4 @@
-using Microsoft.Maui.Controls.PlatformConfiguration;
+﻿using Microsoft.Maui.Controls.PlatformConfiguration;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
@@ -31,7 +31,15 @@ namespace projectFrameCut.LivePreview
         public IClip[]? Clips;
         public ISoundTrack[]? SoundTracks;
         private AudioSampleSource? audioSamples;
-        public AudioSampleSource AudioSamples => audioSamples ??= new(Clips ?? [], SoundTracks ?? [], targetFrameRate);
+        public AudioSampleSource AudioSamples
+        {
+            get
+            {
+                audioSamples ??= new(Clips ?? [], SoundTracks ?? [], targetFrameRate);
+                audioSamples.TotalProjectFrames = TotalDuration;
+                return audioSamples;
+            }
+        }
         public int targetFrameRate = 60;
         public uint TotalDuration;
         public string TempPath = string.Empty;

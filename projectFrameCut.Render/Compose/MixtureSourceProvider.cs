@@ -13,11 +13,11 @@ public sealed class MixtureSourceProvider(bool isUnder) : IEffectProvider
     public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
     public EffectType TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
     public EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.InternalUse | EffectTarget.IsNotVisibleInNewEffectSelector;
-    public IReadOnlyList<Stage> SupportedStages => [Stage.Mixture];
-    public Stage Stage
+    public IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Composition];
+    public EffectStage Stage
     {
-        get => Stage.Mixture;
-        set { if (value != Stage.Mixture) throw new ArgumentOutOfRangeException(nameof(value)); }
+        get => EffectStage.Composition;
+        set { if (value != EffectStage.Composition) throw new ArgumentOutOfRangeException(nameof(value)); }
     }
     public bool Enabled { get; set; } = true;
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -66,7 +66,7 @@ public static class MixtureBindings
             if (!mixer.AnchorsBindingState.ContainsKey(MixtureProviderBase.LowerInputKey))
                 mixer.SetFieldBinding(MixtureProviderBase.LowerInputKey, under.Id.ToString());
         }
-        if (mixers.Length == 1 && !providers.Values.Any(p => p.Stage == Stage.Mixture && p.IsFinalOutputSource()))
+        if (mixers.Length == 1 && !providers.Values.Any(p => p.Stage == EffectStage.Composition && p.IsFinalOutputSource()))
             mixers[0].SetFinalOutputSource(true);
     }
 }

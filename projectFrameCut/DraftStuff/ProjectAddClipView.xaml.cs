@@ -21,6 +21,8 @@ public partial class ProjectAddClipView : ContentView
         _viewModel.LoadVectorComponents();
         _ = _viewModel.LoadMaskSources();
         BindingContext = _viewModel;
+        Loaded += (_, _) => Services.TextStyleStore.Changed += RefreshTextStyles;
+        Unloaded += (_, _) => Services.TextStyleStore.Changed -= RefreshTextStyles;
         _rpcSourcesTabIndex = MainTabView.TabItems.IndexOf(RpcSourcesTab);
         UpdateExternalSourceAvailability();
         _viewModel.SetDrawingView(DrawingCanvas);
@@ -32,7 +34,6 @@ public partial class ProjectAddClipView : ContentView
             "name" => 1,
             _ => 0
         };
-        if (MauiProgram.IsStoreMode) MainTabView.TabItems.Remove(AIGeneratedContentTab);
         CollapseHeaderControls();
     }
 
@@ -42,6 +43,9 @@ public partial class ProjectAddClipView : ContentView
         return _viewModel.LoadRpcVideoSources();
     }
     internal Task RefreshAssetsAsync() => MainThread.InvokeOnMainThreadAsync(_viewModel.LoadAssets);
+
+    private void RefreshTextStyles() => MainThread.BeginInvokeOnMainThread(() =>
+        _ = Services.TextStyleServices.RunAsync(_page, _viewModel.InitializeTextStyles));
 
     private void UpdateExternalSourceAvailability()
     {
@@ -61,10 +65,11 @@ public partial class ProjectAddClipView : ContentView
         CollapseHeaderControls();
 
         OrderOptionContainer.IsVisible = e.Tag is "LocalAssets" or "SharedAssets" or "RpcSources" or "Templates";
-        SearchContainer.IsVisible = e.Tag is not ("Sketch" or "AIGeneratedContent" or "More");
+        SearchContainer.IsVisible = e.Tag is not ("Sketch" or "More");
         if (e.Tag == "RpcSources") _ = _viewModel.LoadRpcVideoSources();
         if (e.Tag == "Graphics") _viewModel.LoadVectorComponents();
         if (e.Tag == "Masks") _ = _viewModel.LoadMaskSources();
+        if (e.Tag == "Text") RefreshTextStyles();
     }
 
     private async void OnAddAssetClicked(object? sender, EventArgs e)
@@ -275,14 +280,6 @@ public partial class ProjectAddClipView : ContentView
     {
         add => _viewModel.ClipAdded += value;
         remove => _viewModel.ClipAdded -= value;
-    }
-
-    private void OnAIContentTypeChanged(object? sender, CheckedChangedEventArgs e)
-    {
-        if (e.Value && sender is RadioButton radioButton)
-        {
-            _viewModel.AIContentType = radioButton.Value?.ToString() ?? "Image";
-        }
     }
 
     private void OnCollectionViewSizeChanged(object sender, EventArgs e)

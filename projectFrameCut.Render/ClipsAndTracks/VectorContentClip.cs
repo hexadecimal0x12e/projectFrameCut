@@ -37,6 +37,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public float FrameTime { get; init; }
@@ -57,7 +58,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
-        public IReadOnlyList<Stage> SupportedStages => EffectStages.Vector;
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Vector;
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectStagePlan? EffectStagePlan { get; set; }
 
@@ -102,7 +103,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     (EffectsInstances ?? []).Where(e => e.Enabled).OrderBy(e => e.Index).OfType<IVectorComponentEffect>(),
                     frameIndex, progress));
             }
-            EffectStagePlan?.Complete(this, Stage.VectorComponent,
+            EffectStagePlan?.Complete(this, EffectStage.VectorContent,
                 VectorPictureEffectProcessing.GetTargetFrame(this, frameIndex));
             return result;
         }
@@ -220,6 +221,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public float FrameTime { get; init; }
@@ -232,7 +234,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
-        public IReadOnlyList<Stage> SupportedStages => EffectStages.VectorImage;
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.VectorImage;
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }

@@ -13,6 +13,8 @@ public static class TextClipStyles
     public const string ParametersKey = "TextStyleProvider_Parameters";
     public const string FieldsKey = "TextStyleProvider_Fields";
     public const string MetaDataKey = "TextStyleProvider_MetaData";
+    public const string StateKey = "TextStyleProvider_State";
+    public const string TextKey = "TextStyleProvider_Text";
 
     public static ITextClipStyleProvider? Create(string fromPlugin, string typeName)
     {
@@ -24,6 +26,17 @@ public static class TextClipStyles
     public static ITextClipStyleProvider? Restore(IReadOnlyDictionary<string, object>? data)
     {
         if (data is null) return null;
+        if (data.TryGetValue(StateKey, out var raw))
+        {
+            var state = raw is TextClipStyleState s ? s
+                : JsonSerializer.Deserialize<TextClipStyleState>(raw is JsonElement j ? j.GetRawText() : JsonSerializer.Serialize(raw))
+                    ?? throw new InvalidOperationException("Empty text style state.");
+            var restored = Create(state.FromPlugin, state.TypeName);
+            if (restored is null) return null;
+            restored.ImportStyle(state);
+            if (data.TryGetValue(TextKey, out var text) && !state.Bindings.ContainsKey("Text")) restored.BasicText = text.ToString() ?? "";
+            return restored;
+        }
         string from = data.GetValueOrDefault(FromKey)?.ToString() ?? "";
         string type = data.GetValueOrDefault(TypeKey)?.ToString() ?? "";
         var source = Create(from, type);
@@ -51,9 +64,11 @@ public static class TextClipStyles
     {
         data[FromKey] = source.FromPlugin;
         data[TypeKey] = source.TypeName;
-        data[FieldsKey] = source.Fields.Where(p => !p.Value.IsDynamic)
-            .ToDictionary(p => p.Key, p => p.Value.GetGetter()());
-        data[MetaDataKey] = new Dictionary<string, object>(source.MetaData);
+        data[StateKey] = source.ExportStyle();
+        if (source.Fields.TryGetValue("Text", out var textField) && textField.IsDynamic) data.Remove(TextKey);
+        else data[TextKey] = source.BasicText;
+        data.Remove(FieldsKey);
+        data.Remove(MetaDataKey);
         data.Remove(ParametersKey);
     }
 
@@ -61,10 +76,8 @@ public static class TextClipStyles
     {
         var copy = Create(source.FromPlugin, source.TypeName)
             ?? throw new InvalidOperationException($"Text style '{source.TypeName}' is unavailable.");
-        copy.MetaData = new(source.MetaData);
-        copy.Fields = source.Fields.ToDictionary(p => p.Key, p => (IEffectArgumentField)new StaticEffectArgumentField(
-            p.Value.GetGetter()(), p.Value.FieldType) { Id = p.Key });
-        copy.BasicText = source.BasicText;
+        copy.ImportStyle(source.ExportStyle());
+        if (!source.Fields.TryGetValue("Text", out var textField) || !textField.IsDynamic) copy.BasicText = source.BasicText;
         return copy;
     }
 

@@ -169,6 +169,7 @@ internal sealed class RemoteSpeedVarianceProvider(IPluginIsolationSession sessio
 
 internal sealed class RemoteClipPositionProvider(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), IClipPositionProvider
 {
+    public bool PreserveAspectRatio => descriptor.PreserveAspectRatio;
     public ClipPositionTuple GetPosition(IClip source, int targetWidth, int targetHeight) => RemoteEffectInvoke.GetPosition(Session, ObjectId, source, 0, targetWidth, targetHeight);
 }
 
@@ -190,6 +191,7 @@ internal sealed class RemoteValueProviderEffect : RemoteEffectBase, IValueProvid
     string IEffectArgumentField.FromPlugin => _field.FromPlugin;
     public bool IsDynamic => true;
     public EffectArgumentFieldType FieldType => (EffectArgumentFieldType)_field.FieldType;
+    public EffectPortTypeContract? TypeContract => IsolationFieldTypeCodec.ReadContract(_field.TypeContract);
     public object? DataFormat => _field.DataFormat == 0 ? null : (PictureDataFormat)_field.DataFormat;
     public string DefaultValue { get => _field.DefaultValue; set => _field.DefaultValue = value; }
     public string MinValue { get => _field.MinimumValue; set => _field.MinimumValue = value; }
@@ -265,7 +267,7 @@ internal static class RemoteEffectInvoke
             TargetWidth = width,
             TargetHeight = height,
         }).AsTask().GetAwaiter().GetResult();
-        return new(response.TargetX, response.TargetY, response.TargetWidth, response.TargetHeight, response.IsDelta, response.Rotation);
+        return new(response.TargetX, response.TargetY, response.TargetWidth, response.TargetHeight, response.IsDelta, response.Rotation, response.Opacity);
     }
 }
 
@@ -381,6 +383,7 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
                 Clip = context.Clip is null ? null : IsolationClipSnapshotFactory.Create(context.Clip),
             },
             ParameterNames = context.Parameters.Keys.ToList(),
+            AudioSampleIndex = context.AudioSampleIndex,
             RelativeWidth = context.RelativeWidth, RelativeHeight = context.RelativeHeight,
             InputTypes = context.InputTypes.ToDictionary(p => p.Key, p => (int)p.Value),
         };
@@ -701,6 +704,7 @@ internal static class IsolationClipSnapshotFactory
             TargetX = clip.TargetX,
             TargetY = clip.TargetY,
             Rotation = clip.Rotation,
+            Opacity = clip.Opacity,
             StartingX = clip.StartingX,
             StartingY = clip.StartingY,
             FrameTime = clip.FrameTime,

@@ -24,8 +24,18 @@ public static class VideoClipRotation
         => GetAngle(clip.Rotation, clip, clip.EffectsInstances, frame, width, height);
 
     public static float GetAngle(float angle, IClip? clip, IEnumerable<IEffect>? effects, uint frame, int width, int height)
+        => Normalize(ApplyPositionProviders(new(0, 0, 0, 0, false, angle), clip, effects, frame, width, height).Rotation);
+
+    public static float GetOpacity(float opacity, IClip? clip, IEnumerable<IEffect>? effects, uint frame, int width, int height)
     {
-        if (clip is null || effects is null) return Normalize(angle);
+        opacity = ApplyPositionProviders(new(0, 0, 0, 0, false, Opacity: opacity), clip, effects, frame, width, height).Opacity;
+        return float.IsNaN(opacity) ? 1 : Math.Clamp(opacity, 0, 1);
+    }
+
+    private static ClipPositionTuple ApplyPositionProviders(ClipPositionTuple current, IClip? clip, IEnumerable<IEffect>? effects,
+        uint frame, int width, int height)
+    {
+        if (clip is null || effects is null) return current;
         using var context = ValueProviderFrameContext.PushFrame(frame,
             Math.Clamp(((float)frame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
         foreach (var effect in effects.Where(e => e.Enabled).OrderBy(e => e.Index))
@@ -34,9 +44,9 @@ public static class VideoClipRotation
             if (effect is IClipPositionProvider p) position = p.GetPosition(clip, width, height);
             else if (effect is IContinuousClipPositionProvider cp) position = cp.GetPosition(clip, frame, width, height);
             else continue;
-            angle = position.IsDelta ? angle + position.Rotation : position.Rotation;
+            current = current.Apply(position);
         }
-        return Normalize(angle);
+        return current;
     }
 
     public static (double X, double Y, double Width, double Height) GetBounds(float angle, double x, double y, double width, double height)
@@ -89,7 +99,7 @@ public static class VideoClipRotation
                 source = replaced;
             }
             if (!PreviewSourceFrameContext.ReadingRaw)
-                clip.EffectStagePlan?.Complete(clip, Stage.SourceReplacement, ClipArgumentBinding.GetFrameIndex(clip,
+                clip.EffectStagePlan?.Complete(clip, EffectStage.SourceReplacement, ClipArgumentBinding.GetFrameIndex(clip,
                     VectorPictureEffectProcessing.GetTargetFrame(clip, frameIndex)));
             return EffectPictureProcessing.RequireFP16(source, $"Clip {clip.Name}/{clip.Id}");
         }

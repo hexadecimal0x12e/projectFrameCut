@@ -163,7 +163,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                 parameters[key] = node.Provider is AdvancedMathEffectProvider && (key is "A" or "B" or "C")
                     ? inputValue : EffectFieldTypes.ConvertInput(field.FieldType, inputValue, false);
                 if (parameters[key] is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory)
-                    || !EffectFieldTypes.Accepts(Types.GetInputType(node.Provider, key), parameters[key]))
+                    || !EffectFieldTypes.Accepts(Types.GetInputType(node.Provider, key), parameters[key], Types.GetInputContract(node.Provider, key)))
                     throw new InvalidOperationException($"Invalid input '{key}' on provider {node.Provider.Id}.");
                 if (binding is not null) values[binding] = parameters[key];
             }
@@ -241,6 +241,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         public bool IsDynamic => true;
         public bool IsDynamicAtRenderTime => true;
         public EffectArgumentFieldType FieldType => output.FieldType;
+        public EffectPortTypeContract? TypeContract => output.TypeContract;
         public object? DataFormat => output.DataFormat;
         public string DefaultValue { get; set; } = output.DefaultValue;
         public string MinValue { get; set; } = output.MinValue;

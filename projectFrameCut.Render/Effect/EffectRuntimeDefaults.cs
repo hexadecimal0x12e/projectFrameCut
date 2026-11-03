@@ -96,15 +96,24 @@ public static class EffectRuntimeDefaults
         return temporary.Execute(key, typeName, type, defaultType, parameters, execute);
     }
 
-    public static IPicture Place(IPicture source, int width, int height, int x = 0, int y = 0) => Execute(
-        "Place", "Place", EffectImplementType.HwAcceleration,
-        new() { ["StartX"] = 0, ["StartY"] = 0 }, e =>
-        {
-            e.Parameters["StartX"] = x;
-            e.Parameters["StartY"] = y;
-            return HwAccelPictureScope.Current is null ? ((INormalEffect)e).Render(source, width, height)
-                : EffectPictureProcessing.Render(e, source, width, height);
-        });
+    public static IPicture Place(IPicture source, int width, int height, int x = 0, int y = 0)
+    {
+        using var blank = PictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero);
+        var result = EffectPictureProcessing.Mix(Mixture, blank, source, source.BitPerPixel, x, y, width, height);
+        if (HwAccelPictureScope.Current is not null || result is not IHwAccelPicture gpu) return result;
+        using (gpu) return gpu.Download();
+    }
+
+    public static IPicture ApplyOpacity(IPicture source, float opacity)
+    {
+        opacity = float.IsNaN(opacity) ? 1 : Math.Clamp(opacity, 0, 1);
+        if (opacity == 1) return source;
+        if (source is IHwAccelPicture gpu && gpu.Context is IHwAccelPictureGeometry geometry)
+            return geometry.Opacity(gpu, (Half)opacity);
+        using var downloaded = source is IHwAccelPicture hardware ? hardware.Download() : null;
+        var picture = downloaded ?? source;
+        return PictureEffectChannels.PreserveHdr(PictureCalculation<IPicture>.Opacity(picture, (Half)opacity), picture);
+    }
 
     private sealed class DefaultMixture : ClassicOverlayMixture, IMixture
     {

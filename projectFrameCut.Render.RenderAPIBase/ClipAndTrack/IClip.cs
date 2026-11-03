@@ -17,11 +17,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
     public interface IClip : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
-        [JsonIgnore]
-        public IReadOnlyList<Stage> SupportedStages { get; }
-
-        [JsonIgnore]
-        public IEffectStagePlan? EffectStagePlan { get; set; }
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
         /// </summary>
@@ -91,6 +86,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public int TargetY { get; set; }
         /// <summary>Clockwise rotation in degrees, applied by the compositor around the target rectangle's center.</summary>
         public float Rotation { get; set; }
+        /// <summary>Opacity from 0 to 1, applied by the compositor.</summary>
+        public float Opacity { get; set; }
         /// <summary>
         /// The starting X-axis position of this clip in the source. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
         /// </summary>
@@ -151,6 +148,18 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Used in serialization and deserialization.
         /// </summary>
         public EffectProviderJSONStructure[]? EffectProviders { get; init; }
+
+        /// <summary>
+        /// The stages that this clip supports.
+        /// </summary>
+        [JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages { get; }
+
+        /// <summary>
+        /// The effect stage plan for this clip. It defines the order and dependencies of the effects applied to this clip.
+        /// </summary>
+        [JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
 
         /// <summary>
         /// The actual effects applied to this clip.
@@ -226,7 +235,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// Get a <see cref="ClipPositionTuple"/> of this clip.
         /// </summary>
-        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false, Rotation);
+        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false, Rotation, Opacity);
 
         /// <summary>
         /// Returns true if the given draft-global frame is inside this clip's visible range.

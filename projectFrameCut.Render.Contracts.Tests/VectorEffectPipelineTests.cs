@@ -19,7 +19,7 @@ public sealed class VectorEffectPipelineTests
 {
     private sealed class VectorProvider : EffectProviderBase
     {
-        public override IReadOnlyList<projectFrameCut.Shared.Stage> SupportedStages => [projectFrameCut.Shared.Stage.VectorPicture];
+        public override IReadOnlyList<projectFrameCut.Shared.EffectStage> SupportedStages => [projectFrameCut.Shared.EffectStage.VectorContent];
 
         public override bool IsDeterministic => true;
 

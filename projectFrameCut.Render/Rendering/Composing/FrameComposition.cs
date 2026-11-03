@@ -40,6 +40,7 @@ internal static class FrameComposition
                 IPicture frame;
                 using (RenderFrameDiagnostics.Current?.Measure("Copy picture"))
                     frame = Track(DynamicEffectGraph.CopyPicture(clip.Picture));
+                frame = Replace(frame, EffectRuntimeDefaults.ApplyOpacity(frame, clip.Position.Opacity));
                 int x = 0, y = 0;
                 if (!clip.IsCanvas)
                 {
@@ -61,6 +62,7 @@ internal static class FrameComposition
                     y += (int)Math.Round((pos.TargetHeight - frame.Height) / 2d);
                 }
                 if (result is null && clip.Clip.MixtureInstance is not (DynamicMixtureGraph or ReferenceMixture)
+                    && !frame.HasAlphaChannel
                     && x == 0 && y == 0 && frame.Width == options.TargetWidth && frame.Height == options.TargetHeight)
                     result = frame;
                 else
@@ -72,7 +74,7 @@ internal static class FrameComposition
                     if (!ReferenceEquals(frame, mixed)) Release(frame);
                     result = mixed;
                 }
-                clip.Clip.EffectStagePlan?.Complete(clip.Clip, Stage.Mixture, frameIndex);
+                clip.Clip.EffectStagePlan?.Complete(clip.Clip, EffectStage.Composition, frameIndex);
             }
             if (result is not null && (result.Width != options.TargetWidth || result.Height != options.TargetHeight))
             {

@@ -21,7 +21,7 @@ public sealed class AdvancedMathEffectProvider : EffectProviderBase, IMultipleOu
     public override string TypeName => "AdvancedMath" + InputCount;
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override bool IsDeterministic => true;
-    public override IReadOnlyList<Stage> SupportedStages => EffectStages.Values;
+    public override IReadOnlyList<EffectStage> SupportedStages => EffectStages.Values;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
     public override EffectTarget Target => EffectTarget.Video | EffectTarget.ValueProvider;
     public string Operation => GetField("Operation")?.ToString() ?? AdvancedMathMethods.DefaultOperation(InputCount);

@@ -768,6 +768,7 @@ public partial class DraftPage
             XPixels = clip.TargetX,
             YPixels = clip.TargetY,
             RotationDegrees = clip.Rotation,
+            clip.Opacity,
             CropEnabled = crop.Enabled,
             CropXPixels = crop.X,
             CropYPixels = crop.Y,
@@ -783,17 +784,11 @@ public partial class DraftPage
         {
             _ = MaskSources.Create(a.String("MaskSourceType")!);
             clip.ExtraData[MaskClip.SourceTypeKey] = a.String("MaskSourceType")!;
-            if (clip.EffectProviders?.Values.OfType<ClipArgumentProvider>().SingleOrDefault() is { } existing)
-            {
-                existing.RestoreStaticValues(existing.StaticValues.Where(x => !x.Key.StartsWith(MaskClip.ArgumentPrefix, StringComparison.Ordinal)).ToDictionary());
-                foreach (var key in existing.AnchorsBindingState.Keys.Where(k => k.StartsWith(MaskClip.ArgumentPrefix, StringComparison.Ordinal)).ToArray())
-                    existing.ClearFieldBinding(key);
-            }
         }
-        var provider = ClipInfoBuilder.EnsureClipArgumentProvider(clip, this);
-        if (a.Has("SourceArguments")) ApplyGuiProviderFields(provider,
-            a.Fields("SourceArguments").ToDictionary(x => MaskClip.ArgumentPrefix + x.Key, x => x.Value), false);
-        ClipInfoBuilder.RebuildAllEffects(clip);
+        if (a.Has("SourceArguments"))
+            foreach (var (key, value) in a.Fields("SourceArguments"))
+                clip.ExtraData[MaskClip.SourceArgumentKeyPrefix + key] = value;
+
     }
 
     private async Task<object?> ExecuteGuiClipConfigurationAsync(GuiProjectOperation operation, GuiEditArgs a)
@@ -825,6 +820,12 @@ public partial class DraftPage
                 if (!float.IsFinite(angle)) throw new ArgumentException("Invalid rotation angle.");
                 clip.Rotation = VideoClipRotation.Normalize(angle);
             }
+            if (a.Has("Opacity"))
+            {
+                float opacity = (float)a.Number("Opacity");
+                if (!float.IsFinite(opacity) || opacity < 0 || opacity > 1) throw new ArgumentException("Invalid opacity.");
+                clip.Opacity = opacity;
+            }
             if (a.Has("WidthPixels") && clip.TargetWidth <= 0 || a.Has("HeightPixels") && clip.TargetHeight <= 0 || !float.IsFinite(clip.Rotation))
                 throw new ArgumentException("Invalid clip geometry.");
             if (clip.ClipType == ClipMode.SolidColorClip)
@@ -841,7 +842,8 @@ public partial class DraftPage
                     ["HeightPixels"] = "TargetHeight",
                     ["XPixels"] = "TargetX",
                     ["YPixels"] = "TargetY",
-                    ["RotationDegrees"] = "Rotation"
+                    ["RotationDegrees"] = "Rotation",
+                    ["Opacity"] = "Opacity"
                 }
                     .Where(x => a.Has(x.Key)).Select(x => x.Value).ToHashSet();
                 if (new[] { "CropEnabled", "CropXPixels", "CropYPixels", "CropWidthPixels", "CropHeightPixels", "CropRotationDegrees" }.Any(a.Has)
@@ -991,7 +993,6 @@ public partial class DraftPage
         else dto.FilePath = EmptyVideoSource.CreatePath(dto.TargetWidth, dto.TargetHeight);
         var clip = DraftImportAndExportHelper.ConvertToElement(dto);
         if (clip.ClipType == ClipMode.MaskClip) ApplyGuiSourceArguments(clip, a);
-        else if (operation == GuiProjectOperation.AddEmptyVideoClip) ClipInfoBuilder.EnsureClipArgumentProvider(clip, this);
         clip = TimelineMcpLiveService.ReplaceClip(this, GuiEditableDto(clip));
         Logger.Log($"GUI RPC created {clip.ClipType} {clip.Id}.", "info");
         return GuiClipSnapshot(clip);
@@ -1597,7 +1598,7 @@ public partial class DraftPage
         var order = a.Enum("RenderOrder", existing is { } previousOrder
             ? TransformProcessing.ReadEnum<TransformRenderOrder>(previousOrder.Provider.MetaData, TransformProcessing.OrderKey) : TransformServices.DefaultRenderOrder);
         provider.Enabled = a.Bool("Enabled", provider.Enabled);
-        if (!SetClipTransform(clip, side, mode, provider, duration, TransformProcessing.IsAI(provider.MetaData), order, notify: false))
+        if (!SetClipTransform(clip, side, mode, provider, duration, order, notify: false))
             throw new InvalidOperationException("Transform input mode or neighboring clips are incompatible.");
         Logger.Log($"GUI RPC transform {provider.TypeName} on clip {clip.Id}/{side}: {mode}, {duration} frames.", "info");
         return GuiClipTransform(clip, side);
@@ -1822,6 +1823,7 @@ public partial class DraftPage
             XPixels = dto.TargetX,
             YPixels = dto.TargetY,
             RotationDegrees = dto.Rotation,
+            dto.Opacity,
             CanvasWidthPixels = VectorComponentClip.ReadNumber(dto.MetaData!, VectorComponentClip.CanvasWidthKey, dto.TargetWidth),
             CanvasHeightPixels = VectorComponentClip.ReadNumber(dto.MetaData!, VectorComponentClip.CanvasHeightKey, dto.TargetHeight),
             Viewport = VectorComponentClip.ReadViewport(dto.MetaData!, dto.TargetWidth, dto.TargetHeight),
@@ -1838,13 +1840,14 @@ public partial class DraftPage
         var node = JsonSerializer.SerializeToNode(dto)!;
         foreach (var (source, target) in new[] { ("Name", "Name"), ("StartFrame", "StartFrame"), ("DurationFrames", "Duration"),
             ("SourceStartFrame", "RelativeStartFrame"), ("TrackId", "LayerIndex"), ("WidthPixels", "TargetWidth"),
-            ("HeightPixels", "TargetHeight"), ("XPixels", "TargetX"), ("YPixels", "TargetY"), ("RotationDegrees", "Rotation") })
+            ("HeightPixels", "TargetHeight"), ("XPixels", "TargetX"), ("YPixels", "TargetY"), ("RotationDegrees", "Rotation"), ("Opacity", "Opacity") })
             if (parameters.TryGetProperty(source, out var value)) node[target] = JsonNode.Parse(value.GetRawText());
         dto = node.Deserialize<ClipDraftDTO>()!;
         if (dto.Duration == 0 || dto.LayerIndex > int.MaxValue || !(batch?.Tracks.Contains((int)dto.LayerIndex) ?? Tracks.ContainsKey((int)dto.LayerIndex))
             || (ulong)dto.StartFrame + dto.Duration > int.MaxValue || !float.IsFinite(dto.Rotation))
             throw new ArgumentException("Invalid vector clip timing, track or rotation.");
         if (dto.TargetWidth <= 0 || dto.TargetHeight <= 0) throw new ArgumentException("Vector clip dimensions must be positive.");
+        if (!float.IsFinite(dto.Opacity) || dto.Opacity < 0 || dto.Opacity > 1) throw new ArgumentException("Invalid opacity.");
         dto.MetaData = metadata is null ? new() : new(metadata);
         foreach (var (parameter, key) in new[] { ("CanvasWidthPixels", VectorComponentClip.CanvasWidthKey),
             ("CanvasHeightPixels", VectorComponentClip.CanvasHeightKey), ("SourceLengthFrames", VectorComponentClip.SourceLengthKey) })

@@ -16,7 +16,6 @@
                 <VerticalStackLayout Spacing="8">
                     <Button x:Name="GeneralSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_General}" FontSize="24" Clicked="OnGeneralSettingClicked" />
                     <Button x:Name="EditSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Edit}" FontSize="24" Clicked="OnEditSettingClicked" />
-                    <Button x:Name="AISettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_AI}" FontSize="24" Clicked="OnAISettingClicked" />
                     <Button x:Name="SecuritySettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Security}" FontSize="24" Clicked="OnSecuritySettingClicked" />
                     <Button x:Name="RenderSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Render}" FontSize="24" Clicked="OnRenderSettingClicked" />
                     <Button x:Name="ExtensibilitySettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Extensibility}" FontSize="24" Clicked="OnExtensibilitySettingClicked" />

@@ -225,6 +225,7 @@ namespace projectFrameCut.Render.Plugin
                 var clip = plugin.ClipCreator(source);
                 clip.ExtraData = dto?.MetaData ?? new();
                 clip.Rotation = VideoClipRotation.Normalize(dto?.Rotation ?? 0);
+                clip.Opacity = dto?.Opacity ?? 1;
                 if (clip is IVectorContentClip vectorClip)
                 {
                     vectorClip.ClipAntiAliasMode = source.TryGetProperty("VectorAntiAliasMode", out var aaModeProp) && aaModeProp.ValueKind == JsonValueKind.String
@@ -279,14 +280,6 @@ namespace projectFrameCut.Render.Plugin
 
         public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru, EffectImplementType type = EffectImplementType.NotSpecified)
         {
-            if (stru.FromPlugin == InternalPluginBase.InternalPluginBaseID && stru.TypeName == "Rotation"
-                && stru.Name == "__Internal_Rotation__" && (stru.Parameters is null || !stru.Parameters.ContainsKey("Angle")))
-            {
-                stru.Parameters ??= new();
-                stru.Parameters["Angle"] = 0f;
-                stru.Parameters.TryAdd("ExpandCanvas", false);
-                Log("Restored missing parameters of a legacy internal rotation effect.", "warn");
-            }
             IEffect effect = null!;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {

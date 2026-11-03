@@ -26,6 +26,8 @@ internal abstract class ResidentPictureContext : IHwAccelPictureContext, IHwAcce
     private int references = 1;
     private int disposed;
     public IHwAccelPicture Resize(IHwAccelPicture source, int width, int height, bool preserveAspect) => ResidentPictureOperations.Resize(source, width, height, preserveAspect);
+    public IHwAccelPicture Opacity(IHwAccelPicture source, Half opacity) =>
+        ResidentPictureOperations.Run(source, ResidentOperation.Opacity, [(float)opacity], alpha: source.HasAlphaChannel || opacity < Half.One);
     public IHwAccelPicture Rotate(IHwAccelPicture source, float angle, bool expandCanvas)
     {
         var result = ResidentPictureOperations.Rotate(source, -angle, expandCanvas, pixelCenters: true);

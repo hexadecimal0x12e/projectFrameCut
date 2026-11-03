@@ -15,17 +15,17 @@ public interface IClipValueEndpointProvider : IEffectProvider
 
 public static class ClipValueEndpointExtensions
 {
-    public static bool CanPassTo(this IClipValueEndpointProvider output, Stage stage, bool sameClip,
+    public static bool CanPassTo(this IClipValueEndpointProvider output, EffectStage stage, bool sameClip,
         IEnumerable<IEffectProvider>? providers = null)
     {
-        bool before = providers?.Any(p => p.Stage == Stage.Transform && p.Enabled
+        bool before = providers?.Any(p => p.Stage == EffectStage.Composition && p.Enabled
             && p.MetaData.GetValueOrDefault("TransformRenderOrder")?.ToString() is "BeforeEffects" or "1") == true;
         return sameClip ? EffectStages.Precedes(output.Stage, stage, before) && !output.ValueType.IsContent()
             : output.AllowCrossClip && output.Stage == stage;
     }
 
     public static bool CanPassTo(this IClipValueEndpointProvider output, EffectPipeline pipeline, bool sameClip) =>
-        output.CanPassTo(pipeline == EffectPipeline.NativeContent ? Stage.VectorPicture : Stage.Picture, sameClip);
+        output.CanPassTo(pipeline == EffectPipeline.NativeContent ? EffectStage.VectorContent : EffectStage.Render, sameClip);
 }
 
 public sealed class ClipValueBindingException(string message, Exception? inner = null) : InvalidOperationException(message, inner) { }

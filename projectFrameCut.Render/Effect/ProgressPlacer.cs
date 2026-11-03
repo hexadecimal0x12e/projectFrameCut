@@ -134,7 +134,8 @@ namespace projectFrameCut.Render.Effect
             int w = (int)Math.Round(from.TargetWidth + (to.TargetWidth - from.TargetWidth) * t);
             int h = (int)Math.Round(from.TargetHeight + (to.TargetHeight - from.TargetHeight) * t);
             bool isDelta = from.IsDelta == to.IsDelta && from.IsDelta;
-            return new ClipPositionTuple(x, y, w, h, isDelta, (float)(from.Rotation + (to.Rotation - from.Rotation) * t));
+            return new ClipPositionTuple(x, y, w, h, isDelta, (float)(from.Rotation + (to.Rotation - from.Rotation) * t),
+                (float)(from.Opacity + (to.Opacity - from.Opacity) * t));
         }
 
         private ClipPositionTuple NormalizePosition(ClipPositionTuple position, IClip source)
@@ -160,7 +161,7 @@ namespace projectFrameCut.Render.Effect
             int y = (int)Math.Round((double)position.TargetY * targetHeight / RelativeHeight);
             int w = (int)Math.Round((double)position.TargetWidth * targetWidth / RelativeWidth);
             int h = (int)Math.Round((double)position.TargetHeight * targetHeight / RelativeHeight);
-            return new ClipPositionTuple(x, y, w, h, position.IsDelta, position.Rotation);
+            return position with { TargetX = x, TargetY = y, TargetWidth = w, TargetHeight = h };
         }
 
         private static List<ProgressData> ParseProgressList(object? value)
@@ -213,7 +214,7 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ProgressPlacerProvider : KeyFramedEffectProviderBase<ProgressData>
     {
-        public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
 
         public override bool IsDeterministic => true;
 
@@ -254,6 +255,7 @@ namespace projectFrameCut.Render.Effect
             step.Fields["TargetWidth"] = KeyFrameStep.Field("TargetWidth", EffectArgumentFieldType.Integer, item.Position.TargetWidth, "1");
             step.Fields["TargetHeight"] = KeyFrameStep.Field("TargetHeight", EffectArgumentFieldType.Integer, item.Position.TargetHeight, "1");
             step.Fields["Rotation"] = KeyFrameStep.Field("Rotation", EffectArgumentFieldType.Numeric, item.Position.Rotation);
+            step.Fields["Opacity"] = KeyFrameStep.Field("Opacity", EffectArgumentFieldType.Numeric, item.Position.Opacity, "0", "1");
             step.Fields["IsDelta"] = KeyFrameStep.Field("IsDelta", EffectArgumentFieldType.Boolean, item.Position.IsDelta);
             return step;
         }
@@ -261,7 +263,8 @@ namespace projectFrameCut.Render.Effect
         protected override ProgressData WriteStep(IKeyFrameStep step) => new(step.Progress, new ClipPositionTuple(
             Convert.ToInt32(step.Fields["TargetX"].GetGetter()()), Convert.ToInt32(step.Fields["TargetY"].GetGetter()()),
             Convert.ToInt32(step.Fields["TargetWidth"].GetGetter()()), Convert.ToInt32(step.Fields["TargetHeight"].GetGetter()()),
-            Convert.ToBoolean(step.Fields["IsDelta"].GetGetter()()), Convert.ToSingle(step.Fields["Rotation"].GetGetter()())));
+            Convert.ToBoolean(step.Fields["IsDelta"].GetGetter()()), Convert.ToSingle(step.Fields["Rotation"].GetGetter()()),
+            Convert.ToSingle(step.Fields["Opacity"].GetGetter()())));
 
         public void UpsertStep(double progress, ClipPositionTuple position)
         {

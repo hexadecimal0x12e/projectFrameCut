@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     /// <summary>
@@ -25,6 +27,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Determine the type of the field, which is used to determine how to process the field.
         /// </summary>
         public EffectArgumentFieldType FieldType { get; }
+
+        /// <summary>The shared contract for a <see cref="EffectArgumentFieldType.CustomType"/> port.</summary>
+        public EffectPortTypeContract? TypeContract => null;
 
         [System.Text.Json.Serialization.JsonIgnore]
         public object? DataFormat => null;
@@ -255,13 +260,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         Any = 1 << 31,
 
         /// <summary>
-        /// Indicate that the field is a custom type, which means the value of the field can be any type, and the handling of the field should be implemented in <see cref="IEffectProvider.Build"/>.
+        /// A custom port carrying <see cref="CustomEffectPortValue"/> under <see cref="IEffectArgumentField.TypeContract"/>.
         /// </summary>
         /// <remarks>
-        /// Make sure you have a good reason to use this type, describe well in <see cref="IEffectArgumentField.Remarks"/> as it will make the effect bundle less portable and harder to use in other contexts.
+        /// Contracts with exactly the same ID are compatible across plugins, regardless of their display names.
         /// </remarks>
-        [Obsolete("This type will be removed in future as the RPC protocol cannot handle raw objects. Consider serialize the target object to JSON string instead.")]
-        CustomType = 1 << 64,
+        CustomType = 1 << 0,
     }
 
     /// <summary>A clip argument that can retain its original property value until explicitly overridden.</summary>
@@ -308,6 +312,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Determine the type of the field, which is used to determine how to process the field.
         /// </summary>
         public required EffectArgumentFieldType FieldType { get; set; }
+        public EffectPortTypeContract? TypeContract { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public object? DataFormat { get; set; }
 
@@ -333,7 +338,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         public bool IsDynamicAtRenderTime => false;
 
-        public Func<object> GetGetter() => () => Value;
+        public Func<object> GetGetter() => () => TypeContract is null ? Value : EffectFieldTypes.ConvertInput(FieldType, Value)!;
     }
 
     /// <summary>
@@ -352,6 +357,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string FromPlugin { get; set; } = string.Empty;
         public bool IsDynamic { get; set; } = false;
         public EffectArgumentFieldType FieldType { get; set; } = EffectArgumentFieldType.Unknown;
+        public EffectPortTypeContract? TypeContract { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public object? DataFormat { get; set; }
         public string DefaultValue { get; set; } = string.Empty;
@@ -364,7 +370,55 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         public Func<object> GetGetter()
         {
-            return () => DefaultValue;
+            return () => TypeContract is null ? DefaultValue : EffectFieldTypes.DefaultValue(this)!;
+        }
+    }
+
+    /// <summary>A plugin-independent data contract. IDs are case-sensitive and must identify the same payload schema.</summary>
+    public sealed record EffectPortTypeContract
+    {
+        public string Id { get; }
+        public string DisplayName { get; }
+        public string? Description { get; }
+
+        public EffectPortTypeContract(string id, string displayName, string? description = null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+            Id = id;
+            DisplayName = displayName;
+            Description = description;
+        }
+
+        public bool IsCompatibleWith(EffectPortTypeContract? other) => string.Equals(Id, other?.Id, StringComparison.Ordinal);
+
+        public CustomEffectPortValue CreateValue<T>(T value, JsonSerializerOptions? options = null) =>
+            new(Id, JsonSerializer.SerializeToElement(value, options));
+
+        public T? ReadValue<T>(CustomEffectPortValue value, JsonSerializerOptions? options = null)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            if (!string.Equals(Id, value.ContractId, StringComparison.Ordinal))
+                throw new ArgumentException($"Expected port contract '{Id}', received '{value.ContractId}'.", nameof(value));
+            return JsonSerializer.Deserialize<T>(value.Data, options);
+        }
+    }
+
+    /// <summary>Serializable custom port data, independent of either plugin's CLR types.</summary>
+    public sealed record CustomEffectPortValue
+    {
+        [System.Text.Json.Serialization.JsonPropertyName(nameof(ContractId))]
+        public string ContractId { get; }
+        [System.Text.Json.Serialization.JsonPropertyName(nameof(Data))]
+        public JsonElement Data { get; }
+
+        public CustomEffectPortValue(string contractId, JsonElement data)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(contractId);
+            if (data.ValueKind == JsonValueKind.Undefined)
+                throw new ArgumentException("Custom port data must contain a JSON value.", nameof(data));
+            ContractId = contractId;
+            Data = data.Clone();
         }
     }
 }

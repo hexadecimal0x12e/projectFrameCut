@@ -1,12 +1,10 @@
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
-using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics.Text;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -176,7 +174,7 @@ namespace projectFrameCut.DraftStuff
             });
             if (clip.ClipType is ClipMode.ProjectReferenceClip or ClipMode.VideoClip or ClipMode.SolidColorClip or ClipMode.VectorCanvasClip
                 or ClipMode.VectorComponentClip or ClipMode.MaskClip or ClipMode.TextClip or ClipMode.SubtitleClip
-                || clip.ClipType != ClipMode.MarkingClip && clip.SupportedStages.Contains(Stage.SourceReplacement))
+                || clip.ClipType != ClipMode.MarkingClip && clip.SupportedStages.Contains(EffectStage.SourceReplacement))
                 tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_SourceProperties,
@@ -901,8 +899,8 @@ namespace projectFrameCut.DraftStuff
             public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
             public EffectType TypeOfEffect => EffectType.NotSpecified;
             public EffectTarget Target => EffectTarget.Video;
-            public IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
-            public Stage Stage { get; set; } = Stage.Picture;
+            public IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
+            public EffectStage Stage { get; set; } = EffectStage.Render;
 
             public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields => new Dictionary<string, EffectArgumentFieldDescriptor>();
             public EffectArgumentFieldDescriptor OutField => new EffectArgumentFieldDescriptor

@@ -2,6 +2,8 @@ using CommunityToolkit.Maui.Views;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace projectFrameCut.ApplicationAPIBase.Effect
 {
@@ -67,47 +69,60 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         public static Func<string[], string>? AppPackageFileResolver;
 
         /// <summary>
+        /// Lists file names in an app-package directory. Registered by the App layer.
+        /// </summary>
+        public static Func<string[], IEnumerable<string>>? AppPackageFileNamesResolver;
+
+        /// <summary>
         /// Resolves a localized string by key. Registered by the App layer.
         /// Signature: (key, fallback, locate) => localized_string
         /// </summary>
         public static Func<string, string, string, string>? TaggedLocalizedStringResolver;
 
         /// <summary>
-        /// Maps effect type names to their sample thumbnail / video file names (relative to "EffectSample").
-        /// ".mp4" files produce a video thumbnail; ".png" files produce an image thumbnail.
-        /// Effects not listed here fall back to "source.png".
+        /// Finds images and videos in EffectSample with the same name as the effect type, ignoring case.
+        /// PNG and MP4 take priority; missing images fall back to source.png.
         /// </summary>
-        public static readonly IReadOnlyDictionary<string, string> EffectSampleThumbnails = new Dictionary<string, string>
+        public static (string imageFile, string? videoFile) ResolveThumbnailFiles(string typeName)
         {
-            { "Blur", "blur.png" },
-            { "ClassicOverlayMixture", "classicOverlayMixture.png" },
-            { "FadeOpacity", "fadeOpacity.png" },
-            { "Flip", "flip.png" },
-            { "Jitter", "jittter.mp4" },
-            { "ProgressCrop", "progresscrop.mp4" },
-            { "ProgressPlacer", "progressplace.mp4" },
-            { "RemoveColor", "removeColor.png" },
-            { "Sharpen", "sharpen.png" },
-            { "Vignette", "vignette.png" },
-            { "ZoomIn", "zoomin.mp4" },
-        };
-
-        /// <summary>
-        /// Resolves the thumbnail file names for a given effect type name.
-        /// Returns (imageFile, videoFile) — one of them may be null.
-        /// For ".mp4" entries, imageFile is "source.png" and videoFile is the mp4.
-        /// For ".png" entries, imageFile is the png and videoFile is null.
-        /// Fallback: ("source.png", null).
-        /// </summary>
-        public static (string? imageFile, string? videoFile) ResolveThumbnailFiles(string typeName)
-        {
-            if (EffectSampleThumbnails.TryGetValue(typeName, out var file))
+            string? imageFile = null, videoFile = null;
+            try
             {
-                if (file.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
-                    return ("source.png", file);
-                return (file, null);
+                foreach (var file in (AppPackageFileNamesResolver?.Invoke(["EffectSample"]) ?? []).Order(StringComparer.Ordinal))
+                {
+                    if (!string.Equals(Path.GetFileNameWithoutExtension(file), typeName, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    switch (Path.GetExtension(file).ToLowerInvariant())
+                    {
+                        case ".png":
+                            imageFile = file;
+                            break;
+                        case ".jpg":
+                        case ".jpeg":
+                        case ".webp":
+                        case ".gif":
+                        case ".bmp":
+                            imageFile ??= file;
+                            break;
+                        case ".mp4":
+                            videoFile = file;
+                            break;
+                        case ".m4v":
+                        case ".mov":
+                        case ".webm":
+                        case ".avi":
+                        case ".mkv":
+                            videoFile ??= file;
+                            break;
+                    }
+                }
             }
-            return ("source.png", null);
+            catch (Exception ex)
+            {
+                Log(ex, "scan effect sample thumbnails");
+            }
+            return (imageFile ?? "source.png", videoFile);
         }
 
         /// <summary>
@@ -123,25 +138,38 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
 
         /// <summary>
         /// Builds a default <see cref="EffectProviderDisplayItem"/> for the given provider using key conventions
-        /// and the thumbnail mapping table.
+        /// and matching sample files.
         /// </summary>
         public static EffectProviderDisplayItem BuildDefault(IEffectProvider source)
         {
             var (imageFile, videoFile) = ResolveThumbnailFiles(source.TypeName);
 
-            ImageSource? ResolveImageSource(string? file)
+            string? ResolveSamplePath(string? file)
             {
                 if (file is null) return null;
-                var absolutePath = AppPackageFileResolver?.Invoke(new[] { "EffectSample", file }) ?? file;
-                return ImageSource.FromFile(absolutePath);
+                try
+                {
+                    var path = AppPackageFileResolver?.Invoke(["EffectSample", file]) ?? file;
+                    return File.Exists(path) ? path : null;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"resolve effect sample '{file}'");
+                    return null;
+                }
             }
+
+            var imagePath = ResolveSamplePath(imageFile);
+            if (imagePath is null && imageFile != "source.png")
+                imagePath = ResolveSamplePath("source.png");
+            var videoPath = ResolveSamplePath(videoFile);
 
             return new EffectProviderDisplayItem
             {
                 LocalizedNameKey = "DisplayName_Effect_" + source.TypeName,
                 LocalizedDescriptionKey = "Description_Effect_" + source.TypeName,
-                Thumbnail = ResolveImageSource(imageFile),
-                VideoThumbnail = videoFile is not null ? MediaSource.FromFile(AppPackageFileResolver?.Invoke(new[] { "EffectSample", videoFile }) ?? videoFile) : null,
+                Thumbnail = imagePath is not null ? ImageSource.FromFile(imagePath) : null,
+                VideoThumbnail = videoPath is not null ? MediaSource.FromFile(videoPath) : null,
                 Fields = null,
             };
         }

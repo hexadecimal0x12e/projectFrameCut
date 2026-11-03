@@ -48,9 +48,9 @@ public partial class ClipInfoBuilder
         };
         var layout = new VerticalStackLayout { Spacing = 8 };
         if (properties is not null) layout.Children.Add(properties);
-        if (clip.SupportedStages.Contains(Stage.SourceReplacement))
+        if (clip.SupportedStages.Contains(EffectStage.SourceReplacement))
         {
-            var sourceReplacement = await BuildEffectStagePanel(clip, handler, Stage.SourceReplacement);
+            var sourceReplacement = await BuildEffectStagePanel(clip, handler, EffectStage.SourceReplacement);
             layout.Children.Add(new PropertyPanelBuilder()
                 .AddCollapsibleSection(Localized.Effect_Stage_SourceReplacement,
                     p => p.AddCustomChild(sourceReplacement.Build(new VerticalStackLayout { Spacing = 10 })),
@@ -224,7 +224,7 @@ public partial class ClipInfoBuilder
             .AddCustomChild(PPLocalizedResources.General_Color,
                 invoker => BuildColorPropertyView(currentSolidColorHex, Colors.White, invoker), "solidColor", currentSolidColorHex)
             .AddPositionTupleInputBox("place", new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20), PositionTupleMode.XYWH, (clip.TargetX, clip.TargetY, valW, valH), entryWidth: 70)
-            .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0);
+            .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, VideoClipRotation.Normalize(clip.Rotation));
 
         panel.PropertyChanged += (s, e) =>
         {
@@ -252,19 +252,7 @@ public partial class ClipInfoBuilder
                     break;
                 case "rotationDeg":
                     if (e.Value is not double deg) return;
-                    clip.Effects ??= new();
-                    clip.Effects[InternalRotationID] = new RotationEffect_IPicture
-                    {
-                        Angle = (float)deg,
-                        Enabled = true,
-                        Name = InternalRotationID,
-                        Index = int.MinValue + 100,
-                        RelativeWidth = page.ProjectInfo.RelativeWidth,
-                        RelativeHeight = page.ProjectInfo.RelativeHeight,
-                        ExpandCanvas = false,
-                        Parameters = new() { ["Angle"] = (float)deg, ["ExpandCanvas"] = false },
-                        Id = InternalRotationID
-                    };
+                    clip.Rotation = VideoClipRotation.Normalize((float)deg);
                     break;
                 default:
                     return;
@@ -472,6 +460,7 @@ public partial class ClipInfoBuilder
 
     internal static ClipArgumentProvider EnsureClipArgumentProvider(ClipElementUI clip, DraftPage? page)
     {
+        if (clip.ClipType is not (ClipMode.TextClip or ClipMode.SubtitleClip)) throw new NotSupportedException("Only text clips expose bindable text properties.");
         clip.EffectProviders ??= new();
         var provider = clip.EffectProviders.Values.OfType<ClipArgumentProvider>().SingleOrDefault();
         if (provider is null)
@@ -493,19 +482,10 @@ public partial class ClipInfoBuilder
             }
             catch (Exception ex) { Log(ex, $"Read argument fields for clip {clip.Id}", nameof(ClipInfoBuilder)); }
         }
-        provider.Attach(fields, key => key switch
-        {
-            nameof(IClip.TargetX) => clip.TargetX,
-            nameof(IClip.TargetY) => clip.TargetY,
-            nameof(IClip.TargetWidth) => clip.TargetWidth,
-            nameof(IClip.TargetHeight) => clip.TargetHeight,
-            nameof(IClip.Rotation) => clip.Rotation,
-            ClipArgumentHandler.ShouldRenderKey => true,
-            _ => key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
-                && TextClipStyles.Restore(clip.ExtraData) is { } style
-                ? TextClipStyles.ReadValue(style, key[TextClipStyles.ArgumentPrefix.Length..])
-                : defaults.GetValueOrDefault(key) ?? fields[key].DefaultValue,
-        });
+        provider.Attach(fields, key => key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
+            && TextClipStyles.Restore(clip.ExtraData) is { } style
+            ? TextClipStyles.ReadValue(style, key[TextClipStyles.ArgumentPrefix.Length..])
+            : defaults.GetValueOrDefault(key) ?? fields[key].DefaultValue);
         if (clip.ClipType == ClipMode.TextClip && TextClipStyles.Restore(clip.ExtraData) is { } textStyle)
             SyncTextStyleClipArguments(clip, textStyle, updateValues: false);
         return provider;
@@ -542,17 +522,8 @@ public partial class ClipInfoBuilder
                 ReadValue = _ => TextClipStyles.ReadValue(style, key),
             };
         }
-        provider.Attach(fields, key => key switch
-        {
-            nameof(IClip.TargetX) => clip.TargetX,
-            nameof(IClip.TargetY) => clip.TargetY,
-            nameof(IClip.TargetWidth) => clip.TargetWidth,
-            nameof(IClip.TargetHeight) => clip.TargetHeight,
-            nameof(IClip.Rotation) => clip.Rotation,
-            ClipArgumentHandler.ShouldRenderKey => true,
-            _ => TextClipStyles.ReadValue(TextClipStyles.Restore(clip.ExtraData) ?? style,
-                key[TextClipStyles.ArgumentPrefix.Length..]),
-        });
+        provider.Attach(fields, key => TextClipStyles.ReadValue(TextClipStyles.Restore(clip.ExtraData) ?? style,
+            key[TextClipStyles.ArgumentPrefix.Length..]));
     }
 
     internal static void SaveTextStyleClipArguments(ClipElementUI clip)
@@ -577,20 +548,17 @@ public partial class ClipInfoBuilder
 
     private View BuildMaskSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> changed)
     {
-        var provider = EnsureClipArgumentProvider(clip, page);
+        var provider = new ClipArgumentProvider();
+        var fields = MaskClip.SourceFields(clip.ExtraData);
+        provider.Attach(fields, key => fields[key].ReadValue(null!));
         var panel = new PropertyPanelBuilder();
-        var host = new ClipBindingHost(clip, provider, page, () =>
-        {
-            RebuildAllEffects(clip);
-            changed?.Invoke(this, new("__REFRESH_PANEL__", null, null));
-        });
-        EffectProviderUIHelper.BuildUI(provider, panel, host,
-            provider.InFields.Keys.Where(k => k.StartsWith(MaskClip.ArgumentPrefix, StringComparison.Ordinal)));
+        EffectProviderUIHelper.BuildUI(provider, panel, null, fields.Keys);
         panel.PropertyChanged += (_, e) =>
         {
             var update = EffectProviderUIHelper.HandleChange(provider, e);
             if (update.newFields is not null) provider.Fields = update.newFields;
-            RebuildAllEffects(clip);
+            foreach (var (key, value) in provider.StaticValues)
+                clip.ExtraData[MaskClip.SourceArgumentKeyPrefix + key[MaskClip.ArgumentPrefix.Length..]] = value;
             changed?.Invoke(this, e);
         };
         return panel.Build();

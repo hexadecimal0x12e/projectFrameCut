@@ -1250,7 +1250,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             }
             else if (warnIfAlreadySet)
             {
-                Log($"[PropertyPanelBuilder] Warning: The control '{control.GetType().Name}' with Id '{Id}' already has an AutomationId set, and this could break the ability for 'Assistant P' to access the PropertyPanel.", "warn");
+                Log($"[PropertyPanelBuilder] The control '{control.GetType().Name}' with Id '{Id}' already has an AutomationId set.", "warn");
             }
         }
 

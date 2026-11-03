@@ -39,7 +39,7 @@ public static class EffectGroupHelper
 
     public static bool CanGroup(IEffectProvider p, IReadOnlyDictionary<Guid, IEffectProvider> providers)
     {
-        if (p is ClipArgumentProvider or IClipValueEndpointProvider || p.TypeOfEffect == EffectType.Transform) return false;
+        if (p is ClipArgumentProvider or RenderOutputProvider or IClipValueEndpointProvider || p.TypeOfEffect == EffectType.Transform) return false;
         foreach (var target in providers.Values)
             foreach (var binding in target.AnchorsBindingState.Where(b => !EffectProviderAnchorExtensions.IsOutputBindingKey(b.Key)))
                 if (EffectProviderOutputExtensions.TryParseOutputSourceId(binding.Value, out var id, out _)
@@ -178,7 +178,7 @@ public static class EffectGroupHelper
             {
                 var source = p.AnchorsBindingState[key];
                 if (EffectProviderAnchorExtensions.IsOutputBindingKey(key)
-                    || source != ValueProviderFrameContext.BuiltInFrameProviderId && source != ValueProviderFrameContext.BuiltInProgressProviderId
+                    || !ValueProviderFrameContext.IsBuiltInSource(source)
                         && (!EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _) || !members.Contains(id)))
                     p.AnchorsBindingState.Remove(key);
             }
@@ -240,7 +240,7 @@ public static class EffectGroupHelper
         foreach (var p in t.Providers)
             foreach (var b in p.AnchorsBindingState)
                 if (EffectProviderAnchorExtensions.IsOutputBindingKey(b.Key)
-                    || b.Value != ValueProviderFrameContext.BuiltInFrameProviderId && b.Value != ValueProviderFrameContext.BuiltInProgressProviderId
+                    || !ValueProviderFrameContext.IsBuiltInSource(b.Value)
                         && b.Value != IEffectProvider.NoConnectionGUID.ToString()
                         && (!EffectProviderOutputExtensions.TryParseOutputSourceId(b.Value, out var id, out _) || !members.Contains(id)))
                     throw new InvalidOperationException("Template contains a project-specific binding.");

@@ -19,6 +19,9 @@ public interface ITextClipStyleProvider : IExtensibleObject
     bool CanSnapWhileResizing { get; }
     TextClipLayoutMode LayoutMode { get; set; }
     TextEntry[] BuildEntries();
+    /// <summary>Exports portable style state. The host persists the associated provider graph for dynamic bindings.</summary>
+    TextClipStyleState ExportStyle() => TextClipStyleState.Export(this);
+    void ImportStyle(TextClipStyleState state) => TextClipStyleState.Import(this, state);
     bool HandleSettableFieldsChange(EffectArgumentFieldDescriptor field, object value, out string feedback);
     void HandleClipResize(bool isInRatio, int TargetX, int TargetY, int TargetWidth, int TargetHeight);
     ClipPositionTuple GetViewRect(int canvasWidth, int canvasHeight);

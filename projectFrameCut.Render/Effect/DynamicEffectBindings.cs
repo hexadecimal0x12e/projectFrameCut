@@ -7,15 +7,16 @@ public static class DynamicEffectBindings
 {
     public static bool IsGraphEffect(IEffect effect) => effect is DynamicEffectGraph or NativeDynamicEffectGraph or DynamicMixtureGraph;
 
-    public static bool IsGraphProvider(IEffectProvider p) => p.Stage == Stage.Mixture
-        && (p.TypeOfEffect == EffectType.MixtureProvider || p.Target.HasFlag(EffectTarget.ValueProvider))
-        || p.Stage is Stage.Picture or Stage.VectorPicture && p is not ClipArgumentProvider && p.TypeOfEffect is
+    public static bool IsGraphProvider(IEffectProvider p) => p is RenderOutputProvider
+        || p.Stage == EffectStage.Composition && (p.TypeOfEffect == EffectType.MixtureProvider || p.Target.HasFlag(EffectTarget.ValueProvider))
+        || p.Stage is EffectStage.Render or EffectStage.VectorContent && p is not ClipArgumentProvider && p.TypeOfEffect is
         EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.ClipPositionProvider
-        or EffectType.ContinuousClipPositionProvider or EffectType.NonIPictureOutputValueProvider or EffectType.VectorPictureEffect;
+        or EffectType.ContinuousClipPositionProvider or EffectType.NonIPictureOutputValueProvider or EffectType.VectorPictureEffect
+        or EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect;
 
-    public static bool CanBindOutput(IEffectProvider p) => p is not ClipArgumentProvider and not IClipValueEndpointProvider { IsExport: true }
+    public static bool CanBindOutput(IEffectProvider p) => p is not (ClipArgumentProvider or RenderOutputProvider or IClipValueEndpointProvider { IsExport: true })
         && (p.Target.HasFlag(EffectTarget.ValueProvider)
-            || p.Stage is Stage.Picture or Stage.VectorPicture or Stage.Text or Stage.VectorComponent or Stage.Mixture);
+            || p.Stage is EffectStage.Render or EffectStage.VectorContent or EffectStage.Text or EffectStage.Composition);
 
     public static Dictionary<string, IEffectArgumentField> InputFields(IEffectProvider p)
     {
@@ -29,11 +30,13 @@ public static class DynamicEffectBindings
     public static bool RequiresGraph(IReadOnlyDictionary<Guid, IEffectProvider>? providers)
     {
         if (providers is null) return false;
-        if (providers.Values.Any(p => p.Stage == Stage.Mixture)) return true;
+        if (providers.Values.Any(p => p is RenderOutputProvider || p.Stage is EffectStage.Render or EffectStage.Composition)) return true;
         if (providers.Values.Any(p => p is IClipValueEndpointProvider or IMultipleOutputEffectProvider || p.GetFinalOutputFieldId() is not null
             || InputFields(p).Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                || f.TypeContract is not null
                 || f.FieldType.BaseType() == EffectArgumentFieldType.AudioSample)
             || p.GetOutputFields().Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                || f.TypeContract is not null
                 || f.FieldType.BaseType() == EffectArgumentFieldType.AudioSample)
             || p.AnchorsBindingState.Values.Contains(ValueProviderFrameContext.BuiltInAudioSampleProviderId)
             || p.AnchorsBindingState.Any(x => !EffectProviderAnchorExtensions.IsOutputBindingKey(x.Key)
@@ -159,6 +162,27 @@ public static class DynamicEffectBindings
         if (providers.Values.OfType<ClipArgumentProvider>().Count() > 1)
             errors.Add(new(null, "MultipleClipArguments", "A clip can only have one argument provider."));
 
+        bool TimingDependsOnOutput(IEffectProvider source, bool speed, HashSet<Guid> seen)
+        {
+            if (!seen.Add(source.Id)) return false;
+            if (speed && source is IClipValueEndpointProvider { IsExport: false } input && providers.ContainsKey(input.SourceEndpointId)) return true;
+            return source.AnchorsBindingState.Where(p => !EffectProviderAnchorExtensions.IsOutputBindingKey(p.Key))
+                .Any(p => p.Value == ValueProviderFrameContext.BuiltInAudioSampleProviderId
+                    || EffectProviderOutputExtensions.TryParseOutputSourceId(p.Value, out var id, out _) && providers.TryGetValue(id, out var upstream)
+                        && TimingDependsOnOutput(upstream, speed, seen));
+        }
+        bool DependsOnGlobalMix(string? source, HashSet<Guid> seen)
+        {
+            if (source == ValueProviderFrameContext.BuiltInAudioSampleProviderId) return true;
+            if (!EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _)
+                || !seen.Add(id) || !providers.TryGetValue(id, out var upstream) || !upstream.Enabled) return false;
+            return upstream.AnchorsBindingState.Where(b => !EffectProviderAnchorExtensions.IsOutputBindingKey(b.Key))
+                .Any(b => DependsOnGlobalMix(b.Value, seen));
+        }
+        foreach (var output in providers.Values.OfType<RenderOutputProvider>().Where(p => p.Enabled))
+            foreach (var field in new[] { RenderOutputProvider.AudioKey, RenderOutputProvider.ShouldRenderKey })
+                if (DependsOnGlobalMix(output.AnchorsBindingState.GetValueOrDefault(field), []))
+                    errors.Add(new(output.Id, "AudioDependencyCycle", "Global mixed audio cannot depend on itself through clip audio or visibility."));
         foreach (var p in providers.Values)
         {
             try { EffectStages.Validate(p); }
@@ -198,17 +222,19 @@ public static class DynamicEffectBindings
                 var inputType = types.GetInputType(p, binding.Key);
                 if (ValueProviderFrameContext.IsBuiltInSource(binding.Value))
                 {
-                    var sourceType = binding.Value == ValueProviderFrameContext.BuiltInAudioSampleProviderId
-                        ? EffectArgumentFieldType.AudioSample : EffectArgumentFieldType.Numeric;
+                    var sourceType = ValueProviderFrameContext.SourceType(binding.Value);
+                    if (binding.Value is ValueProviderFrameContext.ClipAudioProviderId or ValueProviderFrameContext.ClipPositionProviderId
+                        && p.Stage != EffectStage.Render)
+                        errors.Add(new(p.Id, "InvalidRenderSource", "Clip audio and position sources belong to the render stage."));
                     if (sourceType == EffectArgumentFieldType.AudioSample && !ValueProviderFrameContext.SupportsAudioSample(p.Stage))
                         errors.Add(new(p.Id, "UnsupportedAudioSampleStage", $"Final mixed audio cannot feed stage {p.Stage} on {p.Id}."));
-                    if (!EffectFieldTypes.AreCompatible(sourceType, inputType))
+                    if (!EffectFieldTypes.AreCompatible(sourceType, inputType, null, types.GetInputContract(p, binding.Key)))
                         errors.Add(new(p.Id, "IncompatibleInput", $"Built-in source cannot feed '{binding.Key}' on {p.Id}."));
                     continue;
                 }
                 if (binding.Value == IEffectProvider.InputAnchorGUID.ToString())
                 {
-                    if (!EffectFieldTypes.AreCompatible(p.Stage.GetContentType(), inputType)
+                    if (!EffectFieldTypes.AreCompatible(p.Stage.GetContentType(), inputType, null, types.GetInputContract(p, binding.Key))
                         || !IsGraphProvider(p) && binding.Key != EffectProviderAnchorExtensions.InputKey)
                         errors.Add(new(p.Id, "IncompatibleInput", $"Source picture cannot feed '{binding.Key}' on {p.Id}."));
                     continue;
@@ -227,12 +253,16 @@ public static class DynamicEffectBindings
                     errors.Add(new(p.Id, "EndpointIsNotLocalSource", "Export endpoints can only be read through another clip's endpoint input."));
                 else if (!CanBindOutput(source))
                     errors.Add(new(p.Id, "UnsupportedBindingSource", $"Provider {id} cannot feed '{binding.Key}' on {p.Id}."));
+                if (p.TypeOfEffect is EffectType.SpeedVarianceProvider or EffectType.Transform
+                    && (!CanInlineValue(source, providers, types: types) || TimingDependsOnOutput(source, p.TypeOfEffect == EffectType.SpeedVarianceProvider, [])))
+                    errors.Add(new(p.Id, "CompositionTimingDependency", "Timing and transition parameters cannot depend on the composition picture graph."));
                 var outputType = types.GetOutputType(source, output.Id);
-                if (!outputType.HasFlag(EffectArgumentFieldType.Any) && !EffectFieldTypes.AreCompatible(outputType, inputType))
+                if (!outputType.HasFlag(EffectArgumentFieldType.Any) && !EffectFieldTypes.AreCompatible(outputType, inputType,
+                    types.GetOutputContract(source, output.Id), types.GetInputContract(p, binding.Key)))
                     errors.Add(new(p.Id, "IncompatibleInput", $"Provider {id} cannot feed '{binding.Key}' on {p.Id}."));
                 if (p.Stage != source.Stage)
                     errors.Add(new(p.Id, "CrossStageBinding", $"Binding '{binding.Key}' on {p.Id} crosses picture-processing stages."));
-                if (p.Stage is Stage.Text or Stage.VectorComponent or Stage.VectorPicture && p.Stage == source.Stage
+                if (p.Stage is EffectStage.Text or EffectStage.VectorContent && p.Stage == source.Stage
                     && binding.Key == EffectProviderAnchorExtensions.InputKey && !source.CanConnectContent(p, outputId, types))
                     errors.Add(new(p.Id, "IncompatibleContentInput", $"Provider {id} cannot feed native content on {p.Id}."));
             }

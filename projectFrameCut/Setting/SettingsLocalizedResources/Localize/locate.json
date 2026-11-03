@@ -312,225 +312,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_APIKey",
-        "Value": "API \u5BC6\u94A5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "API BaseAddress",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "\u7528\u4E8E\u548C Assistant P \u7684\u804A\u5929",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018Assistant P\u2019",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "\u804A\u5929\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "\u8BF7\u786E\u4FDD\u4F60\u4F7F\u7528\u7684\u662F\u517C\u5BB9OpenAI API\u7684\u63A5\u53E3",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "\u7528\u4E8E\u56FE\u7247\u751F\u6210\u573A\u666F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "\u56FE\u7247\u751F\u6210\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "\u56FE\u7247\u751F\u89C6\u9891\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "\u6587\u751F\u89C6\u9891\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "\u6A21\u578B\u5217\u8868\u4E0D\u53EF\u7528\uFF0C\u8BF7\u68C0\u67E5API\u914D\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "\u6211\u4EEC\u76EE\u524D\u4E0D\u652F\u6301\u4F7F\u7528Anthropic API\u7684\u804A\u5929\u6A21\u578B\u3002\r\u7531\u4E8EAPI\u5DEE\u5F02\uFF0C\u4F7F\u7528\u6765\u81EA DeepSeek \u7684API\u670D\u52A1\u65F6\uFF0C\u4E0D\u652F\u6301\u5728\u601D\u8003\u7684\u65F6\u5019\u4F7F\u7528\u5DE5\u5177\u3002\r\u6240\u6709\u7684\u81EA\u5B9A\u4E49\u6A21\u578B\u90FD\u9700\u8981\u517C\u5BB9OpenAI API\u624D\u80FD\u88AB\u4F7F\u7528\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint2",
-        "Value": "\u5728\u6B64\u9875\u9762\u4E2D\uFF0C\u9664\u975E\u4F60\u4E3B\u52A8\u70B9\u51FB\u201C\u4FDD\u5B58\u201D\uFF0C\u5426\u5219\u6240\u6709\u7684\u66F4\u6539\u90FD\u4E0D\u4F1A\u751F\u6548\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "AI \u670D\u52A1\u63D0\u4F9B\u5546",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "\u663E\u793A\u6240\u6709\u7684\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "\u914D\u7F6EAI\u63D0\u4F9B\u5546",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "\u6D4B\u8BD5\u6A21\u578B\u8C03\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "\u8C03\u7528\u6210\u529F\u5B8C\u6210\uFF0CAI\u8FD4\u56DE\u4E86 {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "\u8BF7\u5148\u5B8C\u6210AI\u670D\u52A1\u914D\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u9884\u671F\u7684\u6570\u636E\u3002\u8BF7\u68C0\u67E5\u4F60\u7684\u914D\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "\u4F60\u6240\u9009\u7684\u670D\u52A1\u5546\u4E0D\u652F\u6301\u6B64\u64CD\u4F5C\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "\u67E5\u770B\u751F\u6210\u7ED3\u679C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "\u8FD9\u5C06\u4F1A\u4F7F\u7528\u4F60\u7684\u914D\u7F6E\u8C03\u7528AI\uFF0C\u53EF\u80FD\u4EA7\u751FToken\u4F7F\u7528\uFF0C\u8981\u7EE7\u7EED\u5417\uFF1F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "AI \u670D\u52A1\u914D\u7F6E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "\u7528\u4E8E\u89C6\u9891\u751F\u6210\u548CAI\u8F6C\u573A\u751F\u6210",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "\u89C6\u9891\u751F\u6210\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "CommonStr_Go",
         "Value": "\u524D\u5F80\u9875\u9762",
         "Mode": "ConstString",
@@ -1990,14 +1771,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Plugin_AIProviderPlugin",
-        "Value": "AI\u670D\u52A1\u63D2\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Plugin_CannotCreateInstance",
         "Value": "\u6211\u4EEC\u65E0\u6CD5\u521D\u59CB\u5316\u63D2\u4EF6\uFF0C\u56E0\u4E3A\uFF1A{reason} ",
         "Mode": "InterpolationString",
@@ -3254,38 +3027,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "AI \u529F\u80FD",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "\u5141\u8BB8\u901A\u8FC7\u5DE5\u5177\u8C03\u7528\u6765\u914D\u7F6E\u9879\u76EE",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "\u5141\u8BB8AI\u8BBF\u95EE\u811A\u672C\u5F15\u64CE\uFF0C\u5B9E\u73B0\u914D\u7F6E\u9879\u76EE",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "\u5141\u8BB8\u5DE5\u5177\u8C03\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_ExternalRpcPipe",
         "Value": "\u5916\u90E8 RPC \u7BA1\u9053\u6743\u9650",
         "Mode": "ConstString",
@@ -3632,6 +3373,78 @@
             "Value": "name"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "\u63d2\u4ef6\u5f00\u53d1\u6d4b\u8bd5\uff08Debug\uff09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "\u7981\u7528\u63d2\u4ef6\u4fe1\u4efb\u6821\u9a8c",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "\u8df3\u8fc7\u8bc1\u4e66\u94fe\u3001\u7b7e\u540d\u3001\u6587\u4ef6\u6458\u8981\u3001\u540a\u9500\u548c\u53d1\u5e03\u8005\u4fe1\u4efb\u6821\u9a8c\u3002\u66f4\u6539\u5f71\u54cd\u540e\u7eed\u52a0\u8f7d\uff1b\u5df2\u52a0\u8f7d\u63d2\u4ef6\u8bf7\u91cd\u65b0\u52a0\u8f7d\u6216\u91cd\u542f\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "\u81ea\u5b9a\u4e49\u6839\u4fe1\u4efb\u8bc1\u4e66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "\u652f\u6301 PEM \u6216 DER \u683c\u5f0f\u7684 CA \u8bc1\u4e66\uff1b\u542f\u7528\u4fe1\u4efb\u6821\u9a8c\u65f6\uff0c\u4ecd\u9700\u9a8c\u8bc1\u63d2\u4ef6\u7b7e\u540d\u5e76\u786e\u8ba4\u53d1\u5e03\u8005\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "\u5bfc\u5165\u6839\u8bc1\u4e66\uff08PEM / DER\uff09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "\u79fb\u9664\u6839\u8bc1\u4e66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "\u5c1a\u672a\u6dfb\u52a0\u81ea\u5b9a\u4e49\u6839\u8bc1\u4e66\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "\u5df2\u8df3\u8fc7\u63d2\u4ef6\u4fe1\u4efb\u6821\u9a8c\uff08Debug\uff09\u3002",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -5588,243 +5401,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_Title",
-        "Value": "AI Service Configuration",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "Configure AI Provider",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Chat Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "For chatting with Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "AI Service Provider",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "API Key",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "API BaseAddress",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Test Model Call",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "This will use your configuration to call the AI, which may consume tokens. Continue?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "Please complete the AI service configuration first.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "Call completed successfully, AI returned {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "Model list unavailable, please check API configuration.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Image Generation Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "For image generation scenarios",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "The service provider you selected does not support this operation.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "Please ensure you are using an interface compatible with the OpenAI API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "The model did not return the expected data. Please check your configuration.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "View Generated Result",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Video Generation Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "For video generation and AI transition generation",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Refresh",
         "Value": "Refresh",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "We currently do not support using chat models from Anthropic API.\rDue to API differences, when using API services from DeepSeek, tool usage during thinking is not supported.\rAll custom models need to be compatible with OpenAI API to be used.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Text-to-Video Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Image-to-Video Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "Show all models",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5869,15 +5447,6 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Audio synthesis buffer size\r(The larger the buffer, the faster the audio synthesis speed; the smaller the buffer, the potentially higher the synthesis precision)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint2",
-        "Value": "On this page, unless you actively click \u0027Save\u0027, none of the changes will take effect.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6262,42 +5831,6 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "This feature requires a device with a hybrid core (big and little core) processor.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities",
-        "Value": "AI Capabilities",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Allow configuring projects via tool calls",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "Allow AI to access the script engine to implement configuration items",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Allow Tool Calls",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7351,6 +6884,78 @@
             "Value": "name"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -9300,243 +8905,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_Title",
-        "Value": "AI \u670D\u52D9\u914D\u7F6E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "\u914D\u7F6EAI\u4F9B\u61C9\u5546",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "\u804A\u5929\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "\u7528\u65BC\u548C Assistant P \u7684\u5C0D\u8A71",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "AI \u670D\u52D9\u4F9B\u61C9\u5546",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "API \u91D1\u9470",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "API \u57FA\u790E\u5730\u5740",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "\u6E2C\u8A66\u6A21\u578B\u547C\u53EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "\u9019\u5C07\u4F7F\u7528\u60A8\u7684\u914D\u7F6E\u8ABF\u7528AI\uFF0C\u53EF\u80FD\u7522\u751FToken\u4F7F\u7528\uFF0C\u8981\u7E7C\u7E8C\u55CE\uFF1F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "\u8ACB\u5148\u5B8C\u6210AI\u670D\u52D9\u914D\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "\u547C\u53EB\u6210\u529F\u5B8C\u6210\uFF0CAI \u8FD4\u56DE\u4E86 {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "\u6A21\u578B\u5217\u8868\u4E0D\u53EF\u7528\uFF0C\u8ACB\u6AA2\u67E5API\u914D\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "\u5716\u7247\u751F\u6210\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "\u7528\u65BC\u5716\u7247\u751F\u6210\u5834\u666F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "\u4F60\u6240\u9078\u64C7\u7684\u670D\u52D9\u5546\u4E0D\u652F\u63F4\u6B64\u64CD\u4F5C\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "\u8ACB\u78BA\u4FDD\u60A8\u4F7F\u7528\u7684\u662F\u76F8\u5BB9OpenAI API\u7684\u4ECB\u9762",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "\u6A21\u578B\u6C92\u6709\u8FD4\u56DE\u9810\u671F\u7684\u8CC7\u6599\u3002\u8ACB\u6AA2\u67E5\u4F60\u7684\u914D\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "\u67E5\u770B\u751F\u6210\u7D50\u679C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "\u5F71\u7247\u751F\u6210\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "\u7528\u65BC\u5F71\u7247\u751F\u6210\u548CAI\u8F49\u5834\u751F\u6210",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Refresh",
         "Value": "\u91CD\u65B0\u6574\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "\u6211\u5011\u76EE\u524D\u4E0D\u652F\u63F4\u4F7F\u7528Anthropic API\u7684\u804A\u5929\u6A21\u578B\u3002\r\u7531\u65BCAPI\u5DEE\u7570\uFF0C\u4F7F\u7528\u4F86\u81EA DeepSeek \u7684API\u670D\u52D9\u6642\uFF0C\u4E0D\u652F\u63F4\u5728\u601D\u8003\u7684\u6642\u5019\u4F7F\u7528\u5DE5\u5177\u3002\r\u6240\u6709\u7684\u81EA\u8A02\u6A21\u578B\u90FD\u9700\u8981\u76F8\u5BB9OpenAI API\u624D\u80FD\u88AB\u4F7F\u7528\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "\u6587\u751F\u5F71\u7247\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "\u5716\u7247\u751F\u6210\u5F71\u7247\u6A21\u578B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "\u986F\u793A\u6240\u6709\u6A21\u578B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9581,15 +8951,6 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "\u97F3\u8A0A\u5408\u6210\u7DE9\u885D\u5340\u5927\u5C0F\r(\u8D8A\u5927\u5408\u6210\u97F3\u8A0A\u7684\u901F\u5EA6\u8D8A\u5FEB\uFF1B\u8D8A\u5C0F\u5408\u6210\u97F3\u8A0A\u7684\u7CBE\u78BA\u5EA6\u53EF\u80FD\u66F4\u9AD8)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint2",
-        "Value": "\u5728\u6B64\u9801\u9762\u4E2D\uFF0C\u9664\u975E\u60A8\u4E3B\u52D5\u9EDE\u64CA\u300C\u5132\u5B58\u300D\uFF0C\u5426\u5247\u6240\u6709\u7684\u8B8A\u66F4\u90FD\u4E0D\u6703\u751F\u6548\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9973,42 +9334,6 @@
       {
         "Id": "Render_EnableAutoThreadAffinity_Unsupported",
         "Value": "\u6B64\u529F\u80FD\u9700\u8981\u4F7F\u7528\u642D\u8F09\u7570\u69CB\uFF08\u5927\u5C0F\u6838\uFF09\u67B6\u69CB\u8655\u7406\u5668\u7684\u88DD\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities",
-        "Value": "AI \u529F\u80FD",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "\u5141\u8A31\u900F\u904E\u5DE5\u5177\u547C\u53EB\u4F86\u8A2D\u5B9A\u5C08\u6848",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "\u5141\u8A31\u5DE5\u5177\u547C\u53EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "\u5141\u8A31 AI \u5B58\u53D6\u8173\u672C\u5F15\u64CE\uFF0C\u5BE6\u4F5C\u8A2D\u5B9A\u9805\u76EE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11071,6 +10396,78 @@
             "Value": "name"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -13020,243 +12417,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_Title",
-        "Value": "AI\u30B5\u30FC\u30D3\u30B9\u8A2D\u5B9A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "AI\u30D7\u30ED\u30D0\u30A4\u30C0\u30FC\u306E\u8A2D\u5B9A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "\u30C1\u30E3\u30C3\u30C8\u30E2\u30C7\u30EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Assistant P\u3068\u306E\u30C1\u30E3\u30C3\u30C8\u306B\u4F7F\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "AI\u30B5\u30FC\u30D3\u30B9\u30D7\u30ED\u30D0\u30A4\u30C0\u30FC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "API\u30AD\u30FC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "API\u30D9\u30FC\u30B9\u30A2\u30C9\u30EC\u30B9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "\u30E2\u30C7\u30EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "\u30E2\u30C7\u30EB\u547C\u3073\u51FA\u3057\u306E\u30C6\u30B9\u30C8",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "\u3053\u308C\u306F\u3042\u306A\u305F\u306E\u8A2D\u5B9A\u3092\u4F7F\u7528\u3057\u3066AI\u3092\u547C\u3073\u51FA\u3057\u3001\u30C8\u30FC\u30AF\u30F3\u4F7F\u7528\u91CF\u304C\u767A\u751F\u3059\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "\u307E\u305AAI\u30B5\u30FC\u30D3\u30B9\u306E\u8A2D\u5B9A\u3092\u5B8C\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "\u547C\u3073\u51FA\u3057\u304C\u6B63\u5E38\u306B\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002AI\u304C {content} \u3092\u8FD4\u3057\u307E\u3057\u305F\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "\u30E2\u30C7\u30EB\u30EA\u30B9\u30C8\u304C\u5229\u7528\u3067\u304D\u307E\u305B\u3093\u3002API\u8A2D\u5B9A\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "\u753B\u50CF\u751F\u6210\u30E2\u30C7\u30EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "\u753B\u50CF\u751F\u6210\u30B7\u30CA\u30EA\u30AA\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "\u9078\u629E\u3057\u305F\u30D7\u30ED\u30D0\u30A4\u30C0\u30FC\u306F\u3053\u306E\u64CD\u4F5C\u3092\u30B5\u30DD\u30FC\u30C8\u3057\u3066\u3044\u307E\u305B\u3093\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "OpenAI API\u4E92\u63DB\u306E\u30A8\u30F3\u30C9\u30DD\u30A4\u30F3\u30C8\u3092\u4F7F\u7528\u3057\u3066\u3044\u308B\u3053\u3068\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "\u30E2\u30C7\u30EB\u304C\u671F\u5F85\u3055\u308C\u308B\u30C7\u30FC\u30BF\u3092\u8FD4\u3057\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u8A2D\u5B9A\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "\u751F\u6210\u7D50\u679C\u3092\u8868\u793A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "\u52D5\u753B\u751F\u6210\u30E2\u30C7\u30EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "\u52D5\u753B\u751F\u6210\u3068AI\u30B7\u30FC\u30F3\u5909\u63DB\u751F\u6210\u306B\u4F7F\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Refresh",
         "Value": "\u66F4\u65B0",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "\u73FE\u5728\u3001Anthropic API\u306E\u30C1\u30E3\u30C3\u30C8\u30E2\u30C7\u30EB\u306F\u30B5\u30DD\u30FC\u30C8\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002\nAPI\u306E\u9055\u3044\u306B\u3088\u308A\u3001DeepSeek\u306EAPI\u30B5\u30FC\u30D3\u30B9\u3092\u4F7F\u7528\u3059\u308B\u5834\u5408\u3001\u601D\u8003\u4E2D\u306B\u30C4\u30FC\u30EB\u3092\u4F7F\u7528\u3059\u308B\u3053\u3068\u306F\u30B5\u30DD\u30FC\u30C8\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002\n\u3059\u3079\u3066\u306E\u30AB\u30B9\u30BF\u30E0\u30E2\u30C7\u30EB\u306FOpenAI API\u3068\u4E92\u63DB\u6027\u304C\u3042\u308B\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "\u6587\u751F\u52D5\u753B\u30E2\u30C7\u30EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "\u753B\u50CF\u304B\u3089\u52D5\u753B\u751F\u6210\u30E2\u30C7\u30EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "\u3059\u3079\u3066\u306E\u30E2\u30C7\u30EB\u3092\u8868\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13302,15 +12464,6 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "\u30AA\u30FC\u30C7\u30A3\u30AA\u5408\u6210\u30D0\u30C3\u30D5\u30A1\u30B5\u30A4\u30BA\r\uFF08\u30D0\u30C3\u30D5\u30A1\u304C\u5927\u304D\u3044\u307B\u3069\u5408\u6210\u901F\u5EA6\u304C\u901F\u3044\uFF1B\u5C0F\u3055\u3044\u307B\u3069\u5408\u6210\u7CBE\u5EA6\u304C\u9AD8\u304F\u306A\u308B\u53EF\u80FD\u6027\u3042\u308A\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint2",
-        "Value": "\u3053\u306E\u30DA\u30FC\u30B8\u3067\u306F\u3001\u3042\u306A\u305F\u304C\u300C\u4FDD\u5B58\u300D\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u306A\u3044\u9650\u308A\u3001\u3059\u3079\u3066\u306E\u5909\u66F4\u306F\u6709\u52B9\u306B\u306A\u308A\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13704,33 +12857,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "AI\u6A5F\u80FD",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "\u30C4\u30FC\u30EB\u547C\u3073\u51FA\u3057\u306B\u3088\u308B\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u69CB\u6210\u3092\u8A31\u53EF",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "AI\u306B\u3088\u308B\u30B9\u30AF\u30EA\u30D7\u30C8\u30A8\u30F3\u30B8\u30F3\u3078\u306E\u30A2\u30AF\u30BB\u30B9\u3092\u8A31\u53EF\u3057\u3001\u8A2D\u5B9A\u9805\u76EE\u3092\u5B9F\u88C5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_General",
         "Value": "\u4E00\u822C\u30BB\u30AD\u30E5\u30EA\u30C6\u30A3\u8A2D\u5B9A",
         "Mode": "ConstString",
@@ -13760,15 +12886,6 @@
       {
         "Id": "Security_RemoteContent_EnableRemoteContent",
         "Value": "\u30AF\u30E9\u30A6\u30C9\u914D\u4FE1\u60C5\u5831\u306E\u6709\u52B9\u5316",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "\u30C4\u30FC\u30EB\u547C\u3073\u51FA\u3057\u3092\u8A31\u53EF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14795,6 +13912,78 @@
             "Value": "name"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -16743,243 +15932,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_Title",
-        "Value": "AI \uC11C\uBE44\uC2A4 \uC124\uC815",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "AI \uC81C\uACF5\uC5C5\uCCB4 \uAD6C\uC131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "\uCC44\uD305 \uBAA8\uB378",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Assistant P\uC640\uC758 \uCC44\uD305\uC6A9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "AI \uC11C\uBE44\uC2A4 \uC81C\uACF5\uC5C5\uCCB4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "API \uD0A4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "API \uAE30\uBCF8 \uC8FC\uC18C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "\uBAA8\uB378",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "\uBAA8\uB378 \uD638\uCD9C \uD14C\uC2A4\uD2B8",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "\uC774 \uC791\uC5C5\uC740 AI\uB97C \uD638\uCD9C\uD558\uAE30 \uC704\uD574 \uADC0\uD558\uC758 \uC124\uC815\uC744 \uC0AC\uC6A9\uD558\uBA70, \uD1A0\uD070 \uC0AC\uC6A9\uB7C9\uC774 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "\uBA3C\uC800 AI \uC11C\uBE44\uC2A4 \uAD6C\uC131\uC744 \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "\uD638\uCD9C \uC131\uACF5 \uC644\uB8CC, AI\uAC00 {content}\uB97C \uBC18\uD658\uD588\uC2B5\uB2C8\uB2E4.",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "\uBAA8\uB378 \uBAA9\uB85D\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. API \uAD6C\uC131\uC744 \uD655\uC778\uD558\uC138\uC694.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "\uC774\uBBF8\uC9C0 \uC0DD\uC131 \uBAA8\uB378",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "\uC774\uBBF8\uC9C0 \uC0DD\uC131 \uC2DC\uB098\uB9AC\uC624\uC5D0 \uC0AC\uC6A9\uB429\uB2C8\uB2E4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "\uC120\uD0DD\uD558\uC2E0 \uC11C\uBE44\uC2A4 \uACF5\uAE09\uC790\uB294 \uC774 \uC791\uC5C5\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "\uC0AC\uC6A9 \uC911\uC778 \uC778\uD130\uD398\uC774\uC2A4\uAC00 OpenAI API\uC640 \uD638\uD658\uB418\uB294\uC9C0 \uD655\uC778\uD558\uC138\uC694.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "\uBAA8\uB378\uC774 \uC608\uC0C1\uB41C \uB370\uC774\uD130\uB97C \uBC18\uD658\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "\uC0DD\uC131 \uACB0\uACFC \uBCF4\uAE30",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "\uBE44\uB514\uC624 \uC0DD\uC131 \uBAA8\uB378",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "\uBE44\uB514\uC624 \uC0DD\uC131 \uBC0F AI \uC7A5\uBA74 \uC804\uD658 \uC0DD\uC131\uC5D0 \uC0AC\uC6A9\uB429\uB2C8\uB2E4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Refresh",
         "Value": "\uC0C8\uB85C \uACE0\uCE68",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "\uD604\uC7AC Anthropic API\uC758 \uCC44\uD305 \uBAA8\uB378\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.\nAPI \uCC28\uC774\uB85C \uC778\uD574 DeepSeek\uC758 API \uC11C\uBE44\uC2A4\uB97C \uC0AC\uC6A9\uD560 \uB54C \uC0DD\uAC01\uD558\uB294 \uB3D9\uC548 \uB3C4\uAD6C\uB97C \uC0AC\uC6A9\uD558\uB294 \uAC83\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.\n\uBAA8\uB4E0 \uC0AC\uC6A9\uC790 \uC815\uC758 \uBAA8\uB378\uC740 OpenAI API\uC640 \uD638\uD658\uB418\uC5B4\uC57C \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "\uD14D\uC2A4\uD2B8-\uBE44\uB514\uC624 \uBAA8\uB378",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "\uC774\uBBF8\uC9C0-\uBE44\uB514\uC624 \uBCC0\uD658 \uBAA8\uB378",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "\uBAA8\uB4E0 \uBAA8\uB378 \uD45C\uC2DC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17024,15 +15978,6 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "\uC624\uB514\uC624 \uD569\uC131 \uBC84\uD37C \uD06C\uAE30\r(\uBC84\uD37C\uAC00 \uD074\uC218\uB85D \uC624\uB514\uC624 \uD569\uC131 \uC18D\uB3C4\uAC00 \uBE60\uB974\uACE0, \uC791\uC744\uC218\uB85D \uC624\uB514\uC624 \uD569\uC131 \uC815\uBC00\uB3C4\uAC00 \uB354 \uB192\uC744 \uC218 \uC788\uC74C)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint2",
-        "Value": "\uC774 \uD398\uC774\uC9C0\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uC790\uAC00 \uC9C1\uC811 \u0027\uC800\uC7A5\u0027\uC744 \uD074\uB9AD\uD558\uC9C0 \uC54A\uB294 \uD55C \uBAA8\uB4E0 \uBCC0\uACBD \uC0AC\uD56D\uC774 \uC801\uC6A9\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17422,44 +16367,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "AI\uAC00 \uC2A4\uD06C\uB9BD\uD2B8 \uC5D4\uC9C4\uC5D0 \uC561\uC138\uC2A4\uD558\uB3C4\uB85D \uD5C8\uC6A9\uD558\uC5EC \uAD6C\uC131 \uD56D\uBAA9\uC744 \uAD6C\uD604",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_RemoteContent",
         "Value": "\uC6D0\uACA9 \uCF58\uD150\uCE20",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "\uB3C4\uAD6C \uD638\uCD9C\uC744 \uD1B5\uD55C \uD504\uB85C\uC81D\uD2B8 \uAD6C\uC131 \uD5C8\uC6A9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities",
-        "Value": "AI \uAE30\uB2A5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "\uB3C4\uAD6C \uD638\uCD9C \uD5C8\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18512,6 +17421,78 @@
             "Value": "name"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -20458,243 +19439,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_Title",
-        "Value": "Configuration du service IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "Configurer le fournisseur d\u0027IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Mod\u00E8le de discussion",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Pour discuter avec Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "Fournisseur de services d\u0027IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "Cl\u00E9 API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "Adresse de base de l\u0027API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Mod\u00E8le",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Test d\u0027appel du mod\u00E8le",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "Cela utilisera votre configuration pour appeler l\u0027IA et pourrait consommer des tokens. Voulez-vous continuer ?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "Veuillez d\u0027abord terminer la configuration du service d\u0027IA.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "Appel termin\u00E9 avec succ\u00E8s, l\u0027IA a retourn\u00E9 {content}.",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "Liste des mod\u00E8les non disponible, veuillez v\u00E9rifier la configuration de l\u0027API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Mod\u00E8le de g\u00E9n\u00E9ration d\u0027images",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "Pour les sc\u00E9narios de g\u00E9n\u00E9ration d\u0027images",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "Le fournisseur que vous avez s\u00E9lectionn\u00E9 ne prend pas en charge cette op\u00E9ration.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "Veuillez vous assurer que vous utilisez une interface compatible avec l\u0027API OpenAI.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "Le mod\u00E8le n\u0027a pas renvoy\u00E9 les donn\u00E9es attendues. Veuillez v\u00E9rifier votre configuration.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "Voir le r\u00E9sultat g\u00E9n\u00E9r\u00E9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Mod\u00E8le de g\u00E9n\u00E9ration vid\u00E9o",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "Utilis\u00E9 pour la g\u00E9n\u00E9ration vid\u00E9o et la g\u00E9n\u00E9ration de sc\u00E8nes AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "_Refresh",
         "Value": "Actualiser",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "Nous ne supportons actuellement pas l\u0027utilisation des mod\u00E8les de chat de l\u0027API Anthropic.\rEn raison des diff\u00E9rences d\u0027API, lors de l\u0027utilisation des services API de DeepSeek, l\u0027utilisation d\u0027outils pendant la r\u00E9flexion n\u0027est pas prise en charge.\rTous les mod\u00E8les personnalis\u00E9s doivent \u00EAtre compatibles avec l\u0027API OpenAI pour pouvoir \u00EAtre utilis\u00E9s.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Mod\u00E8le de g\u00E9n\u00E9ration de vid\u00E9o \u00E0 partir de texte",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Mod\u00E8le de g\u00E9n\u00E9ration vid\u00E9o \u00E0 partir d\u0027images",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "Afficher tous les mod\u00E8les",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20739,15 +19485,6 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Taille du tampon de synth\u00E8se audio\r(Plus grand = synth\u00E8se plus rapide ; plus petit = pr\u00E9cision potentiellement plus \u00E9lev\u00E9e)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint2",
-        "Value": "Sur cette page, \u00E0 moins que vous ne cliquiez manuellement sur \u0022Enregistrer\u0022, toutes les modifications ne prendront pas effet.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21139,35 +19876,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Autoriser la configuration des projets via des appels d\u0027outils",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities",
-        "Value": "Fonctionnalit\u00E9s IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_General",
         "Value": "Configuration g\u00E9n\u00E9rale de la s\u00E9curit\u00E9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Autoriser les appels d\u0027outils",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21195,15 +19905,6 @@
       {
         "Id": "Security_RichText",
         "Value": "Rendu du texte enrichi",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "Autoriser l\u0027IA \u00E0 acc\u00E9der au moteur de script pour impl\u00E9menter des \u00E9l\u00E9ments de configuration",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22232,6 +20933,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -22431,241 +21204,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u062A\u0645 \u0627\u0644\u062D\u0641\u0627\u0638 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0022projectFrameCut\u0022 \u062F\u0648\u0646 \u062A\u0631\u062C\u0645\u0629 \u0643\u0645\u0627 \u0647\u0648 \u0645\u0637\u0644\u0648\u0628.",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "\u0645\u0641\u062A\u0627\u062D API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "\u0639\u0646\u0648\u0627\u0646 API \u0627\u0644\u0623\u0633\u0627\u0633\u064A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "\u0644\u0644\u062F\u0631\u062F\u0634\u0629 \u0645\u0639 Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u062F\u0631\u062F\u0634\u0629",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646\u0643 \u062A\u0633\u062A\u062E\u062F\u0645 \u0648\u0627\u062C\u0647\u0629 \u0645\u062A\u0648\u0627\u0641\u0642\u0629 \u0645\u0639 OpenAI API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "\u0644\u062D\u0627\u0644\u0627\u062A \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0635\u0648\u0631",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "\u0646\u0645\u0648\u0630\u062C \u062A\u0648\u0644\u064A\u062F \u0627\u0644\u0635\u0648\u0631",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "\u0627\u0644\u0646\u0645\u0648\u0630\u062C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "\u0646\u0645\u0648\u0630\u062C \u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0635\u0648\u0631 \u0625\u0644\u0649 \u0641\u064A\u062F\u064A\u0648",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "\u0646\u0645\u0648\u0630\u062C \u062A\u0648\u0644\u064A\u062F \u0627\u0644\u0641\u064A\u062F\u064A\u0648 \u0645\u0646 \u0627\u0644\u0646\u0635",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u062C\u0647\u0629 \u0628\u0631\u0645\u062C\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u0627\u062A (API).",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "\u0646\u062D\u0646 \u0644\u0627 \u0646\u062F\u0639\u0645 \u062D\u0627\u0644\u064A\u064B\u0627 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u062F\u0631\u062F\u0634\u0629 \u0627\u0644\u062E\u0627\u0635 \u0628\u0640 Anthropic API.\n\u0628\u0633\u0628\u0628 \u0627\u062E\u062A\u0644\u0627\u0641\u0627\u062A \u0648\u0627\u062C\u0647\u0629 \u0628\u0631\u0645\u062C\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u0627\u062A (API)\u060C \u0639\u0646\u062F \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u062E\u062F\u0645\u0629 API \u0645\u0646 DeepSeek\u060C \u0644\u0627 \u064A\u062F\u0639\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0623\u062F\u0648\u0627\u062A \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0641\u0643\u064A\u0631.\n\u062C\u0645\u064A\u0639 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u062E\u0635\u0635\u0629 \u062A\u062D\u062A\u0627\u062C \u0625\u0644\u0649 \u0627\u0644\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 OpenAI API \u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647\u0627.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "\u0645\u0632\u0648\u062F \u062E\u062F\u0645\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "\u0639\u0631\u0636 \u062C\u0645\u064A\u0639 \u0627\u0644\u0646\u0645\u0627\u0630\u062C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "\u062A\u0643\u0648\u064A\u0646 \u0645\u0648\u0641\u0651\u0631 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0633\u062A\u062F\u0639\u0627\u0621 \u0627\u0644\u0646\u0645\u0648\u0630\u062C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "\u062A\u0645 \u0627\u0633\u062A\u062F\u0639\u0627\u0621 AI \u0628\u0646\u062C\u0627\u062D\u060C \u0648\u0623\u0639\u0627\u062F {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "\u064A\u0631\u062C\u0649 \u0625\u0643\u0645\u0627\u0644 \u062A\u0643\u0648\u064A\u0646 \u062E\u062F\u0645\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0623\u0648\u0644\u0627\u064B.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "\u0644\u0645 \u064A\u064F\u0631\u062C\u0639 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062A\u0648\u0642\u0639\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A\u0643.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "\u0645\u0632\u0648\u062F \u0627\u0644\u062E\u062F\u0645\u0629 \u0627\u0644\u0630\u064A \u0627\u062E\u062A\u0631\u062A\u0647 \u0644\u0627 \u064A\u062F\u0639\u0645 \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064A\u0629.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "\u0639\u0631\u0636 \u0627\u0644\u0646\u062A\u064A\u062C\u0629 \u0627\u0644\u0645\u064F\u0646\u0634\u0623\u0629",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "\u0633\u064A\u0633\u062A\u062E\u062F\u0645 \u0647\u0630\u0627 \u0625\u0639\u062F\u0627\u062F\u0627\u062A\u0643 \u0644\u0627\u0633\u062A\u062F\u0639\u0627\u0621 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A\u060C \u0648\u0642\u062F \u064A\u0624\u062F\u064A \u0625\u0644\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0631\u0645\u0648\u0632 (Token). \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062E\u062F\u0645\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "\u0644\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0641\u064A\u062F\u064A\u0648 \u0648\u0627\u0644\u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "\u0646\u0645\u0648\u0630\u062C \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0641\u064A\u062F\u064A\u0648",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -24468,15 +23006,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "\u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u062D\u0629\u060C \u0644\u0646 \u062A\u0635\u0628\u062D \u0623\u064A \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0646\u0627\u0641\u0630\u0629 \u0625\u0644\u0627 \u0625\u0630\u0627 \u0642\u0645\u062A \u0628\u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0022\u062D\u0641\u0638\u0022 \u0628\u0646\u0641\u0633\u0643.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629",
         "Mode": "ConstString",
@@ -24861,33 +23390,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "\u0642\u062F\u0631\u0627\u062A \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0645\u0634\u0627\u0631\u064A\u0639 \u0639\u0628\u0631 \u0627\u0633\u062A\u062F\u0639\u0627\u0621 \u0627\u0644\u0623\u062F\u0648\u0627\u062A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0633\u062A\u062F\u0639\u0627\u0621 \u0627\u0644\u0623\u062F\u0648\u0627\u062A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_General",
         "Value": "\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0623\u0645\u0627\u0646 \u0627\u0644\u0639\u0627\u0645",
         "Mode": "ConstString",
@@ -24980,15 +23482,6 @@
       {
         "Id": "Security_Script_AllowAccessPageObject",
         "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0635\u0648\u0635 \u0627\u0644\u0628\u0631\u0645\u062C\u064A\u0629 \u0628\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0643\u0627\u0626\u0646 \u0627\u0644\u0635\u0641\u062D\u0629 \u0027$page\u0027 (\u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0645\u062A\u0642\u062F\u0645)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0628\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u062D\u0631\u0643 \u0627\u0644\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u0646\u0635\u064A\u0629 \u0644\u062A\u0646\u0641\u064A\u0630 \u0639\u0646\u0627\u0635\u0631 \u0627\u0644\u062A\u0643\u0648\u064A\u0646",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25953,6 +24446,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -26148,241 +24713,6 @@
       {
         "Id": "Advanced_WarnLabel",
         "Value": "Warnung: Das willk\u00FCrliche \u00C4ndern dieser Optionen kann zu Instabilit\u00E4t von projectFrameCut f\u00FChren, was unerwartete Situationen wie Datenverlust verursachen kann. Bitte \u00E4ndern Sie sie mit Vorsicht.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "API-Schl\u00FCssel",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "API-Basisadresse",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "F\u00FCr Chats mit Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Chat-Modell",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "Stellen Sie sicher, dass Sie eine mit der OpenAI API kompatible Schnittstelle verwenden.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "F\u00FCr Bildgenerierungsszenarien",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Bildgenerierungsmodell",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Modell",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Bild-zu-Video-Modell",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Text-zu-Video-Modell",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "Modellliste nicht verf\u00FCgbar, bitte \u00FCberpr\u00FCfen Sie die API-Konfiguration.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "Wir unterst\u00FCtzen derzeit keine Chat-Modelle mit der Anthropic-API.\rAufgrund von API-Unterschieden wird bei Verwendung der API von DeepSeek die Nutzung von Werkzeugen w\u00E4hrend des Nachdenkens nicht unterst\u00FCtzt.\rAlle benutzerdefinierten Modelle m\u00FCssen mit der OpenAI-API kompatibel sein, um verwendet werden zu k\u00F6nnen.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "KI-Dienstanbieter",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "Alle Modelle anzeigen",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "AI-Anbieter konfigurieren",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Testmodellaufruf",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "Aufruf erfolgreich abgeschlossen, AI hat {content} zur\u00FCckgegeben.",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "Bitte schlie\u00DFen Sie zuerst die KI-Dienste-Konfiguration ab.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "Das Modell hat nicht die erwarteten Daten zur\u00FCckgegeben. Bitte \u00FCberpr\u00FCfen Sie Ihre Konfiguration.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "Der von Ihnen ausgew\u00E4hlte Anbieter unterst\u00FCtzt diesen Vorgang nicht.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "Generiertes Ergebnis anzeigen",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "Dies wird Ihre konfigurierte KI aufrufen und m\u00F6glicherweise Token verbrauchen. Fortfahren?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "AI-Dienste konfigurieren",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "F\u00FCr Videogenerierung und KI-Szenenwechselgenerierung",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Videogenerierungsmodell",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28186,15 +26516,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "Auf dieser Seite werden alle \u00C4nderungen erst wirksam, wenn Sie auf \u0022Speichern\u0022 klicken.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "Dynamische Vorschau verwenden",
         "Mode": "ConstString",
@@ -28577,26 +26898,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "KI-Funktionen",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_General",
         "Value": "Allgemeine Sicherheitskonfiguration",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Projektkonfiguration \u00FCber Toolaufrufe zulassen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28615,24 +26918,6 @@
       {
         "Id": "Security_RemoteContent_EnableRemoteContent",
         "Value": "Von der Cloud bereitgestellte Inhalte aktivieren",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "Der KI den Zugriff auf die Skript-Engine erlauben, um Konfigurationselemente zu implementieren.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Toolaufrufe zulassen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29670,6 +27955,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -29865,241 +28222,6 @@
       {
         "Id": "Advanced_WarnLabel",
         "Value": "Advertencia: Modificar estas opciones arbitrariamente puede causar inestabilidad en projectFrameCut, p\u00E9rdida de datos u otras situaciones inesperadas. Por favor, modif\u00EDquelas con precauci\u00F3n.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "Clave de API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "Direcci\u00F3n base de la API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Para chatear con Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Modelo de chat",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "Aseg\u00FArate de que est\u00E1s utilizando una interfaz compatible con la API de OpenAI.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "Para escenarios de generaci\u00F3n de im\u00E1genes",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Modelo de generaci\u00F3n de im\u00E1genes",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Modelo",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Modelo de imagen a v\u00EDdeo",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Modelo de texto a video",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "La lista de modelos no est\u00E1 disponible, por favor verifique la configuraci\u00F3n de la API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "Actualmente no soportamos modelos de chat que usen la API de Anthropic.\r\nDebido a diferencias en las API, al usar el servicio API de DeepSeek, no se permite usar herramientas durante el proceso de pensamiento.\r\nTodos los modelos personalizados deben ser compatibles con la API de OpenAI para poder ser utilizados.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "Proveedor de servicios de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "Mostrar todos los modelos",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "Configurar proveedor de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Prueba de llamada al modelo",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "Llamada completada con \u00E9xito, la IA devolvi\u00F3 {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "Por favor, complete primero la configuraci\u00F3n del servicio de IA.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "El modelo no devolvi\u00F3 los datos esperados. Por favor, verifica tu configuraci\u00F3n.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "El proveedor que has seleccionado no admite esta operaci\u00F3n.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "Ver resultado generado",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "Esto usar\u00E1 tu configuraci\u00F3n para llamar a la IA, lo que podr\u00EDa generar consumo de tokens. \u00BFContinuar?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "Configuraci\u00F3n del servicio de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "Para generaci\u00F3n de v\u00EDdeo y creaci\u00F3n de escenas con IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Modelo de generaci\u00F3n de v\u00EDdeo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31903,15 +30025,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "En esta interfaz, a menos que hagas clic en \u0022Guardar\u0022 activamente, todos los cambios no surtir\u00E1n efecto.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "Usar vista previa din\u00E1mica",
         "Mode": "ConstString",
@@ -32297,33 +30410,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "Funciones de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Permitir configurar el proyecto mediante llamadas a herramientas",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "Permitir que la IA acceda al motor de scripts para implementar elementos de configuraci\u00F3n",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_RemoteContent",
         "Value": "Contenido remoto",
         "Mode": "ConstString",
@@ -32380,15 +30466,6 @@
       {
         "Id": "Security_RichText_EnableDisplayingHtml",
         "Value": "Permitir mostrar p\u00E1ginas web, HTML y diagramas de Mermaid",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Permitir llamadas a herramientas",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33390,6 +31467,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -33585,241 +31734,6 @@
       {
         "Id": "Advanced_WarnLabel",
         "Value": "Avviso: Modificare arbitrariamente queste opzioni potrebbe causare instabilit\u00E0 in projectFrameCut, con conseguente perdita di dati e altre situazioni impreviste. Si prega di modificarle con cautela.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "Chiave API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "Indirizzo base dell\u0027API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Per la chat con Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Modello di chat",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "Assicurati di utilizzare un endpoint compatibile con l\u0027API OpenAI.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "Per scenari di generazione immagini",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Modello di generazione immagini",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Modello",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Modello di generazione video da immagini",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Modello di testo a video",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "L\u0027elenco dei modelli non \u00E8 disponibile, controlla la configurazione dell\u0027API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "Attualmente non supportiamo l\u0027uso di modelli di chat con l\u0027API Anthropic.\rA causa delle differenze API, quando si utilizzano i servizi API di DeepSeek, non \u00E8 supportato l\u0027uso di strumenti durante il ragionamento.\rTutti i modelli personalizzati devono essere compatibili con l\u0027API OpenAI per essere utilizzati.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "Fornitore di servizi AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "Mostra tutti i modelli",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "Configura fornitore AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Test chiamata modello",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "Chiamata completata con successo, l\u0027AI ha restituito {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "Completa prima la configurazione del servizio AI.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "Il modello non ha restituito i dati previsti. Controlla la tua configurazione.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "Il fornitore che hai selezionato non supporta questa operazione.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "Visualizza il risultato generato",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "Questo utilizzer\u00E0 la tua configurazione per chiamare l\u0027IA, potrebbe comportare l\u0027uso di token, vuoi continuare?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "Configurazione servizio AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "Per la generazione di video e transizioni AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Modello di generazione video",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -35623,15 +33537,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "In questa interfaccia, a meno che non fai clic attivamente su \u0022Salva\u0022, tutte le modifiche non avranno effetto.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "Usa anteprima dinamica",
         "Mode": "ConstString",
@@ -36016,24 +33921,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "Funzionalit\u00E0 AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Consenti la configurazione del progetto tramite chiamate agli strumenti",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_RemoteContent_EnableHttpDecoder",
         "Value": "Abilita decodificatore HTTP",
         "Mode": "ConstString",
@@ -36072,15 +33959,6 @@
       {
         "Id": "Security_RemoteContent_EnableRemoteContent",
         "Value": "Abilita i contenuti forniti dal cloud",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Consenti chiamate degli strumenti",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36144,15 +34022,6 @@
       {
         "Id": "Security_Script_AllowAccessPageObject",
         "Value": "Consenti agli script di accedere all\u0027oggetto pagina \u0027$page\u0027 (Utilizzo avanzato)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "Consenti all\u0027IA di accedere al motore di script per implementare le voci di configurazione.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -37109,6 +34978,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -37304,241 +35245,6 @@
       {
         "Id": "Advanced_WarnLabel",
         "Value": "Ostrze\u017Cenie: Dowolna modyfikacja tych opcji mo\u017Ce spowodowa\u0107 niestabilno\u015B\u0107 projectFrameCut, utrat\u0119 danych i inne nieprzewidziane sytuacje. Zmieniaj je ostro\u017Cnie.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "Klucz API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "Adres bazowy API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Do czatowania z Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Model czatu",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "Upewnij si\u0119, \u017Ce u\u017Cywasz interfejsu kompatybilnego z OpenAI API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "Do scenariuszy generowania obraz\u00F3w",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Model generowania obraz\u00F3w",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Model obrazu na wideo",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Model generowania wideo z tekstu",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "Lista modeli niedost\u0119pna, sprawd\u017A konfiguracj\u0119 API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "Obecnie nie obs\u0142ugujemy modeli czatu korzystaj\u0105cych z Anthropic API.\rZe wzgl\u0119du na r\u00F3\u017Cnice w API, podczas korzystania z API od DeepSeek, nie jest obs\u0142ugiwane u\u017Cywanie narz\u0119dzi podczas my\u015Blenia.\rWszystkie niestandardowe modele musz\u0105 by\u0107 kompatybilne z OpenAI API, aby mog\u0142y by\u0107 u\u017Cywane.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "Dostawca us\u0142ug AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "Poka\u017C wszystkie modele",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "Konfiguracja dostawcy AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Testowe wywo\u0142anie modelu",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "Wywo\u0142anie zako\u0144czone sukcesem, AI zwr\u00F3ci\u0142o {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "Prosz\u0119 najpierw uko\u0144czy\u0107 konfiguracj\u0119 us\u0142ugi AI.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "Model nie zwr\u00F3ci\u0142 oczekiwanych danych. Sprawd\u017A swoj\u0105 konfiguracj\u0119.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "Wybrany przez Ciebie dostawca nie obs\u0142uguje tej operacji.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "Zobacz wynik generowania",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "To spowoduje u\u017Cycie AI z Twoimi ustawieniami, co mo\u017Ce generowa\u0107 u\u017Cycie token\u00F3w. Kontynuowa\u0107?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "Konfiguracja us\u0142ug AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "Do generowania wideo i tworzenia AI przej\u015B\u0107",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Model generowania wideo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39342,15 +37048,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "Na tej stronie, chyba \u017Ce klikniesz \u0022Zapisz\u0022 aktywnie, wszystkie zmiany nie b\u0119d\u0105 obowi\u0105zywa\u0107.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "U\u017Cyj dynamicznego podgl\u0105du",
         "Mode": "ConstString",
@@ -39728,42 +37425,6 @@
       {
         "Id": "Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer",
         "Value": "U\u017Cyj Popup z CommunityToolkit.Maui jako wyskakuj\u0105cego okienka",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities",
-        "Value": "Funkcje AI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Zezwalaj na konfiguracj\u0119 projektu za pomoc\u0105 wywo\u0142a\u0144 narz\u0119dzi",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Zezwalaj na wywo\u0142ywanie narz\u0119dzi",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "Zezw\u00F3l AI na dost\u0119p do silnika skrypt\u00F3w w celu implementacji element\u00F3w konfiguracji",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -40828,6 +38489,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -41022,241 +38755,6 @@
       {
         "Id": "Advanced_WarnLabel",
         "Value": "Aviso: Modificar essas op\u00E7\u00F5es arbitrariamente pode causar instabilidade no projectFrameCut, resultando em perda de dados e outras situa\u00E7\u00F5es inesperadas. Por favor, modifique-os com cuidado.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "Chave da API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "Endere\u00E7o Base da API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Para conversar com o Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Modelo de Chat",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "Certifique-se de que est\u00E1 usando uma interface compat\u00EDvel com a API da OpenAI",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "Para cen\u00E1rios de gera\u00E7\u00E3o de imagens",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Modelo de Gera\u00E7\u00E3o de Imagem",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Modelo",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Modelo de v\u00EDdeo gerado por imagem",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Modelo de Texto para V\u00EDdeo",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "Lista de modelos indispon\u00EDvel, verifique a configura\u00E7\u00E3o da API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "Atualmente n\u00E3o suportamos modelos de chat que usam a API Anthropic.\rDevido a diferen\u00E7as de API, ao usar servi\u00E7os de API da DeepSeek, n\u00E3o \u00E9 suportado o uso de ferramentas durante o pensamento.\rTodos os modelos personalizados precisam ser compat\u00EDveis com a API OpenAI para serem usados.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "Provedor de servi\u00E7os de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "Mostrar todos os modelos",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "Configurar provedor de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Testar chamada do modelo",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "Chamada conclu\u00EDda com sucesso, a IA retornou {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "Por favor, complete a configura\u00E7\u00E3o do servi\u00E7o de IA primeiro.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "O modelo n\u00E3o retornou os dados esperados. Verifique sua configura\u00E7\u00E3o.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "O provedor selecionado n\u00E3o suporta esta opera\u00E7\u00E3o.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "Ver resultado gerado",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "Isso usar\u00E1 sua configura\u00E7\u00E3o para chamar a IA, o que pode consumir tokens. Deseja continuar?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "Configura\u00E7\u00E3o do Servi\u00E7o de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "Usado para gera\u00E7\u00E3o de v\u00EDdeo e gera\u00E7\u00E3o de cenas com IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Modelo de Gera\u00E7\u00E3o de V\u00EDdeo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -43061,15 +40559,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "Nesta p\u00E1gina, todas as altera\u00E7\u00F5es n\u00E3o ter\u00E3o efeito, a menos que voc\u00EA clique ativamente em \u0022Salvar\u0022.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "Usar visualiza\u00E7\u00E3o din\u00E2mica",
         "Mode": "ConstString",
@@ -43454,24 +40943,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "Permitir que a IA acesse o mecanismo de scripts para implementar itens de configura\u00E7\u00E3o",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities",
-        "Value": "Recursos de IA",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_General",
         "Value": "Configura\u00E7\u00F5es Gerais de Seguran\u00E7a",
         "Mode": "ConstString",
@@ -43481,26 +40952,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Permitir chamada de ferramentas",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_RemoteContent_EnableRemoteContent",
         "Value": "Habilitar conte\u00FAdo fornecido pela nuvem",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Permitir a configura\u00E7\u00E3o do projeto por meio de chamadas de ferramentas",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -44547,6 +42000,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -44742,241 +42267,6 @@
       {
         "Id": "Advanced_WarnLabel",
         "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u041F\u0440\u043E\u0438\u0437\u0432\u043E\u043B\u044C\u043D\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u044D\u0442\u0438\u0445 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u043E\u0432 \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043A \u043D\u0435\u0441\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u0435 projectFrameCut, \u043F\u043E\u0442\u0435\u0440\u0435 \u0434\u0430\u043D\u043D\u044B\u0445 \u0438 \u0434\u0440\u0443\u0433\u0438\u043C \u043D\u0435\u043F\u0440\u0435\u0434\u0432\u0438\u0434\u0435\u043D\u043D\u044B\u043C \u0441\u0438\u0442\u0443\u0430\u0446\u0438\u044F\u043C. \u0418\u0437\u043C\u0435\u043D\u044F\u0439\u0442\u0435 \u0438\u0445 \u0441 \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u043E\u0441\u0442\u044C\u044E.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "API-\u043A\u043B\u044E\u0447",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "\u0411\u0430\u0437\u043E\u0432\u044B\u0439 \u0430\u0434\u0440\u0435\u0441 API",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "\u0434\u043B\u044F \u0447\u0430\u0442\u0430 \u0441 Assistant P",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "\u041C\u043E\u0434\u0435\u043B\u044C \u0447\u0430\u0442\u0430",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "\u0423\u0431\u0435\u0434\u0438\u0442\u0435\u0441\u044C, \u0447\u0442\u043E \u0432\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0435 \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441, \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u044B\u0439 \u0441 OpenAI API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "\u0414\u043B\u044F \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0435\u0432 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0439",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "\u041C\u043E\u0434\u0435\u043B\u044C \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0439",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "\u041C\u043E\u0434\u0435\u043B\u044C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u043B\u044F \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0432\u0438\u0434\u0435\u043E \u0438\u0437 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0439",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "\u041C\u043E\u0434\u0435\u043B\u044C \u0434\u043B\u044F \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0432\u0438\u0434\u0435\u043E \u0438\u0437 \u0442\u0435\u043A\u0441\u0442\u0430",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "\u0421\u043F\u0438\u0441\u043E\u043A \u043C\u043E\u0434\u0435\u043B\u0435\u0439 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D, \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 API.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "\u0412 \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0435\u0435 \u0432\u0440\u0435\u043C\u044F \u043C\u044B \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043C \u0447\u0430\u0442-\u043C\u043E\u0434\u0435\u043B\u0438 \u0441 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435\u043C Anthropic API.\r\u0418\u0437-\u0437\u0430 \u0440\u0430\u0437\u043B\u0438\u0447\u0438\u0439 \u0432 API \u043F\u0440\u0438 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0438 \u0441\u0435\u0440\u0432\u0438\u0441\u043E\u0432 DeepSeek \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u043E\u0432 \u0432\u043E \u0432\u0440\u0435\u043C\u044F \u0440\u0430\u0437\u043C\u044B\u0448\u043B\u0435\u043D\u0438\u0439.\r\u0412\u0441\u0435 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u043C\u043E\u0434\u0435\u043B\u0438 \u0434\u043E\u043B\u0436\u043D\u044B \u0431\u044B\u0442\u044C \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u044B \u0441 OpenAI API \u0434\u043B\u044F \u0438\u0445 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u044F.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "\u041F\u043E\u0441\u0442\u0430\u0432\u0449\u0438\u043A \u0418\u0418-\u0443\u0441\u043B\u0443\u0433",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0432\u0441\u0435 \u043C\u043E\u0434\u0435\u043B\u0438",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u043F\u043E\u0441\u0442\u0430\u0432\u0449\u0438\u043A\u0430 \u0418\u0418",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "\u0422\u0435\u0441\u0442\u043E\u0432\u044B\u0439 \u0432\u044B\u0437\u043E\u0432 \u043C\u043E\u0434\u0435\u043B\u0438",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "\u0412\u044B\u0437\u043E\u0432 \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D, AI \u0432\u0435\u0440\u043D\u0443\u043B {content}.",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0443 \u0441\u043B\u0443\u0436\u0431\u044B \u0418\u0418.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "\u041C\u043E\u0434\u0435\u043B\u044C \u043D\u0435 \u0432\u0435\u0440\u043D\u0443\u043B\u0430 \u043E\u0436\u0438\u0434\u0430\u0435\u043C\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044E.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0439 \u0432\u0430\u043C\u0438 \u043F\u043E\u0441\u0442\u0430\u0432\u0449\u0438\u043A \u0443\u0441\u043B\u0443\u0433 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 \u044D\u0442\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044E.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "\u041F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "\u042D\u0442\u043E \u0432\u044B\u0437\u043E\u0432\u0435\u0442 AI \u0441 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435\u043C \u0432\u0430\u0448\u0435\u0439 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438 \u0438 \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043A \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u044E \u0442\u043E\u043A\u0435\u043D\u043E\u0432. \u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 AI-\u0441\u0435\u0440\u0432\u0438\u0441\u0430",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "\u0414\u043B\u044F \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044F \u0432\u0438\u0434\u0435\u043E \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 AI-\u043F\u0435\u0440\u0435\u0445\u043E\u0434\u043E\u0432",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "\u041C\u043E\u0434\u0435\u043B\u044C \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u0432\u0438\u0434\u0435\u043E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -46782,15 +44072,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "\u041D\u0430 \u044D\u0442\u043E\u0439 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435 \u0432\u0441\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u043D\u0435 \u0432\u0441\u0442\u0443\u043F\u044F\u0442 \u0432 \u0441\u0438\u043B\u0443, \u043F\u043E\u043A\u0430 \u0432\u044B \u043D\u0435 \u043D\u0430\u0436\u043C\u0451\u0442\u0435 \u00AB\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C\u00BB.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0434\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440",
         "Mode": "ConstString",
@@ -47177,44 +44458,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "\u0412\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438 \u0418\u0418",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 \u0432\u044B\u0437\u043E\u0432\u044B \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u043E\u0432",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0432\u044B\u0437\u043E\u0432 \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u043E\u0432",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_RemoteContent",
         "Value": "\u0423\u0434\u0430\u043B\u0435\u043D\u043D\u043E\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0418\u0418 \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0441\u043A\u0440\u0438\u043F\u0442\u043E\u0432\u043E\u043C\u0443 \u0434\u0432\u0438\u0436\u043A\u0443 \u0434\u043B\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0437\u0430\u0434\u0430\u0447 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -48270,6 +45515,78 @@
         ],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -48464,241 +45781,6 @@
       {
         "Id": "Advanced_WarnLabel",
         "Value": "Uyar\u0131: Bu se\u00E7eneklerin geli\u015Fig\u00FCzel de\u011Fi\u015Ftirilmesi, projectFrameCut\u0027un karars\u0131z hale gelmesine, veri kayb\u0131 gibi beklenmedik durumlara yol a\u00E7abilir. L\u00FCtfen bunlar\u0131 de\u011Fi\u015Ftirirken dikkatli olun.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_APIKey",
-        "Value": "API Anahtar\u0131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_BaseAddress",
-        "Value": "API Temel Adresi",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_SubTitle",
-        "Value": "Assistant P ile sohbet i\u00E7in",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ChatModel_Title",
-        "Value": "Sohbet Modeli",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_CustomPrompt",
-        "Value": "L\u00FCtfen OpenAI API ile uyumlu bir aray\u00FCz kulland\u0131\u011F\u0131n\u0131zdan emin olun.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_SubTitle",
-        "Value": "Resim olu\u015Fturma senaryolar\u0131 i\u00E7in kullan\u0131l\u0131r",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ImageModel_Title",
-        "Value": "Resim Olu\u015Fturma Modeli",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model",
-        "Value": "Model",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_ImageToVideo",
-        "Value": "Resimden Video Modeli",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_TextToVideo",
-        "Value": "Metinden Videoya Modeli",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Model_Unknown",
-        "Value": "Model listesi kullan\u0131lam\u0131yor, l\u00FCtfen API yap\u0131land\u0131rmas\u0131n\u0131 kontrol edin.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ModelHint",
-        "Value": "\u015Eu anda Anthropic API\u0027nin sohbet modelini desteklemiyoruz.\rAPI farkl\u0131l\u0131klar\u0131 nedeniyle, DeepSeek API hizmetini kullan\u0131rken, d\u00FC\u015F\u00FCnme s\u0131ras\u0131nda ara\u00E7 kullan\u0131m\u0131 desteklenmez.\rT\u00FCm \u00F6zel modellerin kullan\u0131labilmesi i\u00E7in OpenAI API ile uyumlu olmas\u0131 gerekir.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Provider",
-        "Value": "AI Servis Sa\u011Flay\u0131c\u0131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_ShowAllModel",
-        "Value": "T\u00FCm Modelleri G\u00F6ster",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_SubTitle",
-        "Value": "AI Sa\u011Flay\u0131c\u0131 Yap\u0131land\u0131rmas\u0131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test",
-        "Value": "Model test \u00E7a\u011Fr\u0131s\u0131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Done",
-        "Value": "\u00C7a\u011Fr\u0131 ba\u015Far\u0131yla tamamland\u0131, AI \u015Funu d\u00F6nd\u00FCrd\u00FC: {content}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "content"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "content",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorNoConfig",
-        "Value": "L\u00FCtfen \u00F6nce AI hizmet yap\u0131land\u0131rmas\u0131n\u0131 tamamlay\u0131n.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorResponse",
-        "Value": "Model beklenen verileri d\u00F6nd\u00FCrmedi. L\u00FCtfen yap\u0131land\u0131rman\u0131z\u0131 kontrol edin.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ErrorUnsupportedProvider",
-        "Value": "Se\u00E7ti\u011Finiz sa\u011Flay\u0131c\u0131 bu i\u015Flemi desteklemiyor.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_ViewResult",
-        "Value": "Olu\u015Fturulan sonucu g\u00F6r\u00FCnt\u00FCle",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Test_Warn",
-        "Value": "Bu, AI\u0027yi \u00E7a\u011F\u0131rmak i\u00E7in yap\u0131land\u0131rman\u0131z\u0131 kullanacak ve token kullan\u0131m\u0131na neden olabilir, devam etmek istiyor musunuz?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_Title",
-        "Value": "AI Hizmet Yap\u0131land\u0131rmas\u0131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_SubTitle",
-        "Value": "Video olu\u015Fturma ve AI sahne de\u011Fi\u015Ftirme olu\u015Fturma i\u00E7in kullan\u0131l\u0131r",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AISetting_VideoModel_Title",
-        "Value": "Video Olu\u015Fturma Modeli",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -50505,15 +47587,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "AISetting_ModelHint2",
-        "Value": "Bu sayfada, \u0022Kaydet\u0022 butonuna aktif olarak t\u0131klamad\u0131\u011F\u0131n\u0131z s\u00FCrece, yap\u0131lan t\u00FCm de\u011Fi\u015Fiklikler ge\u00E7erli olmayacakt\u0131r.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_UseDynamicPreview",
         "Value": "Dinamik \u00D6nizleme Kullan",
         "Mode": "ConstString",
@@ -50898,24 +47971,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities",
-        "Value": "Yapay Zeka \u00D6zellikleri",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowScript",
-        "Value": "AI\u0027\u0131n yap\u0131land\u0131rma \u00F6\u011Felerini uygulamak i\u00E7in komut dosyas\u0131 motoruna eri\u015Fmesine izin verin.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_General",
         "Value": "Genel G\u00FCvenlik Yap\u0131land\u0131rmas\u0131",
         "Mode": "ConstString",
@@ -51042,15 +48097,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Security_AICapabilities_AllowToolCall",
-        "Value": "Ara\u00E7 \u00E7a\u011Fr\u0131s\u0131na izin ver",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Security_Script_AllowInternet",
         "Value": "\u0130nternet isteklerine izin ver",
         "Mode": "ConstString",
@@ -51098,15 +48144,6 @@
       {
         "Id": "Security_Script_AllowRemove",
         "Value": "T\u00FCr kald\u0131rma i\u015Flemlerine izin ver (Her zaman kullan\u0131c\u0131 onay\u0131 gerekir)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_AICapabilities_AllowModifyProject",
-        "Value": "Ara\u00E7 \u00E7a\u011Fr\u0131lar\u0131 arac\u0131l\u0131\u011F\u0131yla projeleri yap\u0131land\u0131rmaya izin ver",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -51989,6 +49026,78 @@
             "Value": "name"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "Plugin development (Debug)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "Disable plugin trust validation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "Skip certificate chain, signature, file hash, revocation, and publisher trust checks. Applies to future loads; reload plugins or restart for loaded plugins.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "Custom trusted root certificates",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "Import a PEM or DER CA certificate; with trust validation enabled, plugin signatures and publisher approval are still required.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "Import root certificate (PEM / DER)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "Remove root certificate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "No custom root certificates have been added.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }

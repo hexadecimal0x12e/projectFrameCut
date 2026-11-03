@@ -19,6 +19,8 @@ namespace projectFrameCut.Services
     public static class PluginService
     {
         public const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
+        public const string DisablePluginTrustSetting = PluginPackageSecurityService.DisablePluginTrustSetting;
+        public static bool IsPluginTrustDisabled => PluginPackageSecurityService.IsPluginTrustDisabled;
         private const string IsolationOptionsStorageKey = "plugin_isolation_options_key";
         private const string IsolationOptionsFileName = "plugin-isolation-options.dat";
         private static readonly object IsolationOptionsLock = new();
@@ -34,6 +36,9 @@ namespace projectFrameCut.Services
 
         public static Task RemoveDevelopmentRootCertificateAsync(string fingerprint) =>
             PluginPackageSecurityService.RemoveDevelopmentRootCertificateAsync(fingerprint);
+
+        internal static Task<List<DevelopmentPluginRootRecord>> GetDevelopmentRootCertificatesAsync() =>
+            PluginPackageSecurityService.GetDevelopmentRootCertificatesAsync();
 
         public static Task ForgetPublisherTrustAsync(string publisherId) =>
             PluginPackageSecurityService.ForgetPublisherAsync(publisherId);
@@ -129,12 +134,13 @@ namespace projectFrameCut.Services
 
                 var metadata = verification.Metadata;
                 var trust = verification.TrustReport;
-                var trustDescription =
-                    $"{SettingsManager.SettingLocalizedResources.Plugin_AddWarn(metadata.Name)}\r\r" +
-                    $"Publisher: {trust.PublisherName ?? metadata.Author}\r\n" +
-                    $"Publisher ID: {trust.PublisherId}\r\n" +
-                    $"Signing certificate: {trust.SigningCertificateFingerprint}\r\n" +
-                    $"Certificate chain: valid";
+                var trustDescription = SettingsManager.SettingLocalizedResources.Plugin_AddWarn(metadata.Name) + "\r\r";
+                trustDescription += trust.Level == PluginTrustLevel.Bypassed
+                    ? SettingsManager.SettingLocalizedResources.Plugin_TrustBypassed
+                    : $"Publisher: {trust.PublisherName ?? metadata.Author}\r\n" +
+                      $"Publisher ID: {trust.PublisherId}\r\n" +
+                      $"Signing certificate: {trust.SigningCertificateFingerprint}\r\n" +
+                      $"Certificate chain: valid";
                 var confirmed = await currentPage.DisplayAlertAsync(
                     Localized._Warn,
                     trustDescription,
@@ -145,7 +151,8 @@ namespace projectFrameCut.Services
                     return;
                 }
 
-                await PluginPackageSecurityService.TrustPublisherAsync(trust);
+                if (trust.Level != PluginTrustLevel.Bypassed)
+                    await PluginPackageSecurityService.TrustPublisherAsync(trust);
 
                 var destination = Path.Combine(MauiProgram.BasicDataPath, "Plugins", metadata.PluginID);
                 if (Directory.Exists(destination))
@@ -231,7 +238,7 @@ namespace projectFrameCut.Services
                 return (null, "Plugin file not found.");
             }
 
-            if (!File.Exists(Path.Combine(pluginRoot, PluginPackageSecurityService.ManifestFileName)))
+            if (!IsPluginTrustDisabled && !File.Exists(Path.Combine(pluginRoot, PluginPackageSecurityService.ManifestFileName)))
             {
                 return (null, "Legacy plugin packages are no longer supported. Reinstall this plugin using a certificate-chain package with format version 2.");
             }

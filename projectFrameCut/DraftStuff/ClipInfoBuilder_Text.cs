@@ -550,7 +550,8 @@ namespace projectFrameCut.DraftStuff
                 {
                     if (teObj is List<TextClipEntry> list)
                         entries = list;
-                    else if (teObj is System.Text.Json.JsonElement je)
+                    else if (teObj is System.Text.Json.JsonElement je && je.ValueKind == JsonValueKind.Array
+                        && (je.GetArrayLength() == 0 || !je[0].TryGetProperty("FontName", out _)))
                     {
                         try { entries = System.Text.Json.JsonSerializer.Deserialize<List<TextClipEntry>>(je); }
                         catch { }
@@ -716,6 +717,7 @@ namespace projectFrameCut.DraftStuff
             )
             .AddFromAnother(providerPpb, styleProvider)
             .AddSeparator()
+            .AddButton(Localized.TextStyles_Save, async (_, _) => await TextStyleServices.SaveFromClipAsync(page, clip, styleProvider))
             .AddButton(PPLocalizedResources.TextOption_ChangeStyle, async (_, _) =>
             {
                 var available = TextStyleServices.GetAvailableTextStyleProviders();
@@ -726,10 +728,11 @@ namespace projectFrameCut.DraftStuff
                 var picked = await page.DisplayActionSheetAsync(
                     PPLocalizedResources.TextOption_ChangeStyle, null, null, styleNames);
 
-                if (string.IsNullOrWhiteSpace(picked) || picked == currentStyle) return;
+                if (string.IsNullOrWhiteSpace(picked)) return;
                 if (!available.TryGetValue(picked, out var factory)) return;
 
                 var newProvider = factory();
+                if (newProvider.FromPlugin == styleProvider.FromPlugin && newProvider.TypeName == currentStyle) return;
                 foreach (var (key, argument) in styleProvider.Fields)
                 {
                     if (newProvider.SettableFields.TryGetValue(key, out var descriptor)
@@ -853,17 +856,6 @@ namespace projectFrameCut.DraftStuff
         {
             clip.ExtraData ??= new Dictionary<string, object>();
 
-
-            if (clip.ExtraData.TryGetValue("TextEntries", out var entriesObj) && entriesObj is JsonElement je)
-            {
-                try
-                {
-                    var deserialized = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
-                    if (deserialized is { Count: > 0 })
-                        clip.ExtraData["TextEntries"] = TextEntryMigration.MigrateFromTextClipEntries(deserialized);
-                }
-                catch { }
-            }
 
             string? ReadStringValue(object? raw)
             {

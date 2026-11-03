@@ -180,7 +180,7 @@ namespace projectFrameCut.Render.Compose
     /// </summary>
     public class ClassicOverlayMixtureProvider : MixtureProviderBase
     {
-        public override IReadOnlyList<Stage> SupportedStages => [Stage.Mixture];
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Composition];
 
         public override bool IsDeterministic => true;
 

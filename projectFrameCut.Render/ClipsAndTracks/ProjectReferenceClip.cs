@@ -1,4 +1,4 @@
-using projectFrameCut.Render.Compose;
+﻿using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.ProjectReferences;
@@ -198,7 +198,7 @@ internal sealed class ReferenceSoundTrack(ProjectReferenceRuntime runtime, ISoun
     public EffectAndMixtureJSONStructure[]? Effects { get; init; }
     public IEffect[]? EffectsInstances { get; set; }
     public Dictionary<string, object> ExtraData { get; set; } = new();
-    public IReadOnlyList<Stage> SupportedStages => EffectStages.Audio;
+    public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Audio;
     public IEffectStagePlan? EffectStagePlan { get; set; }
     public void ReInit() { }
     public void Dispose()
@@ -330,6 +330,7 @@ public sealed class ProjectReferenceRuntime : IDisposable
                     dto.TargetWidth = edited.TargetWidth > 0 ? Math.Max(1, (int)Math.Round(edited.TargetWidth / scale)) : 0;
                     dto.TargetHeight = edited.TargetHeight > 0 ? Math.Max(1, (int)Math.Round(edited.TargetHeight / scale)) : 0;
                     dto.Rotation = edited.Rotation;
+                    dto.Opacity = edited.Opacity;
                 }
                 if (editedTrack is not null && dto.Id.ToString() == PartSourceId)
                 {
@@ -372,7 +373,7 @@ public sealed class ProjectReferenceRuntime : IDisposable
             ownedClips = clips.ToArray(); ownedTracks = tracks.ToArray();
             Visual = ExpandVisual(ownedClips);
             Tracks = ownedTracks.Concat(ownedClips.OfType<ProjectReferenceClip>().SelectMany(c => c.GetSoundTracks())).ToArray();
-            Audio = new(ownedClips, Tracks, (int)Project.TargetFrameRate);
+            Audio = new(ownedClips, Tracks, (int)Project.TargetFrameRate) { TotalProjectFrames = Math.Max(Draft.Duration, Draft.AudioDuration) };
         }
         catch
         {

@@ -1,5 +1,4 @@
 using projectFrameCut.Drawing.Base;
-using projectFrameCut.AIContracts;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.Contracts;
@@ -13,9 +12,6 @@ using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Threading.Channels;
 
 namespace projectFrameCut.Render.PluginIsolation;
 
@@ -44,7 +40,6 @@ internal sealed class PluginIsolationWorkerService(
     private readonly NamedPipePluginCommunicationService _communication = communication;
     private readonly Func<IsolationLoadPluginRequest, IPluginBase>? _externalPluginFactory = externalPluginFactory;
     private readonly ConcurrentDictionary<long, object> _objects = new();
-    private readonly ConcurrentDictionary<Guid, AIOperationState> _aiOperations = new();
     private long _nextObjectId;
     private IPluginBase? _plugin;
     private bool _authenticated;
@@ -119,12 +114,6 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationGetClipPosition => GetClipPosition(request),
                     RenderOperation.IsolationGetEffectValue => GetEffectValue(request),
                     RenderOperation.IsolationComputeEffect => await ComputeEffectAsync(request, cancellationToken).ConfigureAwait(false),
-                    RenderOperation.IsolationAIValidateConfiguration => await ValidateAIConfigurationAsync(request, cancellationToken).ConfigureAwait(false),
-                    RenderOperation.IsolationAIListModels => await ListAIModelsAsync(request, cancellationToken).ConfigureAwait(false),
-                    RenderOperation.IsolationAIBeginOperation => BeginAIOperation(request),
-                    RenderOperation.IsolationAIPollOperation => await PollAIOperationAsync(request, cancellationToken).ConfigureAwait(false),
-                    RenderOperation.IsolationAICancelOperation => CancelAIOperation(request),
-                    RenderOperation.IsolationAIReleaseOperation => ReleaseAIOperation(request),
                     RenderOperation.IsolationShutdown => Shutdown(request),
                     _ => UnsupportedOperation(request),
                 };
@@ -243,10 +232,10 @@ internal sealed class PluginIsolationWorkerService(
                 provider.ValidateOutputFields();
                 if (!IsSupportedExternalEffect(provider.TypeOfEffect))
                     throw new NotSupportedException($"External effect provider '{item.Key}' uses unsupported effect type '{provider.TypeOfEffect}'.");
-                var custom = provider.InFields.Values.FirstOrDefault(x => x.FieldType.HasFlag(EffectArgumentFieldType.CustomType));
+                var custom = provider.InFields.Values.FirstOrDefault(x => x.FieldType.HasFlag(EffectArgumentFieldType.CustomType) && x.TypeContract is null);
                 if (custom is not null) throw new NotSupportedException($"External effect provider '{item.Key}' field '{custom.Id}' uses unsupported CustomType '{custom.TypeName}'.");
                 foreach (var output in provider.GetOutputFields().Values)
-                    if (output.FieldType.HasFlag(EffectArgumentFieldType.CustomType))
+                    if (output.FieldType.HasFlag(EffectArgumentFieldType.CustomType) && output.TypeContract is null)
                         throw new NotSupportedException($"External effect provider '{item.Key}' output field '{output.Id}' uses unsupported CustomType '{output.TypeName}'.");
             }
         }
@@ -257,7 +246,7 @@ internal sealed class PluginIsolationWorkerService(
             PluginApiVersion = _plugin.PluginAPIVersion,
             Providers = _plugin.EffectProviderProvider.Select(x => (x.Key, Provider: x.Value()))
                 .Where(x => (_externalPluginFactory is not null || IsPictureEffect(x.Provider.TypeOfEffect))
-                    && !x.Provider.InFields.Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.CustomType)))
+                    && !x.Provider.InFields.Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.CustomType) && f.TypeContract is null))
                 .Select(x => new IsolationProviderCatalogItem { TypeName = x.Key }).ToList(),
             EffectImplementations = _plugin.EffectImplementationProvider.Keys.Select(x => new IsolationEffectImplementationCatalogItem
             {
@@ -286,11 +275,6 @@ internal sealed class PluginIsolationWorkerService(
             VideoWriters = _plugin.VideoWriterProvider.Keys.ToList(),
             ProvidesClips = Implements(nameof(IPluginBase.ClipCreator)),
             ProvidesVectorComponents = Implements(nameof(IPluginBase.VectComponentCreator)),
-            AIProviders = (_plugin as IAIProviderPlugin)?.AIProviderFactories.Select(x => new IsolationAIProviderDescriptor
-            {
-                ProviderId = x.Key,
-                DescriptorJson = JsonSerializer.Serialize(x.Value().Descriptor),
-            }).ToList() ?? [],
         });
 
         bool Implements(string name) => _plugin.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance).Any(x => x.Name == name);
@@ -617,6 +601,7 @@ internal sealed class PluginIsolationWorkerService(
             TargetHeight = position.TargetHeight,
             IsDelta = position.IsDelta,
             Rotation = position.Rotation,
+            Opacity = position.Opacity,
         });
     }
 
@@ -671,6 +656,7 @@ internal sealed class PluginIsolationWorkerService(
                     Clip = clip, FrameIndex = frame.TargetFrame, Progress = frame.Progress, ClipProgress = frame.ClipProgress,
                     TargetWidth = frame.TargetWidth, TargetHeight = frame.TargetHeight, CancellationToken = cancellationToken,
                     RelativeWidth = request.RelativeWidth, RelativeHeight = request.RelativeHeight,
+                    AudioSampleIndex = request.AudioSampleIndex,
                     InputTypes = request.InputTypes.ToDictionary(p => p.Key, p => (EffectArgumentFieldType)p.Value),
                 };
                 result = EffectPictureProcessing.Compute(effect, context, values);
@@ -1072,6 +1058,7 @@ internal sealed class PluginIsolationWorkerService(
         clip.TargetX = state.TargetX;
         clip.TargetY = state.TargetY;
         clip.Rotation = state.Rotation;
+        clip.Opacity = state.Opacity;
         clip.StartingX = state.StartingX;
         clip.StartingY = state.StartingY;
         clip.ExtendToWholeDraft = state.ExtendToWholeDraft;
@@ -1124,195 +1111,9 @@ internal sealed class PluginIsolationWorkerService(
 
     private int _disposed;
 
-    private async ValueTask<RenderResponseEnvelope> ValidateAIConfigurationAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
-    {
-        var request = Read<IsolationAIInvokeRequest>(envelope);
-        var result = await RequireAIProvider(request.ProviderId).ValidateConfigurationAsync(ToContext(request.Context), cancellationToken).ConfigureAwait(false);
-        return Success(envelope, new IsolationAIJsonResponse { Json = JsonSerializer.Serialize(result) });
-    }
-
-    private async ValueTask<RenderResponseEnvelope> ListAIModelsAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
-    {
-        var request = Read<IsolationAIInvokeRequest>(envelope);
-        var query = JsonSerializer.Deserialize<AIModelQuery>(request.RequestJson) ?? throw new InvalidDataException("The AI model query is invalid.");
-        var result = await RequireAIProvider(request.ProviderId).GetModelsAsync(ToContext(request.Context), query, cancellationToken).ConfigureAwait(false);
-        return Success(envelope, new IsolationAIJsonResponse { Json = JsonSerializer.Serialize(result) });
-    }
-
-    private RenderResponseEnvelope BeginAIOperation(RenderRequestEnvelope envelope)
-    {
-        var request = Read<IsolationAIInvokeRequest>(envelope);
-        var provider = RequireAIProvider(request.ProviderId);
-        var id = Guid.NewGuid();
-        var state = new AIOperationState(CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token));
-        if (!_aiOperations.TryAdd(id, state)) throw new InvalidOperationException("Failed to allocate an AI operation.");
-        state.Runner = Task.Run(async () =>
-        {
-            try
-            {
-                var context = ToContext(request.Context);
-                string requestJson = await HydrateAIMediaAsync(request.RequestJson, request.Payloads, state.Cancellation.Token).ConfigureAwait(false);
-                switch (request.OperationKind)
-                {
-                    case "chat" when provider is IAIChatProvider chat:
-                        var chatRequest = JsonSerializer.Deserialize<AIChatRequest>(requestJson) ?? throw new InvalidDataException("The AI chat request is invalid.");
-                        await foreach (var item in chat.StreamChatAsync(context, chatRequest, state.Cancellation.Token).ConfigureAwait(false))
-                            await state.Events.Writer.WriteAsync(await ExternalizeAIMediaAsync(JsonSerializer.Serialize(item), state.Cancellation.Token).ConfigureAwait(false), state.Cancellation.Token).ConfigureAwait(false);
-                        break;
-                    case "image" when provider is IAIImageProvider image:
-                        var imageRequest = JsonSerializer.Deserialize<AIImageGenerationRequest>(requestJson) ?? throw new InvalidDataException("The AI image request is invalid.");
-                        await state.Events.Writer.WriteAsync(await ExternalizeAIMediaAsync(JsonSerializer.Serialize(await image.GenerateImageAsync(context, imageRequest, state.Cancellation.Token).ConfigureAwait(false)), state.Cancellation.Token).ConfigureAwait(false), state.Cancellation.Token).ConfigureAwait(false);
-                        break;
-                    case "video" when provider is IAIVideoProvider video:
-                        var videoRequest = JsonSerializer.Deserialize<AIVideoGenerationRequest>(requestJson) ?? throw new InvalidDataException("The AI video request is invalid.");
-                        await state.Events.Writer.WriteAsync(await ExternalizeAIMediaAsync(JsonSerializer.Serialize(await video.GenerateVideoAsync(context, videoRequest, state.Cancellation.Token).ConfigureAwait(false)), state.Cancellation.Token).ConfigureAwait(false), state.Cancellation.Token).ConfigureAwait(false);
-                        break;
-                    case "extension" when provider is IAIExtensionProvider extension:
-                        var extensionRequest = JsonSerializer.Deserialize<AIExtensionRequest>(requestJson) ?? throw new InvalidDataException("The AI extension request is invalid.");
-                        await state.Events.Writer.WriteAsync(await ExternalizeAIMediaAsync(JsonSerializer.Serialize(await extension.InvokeAsync(context, extensionRequest, state.Cancellation.Token).ConfigureAwait(false)), state.Cancellation.Token).ConfigureAwait(false), state.Cancellation.Token).ConfigureAwait(false);
-                        break;
-                    default:
-                        throw new NotSupportedException($"AI operation '{request.OperationKind}' is not supported by provider '{request.ProviderId}'.");
-                }
-                state.Events.Writer.TryComplete();
-            }
-            catch (OperationCanceledException ex) { state.Events.Writer.TryComplete(ex); }
-            catch (Exception ex)
-            {
-                Logger.Log($"Isolated AI operation '{request.OperationKind}' failed with {ex.GetType().FullName}.", "error");
-                var error = new AIProviderError(AIErrorCode.Unknown, "The isolated AI provider request failed.");
-                if (request.OperationKind == "chat")
-                    await state.Events.Writer.WriteAsync(new IsolationAIJsonResponse { Json = JsonSerializer.Serialize(new AIChatContentPart { Kind = AIContentPartKind.Error, Error = error }) }).ConfigureAwait(false);
-                else
-                    await state.Events.Writer.WriteAsync(new IsolationAIJsonResponse { Json = JsonSerializer.Serialize(AIResult<object>.FromError(error)) }).ConfigureAwait(false);
-                state.Events.Writer.TryComplete();
-            }
-        });
-        return Success(envelope, new IsolationAIBeginResponse { OperationId = id.ToString("N") });
-    }
-
-    private async ValueTask<RenderResponseEnvelope> PollAIOperationAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
-    {
-        var request = Read<IsolationAIOperationRequest>(envelope);
-        var state = RequireAIOperation(request.OperationId);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(Math.Clamp(request.WaitMilliseconds, 1, 30000));
-        try { _ = await state.Events.Reader.WaitToReadAsync(timeout.Token).ConfigureAwait(false); }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { }
-        var response = new IsolationAIPollResponse();
-        while (response.Events.Count < Math.Clamp(request.MaximumEvents, 1, 128) && state.Events.Reader.TryRead(out var item)) response.Events.Add(item);
-        response.Completed = state.Events.Reader.Completion.IsCompleted && !state.Events.Reader.TryPeek(out _);
-        if (response.Completed && state.Events.Reader.Completion.IsFaulted)
-            await state.Events.Reader.Completion.ConfigureAwait(false);
-        return Success(envelope, response);
-    }
-
-    private RenderResponseEnvelope CancelAIOperation(RenderRequestEnvelope envelope)
-    {
-        var request = Read<IsolationAIOperationRequest>(envelope);
-        RequireAIOperation(request.OperationId).Cancellation.Cancel();
-        return Success(envelope, new EmptyResponse());
-    }
-
-    private RenderResponseEnvelope ReleaseAIOperation(RenderRequestEnvelope envelope)
-    {
-        var request = Read<IsolationAIOperationRequest>(envelope);
-        if (Guid.TryParse(request.OperationId, out var id) && _aiOperations.TryRemove(id, out var state))
-        {
-            state.Cancellation.Cancel();
-            state.Dispose();
-        }
-        return Success(envelope, new EmptyResponse());
-    }
-
-    private IAIProvider RequireAIProvider(string id)
-    {
-        var plugin = RequirePlugin() as IAIProviderPlugin ?? throw new NotSupportedException("The plugin does not provide AI providers.");
-        return plugin.AIProviderFactories.TryGetValue(id, out var factory) ? factory() : throw new KeyNotFoundException($"AI provider '{id}' was not found.");
-    }
-
-    private AIOperationState RequireAIOperation(string id) => Guid.TryParse(id, out var parsed) && _aiOperations.TryGetValue(parsed, out var state)
-        ? state
-        : throw new KeyNotFoundException($"AI operation '{id}' was not found.");
-
-    private static AIProviderContext ToContext(IsolationAIProviderContext context) => new()
-    {
-        ProfileId = Guid.TryParse(context.ProfileId, out var id) ? id : Guid.Empty,
-        ProviderKey = context.ProviderKey,
-        ModelId = context.ModelId,
-        Configuration = context.Configuration,
-        SecretResolver = (key, _) => ValueTask.FromResult(context.Secrets.GetValueOrDefault(key)),
-    };
-
-    private async ValueTask<string> HydrateAIMediaAsync(string json, IReadOnlyList<IsolationPayloadReference> payloads, CancellationToken cancellationToken)
-    {
-        if (payloads.Count == 0) return json;
-        var root = JsonNode.Parse(json) ?? throw new InvalidDataException("The AI request JSON is invalid.");
-        await VisitAsync(root, async obj =>
-        {
-            if (obj["Kind"]?.GetValue<int>() != (int)AIMediaReferenceKind.Transport ||
-                !int.TryParse(obj["Locator"]?.GetValue<string>(), out int index) || index < 0 || index >= payloads.Count) return;
-            await using var stream = await _payloads.OpenReadAsync(payloads[index], cancellationToken).ConfigureAwait(false);
-            using var memory = new MemoryStream();
-            await stream.CopyToAsync(memory, cancellationToken).ConfigureAwait(false);
-            obj["Kind"] = (int)AIMediaReferenceKind.Inline;
-            obj["Data"] = Convert.ToBase64String(memory.ToArray());
-            obj["Locator"] = null;
-        }).ConfigureAwait(false);
-        return root.ToJsonString();
-    }
-
-    private async ValueTask<IsolationAIJsonResponse> ExternalizeAIMediaAsync(string json, CancellationToken cancellationToken)
-    {
-        var response = new IsolationAIJsonResponse();
-        var root = JsonNode.Parse(json) ?? throw new InvalidDataException("The AI response JSON is invalid.");
-        await VisitAsync(root, async obj =>
-        {
-            byte[]? data = null;
-            if (obj["Kind"]?.GetValue<int>() == (int)AIMediaReferenceKind.Inline && obj["Data"] is JsonValue dataNode && dataNode.TryGetValue<string>(out var base64) && !string.IsNullOrEmpty(base64))
-                data = Convert.FromBase64String(base64);
-            else if (obj["Kind"]?.GetValue<int>() == (int)AIMediaReferenceKind.File && obj["Locator"] is JsonValue locatorNode && locatorNode.TryGetValue<string>(out var path) && File.Exists(path))
-                data = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
-            if (data is null) return;
-            var lease = await _payloads.PublishAsync(data, _payloadKind, cancellationToken).ConfigureAwait(false);
-            int index = response.Payloads.Count;
-            response.Payloads.Add(lease.Reference);
-            obj["Kind"] = (int)AIMediaReferenceKind.Transport;
-            obj["Locator"] = index.ToString();
-            obj["Data"] = null;
-        }).ConfigureAwait(false);
-        response.Json = root.ToJsonString();
-        return response;
-    }
-
-    private static async ValueTask VisitAsync(JsonNode node, Func<JsonObject, ValueTask> visitor)
-    {
-        if (node is JsonObject obj)
-        {
-            await visitor(obj).ConfigureAwait(false);
-            foreach (var child in obj.ToArray()) if (child.Value is not null) await VisitAsync(child.Value, visitor).ConfigureAwait(false);
-        }
-        else if (node is JsonArray array)
-            foreach (var child in array) if (child is not null) await VisitAsync(child, visitor).ConfigureAwait(false);
-    }
-
-    private sealed class AIOperationState(CancellationTokenSource cancellation) : IDisposable
-    {
-        public CancellationTokenSource Cancellation { get; } = cancellation;
-        public Channel<IsolationAIJsonResponse> Events { get; } = Channel.CreateUnbounded<IsolationAIJsonResponse>(new() { SingleReader = false, SingleWriter = true });
-        public Task? Runner { get; set; }
-        public void Dispose() => Cancellation.Dispose();
-    }
-
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        foreach (var operation in _aiOperations.Values)
-        {
-            try { operation.Cancellation.Cancel(); } catch { }
-            operation.Dispose();
-        }
-        _aiOperations.Clear();
         foreach (var item in _objects.Values.OfType<IDisposable>())
             try { item.Dispose(); } catch { }
         _objects.Clear();
@@ -1351,7 +1152,7 @@ internal sealed class PluginIsolationWorkerService(
 
     private void ApplyProviderState(IEffectProvider provider, IsolationProviderState state, IReadOnlyDictionary<string, IPicture> pictures)
     {
-        provider.Stage = (Stage)state.Stage;
+        provider.Stage = (EffectStage)state.Stage;
         EffectStages.Validate(provider);
         provider.Enabled = state.Enabled;
         provider.Id = Guid.TryParse(state.InstanceId, out var id) ? id : Guid.NewGuid();
@@ -1362,14 +1163,24 @@ internal sealed class PluginIsolationWorkerService(
         foreach (var item in state.Fields)
         {
             var type = (EffectArgumentFieldType)item.FieldType;
-            if (type.HasFlag(EffectArgumentFieldType.CustomType)) throw new NotSupportedException($"Custom field '{item.Id}' cannot cross the isolation boundary.");
+            if (type.HasFlag(EffectArgumentFieldType.CustomType) && item.TypeContract is null)
+                throw new NotSupportedException($"Custom field '{item.Id}' requires a port type contract to cross the isolation boundary.");
             var value = item.AudioValue is not null
                 ? AudioPayloadCodec.ReadAsync(item.AudioValue, _payloads, default).AsTask().GetAwaiter().GetResult()
                 : pictures.TryGetValue(item.Id, out var picture) ? (object)picture : IsolationValueConverter.ToObject(item.Value)
-                    ?? (type.BaseType() == EffectArgumentFieldType.AudioSample ? null : item.DefaultValue);
+                    ?? (type.BaseType() == EffectArgumentFieldType.AudioSample || item.TypeContract is not null ? null : item.DefaultValue);
             fields[item.Id] = item.IsDynamic
-                ? new DynamicEffectParamField(item.Id, type, item.BoundProviderId, value) { FieldType = type, DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat }
-                : new StaticEffectArgumentField(value, type) { DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat };
+                ? new DynamicEffectParamField(item.Id, type, item.BoundProviderId, value)
+                {
+                    FieldType = type,
+                    TypeContract = IsolationFieldTypeCodec.ReadContract(item.TypeContract),
+                    DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat,
+                }
+                : new StaticEffectArgumentField(value!, type)
+                {
+                    TypeContract = IsolationFieldTypeCodec.ReadContract(item.TypeContract),
+                    DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat,
+                };
         }
         provider.Fields = fields;
     }
@@ -1407,6 +1218,7 @@ internal sealed class PluginIsolationWorkerService(
         TypeName = field.TypeName,
         FromPlugin = field.FromPlugin,
         FieldType = (ulong)field.FieldType,
+        TypeContract = IsolationFieldTypeCodec.WriteContract(field.TypeContract),
         DataFormat = field.DataFormat is PictureDataFormat format ? (int)format : 0,
         DefaultValue = field.DefaultValue,
         MinimumValue = field.MinValue,
@@ -1448,7 +1260,12 @@ internal sealed class PluginIsolationWorkerService(
         IsColorAdjust = effect is IColorAdjustEffect,
         ValueField = effect is IValueProviderEffect field ? DescribeField(field) : null,
         TransformDefinition = effect is ITransform transform ? (int)transform.Definition : 0,
-        PreserveAspectRatio = effect is not IContinuousClipPositionProvider cp || cp.PreserveAspectRatio,
+        PreserveAspectRatio = effect switch
+        {
+            IClipPositionProvider p => p.PreserveAspectRatio,
+            IContinuousClipPositionProvider cp => cp.PreserveAspectRatio,
+            _ => true,
+        },
         HasMultipleOutputs = effect is IMultipleOutputEffect,
     };
 
