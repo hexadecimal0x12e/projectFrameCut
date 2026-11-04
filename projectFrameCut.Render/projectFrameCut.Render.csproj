@@ -9,8 +9,8 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<AssemblyVersion>3.1.0.0</AssemblyVersion>
-		<FileVersion>3.1.0.0</FileVersion>
+		<AssemblyVersion>4.0.0.0</AssemblyVersion>
+		<FileVersion>4.0.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut CRL</Product>
 		<Description>projectFrameCut's core render library</Description>
@@ -47,7 +47,6 @@
 
 	<ItemGroup>
 	  <None Remove="Resource\*.png" />
-      <EmbeddedResource Include="..\projectFrameCut\Resources\Raw\JapaneseDictionary\JapaneseDictionary.zip" LogicalName="projectFrameCut.Render.JapaneseDictionary.zip" />
 	  <EmbeddedResource Include="Resource\Error.png" LogicalName="projectFrameCut.Render.Resource.Error.png" />
 	  <EmbeddedResource Include="Resource\Error_SourceFail.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceFail.png" />
 	  <EmbeddedResource Include="Resource\Error_BindingFail.png" LogicalName="projectFrameCut.Render.Resource.Error_BindingFail.png" />

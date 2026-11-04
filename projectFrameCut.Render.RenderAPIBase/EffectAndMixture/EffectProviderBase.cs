@@ -229,7 +229,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         private IReadOnlyList<EffectArgumentFieldDescriptor> DefineContinuousEffectFields()
         {
-            if (TypeOfEffect != EffectType.ContinuousEffect
+            if (TypeOfEffect is not (EffectType.ContinuousEffect or EffectType.ContinuousTextEffect)
                 && !(TypeName == "Crop" && MetaData.ContainsKey(IsContinuousEffectParameterKey))) return [];
             const EffectArgumentFieldType flags = EffectArgumentFieldType.NotVisibleInEffectPanel | EffectArgumentFieldType.CannotBeDynamic;
             return

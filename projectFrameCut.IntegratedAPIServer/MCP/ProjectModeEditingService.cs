@@ -411,7 +411,7 @@ internal static class ProjectModeEditingService
                 && providers.TryGetValue(upstreamId, out var source) && source.TryGetOutputField(outputId, out _) && types.GetOutputType(source, outputId).IsContent()
                 ? upstreamId
                 : null;
-            EffectBindingHelper.SetFinalOutput(providers, replacementOutput, removedProvider.GetPipeline(), replacementOutput.HasValue ? outputId : null);
+            EffectBindingHelper.SetFinalOutput(providers, replacementOutput, removedProvider.Stage, replacementOutput.HasValue ? outputId : null);
         }
         CommitProviders(clip, providers, allowIncompletePicturePath: true);
         return new { removed = true, providerId, diagnostics = ValidateProviderPorts(providers) };
@@ -455,7 +455,7 @@ internal static class ProjectModeEditingService
         Guid? providerId = OptionalGuid(arguments, "providerId");
         string? outputId = OptionalString(arguments, "outputId");
         if (providerId is null && outputId is not null) throw new ArgumentException("outputId requires providerId.");
-        EffectBindingHelper.SetFinalOutput(providers, providerId, EffectPipeline.Picture, outputId);
+        EffectBindingHelper.SetFinalOutput(providers, providerId, EffectStage.Render, outputId);
         CommitProviders(clip, providers, allowIncompletePicturePath: true);
         return new { clipId = clip.Id, providerId, outputId };
     }
@@ -475,7 +475,7 @@ internal static class ProjectModeEditingService
         EffectArgumentFieldType sourceType;
         if (ValueProviderFrameContext.IsBuiltInSource(source))
             sourceType = ValueProviderFrameContext.SourceType(source);
-        else if (source == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.GetPipeline().GetContentType();
+        else if (source == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.Stage.GetContentType();
         else
         {
             if (!EffectProviderOutputExtensions.TryParseOutputSourceId(source, out Guid sourceId, out var outputId))
@@ -878,7 +878,7 @@ internal static class ProjectModeEditingService
                 EffectArgumentFieldType sourceType;
                 if (ValueProviderFrameContext.IsBuiltInSource(binding.Value))
                     sourceType = ValueProviderFrameContext.SourceType(binding.Value);
-                else if (binding.Value == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.GetPipeline().GetContentType();
+                else if (binding.Value == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.Stage.GetContentType();
                 else if (binding.Value.StartsWith("builtin://", StringComparison.Ordinal))
                 {
                     yield return new BindingDiagnostic(target.Id, "UnknownBuiltinSource", $"Field '{binding.Key}' references unknown built-in source '{binding.Value}'.");

@@ -33,6 +33,7 @@ public partial class DraftPage
     private Guid _guiSessionId;
     private IRenderClient? _guiClient;
     internal bool IsGuiRpcRequest => _guiRpcRequest.Value;
+    internal bool IsClosed => AlreadyDisappeared;
 
     #region external RPC
     private bool? externalRpcUiAllowed;
@@ -110,6 +111,7 @@ public partial class DraftPage
             if (ReferenceEquals(_guiClient, client) && _guiSessionId != Guid.Empty) return _guiSessionId;
             var id = Guid.NewGuid();
             await client.RegisterGuiProjectAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+            if (_guiClient is not null) CustomEffectPortEditorService.Reset(this);
             Volatile.Write(ref _externalRpcConnectionCount, 0);
             _guiClient = client;
             _guiSessionId = id;
@@ -117,6 +119,26 @@ public partial class DraftPage
             return id;
         }
         finally { _guiRegistrationGate.Release(); }
+    }
+
+    internal async Task<string> CreateCustomEffectEditorPipeAsync(string clientName)
+    {
+        ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
+        if (AlreadyDisappeared) throw new InvalidOperationException("Project is closed.");
+        var client = RenderRpcBootstrap.Client;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token);
+        var response = await client.CreateGuiProjectPipeAsync(new CreateGuiProjectPipeRequest
+        {
+            SessionId = sessionId,
+            ClientName = clientName,
+            SuppressConnectionNotification = true,
+        }, timeout.Token);
+        if (AlreadyDisappeared) throw new InvalidOperationException("Project is closed.");
+        ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
+        if (string.IsNullOrWhiteSpace(response.Token))
+            throw new InvalidOperationException("The render backend returned an empty RPC pipe token.");
+        return RenderProtocol.AdditionalPipePrefix + response.Token;
     }
 
     private async Task MonitorGuiRpcAsync(CancellationToken ct)
@@ -133,6 +155,8 @@ public partial class DraftPage
                     var id = await EnsureGuiRpcSessionAsync(client, ct).ConfigureAwait(false);
                     var work = await client.GetGuiProjectWorkAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
                     Volatile.Write(ref _externalRpcConnectionCount, work.ActiveConnectionCount);
+                    if (!string.IsNullOrEmpty(work.ConnectionPipeToken))
+                        CustomEffectPortEditorService.ConnectionChanged(this, work.ConnectionPipeToken, work.DisconnectedConnectionId == Guid.Empty);
                     if (work.DisconnectedConnectionId != Guid.Empty)
                     {
                         await MainThread.InvokeOnMainThreadAsync(async () =>
@@ -179,6 +203,7 @@ public partial class DraftPage
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
         finally
         {
+            CustomEffectPortEditorService.Reset(this);
             await MainThread.InvokeOnMainThreadAsync(CloseGuiBatchAsync);
             if (_guiClient is not null && _guiSessionId != Guid.Empty)
             {
@@ -237,7 +262,6 @@ public partial class DraftPage
         provider.Enabled,
         Target = provider.Target.ToString(),
         EffectType = provider.TypeOfEffect.ToString(),
-        Pipeline = provider.GetPipeline().ToString(),
         InputProviderId = provider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey) ? provider.GetMainInputSource() : null,
         IsFinalOutput = provider.IsFinalOutputSource(),
         OutputFieldId = provider.GetFinalOutputFieldId(),
@@ -290,6 +314,7 @@ public partial class DraftPage
         if (write && IsReadonly) throw new InvalidOperationException("Project is read-only.");
         object? result;
         bool deferEffectRendering = false;
+        Guid? changedEffectClipId = null;
         switch (operation)
         {
             case GuiProjectOperation.GetProjectHistory:
@@ -519,12 +544,19 @@ public partial class DraftPage
             case GuiProjectOperation.ImportClipEffectGroup:
             case GuiProjectOperation.SaveClipEffectGroup:
                 result = await ExecuteGuiEffectOperationAsync(operation, p, cancellationToken, () => deferEffectRendering = true);
+                changedEffectClipId = G("ClipId");
                 break;
             default: throw new NotSupportedException("Unknown GUI project operation.");
         }
         var change = CreateGuiProjectChange(request);
         if (deferEffectRendering) change.DetailInfo = "__EFFECT_BINDING_CHANGED__";
-        ForwardClipChangeToWorkspace(this, change);
+        if (changedEffectClipId is { } effectClipId)
+        {
+            change.SourceId = effectClipId;
+            change.Reason = ClipUpdateReason.PropertyChanged;
+            OnClipChanged?.Invoke(this, change);
+        }
+        else ForwardClipChangeToWorkspace(this, change);
         await DraftChangedAsync(this, change, throwOnFailure: true, cancellationToken: cancellationToken);
         return result;
     }

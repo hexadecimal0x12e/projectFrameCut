@@ -2,6 +2,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Shared;
 using System.Text.Json;
 
 namespace SomePublisher;

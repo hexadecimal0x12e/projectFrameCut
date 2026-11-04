@@ -137,6 +137,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (!copy.textStyle.HandleSettableFieldsChange(descriptor, value, out _))
                     copy.textStyle.Fields[id] = new StaticEffectArgumentField(TextClipStyles.ReadValue(style, id), descriptor.FieldType) { Id = id };
             }
+            if (copy.textStyle.LayoutMode != TextClipLayoutMode.FillClip)
+            {
+                using var clipScope = ValueProviderFrameContext.PushClip(copy);
+                var rect = copy.textStyle.GetViewRect(Math.Max(1, copy.TargetWidth), Math.Max(1, copy.TargetHeight));
+                copy.TargetWidth = Math.Max(1, rect.TargetWidth);
+                copy.TargetHeight = Math.Max(1, rect.TargetHeight);
+            }
             return copy;
         }
 
@@ -243,6 +250,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public virtual void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             textStyle = null;
             textStyleLoaded = false;
             ClearFrameCache();
@@ -402,6 +410,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             using var clipScope = ValueProviderFrameContext.PushClip(this);
             var raw = GetRawEntries(targetFrame);
             if (PreviewSourceFrameContext.ReadingRaw) return raw;
+            uint frame = VectorPictureEffectProcessing.GetTargetFrame(this, targetFrame);
             foreach (var item in (EffectsInstances ?? []).Where(e => e.Enabled && (e is ITextEffect or IContinuousTextEffect)).OrderBy(e => e.Index))
             {
                 if (item is ITextEffect textEffect)
@@ -412,15 +421,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 {
                     if (cte.IsScoped)
                     {
-                        if (targetFrame < cte.StartPoint || targetFrame > cte.EndPoint)
+                        if (frame < cte.StartPoint || frame >= cte.EndPoint)
                             continue;
                     }
                     raw = cte.Process(raw.ToArray(), cte.IsScoped
-                        ? (float)EffectHelper.GetContinuesEffectProgress(targetFrame, cte.StartPoint, cte.EndPoint)
+                        ? (float)EffectHelper.GetContinuesEffectProgress(frame, cte.StartPoint, cte.EndPoint)
                         : Duration <= 1 ? 0 : Math.Clamp(targetFrame / (float)(Duration - 1), 0, 1));
                 }
             }
-            EffectStagePlan?.Complete(this, EffectStage.Text, VectorPictureEffectProcessing.GetTargetFrame(this, targetFrame));
+            EffectStagePlan?.Complete(this, EffectStage.Text, frame);
             return raw;
         }
 

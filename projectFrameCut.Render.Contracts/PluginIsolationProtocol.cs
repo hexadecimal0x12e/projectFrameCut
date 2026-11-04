@@ -338,8 +338,26 @@ public sealed class IsolationPortTypeContract
 }
 
 [ProtoContract]
+public sealed class IsolationCustomEffectPortEditorLaunchOption
+{
+    [ProtoMember(1)] public string EntryPoint { get; set; } = string.Empty;
+    [ProtoMember(2)] public List<string> Arguments { get; set; } = [];
+    [ProtoMember(3)] public bool UseShellExecute { get; set; }
+    [ProtoMember(4), System.ComponentModel.DefaultValue(true)] public bool CreateNoWindow { get; set; } = true;
+}
+
+[ProtoContract]
+public sealed class IsolationCustomEffectPortEditorConfiguration
+{
+    [ProtoMember(1)] public IsolationCustomEffectPortEditorLaunchOption? Windows { get; set; }
+    [ProtoMember(2)] public IsolationCustomEffectPortEditorLaunchOption? MacOS { get; set; }
+    [ProtoMember(3)] public IsolationCustomEffectPortEditorLaunchOption? Linux { get; set; }
+}
+
+[ProtoContract]
 public sealed class IsolationFieldDescriptor
 {
+    [ProtoMember(17)] public IsolationCustomEffectPortEditorConfiguration? EditorConfiguration { get; set; }
     [ProtoMember(16)] public IsolationPortTypeContract? TypeContract { get; set; }
     [ProtoMember(15)] public int DataFormat { get; set; }
     [ProtoMember(1)] public string Id { get; set; } = string.Empty;

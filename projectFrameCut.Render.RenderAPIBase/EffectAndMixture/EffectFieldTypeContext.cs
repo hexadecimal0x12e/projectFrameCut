@@ -130,7 +130,7 @@ public sealed class EffectFieldTypeResolution
                 }
                 inputFormats[key] = GetSourceDataFormat(source);
                 inputs[key] = source == IEffectProvider.InputAnchorGUID.ToString()
-                    ? providers[id].GetPipeline().GetContentType() : GetSourceType(source, providers);
+                    ? providers[id].Stage.GetContentType() : GetSourceType(source, providers);
             }
             if (!inputFormats.ContainsKey(EffectProviderBase.PrimaryInputAnchorKey)
                 || state.Bindings.GetValueOrDefault(EffectProviderBase.PrimaryInputAnchorKey) == IEffectProvider.NoConnectionGUID.ToString())
@@ -228,7 +228,7 @@ public sealed class EffectFieldTypeResolution
                 sources[key] = parent.GetContext(id).State;
             inputFormats[key] = parent.GetSourceDataFormat(value);
             inputs[key] = value == IEffectProvider.InputAnchorGUID.ToString()
-                ? provider.GetPipeline().GetContentType() : parent.GetSourceType(value, providers);
+                ? provider.Stage.GetContentType() : parent.GetSourceType(value, providers);
         }
         if (!inputFormats.ContainsKey(EffectProviderBase.PrimaryInputAnchorKey)
             || state.Bindings.GetValueOrDefault(EffectProviderBase.PrimaryInputAnchorKey) == IEffectProvider.NoConnectionGUID.ToString())
@@ -314,7 +314,7 @@ public sealed class EffectFieldTypeResolution
 
     public bool IsBindingCompatible(IEffectProvider provider, string fieldId, string source)
     {
-        var type = source == IEffectProvider.InputAnchorGUID.ToString() ? provider.GetPipeline().GetContentType() : GetSourceType(source, providers);
+        var type = source == IEffectProvider.InputAnchorGUID.ToString() ? provider.Stage.GetContentType() : GetSourceType(source, providers);
         return type.HasFlag(EffectArgumentFieldType.Any) || EffectFieldTypes.AreCompatible(type, GetInputType(provider, fieldId),
             GetSourceContract(source), GetInputContract(provider, fieldId));
     }

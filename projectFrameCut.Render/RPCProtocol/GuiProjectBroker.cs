@@ -122,25 +122,29 @@ public sealed class GuiProjectBroker : IDisposable
         if (session.Pending.TryGetValue(result.RequestId, out var completion)) completion.TrySetResult(result);
     }
 
-    public void NotifyConnected(Guid id, string clientName)
+    public void NotifyConnected(Guid id, string clientName, string pipeToken = "")
     {
         var session = Get(id);
         Interlocked.Increment(ref session.ActiveConnectionCount);
-        session.Queue.Writer.TryWrite(new() { SessionId = id, ConnectedClientName = clientName });
+        session.Queue.Writer.TryWrite(new() { SessionId = id, ConnectedClientName = clientName, ConnectionPipeToken = pipeToken });
     }
 
-    public IRenderService Bind(Guid id) => new BoundService(this, id);
+    public IRenderService Bind(Guid id) => Bind(id, false);
 
-    private sealed class BoundService(GuiProjectBroker broker, Guid id) : IRenderService, IRenderConnectionObserver
+    public IRenderService Bind(Guid id, bool suppressConnectionNotification) => new BoundService(this, id, suppressConnectionNotification);
+
+    public IRenderService Bind(Guid id, bool suppressConnectionNotification, string pipeToken) => new BoundService(this, id, suppressConnectionNotification, pipeToken);
+
+    private sealed class BoundService(GuiProjectBroker broker, Guid id, bool suppressConnectionNotification, string pipeToken = "") : IRenderService, IRenderConnectionObserver
     {
-        public void Connected(string clientId) => broker.NotifyConnected(id, clientId);
+        public void Connected(string clientId) => broker.NotifyConnected(id, suppressConnectionNotification ? string.Empty : clientId, pipeToken);
         public async ValueTask DisconnectedAsync(Guid connectionId)
         {
             if (!broker._sessions.TryGetValue(id, out var session)) return;
             Interlocked.Decrement(ref session.ActiveConnectionCount);
             try
             {
-                await session.Queue.Writer.WriteAsync(new() { SessionId = id, DisconnectedConnectionId = connectionId }, session.Lifetime.Token).ConfigureAwait(false);
+                await session.Queue.Writer.WriteAsync(new() { SessionId = id, DisconnectedConnectionId = connectionId, ConnectionPipeToken = pipeToken }, session.Lifetime.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (session.Lifetime.IsCancellationRequested) { }
             catch (ChannelClosedException) { }

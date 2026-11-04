@@ -28,8 +28,12 @@ internal sealed class ExternalPluginBackendPlatform(ExternalPluginBackendLaunchO
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         var pluginRoot = Path.GetFullPath(context.PluginRoot);
         var pluginsRoot = Path.GetFullPath(Path.Combine(MauiProgram.BasicDataPath, "Plugins"));
-        if (!pluginRoot.StartsWith(pluginsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, comparison) ||
-            !string.Equals(Path.GetFileName(pluginRoot), context.PluginId, comparison))
+        if (!(pluginRoot.StartsWith(pluginsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, comparison) &&
+            string.Equals(Path.GetFileName(pluginRoot), context.PluginId, comparison))
+#if WINDOWS
+            && !WindowsAppExtensionService.IsVerifiedRoot(context.PluginId, pluginRoot)
+#endif
+            )
             throw new UnauthorizedAccessException("The external backend package directory is invalid.");
         var sessionRoot = Path.GetFullPath(context.SessionRoot);
         if (!string.Equals(Path.GetDirectoryName(sessionRoot), Path.GetFullPath(SessionDirectory), comparison) ||

@@ -114,6 +114,7 @@ public sealed class MaskClip : IRotatableClip
 
     public void ReInit(IPicture.PicturePixelMode pixelMode)
     {
+        ClipInitializationFailure.Clear(this);
         var source = MaskSources.Create(SourceType);
         SourceArguments = source.Fields.ToDictionary(f => f.Id, f => source.ReadArgument(f.Id,
             ExtraData.GetValueOrDefault(SourceArgumentKeyPrefix + f.Id)));

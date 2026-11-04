@@ -42,6 +42,8 @@ public sealed class RenderWorkerService : Service
         };
 
         base.OnCreate();
+        using var process = System.Diagnostics.Process.GetCurrentProcess();
+        ProcessPriorityBoost.RaiseToHighest(process);
         EnsureNotificationChannel();
     }
 

@@ -105,15 +105,22 @@ namespace projectFrameCut.Render.Rendering
         public event Action<double, TimeSpan>? OnProgressChanged;
         public event Action<long, long>? OnHashPreparationProgressChanged;
         public event Action<ChunkRenderProgress>? OnChunkProgressChanged;
-        private Stopwatch _renderTotalStopwatch = new();
-        private readonly Queue<(TimeSpan Elapsed, long Finished)> progressSamples = new();
-        private TimeSpan lastProgressSample;
-        private double _currentFps = 0;
+        private readonly Stopwatch _renderTotalStopwatch = new();
+        private readonly object progressGate = new();
+        private readonly Stopwatch progressStopwatch = new();
+        private readonly Queue<(TimeSpan Elapsed, int Finished)> progressSamples = new();
+        private (TimeSpan Elapsed, int Finished) progressSample;
+        private TimeSpan lastProgressReport;
+        private bool writingDeferredVideo;
 
-        public double CurrentFps => Interlocked.CompareExchange(ref _currentFps, 0, 0);
-        public TimeSpan EstimatedRemaining => GetEstimatedRemaining(
-            (EnableDeferredComposition ? 2d : 1d) * Duration - Volatile.Read(ref Finished)
-                - (EnableDeferredComposition ? Volatile.Read(ref preparedFrames) : 0), CurrentFps);
+        public double CurrentFps
+        {
+            get { lock (progressGate) return CalculateCurrentFps(); }
+        }
+        public TimeSpan EstimatedRemaining
+        {
+            get { lock (progressGate) return CalculateEstimatedRemaining(CalculateCurrentFps()); }
+        }
 
         public RenderThreadProgress[] GetThreadProgress() => threadProgress.Values
             .OrderBy(p => p.ThreadId).Select(p => p.Snapshot()).ToArray();
@@ -131,7 +138,7 @@ namespace projectFrameCut.Render.Rendering
 
         public double CurrentSecondPerFrame => 1 / CurrentFps;
         public double CurrentFinishedPercentage => Duration > 0 ? (double)Volatile.Read(ref Finished) / Duration : 0;
-        public int CurrentFinished => Finished;
+        public int CurrentFinished => Volatile.Read(ref Finished);
 
         public bool AutoSetupRenderContext { get; set; } = true;
         public double Progress => EnableDeferredComposition && Duration > 0
@@ -400,7 +407,6 @@ namespace projectFrameCut.Render.Rendering
                 running = true;
             }
             _renderTotalStopwatch.Restart();
-            progressSamples.Enqueue((TimeSpan.Zero, 0));
 
             try
             {
@@ -432,6 +438,7 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 if (LogRenderSummary) Log($"[Render] Effect implementations: {EffectHelper.GetImplementationSummary(Clips)}.");
+                ResetProgress();
                 Composer!.FramePrepared += OnFramePrepared;
                 Composer.FrameWritten += OnFrameWritten;
                 Composer.Initialize(CompositionOptions with { RenderAheadFrames = serialRendering ? 1 : RenderAheadFrames, RunInline = serialRendering },
@@ -475,6 +482,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 workerFailure = null;
                 _renderTotalStopwatch.Stop();
+                lock (progressGate) progressStopwatch.Stop();
                 if (!EnableDeferredComposition || !renderSucceeded) Composer?.Dispose();
                 ReleaseResources();
             }
@@ -604,7 +612,7 @@ namespace projectFrameCut.Render.Rendering
                 ClipSession?.MarkInitialized(clip);
             }
             var effects = clipEffects
-                .Where(e => e.Enabled && e.TypeOfEffect.GetPipeline() == EffectPipeline.Picture);
+                .Where(e => e.Enabled && e.TypeOfEffect.GetStage() is not (EffectStage.Text or EffectStage.VectorContent));
             if (HasExplicitTargetRect(clip)) effects = effects.Where(e => !IsLegacyInternalLayoutEffect(e));
             EffectCache[clip.Id] = effects.ToArray();
             if (clip.AlternativeSource is ISourceReplacementEffect replacement)
@@ -1048,7 +1056,11 @@ namespace projectFrameCut.Render.Rendering
 
         private IDisposable EnterComposerProgress(string name, bool writing = false)
         {
-            if (writing) _renderTotalStopwatch.Start();
+            if (writing)
+            {
+                _renderTotalStopwatch.Start();
+                ResetProgress(writing: true);
+            }
             var tracker = new RenderThreadTracker(name, StartFrame, (ulong)StartFrame + Duration, true)
             { ThreadId = Environment.CurrentManagedThreadId };
             threadProgress[tracker.ThreadId] = tracker;
@@ -1057,7 +1069,11 @@ namespace projectFrameCut.Render.Rendering
             {
                 tracker.Stop(writing || !EnableDeferredComposition
                     ? Composer?.WrittenFrames >= Duration : Composer?.PreparedFrames >= Duration);
-                if (writing) _renderTotalStopwatch.Stop();
+                if (writing)
+                {
+                    _renderTotalStopwatch.Stop();
+                    lock (progressGate) progressStopwatch.Stop();
+                }
             });
         }
 
@@ -1066,7 +1082,7 @@ namespace projectFrameCut.Render.Rendering
             Interlocked.Increment(ref preparedFrames);
             if (!serialRendering || !running) CompleteThreadFrame(progress.FrameIndex);
             Interlocked.Add(ref compositeTicks, progress.CompositionElapsed.Ticks);
-            InvokeProgress();
+            if (EnableDeferredComposition) InvokeProgress();
         }
 
         private void OnFrameWritten(RenderComposerFrameProgress progress)
@@ -1665,24 +1681,57 @@ namespace projectFrameCut.Render.Rendering
 
         #region misc
 
+        private void ResetProgress(bool writing = false)
+        {
+            lock (progressGate)
+            {
+                writingDeferredVideo = writing;
+                progressSamples.Clear();
+                progressSample = default;
+                lastProgressReport = TimeSpan.Zero;
+                progressStopwatch.Restart();
+            }
+        }
+
+        private int ProgressFinished => EnableDeferredComposition && !writingDeferredVideo
+            ? Volatile.Read(ref preparedFrames) : Volatile.Read(ref Finished);
+
+        private double CalculateCurrentFps()
+        {
+            var elapsed = progressStopwatch.Elapsed;
+            while (progressSamples.TryPeek(out var sample) && elapsed - sample.Elapsed >= TimeSpan.FromSeconds(5))
+                progressSample = progressSamples.Dequeue();
+            double seconds = (elapsed - progressSample.Elapsed).TotalSeconds;
+            return seconds > 0 ? Math.Max(0, ProgressFinished - progressSample.Finished) / seconds : 0;
+        }
+
+        private TimeSpan CalculateEstimatedRemaining(double fps)
+        {
+            double remaining = Duration - (double)ProgressFinished;
+            // Until encoding starts, its throughput is unknown; use preparation speed as an initial estimate.
+            if (EnableDeferredComposition && !writingDeferredVideo)
+                remaining += Duration - (double)Volatile.Read(ref Finished);
+            return GetEstimatedRemaining(remaining, fps);
+        }
+
         private void InvokeProgress()
         {
-            int finished = Volatile.Read(ref Finished);
-            long completedWork = finished + (EnableDeferredComposition ? Volatile.Read(ref preparedFrames) : 0L);
-            double prog = Progress;
-            var elapsed = _renderTotalStopwatch.Elapsed;
-            while (progressSamples.Count > 1 && elapsed - progressSamples.Peek().Elapsed > TimeSpan.FromSeconds(30))
-                progressSamples.Dequeue();
-            var sample = progressSamples.Peek();
-            double seconds = (elapsed - sample.Elapsed).TotalSeconds;
-            double fps = seconds > 0 ? (completedWork - sample.Finished) / seconds : 0;
-            if (elapsed - lastProgressSample >= TimeSpan.FromSeconds(1))
+            int finished;
+            double prog;
+            TimeSpan eta;
+            lock (progressGate)
             {
-                progressSamples.Enqueue((elapsed, completedWork));
-                lastProgressSample = elapsed;
+                int completed = ProgressFinished;
+                if (completed >= Duration) progressStopwatch.Stop();
+                var elapsed = progressStopwatch.Elapsed;
+                progressSamples.Enqueue((elapsed, completed));
+                double fps = CalculateCurrentFps();
+                if (completed < Duration && elapsed - lastProgressReport < TimeSpan.FromMilliseconds(250)) return;
+                lastProgressReport = elapsed;
+                finished = Volatile.Read(ref Finished);
+                prog = Progress;
+                eta = CalculateEstimatedRemaining(fps);
             }
-            Interlocked.Exchange(ref _currentFps, fps);
-            var eta = GetEstimatedRemaining((EnableDeferredComposition ? 2d : 1d) * Duration - completedWork, fps);
             OnProgressChanged?.Invoke(prog, eta);
             uint projectFrames = TotalProjectFrames > 0 ? TotalProjectFrames : AudioSamples?.TotalProjectFrames ?? Duration;
             double globalProgress = projectFrames > 0
@@ -1709,7 +1758,7 @@ namespace projectFrameCut.Render.Rendering
         {
             int cached;
             lock (cacheGate) cached = frameCache.Count;
-            return $"Finished {CurrentFinished}/{Duration} ({Progress:p2}), ETA: {GetEstimatedRemaining(Duration - (double)CurrentFinished, CurrentFps)}, {CurrentFps:n2} FPS, " +
+            return $"Finished {CurrentFinished}/{Duration} ({Progress:p2}), ETA: {EstimatedRemaining}, {CurrentFps:n2} FPS, " +
                 (serialRendering ? $"serial render threads: {Volatile.Read(ref ThreadWorking)}/1, "
                     : $"workers: {Volatile.Read(ref ThreadWorking)} running, {Volatile.Read(ref liveWorkers)} alive, {(AllowWorkerOversubscription ? "soft limit" : "limit")}: {workerLimit}, ") +
                 $"cached clips: {cached}, estimated buffers: {(Composer?.BufferedBytes ?? 0) / 1024 / 1024} MiB, " +

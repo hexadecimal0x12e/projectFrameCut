@@ -8,6 +8,30 @@ namespace projectFrameCut.Render.PluginIsolation;
 
 internal static class IsolationFieldTypeCodec
 {
+    public static IsolationCustomEffectPortEditorConfiguration? WriteEditor(object? dataFormat) =>
+        dataFormat is CustomEffectPortEditorConfiguration editor ? new()
+        {
+            Windows = WriteLaunch(editor.Windows), MacOS = WriteLaunch(editor.MacOS), Linux = WriteLaunch(editor.Linux),
+        } : null;
+
+    private static IsolationCustomEffectPortEditorLaunchOption? WriteLaunch(CustomEffectPortEditorLaunchOption? launch) => launch is null ? null : new()
+    {
+        EntryPoint = launch.EntryPoint, Arguments = launch.Arguments.ToList(),
+        UseShellExecute = launch.UseShellExecute, CreateNoWindow = launch.CreateNoWindow,
+    };
+
+    public static object? ReadDataFormat(IsolationFieldDescriptor field) => field.EditorConfiguration is { } editor
+        ? new CustomEffectPortEditorConfiguration
+        {
+            Windows = ReadLaunch(editor.Windows), MacOS = ReadLaunch(editor.MacOS), Linux = ReadLaunch(editor.Linux),
+        } : field.DataFormat == 0 ? null : (PictureDataFormat)field.DataFormat;
+
+    private static CustomEffectPortEditorLaunchOption? ReadLaunch(IsolationCustomEffectPortEditorLaunchOption? launch) => launch is null ? null : new()
+    {
+        EntryPoint = launch.EntryPoint, Arguments = launch.Arguments.ToArray(),
+        UseShellExecute = launch.UseShellExecute, CreateNoWindow = launch.CreateNoWindow,
+    };
+
     public static IsolationPortTypeContract? WriteContract(EffectPortTypeContract? contract) => contract is null ? null : new()
     {
         Id = contract.Id, DisplayName = contract.DisplayName, Description = contract.Description ?? "",
@@ -81,6 +105,7 @@ internal static class IsolationFieldTypeCodec
         Id = field.Id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = (ulong)field.FieldType,
         TypeContract = WriteContract(field.TypeContract),
         DataFormat = field.DataFormat is PictureDataFormat f ? (int)f : 0,
+        EditorConfiguration = WriteEditor(field.DataFormat),
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinimumValue = field.MinValue,
         MaximumValue = field.MaxValue, PresetOptions = field.PresetOptions?.ToList() ?? [], Remarks = field.Remarks ?? "",
     };
@@ -89,7 +114,7 @@ internal static class IsolationFieldTypeCodec
     {
         Id = field.Id, TypeName = field.TypeName, FromPlugin = field.FromPlugin, FieldType = (EffectArgumentFieldType)field.FieldType,
         TypeContract = ReadContract(field.TypeContract),
-        DataFormat = field.DataFormat == 0 ? null : (PictureDataFormat)field.DataFormat,
+        DataFormat = ReadDataFormat(field),
         IsDynamic = field.IsDynamic, DefaultValue = field.DefaultValue, MinValue = field.MinimumValue,
         MaxValue = field.MaximumValue, PresetOptions = field.PresetOptions.ToArray(), Remarks = field.Remarks,
     };

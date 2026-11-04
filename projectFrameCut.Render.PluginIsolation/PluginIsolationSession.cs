@@ -7,6 +7,8 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
 {
     private readonly PluginIsolationTransportOptions _options;
     private readonly Func<string, ValueTask> _terminate;
+    private readonly IIsolationPayloadExchange _payloads;
+    private string _terminationReason = "The backend connection was closed. Reload the plugin to reconnect.";
     private int _disposed;
 
     public PluginIsolationSession(
@@ -20,7 +22,7 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
     {
         PluginId = pluginId;
         Control = control;
-        Payloads = payloads;
+        _payloads = payloads;
         Resources = resources;
         Capabilities = capabilities;
         PreferredPayloadKind = options.PayloadMode ?? (capabilities.PayloadKinds.Contains(IsolationPayloadKind.SharedMemory)
@@ -34,14 +36,21 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
 
     public string PluginId { get; }
     public IIsolationControlChannel Control { get; }
-    public IIsolationPayloadExchange Payloads { get; }
+    public IIsolationPayloadExchange Payloads
+    {
+        get
+        {
+            ThrowIfClosed();
+            return _payloads;
+        }
+    }
     public IIsolationResourceBroker Resources { get; }
     public IsolationChannelCapabilities Capabilities { get; }
     public IsolationPayloadKind PreferredPayloadKind { get; }
 
     public async ValueTask<TResponse> InvokeAsync<TRequest, TResponse>(RenderOperation operation, TRequest request, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        ThrowIfClosed();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_options.RequestTimeout);
         try
@@ -59,7 +68,7 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
             {
                 var error = response.Error;
                 if (_options.TerminateOnRemoteError)
-                    await AbortAsync($"Operation {operation} failed in the external backend.").ConfigureAwait(false);
+                    await AbortAsync($"Operation {operation} failed in the external backend: {error.Message}").ConfigureAwait(false);
                 error.ThrowAsException();
             }
             return RenderRpcSerializer.Deserialize<TResponse>(response.Payload);
@@ -79,26 +88,33 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
             await AbortAsync($"Operation {operation} returned malformed protobuf data.").ConfigureAwait(false);
             throw;
         }
-        catch (RenderPipeException)
+        catch (RenderPipeException ex)
         {
-            await AbortAsync($"The isolation control channel failed during {operation}.").ConfigureAwait(false);
+            await AbortAsync($"The isolation control channel failed during {operation}: {ex.Message}").ConfigureAwait(false);
             throw;
         }
-        catch (IOException)
+        catch (IOException ex)
         {
-            await AbortAsync($"The isolation runtime disconnected during {operation}.").ConfigureAwait(false);
+            await AbortAsync($"The isolation runtime disconnected during {operation}: {ex.Message}").ConfigureAwait(false);
             throw;
         }
     }
 
     public ValueTask TerminateAsync(string reason) => AbortAsync(reason);
 
+    private void ThrowIfClosed()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+            throw new RenderPipeException($"Plugin '{PluginId}' backend session closed: {_terminationReason}");
+    }
+
     private async ValueTask AbortAsync(string reason)
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _terminationReason = reason;
         try { await Control.DisposeAsync().ConfigureAwait(false); } catch { }
         try { await Resources.DisposeAsync().ConfigureAwait(false); } catch { }
-        try { await Payloads.DisposeAsync().ConfigureAwait(false); } catch { }
+        try { await _payloads.DisposeAsync().ConfigureAwait(false); } catch { }
         await _terminate(reason).ConfigureAwait(false);
     }
 
@@ -119,7 +135,7 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
         catch { }
         await Control.DisposeAsync().ConfigureAwait(false);
         await Resources.DisposeAsync().ConfigureAwait(false);
-        await Payloads.DisposeAsync().ConfigureAwait(false);
+        await _payloads.DisposeAsync().ConfigureAwait(false);
         await _terminate("Isolation session closed.").ConfigureAwait(false);
     }
 }

@@ -81,6 +81,8 @@ namespace projectFrameCut.Shared
         VectorComponent = 512,
         Transform = 1024,
         VectorPicture = 2048,
+        Pipeline = 4096, 
+        ClipPosition = 8192,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,
@@ -95,12 +97,6 @@ namespace projectFrameCut.Shared
         SourceReplacement,
         Render,
         Composition,
-    }
-
-    public enum EffectPipeline
-    {
-        Picture,
-        NativeContent,
     }
 
     /// <summary>
@@ -167,7 +163,7 @@ namespace projectFrameCut.Shared
         System,
     }
 
-    [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead. TextClipEntry is kept for backward compatibility with serialized data.")]
+    [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead to define text field, or \"TextClipPreset\" for a more modern approach of saving user text clip configurations. TextClipEntry is kept for backward compatibility with serialized data.")]
     public record TextClipEntry
     {
         // Core text

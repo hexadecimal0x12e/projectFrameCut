@@ -208,7 +208,7 @@ public static class DynamicEffectBindings
                 && !EffectFieldTypes.AreCompatible(type, p.Stage.GetContentType());
             if (IsGraphProvider(p) && (p.GetOutputFields().Keys.Any(key => WrongContent(types.GetOutputType(p, key)))
                 || fields.Keys.Any(key => WrongContent(types.GetInputType(p, key)))))
-                errors.Add(new(p.Id, "UnsupportedGraphInput", $"Provider {p.Id} declares content from another pipeline."));
+                errors.Add(new(p.Id, "UnsupportedGraphInput", $"Provider {p.Id} declares content from another stage."));
             foreach (var binding in p.AnchorsBindingState.Where(x => !EffectProviderAnchorExtensions.IsOutputBindingKey(x.Key)))
             {
                 if (binding.Value == IEffectProvider.NoConnectionGUID.ToString()) continue;

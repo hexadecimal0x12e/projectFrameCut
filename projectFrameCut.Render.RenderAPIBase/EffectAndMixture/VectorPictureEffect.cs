@@ -15,26 +15,8 @@ public interface IVectorPictureEffect : IEffect
 public sealed record VectorEffectFrameContext(projectFrameCut.Render.RenderAPIBase.ClipAndTrack.IClip Clip,
     uint FrameIndex, float Progress, int Width, int Height);
 
-public static class EffectPipelineExtensions
+public static class EffectProviderContentExtensions
 {
-    public const string PipelineKey = "__EffectPipeline__";
-
-    public static EffectPipeline GetPipeline(this IEffectProvider provider) => provider.Stage is
-        EffectStage.Text or EffectStage.VectorContent ? EffectPipeline.NativeContent : EffectPipeline.Picture;
-
-    public static void SetPipeline(this IEffectProvider provider, EffectPipeline pipeline)
-    {
-        var stage = pipeline == EffectPipeline.NativeContent ? EffectStage.VectorContent : EffectStage.Render;
-        if (provider.SupportedStages.Contains(stage)) provider.Stage = stage;
-    }
-
-    public static EffectArgumentFieldType GetContentType(this EffectPipeline pipeline) =>
-        pipeline == EffectPipeline.NativeContent ? EffectArgumentFieldType.VectorPicture : EffectArgumentFieldType.IPicture;
-
-    public static EffectPipeline GetPipeline(this EffectType type) => type is
-        EffectType.VectorComponentEffect or EffectType.TextEffect or EffectType.ContinuousTextEffect or EffectType.VectorPictureEffect
-            ? EffectPipeline.NativeContent : EffectPipeline.Picture;
-
     public static bool CanConnectContent(this IEffectProvider source, IEffectProvider target)
         => source.CanConnectContent(target, null);
 
@@ -45,7 +27,7 @@ public static class EffectPipelineExtensions
     {
         if (!target.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input)
             || source.TypeOfEffect == EffectType.Transform || source is ClipArgumentProvider) return false;
-        if (target.GetPipeline() == EffectPipeline.Picture || target.TypeOfEffect == EffectType.VectorPictureEffect
+        if (target.Stage is not (EffectStage.Text or EffectStage.VectorContent) || target.TypeOfEffect == EffectType.VectorPictureEffect
             || target.Target.HasFlag(EffectTarget.ValueProvider))
             return source.Stage == target.Stage
                 && source.TryGetOutputField(outputId, out var output)

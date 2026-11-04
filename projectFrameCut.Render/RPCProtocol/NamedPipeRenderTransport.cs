@@ -381,7 +381,7 @@ public sealed class NamedPipeRenderServer(
                 if (request.Operation == RenderOperation.GetGuiProjectWork)
                     return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(await _gui.TakeAsync(session.SessionId, request.ClientId, ct).ConfigureAwait(false)) };
                 if (request.Operation == RenderOperation.CreateGuiProjectPipe)
-                    return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new CreateAdditionalPipeResponse { Token = await CreatePipeAsync(ct, session.SessionId, clientName: session.ClientName, isolated: session.Isolated).ConfigureAwait(false) }) };
+                    return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new CreateAdditionalPipeResponse { Token = await CreatePipeAsync(ct, session.SessionId, clientName: session.ClientName, isolated: session.Isolated, suppressConnectionNotification: session.SuppressConnectionNotification).ConfigureAwait(false) }) };
                 return new() { RequestId = request.RequestId, Payload = request.Operation == RenderOperation.RegisterGuiProject
                     ? RenderRpcSerializer.Serialize(session) : RenderRpcSerializer.Serialize(new EmptyResponse()) };
             }
@@ -493,7 +493,7 @@ public sealed class NamedPipeRenderServer(
             return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new CreateAdditionalPipeResponse { Token = createdToken }) };
         }
 
-        private async Task<string> CreatePipeAsync(CancellationToken ct, Guid guiSessionId = default, Guid externalClientId = default, string clientName = "", bool isolated = false, string[]? additionalSids = null)
+        private async Task<string> CreatePipeAsync(CancellationToken ct, Guid guiSessionId = default, Guid externalClientId = default, string clientName = "", bool isolated = false, string[]? additionalSids = null, bool suppressConnectionNotification = false)
         {
             ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed());
             if (additionalSids is { Length: > 0 } && externalRequestPipeFactory is null)
@@ -505,7 +505,7 @@ public sealed class NamedPipeRenderServer(
                 ObjectDisposedException.ThrowIf(_disposed, this);
                 ct.ThrowIfCancellationRequested();
                 _lifetime.Token.ThrowIfCancellationRequested();
-                _listeners.Add(ListenAsync(token, ready, guiSessionId, externalClientId, clientName, isolated, additionalSids));
+                _listeners.Add(ListenAsync(token, ready, guiSessionId, externalClientId, clientName, isolated, additionalSids, suppressConnectionNotification));
             }
             try
             {
@@ -527,14 +527,14 @@ public sealed class NamedPipeRenderServer(
                 try { lifetime.Cancel(); } catch (ObjectDisposedException) { }
         }
 
-        private async Task ListenAsync(string token, TaskCompletionSource ready, Guid guiSessionId, Guid externalClientId, string clientName, bool isolated, string[]? additionalSids)
+        private async Task ListenAsync(string token, TaskCompletionSource ready, Guid guiSessionId, Guid externalClientId, string clientName, bool isolated, string[]? additionalSids, bool suppressConnectionNotification)
         {
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token,
                 guiSessionId == Guid.Empty ? CancellationToken.None : _gui.GetLifetime(guiSessionId));
             _pipeLifetimes[token] = lifetime;
             try
             {
-                IRenderService pipeService = guiSessionId == Guid.Empty ? service : _gui.Bind(guiSessionId);
+                IRenderService pipeService = guiSessionId == Guid.Empty ? service : _gui.Bind(guiSessionId, suppressConnectionNotification, token);
                 if (!string.IsNullOrWhiteSpace(clientName))
                     pipeService = new ExternalRpcMetadataPipeService(pipeService, clientName);
                 if (externalClientId != Guid.Empty)

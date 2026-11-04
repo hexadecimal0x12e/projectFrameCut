@@ -21,10 +21,25 @@ public partial class DraftEffectBindingView
         new(new("f151dd63-6821-4f7b-a71a-9bd8a035e767"), ValueProviderFrameContext.BuiltInProgressProviderId, Localized.Effect_ClipProgress),
     ];
 
-    private bool HasContentPipeline => _clip?.ClipType != ClipMode.AudioClip
-        && _pipeline is EffectStage.Render or EffectStage.Text or EffectStage.VectorContent or EffectStage.Composition;
+    private bool HasContentStage => _clip?.ClipType != ClipMode.AudioClip && !IsTransformPipeline
+        && _stage is EffectStage.Render or EffectStage.Text or EffectStage.VectorContent or EffectStage.Composition;
 
-    private string TerminalSourceOutputKey(string field) => _pipeline == EffectStage.Render
+    private string ContentSourceName => _stage switch
+    {
+        EffectStage.Text => Localized.Effect_TextSource,
+        EffectStage.VectorContent => EffectStageUI.Name(_stage),
+        _ => PPLocalizedResources.EffectBind_SourcePicture,
+    };
+
+    private string ContentOutputName => _stage switch
+    {
+        EffectStage.Text => Localized.Effect_TextOutput,
+        EffectStage.Composition => Localized.Effect_PictureOutput,
+        EffectStage.VectorContent => EffectStageUI.Name(_stage),
+        _ => PPLocalizedResources.EffectBind_FinalResult,
+    };
+
+    private string TerminalSourceOutputKey(string field) => _stage == EffectStage.Render
         ? field switch
         {
             RenderOutputProvider.AudioKey => "audio",
@@ -36,34 +51,39 @@ public partial class DraftEffectBindingView
     private bool IsSourceOutputEnabled(string key)
     {
         if (bool.TryParse(_clip?.ExtraData.GetValueOrDefault(StagePositionKey(key, "Enabled"))?.ToString(), out var enabled)) return enabled;
+        if (_stage == EffectStage.Text && key.StartsWith("terminal:", StringComparison.Ordinal))
+        {
+            var field = key["terminal:".Length..];
+            return _clip?.EffectProviders?.Values.OfType<ClipArgumentProvider>()
+                .Any(p => p.TryGetFieldBinding(field, out _) || p.StaticValues.ContainsKey(field)) == true;
+        }
         if (key.StartsWith("builtin://", StringComparison.Ordinal)
-            && _clip?.EffectProviders?.Values.Any(p => p.Stage == _pipeline && p.AnchorsBindingState.Values.Contains(key)) == true) return true;
+            && _clip?.EffectProviders?.Values.Any(p => IsCurrentPipelineProvider(p) && p.AnchorsBindingState.Values.Contains(key)) == true) return true;
         // Earlier stages already exposed the global audio source before this panel existed.
         return !key.StartsWith("builtin://", StringComparison.Ordinal)
-            || key == ValueProviderFrameContext.BuiltInAudioSampleProviderId && _pipeline != EffectStage.Render;
+            || key == ValueProviderFrameContext.BuiltInAudioSampleProviderId && _stage != EffectStage.Render;
     }
 
     private IEnumerable<SourceOutputEntry> GetSourceOutputEntries()
     {
         if (_clip is null) yield break;
-        if (HasContentPipeline)
-            yield return new("content", _pipeline == EffectStage.Composition ? Localized.Effect_PictureOutput
-                : $"{(_pipeline == EffectStage.Render ? PPLocalizedResources.EffectBind_SourcePicture : EffectStageUI.Name(_pipeline))} → {PPLocalizedResources.EffectBind_FinalResult}");
-        if (_pipeline == EffectStage.Render)
+        if (HasContentStage)
+            yield return new("content", _stage == EffectStage.Composition ? ContentOutputName
+                : $"{ContentSourceName} → {ContentOutputName}");
+        if (_stage == EffectStage.Render)
         {
             if (HasClipAudio) yield return new("audio", $"{Localized.Effect_RenderSourceAudio} → {Localized.Effect_RenderFinalAudio}");
             if (_clip.ClipType != ClipMode.AudioClip)
                 yield return new("position", $"{Localized.Effect_RenderSourcePosition} → {Localized.Effect_RenderFinalPosition}");
         }
         if (_clip.EffectProviders is { } providers)
-            foreach (var terminal in EffectStages.GetTerminals(_pipeline, providers.Values))
+            foreach (var terminal in EffectStages.GetTerminals(_stage, providers.Values))
             {
-                if (_pipeline == EffectStage.Render && terminal.Id is RenderOutputProvider.AudioKey or RenderOutputProvider.PositionKey) continue;
-                yield return new(TerminalSourceOutputKey(terminal.Id), terminal.Id == RenderOutputProvider.ShouldRenderKey
-                    ? Localized.Effect_RenderShouldRender : HumanizePortName(terminal.Id));
+                if (_stage == EffectStage.Render && terminal.Id is RenderOutputProvider.AudioKey or RenderOutputProvider.PositionKey) continue;
+                yield return new(TerminalSourceOutputKey(terminal.Id), StageTerminalName(terminal, providers[terminal.ProviderId!.Value]));
             }
         foreach (var source in BuiltInSources)
-            if (source.Source != ValueProviderFrameContext.BuiltInAudioSampleProviderId || ValueProviderFrameContext.SupportsAudioSample(_pipeline))
+            if (source.Source != ValueProviderFrameContext.BuiltInAudioSampleProviderId || ValueProviderFrameContext.SupportsAudioSample(_stage))
                 yield return new(source.Source, source.Name);
     }
 
@@ -84,13 +104,13 @@ public partial class DraftEffectBindingView
                 || n.TerminalField is not null && _clip?.EffectProviders?.ContainsKey(n.Provider!.Id) != true)).ToArray())
             RemoveSourceOutputNode(node);
         AddContentNodes();
-        if (_pipeline == EffectStage.Render && HasClipAudio && IsSourceOutputEnabled("audio") && !_nodes.ContainsKey(AudioSampleNodeId))
+        if (_stage == EffectStage.Render && HasClipAudio && IsSourceOutputEnabled("audio") && !_nodes.ContainsKey(AudioSampleNodeId))
             AddSourceNode(AudioSampleNodeId, ValueProviderFrameContext.ClipAudioProviderId, Localized.Effect_RenderSourceAudio, "audioSource", 350);
         AddRenderPositionSource();
         AddStageTerminals();
         foreach (var source in BuiltInSources)
             if (IsSourceOutputEnabled(source.Source) && !_nodes.ContainsKey(source.Id)
-                && (source.Source != ValueProviderFrameContext.BuiltInAudioSampleProviderId || ValueProviderFrameContext.SupportsAudioSample(_pipeline)))
+                && (source.Source != ValueProviderFrameContext.BuiltInAudioSampleProviderId || ValueProviderFrameContext.SupportsAudioSample(_stage)))
                 AddSourceNode(source.Id, source.Source, source.Name, source.Source, 800);
     }
 
@@ -98,7 +118,7 @@ public partial class DraftEffectBindingView
     {
         var type = ValueProviderFrameContext.SourceType(source);
         bool legacyAudio = source == ValueProviderFrameContext.ClipAudioProviderId
-            || source == ValueProviderFrameContext.BuiltInAudioSampleProviderId && _pipeline != EffectStage.Render;
+            || source == ValueProviderFrameContext.BuiltInAudioSampleProviderId && _stage != EffectStage.Render;
         var node = new NodeViewModel
         {
             Id = id, Kind = NodeKind.AudioSample, Provider = null, DisplayName = name,
@@ -142,14 +162,14 @@ public partial class DraftEffectBindingView
                 }
                 else
                 {
-                    RemoveUIBindingsFrom(BindingIdOf(node), stage: _pipeline);
+                    RemoveUIBindingsFrom(BindingIdOf(node), stage: _stage, currentPipelineOnly: _stage == EffectStage.Composition);
                     RemoveUIBindingsTo(BindingIdOf(node), null);
                 }
                 RemoveSourceOutputNode(node);
             }
         if (enabled && _clip.EffectProviders is { } providers)
         {
-            if (key == "content") EffectBindingHelper.SetFinalOutput(providers, null, _pipeline);
+            if (key == "content") EffectBindingHelper.SetFinalOutput(providers, null, _stage);
             else if (key is "audio" or "position")
                 RenderOutputProvider.Ensure(providers).SetFieldBinding(key == "audio" ? RenderOutputProvider.AudioKey : RenderOutputProvider.PositionKey,
                     key == "audio" ? ValueProviderFrameContext.ClipAudioProviderId : ValueProviderFrameContext.ClipPositionProviderId);
@@ -180,6 +200,7 @@ public partial class DraftEffectBindingView
         if (_isDraggingNodeOrPort) return;
         if (e.GetPosition(NodesContainer) is { } point
             && _nodes.Values.Any(n => n.View?.IsVisible == true && GetNodeBounds(n, n.X, n.Y).Contains(point))) return;
+        EndPortConnection();
         ShowSourcesAndOutputs();
     }
 
@@ -209,7 +230,7 @@ public partial class DraftEffectBindingView
         }
         if (_clip is null) return;
         SourcesAndOutputsPanel.Children.Add(new Label { Text = Localized.Effect_ValuePassThrough, FontAttributes = FontAttributes.Bold });
-        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.Stage == _pipeline) ?? [])
+        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(IsCurrentPipelineProvider) ?? [])
             AddSourceOutputRow(endpoint.Name, true, () =>
             {
                 if (_nodes.TryGetValue(endpoint.Id, out var node)) RemoveEffect(node);

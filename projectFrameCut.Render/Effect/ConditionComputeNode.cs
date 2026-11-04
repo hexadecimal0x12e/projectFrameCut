@@ -18,7 +18,7 @@ public sealed class ConditionComputeNodeEffectProvider : EffectProviderBase, IMu
     public override string TypeName => "ConditionComputeNode";
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
-    public override EffectTarget Target => EffectTarget.Video | EffectTarget.ValueProvider;
+    public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider;
 
     protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() =>
     [

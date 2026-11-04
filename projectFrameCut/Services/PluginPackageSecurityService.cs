@@ -519,7 +519,7 @@ internal static class PluginPackageSecurityService
         }
     }
 
-    private static void ValidateMetadata(PluginMetadata metadata)
+    internal static void ValidateMetadata(PluginMetadata metadata)
     {
         if (string.IsNullOrWhiteSpace(metadata.PluginID) || metadata.PluginID is "." or ".." ||
             metadata.PluginID != Path.GetFileName(metadata.PluginID) || metadata.PluginID.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||

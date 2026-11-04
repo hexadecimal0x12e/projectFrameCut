@@ -48,12 +48,12 @@ namespace projectFrameCut.DraftStuff
                 tabs.IsTabBarVisible = false;
             }
 
-            tabs.OnTabSwitched += (_, item) =>
+            tabs.OnTabSwitched += (_, item) => RunPanelAction(() =>
             {
                 page.SelectedTimingTab = item.Tag;
                 if (item.Tag == "timing") refreshTiming();
                 else refreshSpeed();
-            };
+            });
             tabs.SelectByTag(page.SelectedTimingTab);
             return tabs;
         }
@@ -132,7 +132,7 @@ namespace projectFrameCut.DraftStuff
                     ThumbnailPath = thumbPath,
                     Margin = new Thickness(10, 20, 10, 20)
                 };
-                rangeSlider.ValuesChanged += (s, e) =>
+                rangeSlider.ValuesChanged += (s, e) => RunPanelAction(() =>
                 {
                     uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
                     uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
@@ -141,13 +141,13 @@ namespace projectFrameCut.DraftStuff
                     lengthEntry.Text = Math.Max(1u, newEnd - newStart).ToString();
                     updating = false;
                     UpdatePreview();
-                };
-                rangeSlider.DragCompleted += (s, e) =>
+                });
+                rangeSlider.DragCompleted += (s, e) => RunPanelAction(() =>
                 {
                     uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
                     uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
                     ApplyFrames(s, ReadStartFrame(), newStart, Math.Max(1u, newEnd - newStart));
-                };
+                });
                 fields.Children.Add(rangeSlider);
             }
 
@@ -157,8 +157,8 @@ namespace projectFrameCut.DraftStuff
                 Spacing = 8,
                 Children =
                 {
-                    new Button { Text = "-1s", Command = new Command(() => ChangeLength(-Math.Max(1L, (long)Math.Round(fps)))) },
-                    new Button { Text = "+1s", Command = new Command(() => ChangeLength(Math.Max(1L, (long)Math.Round(fps)))) }
+                    new Button { Text = "-1s", Command = new Command(() => RunPanelAction(() => ChangeLength(-Math.Max(1L, (long)Math.Round(fps))))) },
+                    new Button { Text = "+1s", Command = new Command(() => RunPanelAction(() => ChangeLength(Math.Max(1L, (long)Math.Round(fps))))) }
                 }
             });
             fields.Children.Add(infoLabel);
@@ -234,12 +234,13 @@ namespace projectFrameCut.DraftStuff
             }
 
             void ApplyEntries(object? sender, EventArgs e)
+                => RunPanelAction(() =>
             {
                 if (TryReadFrames(out var start, out var sourceStart, out var length)) ApplyFrames(sender, start, sourceStart, length);
-            }
-            startEntry.TextChanged += (_, _) => UpdatePreview();
-            sourceEntry.TextChanged += (_, _) => UpdatePreview();
-            lengthEntry.TextChanged += (_, _) => UpdatePreview();
+            });
+            startEntry.TextChanged += (_, _) => RunPanelAction(() => UpdatePreview());
+            sourceEntry.TextChanged += (_, _) => RunPanelAction(() => UpdatePreview());
+            lengthEntry.TextChanged += (_, _) => RunPanelAction(() => UpdatePreview());
             applyBtn.Clicked += ApplyEntries;
             startEntry.Completed += ApplyEntries;
             sourceEntry.Completed += ApplyEntries;
@@ -256,14 +257,14 @@ namespace projectFrameCut.DraftStuff
                     VerticalOptions = LayoutOptions.Center,
                     IsEnabled = !hasOtherClipsInTrack
                 };
-                extendSwitch.Toggled += (s, e) =>
+                extendSwitch.Toggled += (s, e) => RunPanelAction(() =>
                 {
                     clip.ExtraData ??= new Dictionary<string, object>();
                     clip.ExtraData["ExtendToWholeDraft"] = e.Value;
                     fields.IsEnabled = !e.Value;
                     handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, extendToWhole));
                     extendToWhole = e.Value;
-                };
+                });
                 var row = new Grid
                 {
                     ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
@@ -368,14 +369,14 @@ namespace projectFrameCut.DraftStuff
                     });
                 }
 
-                ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) =>
+                ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) => RunPanelAction(() =>
                 {
                     if (clip.EffectProviders is { } providers)
                         EffectBindingHelper.RemoveProvider(providers, bundleId);
                     RebuildAllEffects(clip);
                     handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return;
-                });
+                }));
                 ppb.AddSeparator();
                 UpdateDurationHint();
                 ppb.AddCustomChild(durationHintLabel);
@@ -385,7 +386,7 @@ namespace projectFrameCut.DraftStuff
                 ppb.AppendWhen(speedProviders.Count == 0 && speedProviderFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.SpeedVariance, page, allProviderFactories, ppb, handler, false)));
             }
 
-            ppb.PropertyChanged += (s, e) =>
+            ppb.PropertyChanged += GuardPanelChange((s, e) =>
             {
                 if (s is IEffectProvider senderProvider)
                 {
@@ -418,10 +419,10 @@ namespace projectFrameCut.DraftStuff
                     int currentCount = clip.EffectProviders.Values.Count(IsSpeedVarianceProvider);
                     if (currentCount >= 1)
                     {
-                        page.Dispatcher.Dispatch(async () =>
+                        page.Dispatcher.Dispatch(async () => await RunPanelActionAsync(async () =>
                         {
                             await page.DisplayAlertAsync(Localized._Info, PPLocalizedResources.SpeedAndRatio_ErrSingle, Localized._OK);
-                        });
+                        }));
                         return;
                     }
                     if (ppb.Properties.TryGetValue("NewProviderType", out var typeObj) && typeObj is string bundleTypeName)
@@ -443,7 +444,7 @@ namespace projectFrameCut.DraftStuff
                 }
 
                 handler?.Invoke(s, e);
-            };
+            });
 
             return ppb.BuildWithScrollView();
         }

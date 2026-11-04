@@ -1,5 +1,6 @@
 using projectFrameCut.Shared;
 using projectFrameCut.ApplicationAPIBase.Text;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -12,6 +13,42 @@ namespace projectFrameCut.ApplicationPluginBase.Text;
 
 public class TextClipStyleUIProvider : ITextClipStyleUIProvider
 {
+    public virtual (string name, string description) GetLocalizedFieldInfo(ITextClipStyleProvider source, string fieldId, string locale)
+    {
+        var field = source.SettableFields.GetValueOrDefault(fieldId);
+        var key = fieldId switch
+        {
+            "Text" => "TextOption_Content",
+            "FontFamily" => "TextOption_Font",
+            "FontSize" => "TextStyle_Field_FontSize",
+            "Color" => "TextOption_Color",
+            "FontStyle" => "TextOption_Style",
+            "HorizontalAlignment" => "TextOption_HorizonOption",
+            "VerticalAlignment" => "TextOption_VerticalOption",
+            "LayoutMode" => "TextOption_LayoutMode",
+            "FixedHeightValue" => "TextOption_LayoutMode_FixedHeight",
+            "WrappingWidth" => "TextOption_WrapW",
+            "ApplyKerning" => "TextOption_Kerning",
+            "LineSpacing" => "TextOption_LineSpacing",
+            "Rotation" => "TextOption_Rotation",
+            "StrokeWidth" => "TextStyle_Field_StrokeWidth",
+            "StrokeColor" => "TextStyle_Field_StrokeColor",
+            "UseVerticalLayout" => "TextOption_UseVerticalLayout",
+            "KeepNonCJKTextAsHorizontal" => "TextOption_KeepNonCJKHorizontal",
+            "PinyinFontSizeRatio" => "TextStyle_Field_PinyinFontSizeRatio",
+            "PinyinColor" => "TextStyle_Field_PinyinColor",
+            "CharSpacing" => "TextStyle_Field_CharSpacing",
+            _ => $"_{fieldId}",
+        };
+        var locales = ISimpleLocalizerBase.GetMapping();
+        var loc = locales.GetValueOrDefault(locale) ?? locales.GetValueOrDefault("en-US");
+        var name = fieldId == "Dpi" ? "DPI" : field?.DisplayName ?? fieldId;
+        if (loc?.IsItemExist(key) == true) name = loc.DynamicLookup(key, name);
+        return (EffectProviderDisplayDefaults.ResolveLocalized($"TextStyle_{source.TypeName}_{fieldId}",
+                EffectProviderDisplayDefaults.ResolveLocalized(field?.LocalizedNameKey ?? key, name, locale), locale),
+            EffectProviderDisplayDefaults.ResolveLocalized($"Description_TextStyle_{source.TypeName}_{fieldId}", field?.Remarks ?? "", locale));
+    }
+
     private readonly Label glyphWarning = new()
     {
         TextColor = Microsoft.Maui.Graphics.Colors.OrangeRed,

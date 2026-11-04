@@ -107,6 +107,15 @@ public sealed class EffectImplementationRegistry
                 if (parameters.TryGetValue(nameof(IContinuousEffect.IsScoped), out var scoped) && EffectParamConvert.TryConvertToBool(scoped, out var isScoped))
                     c.IsScoped = isScoped;
             }
+            else if (effect is IContinuousTextEffect text)
+            {
+                if (parameters.TryGetValue(nameof(IContinuousTextEffect.StartPoint), out var start) && EffectParamConvert.TryConvertToInt(start, out var startPoint))
+                    text.StartPoint = startPoint;
+                if (parameters.TryGetValue(nameof(IContinuousTextEffect.EndPoint), out var end) && EffectParamConvert.TryConvertToInt(end, out var endPoint))
+                    text.EndPoint = endPoint;
+                if (parameters.TryGetValue(nameof(IContinuousTextEffect.IsScoped), out var scoped) && EffectParamConvert.TryConvertToBool(scoped, out var isScoped))
+                    text.IsScoped = isScoped;
+            }
             return effect;
         }
         catch

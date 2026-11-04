@@ -105,6 +105,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            ClipInitializationFailure.Clear(this);
            EffectHelper.ResolveClipEffects(this);
 
         }
@@ -120,6 +121,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ReInit();
         }
 
         private int ResolveConfiguredInt(string key, int fallback)

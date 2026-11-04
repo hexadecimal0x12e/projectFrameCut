@@ -124,12 +124,12 @@ public partial class ClipInfoBuilder
             UpdatePreview();
         }
 
-        startEntry.TextChanged += (_, _) => UpdatePreview();
-        endEntry.TextChanged += (_, _) => UpdatePreview();
-        startEntry.Completed += (_, _) => ApplyRange(scopeSwitch.IsToggled);
-        endEntry.Completed += (_, _) => ApplyRange(scopeSwitch.IsToggled);
-        applyButton.Clicked += (_, _) => ApplyRange(scopeSwitch.IsToggled);
-        slider.ValuesChanged += (_, _) =>
+        startEntry.TextChanged += (_, _) => RunPanelAction(() => UpdatePreview(), page);
+        endEntry.TextChanged += (_, _) => RunPanelAction(() => UpdatePreview(), page);
+        startEntry.Completed += (_, _) => RunPanelAction(() => ApplyRange(scopeSwitch.IsToggled), page);
+        endEntry.Completed += (_, _) => RunPanelAction(() => ApplyRange(scopeSwitch.IsToggled), page);
+        applyButton.Clicked += (_, _) => RunPanelAction(() => ApplyRange(scopeSwitch.IsToggled), page);
+        slider.ValuesChanged += (_, _) => RunPanelAction(() =>
         {
             updating = true;
             int start = min + (int)Math.Round(slider.LowerValue);
@@ -137,9 +137,9 @@ public partial class ClipInfoBuilder
             endEntry.Text = Math.Clamp(min + (int)Math.Round(slider.UpperValue), start + 1, max).ToString();
             updating = false;
             UpdatePreview();
-        };
-        slider.DragCompleted += (_, _) => ApplyRange(scopeSwitch.IsToggled);
-        scopeSwitch.Toggled += (_, e) =>
+        }, page);
+        slider.DragCompleted += (_, _) => RunPanelAction(() => ApplyRange(scopeSwitch.IsToggled), page);
+        scopeSwitch.Toggled += (_, e) => RunPanelAction(() =>
         {
             if (!e.Value)
             {
@@ -148,7 +148,7 @@ public partial class ClipInfoBuilder
             }
             editors.IsEnabled = e.Value;
             ApplyRange(e.Value);
-        };
+        }, page);
 
         SyncFields(saved.Start, saved.End);
         panel.AddCustomChildWithID(ContinuousEffectRangePropertyPrefix + provider.Id, stack);

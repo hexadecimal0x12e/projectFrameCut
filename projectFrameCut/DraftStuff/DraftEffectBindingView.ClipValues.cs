@@ -44,8 +44,8 @@ public partial class DraftEffectBindingView
         ClipValuesPanel.Children.Clear();
         ClipValuesContent.IsVisible = _clip is not null && _page is not null;
         if (_clip is null || _page is null) return;
-        var endpointTypes = EndpointTypes.Where(t => (!t.IsContent() || t == _pipeline.GetContentType())
-            && (t != EffectArgumentFieldType.AudioSample || ValueProviderFrameContext.SupportsAudioSample(_pipeline))).ToArray();
+        var endpointTypes = EndpointTypes.Where(t => (!t.IsContent() || t == _stage.GetContentType())
+            && (t != EffectArgumentFieldType.AudioSample || ValueProviderFrameContext.SupportsAudioSample(_stage))).ToArray();
         if (!endpointTypes.Contains(_endpointType)) _endpointType = EffectArgumentFieldType.Numeric;
         ClipValueCreationPanel.Children.Add(new Label { Text = Localized.Effect_EndpointOutputs, FontAttributes = FontAttributes.Bold });
         var name = new Entry { Placeholder = Localized.Effect_EndpointName, Text = _endpointName };
@@ -57,7 +57,7 @@ public partial class DraftEffectBindingView
             if (type.SelectedIndex >= 0) _endpointType = endpointTypes[type.SelectedIndex];
         };
         ClipValueCreationPanel.Children.Add(type);
-        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.Stage == _pipeline) ?? [])
+        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && IsCurrentPipelineProvider(p)) ?? [])
         {
             var row = new HorizontalStackLayout { Spacing = 4 };
             var select = new Button { Text = $"{endpoint.Name} ({PortTypeHelper.HumanizeTypeName(endpoint.ValueType)})", HorizontalOptions = LayoutOptions.Fill };
@@ -100,7 +100,7 @@ public partial class DraftEffectBindingView
         {
             if (source.Id != _clip.Id && !Precedes(source, _clip)) continue;
             foreach (var output in source.EffectProviders?.Values.OfType<IClipValueEndpointProvider>()
-                .Where(p => p.IsExport && p.CanPassTo(_pipeline, source.Id == _clip.Id, _clip.EffectProviders?.Values)) ?? [])
+                .Where(p => p.IsExport && p.CanPassTo(_stage, source.Id == _clip.Id, _clip.EffectProviders?.Values)) ?? [])
                 yield return (source, output);
         }
     }
@@ -121,7 +121,8 @@ public partial class DraftEffectBindingView
     private void AddEndpointNode(ClipValueEndpointProvider provider)
     {
         if (_clip is null) return;
-        provider.Stage = _pipeline;
+        provider.Stage = _stage;
+        AssignCurrentPipeline(provider);
         _clip.EffectProviders ??= new();
         _clip.EffectProviders[provider.Id] = provider;
         var node = new NodeViewModel { Id = provider.Id, Kind = NodeKind.Effect, Provider = provider, DisplayName = provider.Name };
@@ -129,8 +130,8 @@ public partial class DraftEffectBindingView
         var position = FindNonOverlappingPosition(node, 250 + _nodes.Count * 30, 150);
         node.X = position.X;
         node.Y = position.Y;
-        provider.MetaData["__DraftEffectBindingView_InteractiveEditorX__"] = node.X;
-        provider.MetaData["__DraftEffectBindingView_InteractiveEditorY__"] = node.Y;
+        provider.MetaData[ProviderPositionKey("X")] = node.X;
+        provider.MetaData[ProviderPositionKey("Y")] = node.Y;
         AddNode(node);
         OnBindingConfigurationChanged();
         RebuildConnections();

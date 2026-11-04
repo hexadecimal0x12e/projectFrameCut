@@ -169,12 +169,10 @@ namespace projectFrameCut.DraftStuff
             tabs.Add(new TabbedViewItem
             {
                 Header = Localized.MainSettingsPage_Tab_General,
-                Content = BuildGeneralTab(clip, handler),
+                LazyContentFactory = () => BuildGeneralTab(clip, handler),
                 Tag = "general"
             });
-            if (clip.ClipType is ClipMode.ProjectReferenceClip or ClipMode.VideoClip or ClipMode.SolidColorClip or ClipMode.VectorCanvasClip
-                or ClipMode.VectorComponentClip or ClipMode.MaskClip or ClipMode.TextClip or ClipMode.SubtitleClip
-                || clip.ClipType != ClipMode.MarkingClip && clip.SupportedStages.Contains(EffectStage.SourceReplacement))
+            if (clip.ClipType is ClipMode.ProjectReferenceClip or ClipMode.VideoClip or ClipMode.SolidColorClip or ClipMode.VectorCanvasClip  or ClipMode.VectorComponentClip or ClipMode.MaskClip or ClipMode.TextClip or ClipMode.SubtitleClip || clip.ClipType != ClipMode.MarkingClip && clip.SupportedStages.Contains(EffectStage.SourceReplacement))
                 tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_SourceProperties,
@@ -293,7 +291,7 @@ namespace projectFrameCut.DraftStuff
             if (page.IsGuiRpcRequest && tabs.Count > 0)
                 await LoadTabContentAsync(tabs.FirstOrDefault(t => t.Tag == (selectedTab ?? lastSelectedTab)) ?? tabs[0]);
             tabbedView.TabItems = new(tabs);
-            tabbedView.OnTabSwitched += (_, item) => lastSelectedTab = item.Tag;
+            tabbedView.OnTabSwitched += (_, item) => RunPanelAction(() => lastSelectedTab = item.Tag);
             if (!string.IsNullOrEmpty(selectedTab ?? lastSelectedTab)) tabbedView.SelectByTag(selectedTab ?? lastSelectedTab);
 
             tabbedView.HeaderRightContent = new Button
@@ -304,13 +302,13 @@ namespace projectFrameCut.DraftStuff
                 HeightRequest = 35,
                 Padding = 0,
                 VerticalOptions = LayoutOptions.Center,
-                Command = new Command(() =>
+                Command = new Command(() => RunPanelAction(() =>
                 {
-                    tabbedView.Dispatcher.Dispatch(() =>
+                    tabbedView.Dispatcher.Dispatch(() => RunPanelAction(() =>
                     {
                         if (page.SelectedClip is not null) page.RefreshPropertyPanel(page.SelectedClip);
-                    });
-                })
+                    }));
+                }))
             };
 
             return tabbedView;
@@ -385,20 +383,20 @@ namespace projectFrameCut.DraftStuff
             var label = new Label { Text = value, WidthRequest = 108, VerticalOptions = LayoutOptions.Center };
             bool opening = false;
             var tap = new TapGestureRecognizer();
-            tap.Tapped += async (_, _) =>
+            tap.Tapped += async (_, _) => await RunPanelActionAsync(async () =>
             {
                 if (opening) return;
                 opening = true;
                 try
                 {
                     var picker = new ColorPicker { SelectedColor = preview.Color };
-                    picker.SelectedColorChanged += (_, color) =>
+                    picker.SelectedColorChanged += (_, color) => RunPanelAction(() =>
                     {
                         preview.Color = color;
                         var hex = ToArgbHex(color);
                         label.Text = hex;
                         changed(hex);
-                    };
+                    });
                     await page.ShowAPopup(new ScrollView
                     {
                         Content = new VerticalStackLayout
@@ -407,7 +405,7 @@ namespace projectFrameCut.DraftStuff
                             Padding = new Thickness(10, 0),
                             Children =
                             {
-                                new Button { Text = Localized._Hide, Command = new Command(async () => await page.HidePopup(true)) },
+                                new Button { Text = Localized._Hide, Command = new Command(async () => await RunPanelActionAsync(async () => await page.HidePopup(true))) },
                                 picker
                             }
                         }
@@ -415,7 +413,7 @@ namespace projectFrameCut.DraftStuff
                 }
                 catch (Exception ex) { Log(ex, "Open clip color picker", this); }
                 finally { opening = false; }
-            };
+            });
             preview.GestureRecognizers.Add(tap);
             var layout = new HorizontalStackLayout { Spacing = 8, Children = { preview, label } };
             if (reset is not null)
@@ -429,11 +427,11 @@ namespace projectFrameCut.DraftStuff
                     Padding = 0,
                     VerticalOptions = LayoutOptions.Center
                 };
-                button.Clicked += (_, _) =>
+                button.Clicked += (_, _) => RunPanelAction(() =>
                 {
                     label.Text = reset();
                     preview.Color = ParseArgbOrFallback(label.Text, fallback);
-                };
+                });
                 layout.Children.Add(button);
             }
             return layout;
@@ -497,9 +495,9 @@ namespace projectFrameCut.DraftStuff
 
             if (clip.ClipType == ClipMode.MarkingClip)
                 ppb.AddSeparator()
-                    .AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip));
+                    .AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await RunPanelActionAsync(async () => await page.UnbindGroupingMarkerAsync(clip)));
 
-            ppb.PropertyChanged += (s, e) =>
+            ppb.PropertyChanged += GuardPanelChange((s, e) =>
             {
                 switch (e.Id)
                 {
@@ -514,7 +512,7 @@ namespace projectFrameCut.DraftStuff
                         return;
                 }
                 handler?.Invoke(s, e);
-            };
+            });
             return ppb.BuildWithScrollView();
         }
 
@@ -984,7 +982,7 @@ namespace projectFrameCut.DraftStuff
 
                 Content = _layout;
 
-                SizeChanged += (s, e) => { _trackWidth = Width; RebuildThumbnails(); UpdateLayout(); };
+                SizeChanged += (s, e) => RunPanelAction(() => { _trackWidth = Width; RebuildThumbnails(); UpdateLayout(); }, null);
 
                 AddPanGesture(_leftThumb, 0);
                 AddPanGesture(_rightThumb, 1);
@@ -1021,7 +1019,7 @@ namespace projectFrameCut.DraftStuff
                 var pan = new PanGestureRecognizer();
                 double initialLowerValue = 0;
                 double initialUpperValue = 0;
-                pan.PanUpdated += (s, e) =>
+                pan.PanUpdated += (s, e) => RunPanelAction(() =>
                 {
                     if (e.StatusType == GestureStatus.Started)
                     {
@@ -1054,7 +1052,7 @@ namespace projectFrameCut.DraftStuff
                     {
                         DragCompleted?.Invoke(this, EventArgs.Empty);
                     }
-                };
+                }, null);
                 thumb.GestureRecognizers.Add(pan);
             }
 

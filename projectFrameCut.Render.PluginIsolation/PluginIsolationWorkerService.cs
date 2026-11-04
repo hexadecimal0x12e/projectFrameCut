@@ -1174,12 +1174,12 @@ internal sealed class PluginIsolationWorkerService(
                 {
                     FieldType = type,
                     TypeContract = IsolationFieldTypeCodec.ReadContract(item.TypeContract),
-                    DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat,
+                    DataFormat = IsolationFieldTypeCodec.ReadDataFormat(item),
                 }
                 : new StaticEffectArgumentField(value!, type)
                 {
                     TypeContract = IsolationFieldTypeCodec.ReadContract(item.TypeContract),
-                    DataFormat = item.DataFormat == 0 ? null : (PictureDataFormat)item.DataFormat,
+                    DataFormat = IsolationFieldTypeCodec.ReadDataFormat(item),
                 };
         }
         provider.Fields = fields;
@@ -1220,6 +1220,7 @@ internal sealed class PluginIsolationWorkerService(
         FieldType = (ulong)field.FieldType,
         TypeContract = IsolationFieldTypeCodec.WriteContract(field.TypeContract),
         DataFormat = field.DataFormat is PictureDataFormat format ? (int)format : 0,
+        EditorConfiguration = IsolationFieldTypeCodec.WriteEditor(field.DataFormat),
         DefaultValue = field.DefaultValue,
         MinimumValue = field.MinValue,
         MaximumValue = field.MaxValue,

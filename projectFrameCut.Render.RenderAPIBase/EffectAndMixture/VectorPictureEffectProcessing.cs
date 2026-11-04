@@ -2,6 +2,7 @@ using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.Shared;
 using System.Text.Json;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -39,7 +40,7 @@ public static class VectorPictureEffectProcessing
     }
 
     public static bool HasNativeEffects(IClip clip) => (clip.EffectsInstances ?? []).Any(e =>
-        e.Enabled && e.TypeOfEffect.GetPipeline() == projectFrameCut.Shared.EffectPipeline.NativeContent);
+        e.Enabled && e.TypeOfEffect.GetStage() is EffectStage.Text or EffectStage.VectorContent);
 
     public static VectorPicture Process(IClip clip, VectorPicture picture, uint frame, float? clipProgress = null, int width = 0, int height = 0)
     {

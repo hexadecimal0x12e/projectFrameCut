@@ -23,7 +23,7 @@ public sealed class AdvancedMathEffectProvider : EffectProviderBase, IMultipleOu
     public override bool IsDeterministic => true;
     public override IReadOnlyList<EffectStage> SupportedStages => EffectStages.Values;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
-    public override EffectTarget Target => EffectTarget.Video | EffectTarget.ValueProvider;
+    public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider;
     public string Operation => GetField("Operation")?.ToString() ?? AdvancedMathMethods.DefaultOperation(InputCount);
     public static object ParseNumber(object value) => AdvancedMathMethods.ReadNumber(value);
     Dictionary<string, string> IEffectProvider.ParametersType => Fields.Keys.ToDictionary(k => k,

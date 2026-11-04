@@ -60,18 +60,12 @@ public sealed partial class DynamicPreview : IDisposable
             {
                 try
                 {
-                    bool wasMarked = ClipInitializationFailure.IsMarked(clipInstance);
+                    ClipInitializationFailure.Clear(clipInstance);
                     clipInstance.ReInit(8);
-                    if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
-                    {
-                        ClipInitializationFailure.Clear(clipInstance);
-                        if (wasMarked) ClipInitializationRecovered?.Invoke(clipInstance.Id);
-                    }
                 }
                 catch (Exception ex)
                 {
                     ClipInitializationFailure.Mark(clipInstance, "Source or ResolveEffect", ex);
-                    ClipInitializationFailed?.Invoke(clipInstance.Id, ClipInitializationFailure.GetDescription(clipInstance.ExtraData));
                     Log(ex, $"Initialize preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
                 }
             }));
@@ -106,6 +100,15 @@ public sealed partial class DynamicPreview : IDisposable
 
         ResetFallbackLogs();
         CacheOverlayPreparedPreviews([]);
+        foreach (var clip in newClips) NotifyInitializationState(clip);
+    }
+
+    private void NotifyInitializationState(IClip clip)
+    {
+        if (ClipInitializationFailure.IsMarked(clip))
+            ClipInitializationFailed?.Invoke(clip.Id, ClipInitializationFailure.GetDescription(clip.ExtraData));
+        else
+            ClipInitializationRecovered?.Invoke(clip.Id);
     }
 
     public void SetClips(IClip[]? clips)
@@ -143,6 +146,7 @@ public sealed partial class DynamicPreview : IDisposable
 
         ResetFallbackLogs();
         CacheOverlayPreparedPreviews([]);
+        foreach (var clip in clips) NotifyInitializationState(clip);
     }
 
     public void SetLivePreviewer(ref LivePreviewer? previewer)

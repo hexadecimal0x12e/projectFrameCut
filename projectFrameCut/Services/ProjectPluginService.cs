@@ -112,6 +112,9 @@ public static class ProjectPluginService
     private static readonly SemaphoreSlim IdentityGate = new(1, 1);
     private static string? activeStageRoot;
 
+    internal static string? GetLoadedPluginRoot(string pluginId) =>
+        activeStageRoot is { } root && PluginManager.ProjectPluginIds.Contains(pluginId) ? Path.Combine(root, pluginId) : null;
+
     public static async Task<ProjectPluginReference> CreatePackageFromStagingAsync(
         string projectRoot,
         ProjectJSONStructure project,

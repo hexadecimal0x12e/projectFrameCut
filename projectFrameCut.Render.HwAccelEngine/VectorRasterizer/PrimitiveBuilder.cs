@@ -153,6 +153,24 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             }
         }
 
+        private static void AppendContourEdges(List<float> edges, Point[][]? contours,
+            float ox, float oy, float sx, float sy,
+            ref float bbMinX, ref float bbMinY, ref float bbMaxX, ref float bbMaxY)
+        {
+            if (contours is null) return;
+            Span<(float x, float y)> buffer = stackalloc (float, float)[256];
+            foreach (var contour in contours)
+            {
+                if (contour.Length < 3) continue;
+                Span<(float x, float y)> pts = contour.Length <= buffer.Length
+                    ? buffer[..contour.Length]
+                    : new (float, float)[contour.Length];
+                for (int i = 0; i < contour.Length; i++)
+                    pts[i] = (CX(contour[i].X, ox, sx), CY(contour[i].Y, oy, sy));
+                AppendContourEdges(edges, pts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
+            }
+        }
+
         /// <summary>Adds a PolygonFill primitive for a single contour (no holes).</summary>
         private static void AddPolygonFill(List<GpuPrimitive> primitives, List<float> edges,
             ReadOnlySpan<(float x, float y)> pts,
@@ -493,27 +511,16 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             if (s.FillA > Half.Zero)
             {
-                // Single PolygonFill primitive: outer contour + hole contours
-                // in one edge range; the non-zero winding rule in the kernel
-                // carves the holes out (same rule as the CPU scanline filler).
+                // Keep all contours in one fill to preserve their original winding.
                 int edgeStart = edges.Count / 4;
                 float bbMinX = float.MaxValue, bbMinY = float.MaxValue;
                 float bbMaxX = float.MinValue, bbMaxY = float.MinValue;
                 AppendContourEdges(edges, canvasPts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
 
-                if (s.Holes is { Length: > 0 })
-                {
-                    foreach (var hole in s.Holes!)
-                    {
-                        if (hole.Length < 3) continue;
-                        Span<(float x, float y)> holePts = hole.Length <= 256
-                            ? stackalloc (float, float)[hole.Length]
-                            : new (float, float)[hole.Length];
-                        for (int i = 0; i < hole.Length; i++)
-                            holePts[i] = (CX(hole[i].X, ox, sx), CY(hole[i].Y, oy, sy));
-                        AppendContourEdges(edges, holePts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
-                    }
-                }
+                AppendContourEdges(edges, s.AdditionalContours, ox, oy, sx, sy,
+                    ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
+                AppendContourEdges(edges, s.Holes, ox, oy, sx, sy,
+                    ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
 
                 int edgeCount = edges.Count / 4 - edgeStart;
                 primitives.Add(new GpuPrimitive(
@@ -605,6 +612,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                     Points = Array.ConvertAll(s.Points, p => new Point(
                         p.X * cosA - p.Y * sinA,
                         p.X * sinA + p.Y * cosA)),
+                    AdditionalContours = s.AdditionalContours?.Select(contour => Array.ConvertAll(contour, p => new Point(
+                        p.X * cosA - p.Y * sinA,
+                        p.X * sinA + p.Y * cosA))).ToArray(),
                     Holes = s.Holes?.Select(h => Array.ConvertAll(h, p => new Point(
                         p.X * cosA - p.Y * sinA,
                         p.X * sinA + p.Y * cosA))).ToArray(),

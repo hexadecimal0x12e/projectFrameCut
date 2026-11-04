@@ -78,12 +78,12 @@ namespace projectFrameCut.Render.Rendering
             {
                 var clip = argumentFrames.Get(original, targetFrame, c =>
                 {
-                    if (initializeClips && !ClipInitializationFailure.HasDeferredFailures(c.ExtraData))
+                    if (initializeClips)
                     {
                         try
                         {
-                            c.ReInit(ppb);
                             ClipInitializationFailure.Clear(c);
+                            c.ReInit(ppb);
                         }
                         catch (Exception ex)
                         {
@@ -774,7 +774,7 @@ namespace projectFrameCut.Render.Rendering
                     .ToArray();
             }
 
-            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect.GetPipeline() == EffectPipeline.Picture
+            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect.GetStage() is not (EffectStage.Text or EffectStage.VectorContent)
                 && c.TypeOfEffect != EffectType.SpeedVarianceProvider).ToArray();
         }
     }

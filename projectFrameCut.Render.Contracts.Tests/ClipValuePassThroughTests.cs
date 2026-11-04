@@ -82,9 +82,9 @@ public sealed class ClipValuePassThroughTests
             calls++;
             return (float)c.FrameIndex;
         });
-        value.SetPipeline(EffectPipeline.NativeContent);
+        value.Stage = EffectStage.VectorContent;
         var output = Output(value, EffectArgumentFieldType.Numeric);
-        output.SetPipeline(EffectPipeline.NativeContent);
+        output.Stage = EffectStage.VectorContent;
         var id = Guid.NewGuid();
         var input = new ClipValueImportProvider
         {
@@ -113,19 +113,18 @@ public sealed class ClipValuePassThroughTests
     }
 
     [TestMethod]
-    [DataRow(EffectPipeline.Picture, EffectPipeline.Picture, EffectArgumentFieldType.Numeric)]
-    [DataRow(EffectPipeline.NativeContent, EffectPipeline.NativeContent, EffectArgumentFieldType.Numeric)]
-    [DataRow(EffectPipeline.Picture, EffectPipeline.NativeContent, EffectArgumentFieldType.Numeric)]
-    [DataRow(EffectPipeline.NativeContent, EffectPipeline.Picture, EffectArgumentFieldType.VectorPicture)]
-    public void SameClipEndpointsRejectInvalidStageDirectionsAndContent(EffectPipeline sourcePipeline,
-        EffectPipeline targetPipeline, EffectArgumentFieldType type)
+    [DataRow(EffectStage.Render, EffectStage.Render, EffectArgumentFieldType.Numeric)]
+    [DataRow(EffectStage.VectorContent, EffectStage.VectorContent, EffectArgumentFieldType.Numeric)]
+    [DataRow(EffectStage.Render, EffectStage.VectorContent, EffectArgumentFieldType.Numeric)]
+    [DataRow(EffectStage.VectorContent, EffectStage.Render, EffectArgumentFieldType.VectorPicture)]
+    public void SameClipEndpointsRejectInvalidStageDirectionsAndContent(EffectStage sourceStage,
+        EffectStage targetStage, EffectArgumentFieldType type)
     {
-        var output = new ClipValueExportProvider { ValueType = type };
-        output.SetPipeline(sourcePipeline);
+        var output = new ClipValueExportProvider { Stage = sourceStage, ValueType = type };
         output.SetMainInputSource(type.IsContent() ? IEffectProvider.InputAnchorGUID.ToString() : ValueProviderFrameContext.BuiltInFrameProviderId);
         using var clip = Clip(1, output);
         var input = Input(clip, output);
-        input.SetPipeline(targetPipeline);
+        input.Stage = targetStage;
         clip.EffectProvidersInstances = [output, input];
         using var endpoints = new ClipValueFrameContext([clip], 2, _ => Assert.Fail(), DynamicEffectGraph.CopyPicture);
         Assert.ThrowsExactly<ClipValueBindingException>(() => endpoints.Read(clip, 2, input));

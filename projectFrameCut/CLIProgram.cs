@@ -1870,6 +1870,7 @@ namespace projectFrameCut
 
         internal static void InitializeRenderRuntime(string dataRoot, string ffmpegRoot = "")
         {
+            projectFrameCut.Render.Text.TextStylePronunciation.DictionaryDirectory = Path.Combine(dataRoot, "JapaneseDictionary");
             SettingsManager.InitializeReadOnly(dataRoot);
             ProjectExternalSourceService.InitializeRuntime(dataRoot);
             PluginManager.ProjectPluginLoader = async (projectRoot, project, cancellationToken) =>
@@ -1879,8 +1880,10 @@ namespace projectFrameCut
                     throw new InvalidOperationException("Project plugins failed to load: " + string.Join("; ", result.Failed.Select(x => $"{x.Key}: {x.Value}")));
             };
             PluginManager.ProjectPluginUnloader = ProjectPluginService.UnloadProjectPluginsAsync;
-            if (!PluginManager.Inited)
+            bool initializePlugins = !PluginManager.Inited;
+            if (initializePlugins)
             {
+                MauiProgram.SetRenderDataRoot(dataRoot);
                 if (GlobalPluginHelper.PluginsDataRootPath is null)
                     GlobalPluginHelper.PluginsDataRootPath = Path.Combine(dataRoot, "Plugins");
                 if (GlobalPluginHelper.CacheRootPath is null)
@@ -2022,6 +2025,7 @@ namespace projectFrameCut
                 }
 
             }
+            if (initializePlugins) PluginService.LoadRenderPlugins();
         }
 
         private static string ResolveDataRoot(string? dataRoot)

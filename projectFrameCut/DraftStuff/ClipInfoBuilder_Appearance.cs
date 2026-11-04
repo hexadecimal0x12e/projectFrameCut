@@ -170,7 +170,7 @@ namespace projectFrameCut.DraftStuff
                     .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
                     .AddCheckbox("cropEnable", PPLocalizedResources._Enabled, currentCropProvider.Enabled)
                     .AppendWhen(currentCropProvider.Enabled,
-                    c => c.AddButton(PPLocalizedResources.Effect_ProgressPlacer_OpenEditor, async (_, _) => await page.ShowAPopup(content: cropView, mode: "dialog"))
+                    c => c.AddButton(PPLocalizedResources.Effect_ProgressPlacer_OpenEditor, async (_, _) => await RunPanelActionAsync(async () => await page.ShowAPopup(content: cropView, mode: "dialog")))
                         .AddSeparator()
                         .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
                         .AddEntry("cropStartY", PPLocalizedResources._StartY, cropView.StartY.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
@@ -178,7 +178,7 @@ namespace projectFrameCut.DraftStuff
                         .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnUnfocused)
                         );
 
-                cropView.ConfigurationChanged += (s, bundle) =>
+                cropView.ConfigurationChanged += (s, bundle) => RunPanelAction(() =>
                 {
                     clip.Effects ??= new Dictionary<string, IEffect>();
                     clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
@@ -216,7 +216,7 @@ namespace projectFrameCut.DraftStuff
 
                     previousCropPayload = normalized;
                     SyncCropInputsFromView();
-                };
+                });
 
                 bool syncingCropInputs = false;
 
@@ -294,7 +294,7 @@ namespace projectFrameCut.DraftStuff
                     ApplyResizeToModelWithCurrentMode(snappedW, snappedH);
                 }
 
-                transformPpb.PropertyChanged += (s, e) =>
+                transformPpb.PropertyChanged += GuardPanelChange((s, e) =>
                 {
                     clip.Effects ??= new Dictionary<string, IEffect>();
 
@@ -388,7 +388,7 @@ namespace projectFrameCut.DraftStuff
                     }
 
                     handler?.Invoke(s, e);
-                };
+                });
 
 
 
@@ -538,14 +538,14 @@ namespace projectFrameCut.DraftStuff
             if (clip.ClipType == ClipMode.VideoClip
                 && SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.GeneratedFromVideoKey))
             {
-                ppb.AddButton(PPLocalizedResources.General_Unbind, async (s, e) =>
+                ppb.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await RunPanelActionAsync(async () =>
                 {
                     await page.UnbindClipAudioAsync(clip);
                     page.RefreshPropertyPanel(clip);
-                });
+                }));
             }
 
-            ppb.PropertyChanged += (s, e) =>
+            ppb.PropertyChanged += GuardPanelChange((s, e) =>
             {
                 if (e.Id == "audioEnabled")
                     page.SetClipAudioEnabled(clip, Convert.ToBoolean(e.Value));
@@ -555,7 +555,7 @@ namespace projectFrameCut.DraftStuff
                     return;
 
                 handler?.Invoke(s, e);
-            };
+            });
             if (clip.ClipType == ClipMode.VideoClip)
             {
                 ppb.AddSeparator();
@@ -621,7 +621,7 @@ namespace projectFrameCut.DraftStuff
                     }
                     if (previous.IsFinalOutputSource())
                         EffectBindingHelper.SetFinalOutput(clip.EffectProviders, Guid.TryParse(source, out var id)
-                            && clip.EffectProviders.ContainsKey(id) ? id : null, previous.GetPipeline());
+                            && clip.EffectProviders.ContainsKey(id) ? id : null, previous.Stage);
                 }
             }
             else
@@ -668,15 +668,15 @@ namespace projectFrameCut.DraftStuff
             {
                 new Label { Text = Localized.ProjectReference_ImportMode + (reference?.Mode == ProjectReferenceMode.Linked ? Localized.ProjectReference_Linked : Localized.ProjectReference_Snapshot) },
                 new Label { Text = reference?.SourcePath, LineBreakMode = LineBreakMode.CharacterWrap },
-                new Button { Text = Localized.ProjectReference_Ungroup, Command = new Command(async () => await page.UngroupProjectReferenceAsync(clip)) },
+                new Button { Text = Localized.ProjectReference_Ungroup, Command = new Command(async () => await RunPanelActionAsync(async () => await page.UngroupProjectReferenceAsync(clip))) },
             }
             };
             if (clip.ExtraData.GetValueOrDefault("ProjectReferenceError") is { } error)
                 layout.Children.Add(new Label { Text = error.ToString(), TextColor = Colors.OrangeRed });
             if (reference?.Mode == ProjectReferenceMode.Linked)
             {
-                layout.Children.Add(new Button { Text = Localized.ProjectReference_Refresh, Command = new Command(async () => await page.RefreshProjectReferenceAsync(clip)) });
-                layout.Children.Add(new Button { Text = Localized.ProjectReference_Relocate, Command = new Command(async () => await page.RefreshProjectReferenceAsync(clip, true)) });
+                layout.Children.Add(new Button { Text = Localized.ProjectReference_Refresh, Command = new Command(async () => await RunPanelActionAsync(async () => await page.RefreshProjectReferenceAsync(clip))) });
+                layout.Children.Add(new Button { Text = Localized.ProjectReference_Relocate, Command = new Command(async () => await RunPanelActionAsync(async () => await page.RefreshProjectReferenceAsync(clip, true))) });
             }
             return new ScrollView { Content = layout };
         }

@@ -13,28 +13,28 @@ namespace projectFrameCut.Services;
 internal static class PluginIsolationFactory
 {
     public static async ValueTask<IPluginBase> CreateExternalAsync(
-        PluginPackageVerificationResult verification,
+        PluginMetadata metadata,
         string pluginRoot,
         Dictionary<string, string> configuration,
         CancellationToken cancellationToken = default)
     {
-        var launch = verification.Metadata.ExternalBackend?.GetCurrentPlatform()
+        var launch = metadata.ExternalBackend?.GetCurrentPlatform()
             ?? throw new PlatformNotSupportedException("The external plugin package does not declare an entry point for this platform.");
         var session = await new ExternalPluginBackendPlatform(launch).StartAsync(new PluginIsolationLaunchContext
         {
-            PluginId = verification.Metadata.PluginID,
+            PluginId = metadata.PluginID,
             PluginRoot = pluginRoot,
             SessionRoot = Path.Combine(ExternalPluginBackendPlatform.SessionDirectory, Guid.NewGuid().ToString("N")),
             AuthenticationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
             PluginEncryptionKey = string.Empty,
             InstancePackageName = ExternalPluginBackendPlatform.InstanceName,
-            Transport = new() { TerminateOnRemoteError = true },
+            Transport = new(),
         }, cancellationToken).ConfigureAwait(false);
         try
         {
             var client = new PluginIsolationClient(session);
             await client.LoadAsync(Render.Plugin.PluginManager.CurrentLocale, configuration, cancellationToken).ConfigureAwait(false);
-            return new ExternalPluginProxy(verification.Metadata, client);
+            return new ExternalPluginProxy(metadata, client);
         }
         catch
         {

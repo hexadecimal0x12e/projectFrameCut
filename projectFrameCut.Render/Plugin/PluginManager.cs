@@ -243,6 +243,12 @@ namespace projectFrameCut.Render.Plugin
         public static ISoundTrack CreateSoundTrack(JsonElement source)
         {
             var referenceDto = source.Deserialize<SoundtrackDTO>();
+            if (referenceDto?.MetaData is { } metadata)
+            {
+                int count = metadata.Count;
+                ClipInitializationFailure.Clear(metadata);
+                if (metadata.Count != count) source = JsonSerializer.SerializeToElement(referenceDto);
+            }
             if (referenceDto is not null && ProjectReferencePart.Read(referenceDto.MetaData) is { } part)
                 return ProjectReferenceRuntime.CreateDetachedTrack(referenceDto, part);
             var type = source.GetProperty("FromPlugin").GetString();

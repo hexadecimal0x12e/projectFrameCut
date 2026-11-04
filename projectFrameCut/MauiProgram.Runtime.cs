@@ -16,6 +16,8 @@ public static partial class MauiProgram
 
     public static string BasicDataPath { get; private set; }
 
+    internal static void SetRenderDataRoot(string dataRoot) => BasicDataPath = Path.GetFullPath(dataRoot);
+
     public static string CachePath { get; private set; }
 
     public static string FFmpegRoot { get; private set; }

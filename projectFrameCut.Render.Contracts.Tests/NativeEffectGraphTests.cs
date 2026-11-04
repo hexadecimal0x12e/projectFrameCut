@@ -27,7 +27,7 @@ public sealed class NativeEffectGraphTests
     private static VectorPicture Vector(float x = 3) => new() { Elements = [new Element { RelativeX = x }] };
     private static T Native<T>(T provider) where T : IEffectProvider
     {
-        provider.SetPipeline(EffectPipeline.NativeContent);
+        provider.Stage = EffectStage.VectorContent;
         return provider;
     }
 
@@ -136,7 +136,7 @@ public sealed class NativeEffectGraphTests
     }
 
     [TestMethod]
-    public void NativeEndpointImportsAnIndependentSnapshotAndRejectsChangedPipeline()
+    public void NativeEndpointImportsAnIndependentSnapshotAndRejectsChangedStage()
     {
         var export = Native(new ClipValueExportProvider { ValueType = EffectArgumentFieldType.VectorPicture });
         export.SetMainInputSource(IEffectProvider.InputAnchorGUID);
@@ -159,7 +159,7 @@ public sealed class NativeEffectGraphTests
         Assert.AreEqual(3f, original.Elements[0].RelativeX);
         Assert.AreEqual(3f, ((VectorPicture)endpoints.Read(consumer, 102, import)).Elements[0].RelativeX);
         Assert.AreEqual(1, calls);
-        import.SetPipeline(EffectPipeline.Picture);
+        import.Stage = EffectStage.Render;
         Assert.ThrowsExactly<ClipValueBindingException>(() => endpoints.Read(consumer, 102, import));
     }
 
@@ -194,8 +194,12 @@ public sealed class NativeEffectGraphTests
         var provider = Native(new ClipValueExportProvider { ValueType = EffectArgumentFieldType.VectorPicture });
         var dto = EffectBindingHelper.SerializeProvider(provider);
         var restoredDto = JsonSerializer.Deserialize<EffectProviderJSONStructure>(JsonSerializer.Serialize(dto))!;
-        var copy = new ClipValueExportProvider { MetaData = restoredDto.MetaData! };
-        Assert.AreEqual(EffectPipeline.NativeContent, copy.GetPipeline());
+        var copy = new ClipValueExportProvider
+        {
+            Stage = restoredDto.Stage ?? throw new AssertFailedException("Missing effect stage."),
+            MetaData = restoredDto.MetaData!,
+        };
+        Assert.AreEqual(EffectStage.VectorContent, copy.Stage);
         Assert.AreEqual(EffectArgumentFieldType.VectorPicture, ((IClipValueEndpointProvider)copy).ValueType);
     }
 
@@ -236,7 +240,7 @@ public sealed class NativeEffectGraphTests
         var descriptor = await session.InvokeAsync<IsolationCreateProviderRequest, IsolationProviderDescriptor>(RenderOperation.IsolationCreateProvider,
             new() { TypeName = "NativeMultiple" });
         var remote = new RemoteMultipleOutputEffectProvider(session, descriptor);
-        remote.SetPipeline(EffectPipeline.NativeContent);
+        remote.Stage = EffectStage.VectorContent;
         var effects = remote.Build();
         try
         {

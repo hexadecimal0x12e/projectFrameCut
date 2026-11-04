@@ -326,6 +326,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 
         private async void UpdateSelection()
         {
+            try { await UpdateSelectionAsync(); }
+            catch (Exception ex)
+            {
+                Log(ex, "Select tab", this);
+                try
+                {
+                    ShowContent(null, new Label { Text = ex.Message, TextColor = Colors.OrangeRed, Margin = new Thickness(8) });
+                }
+                catch (Exception error) { Log(error, "Show tab error", this); }
+            }
+        }
+
+        private async Task UpdateSelectionAsync()
+        {
             if (TabItems == null || TabItems.Count == 0)
             {
                 ShowContent(null, null);
@@ -397,7 +411,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                 }
                 catch (Exception ex)
                 {
-                    Log(ex, $"Show Tab {SelectedItem.Tag}/{SelectedItem.Header} in the tabview of {Parent}({Parent.GetType().Name})", this);
+                    Log(ex, $"Show Tab {selectedItem.Tag}/{selectedItem.Header} in the tabview of {Parent}({Parent?.GetType().Name})", this);
                     lazyContent = new VerticalStackLayout
                     {
                         Children =
@@ -435,7 +449,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 
                 }
 
-                MainThread.BeginInvokeOnMainThread(() =>
+                await MainThread.InvokeOnMainThreadAsync(() =>
                 {
                     if (lazyContent != null)
                     {

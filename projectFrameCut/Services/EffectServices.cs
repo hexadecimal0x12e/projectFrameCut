@@ -53,13 +53,35 @@ namespace projectFrameCut.Services
 
             }
 
-            return EffectHelper.EffectsProviderEnum.ToDictionary(c => c.Key, GetEffectDisplayName);
+            return EffectHelper.EffectsProviderEnum.ToDictionary(c => c.Key, c =>
+            {
+                try { return GetEffectDisplayName(c); }
+                catch (Exception ex)
+                {
+                    projectFrameCut.Shared.Logger.Log(ex, $"Read effect name '{c.Key}'", typeof(EffectServices));
+                    return PluginManager.GetLocalizationItem("DisplayName_Effect_" + c.Key, c.Key);
+                }
+            });
         }
 
         public static Dictionary<string, Func<IEffectProvider>> GetAvailableEffectProviders()
         {
             if (!PluginManager.Inited) return [];
-            return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).ToDictionary(k => k.Key, v => v.Value);
+            return PluginManager.LoadedPlugins.Values.SelectMany(c => c.EffectProviderProvider).ToDictionary(k => k.Key, v => v.Value);
+        }
+
+        public static Dictionary<string, Func<IEffectProvider>> GetAvailableEffectProviders(Func<IEffectProvider, bool> predicate)
+        {
+            var result = new Dictionary<string, Func<IEffectProvider>>();
+            foreach (var p in GetAvailableEffectProviders())
+            {
+                try
+                {
+                    if (predicate(p.Value())) result.Add(p.Key, p.Value);
+                }
+                catch (Exception ex) { projectFrameCut.Shared.Logger.Log(ex, $"Discover effect provider '{p.Key}'", typeof(EffectServices)); }
+            }
+            return result;
         }
 
         /// <summary>
@@ -73,22 +95,23 @@ namespace projectFrameCut.Services
             var factory = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>()
                 .SelectMany(c => c.EffectProviderUIProvider)
                 .FirstOrDefault(kv => kv.Key == provider.TypeName).Value;
-            var plugin = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().First(c => c.PluginID == provider.FromPlugin);
             if (factory is not null)
             {
                 try { return factory(provider); }
                 catch (Exception ex) { projectFrameCut.Shared.Logger.Log(ex, $"Create custom UI for isolated effect provider '{provider.TypeName}'", typeof(EffectServices)); }
             }
-            try
+            if (PluginManager.LoadedPlugins.TryGetValue(provider.FromPlugin, out var plugin) && plugin is IApplicationPluginBase app)
             {
-                return plugin.GetDefaultEffectProviderUIProvider(provider)
-                    ?? throw new InvalidOperationException("The plugin did not provide a default effect provider UI.");
+                try
+                {
+                    if (app.GetDefaultEffectProviderUIProvider(provider) is { } ui) return ui;
+                }
+                catch (Exception ex)
+                {
+                    projectFrameCut.Shared.Logger.Log(ex, $"Create plugin default UI for isolated effect provider '{provider.TypeName}'", typeof(EffectServices));
+                }
             }
-            catch (Exception ex)
-            {
-                projectFrameCut.Shared.Logger.Log(ex, $"Create plugin default UI for isolated effect provider '{provider.TypeName}'", typeof(EffectServices));
-                return new ApplicationPluginBase.Effect.EffectProviderUI(provider);
-            }
+            return new ApplicationPluginBase.Effect.EffectProviderUI(provider);
         }
 
         public static IKeyFramedEffectUIProvider GetStepUIProvider(IKeyFramedEffectProvider provider)
@@ -114,7 +137,7 @@ namespace projectFrameCut.Services
             {
                 if (!haveSubFix) return PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
                 var instance = e.Value();
-                var type = instance.TypeOfEffect switch
+                var type = instance.Target.HasFlag(Shared.EffectTarget.Pipeline) ? Localized.EffectType_Pipeline : instance.TypeOfEffect switch
                 {
                     Shared.EffectType.ContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
                     Shared.EffectType.AudioContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
@@ -122,6 +145,7 @@ namespace projectFrameCut.Services
                     (Shared.EffectType)5 => PPLocalizedResources.Effect_BindableArgsEffect,
                     Shared.EffectType.TextEffect => PPLocalizedResources.Effect_TextEffect,
                     Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
+                    Shared.EffectType.ClipPositionProvider => Localized.EffectType_ClipPosition,
                     _ => PPLocalizedResources.Effect_GeneralEffect,
                 };
                 if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
@@ -138,7 +162,15 @@ namespace projectFrameCut.Services
 
             }
 
-            return GetAvailableEffectProviders().ToDictionary(c => c.Key, GetEffectDisplayName);
+            return GetAvailableEffectProviders().ToDictionary(c => c.Key, c =>
+            {
+                try { return GetEffectDisplayName(c); }
+                catch (Exception ex)
+                {
+                    projectFrameCut.Shared.Logger.Log(ex, $"Read effect provider name '{c.Key}'", typeof(EffectServices));
+                    return PluginManager.GetLocalizationItem("DisplayName_Effect_" + c.Key, c.Key);
+                }
+            });
         }
     }
 }

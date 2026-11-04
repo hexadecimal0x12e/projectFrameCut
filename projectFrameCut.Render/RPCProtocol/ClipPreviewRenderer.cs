@@ -33,8 +33,7 @@ public static class ClipPreviewRenderer
         using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
             projectWidth, projectHeight, pixelMode, token);
         using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id, independent: true);
-        if (initializeClips && !ClipArgumentBinding.IsFrameCopy(clip) && !ClipArgumentBinding.TryGetFrame(clip, frameIndex, out _)
-            && !ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+        if (initializeClips && !ClipArgumentBinding.IsFrameCopy(clip) && !ClipArgumentBinding.TryGetFrame(clip, frameIndex, out _))
         {
             try
             {

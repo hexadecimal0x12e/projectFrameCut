@@ -83,6 +83,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
         private static void InitializeEffects(ClipElementUI element, ClipDraftDTO dto, int relativeWidth, int relativeHeight)
         {
+            ClipInitializationFailure.Clear(element.ExtraData);
             try
             {
                 VideoClipRotation.Migrate(dto);
@@ -206,7 +207,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                                     ShouldDisplayInUI = elem.ShouldDisplayInUI,
                                     Effects = SerializeEffects(elem),
                                     EffectProviders = elem.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray(),
-                                    MetaData = elem.ExtraData
+                                    MetaData = ClipInitializationMetadata.ForPersistence(elem.ExtraData)
                                 };
                                 soundtracks.Add(dto);
                             }
@@ -483,6 +484,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             normalized[ClipDraftDTO.ProjectFrameRateMetaKey] = targetFrameRate;
             normalized[ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion;
+            ClipInitializationFailure.Clear(normalized);
             return normalized;
         }
 
@@ -556,8 +558,6 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 {
                     // 从 EffectProviders 重建（保留动态绑定），无 provider 时回退静态 Effects。
                     clipInstance.EffectsInstances = EffectHelper.GetClipEffectsInstances(clipInstance);
-                    if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
-                        ClipInitializationFailure.Clear(clipInstance);
                 }
                 catch (Exception ex)
                 {

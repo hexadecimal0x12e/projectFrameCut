@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.Text;
 using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using Microsoft.Maui.Controls.Shapes;
@@ -109,7 +109,7 @@ namespace projectFrameCut.DraftStuff
                 VerticalOptions = LayoutOptions.Center,
                 IsVisible = canDeleteEntry
             };
-            removeBtn.Clicked += (s, ev) => { onRemove?.Invoke(idx); };
+            removeBtn.Clicked += (s, ev) => RunPanelAction(() => { onRemove?.Invoke(idx); }, null);
             headerGrid.Add(removeBtn, 1, 0);
             stack.Children.Add(headerGrid);
             stack.Children.Add(Divider());
@@ -123,17 +123,17 @@ namespace projectFrameCut.DraftStuff
                 MinimumHeightRequest = 64,
                 Placeholder = PPLocalizedResources.TextOption_Content_Placeholder
             };
-            editor.TextChanged += (s, ev) =>
+            editor.TextChanged += (s, ev) => RunPanelAction(() =>
             {
                 currentEntry = currentEntry with { text = editor.Text ?? string.Empty };
                 UpdateGlyphWarning();
-            };
-            editor.Unfocused += (s, ev) =>
+            }, null);
+            editor.Unfocused += (s, ev) => RunPanelAction(() =>
             {
                 currentEntry = currentEntry with { text = editor.Text ?? string.Empty };
                 onChanged?.Invoke(idx, currentEntry);
                 UpdateGlyphWarning();
-            };
+            }, null);
             stack.Children.Add(editor);
 
             // POSITION
@@ -151,8 +151,8 @@ namespace projectFrameCut.DraftStuff
             };
             var xEntry = new Entry { Text = e.x.ToString(), Placeholder = "0" };
             var yEntry = new Entry { Text = e.y.ToString(), Placeholder = "0" };
-            xEntry.Unfocused += (s, ev) => { if (int.TryParse(xEntry.Text, out var nx)) onChanged?.Invoke(idx, e with { x = nx }); };
-            yEntry.Unfocused += (s, ev) => { if (int.TryParse(yEntry.Text, out var ny)) onChanged?.Invoke(idx, e with { y = ny }); };
+            xEntry.Unfocused += (s, ev) => RunPanelAction(() => { if (int.TryParse(xEntry.Text, out var nx)) onChanged?.Invoke(idx, e with { x = nx }); }, null);
+            yEntry.Unfocused += (s, ev) => RunPanelAction(() => { if (int.TryParse(yEntry.Text, out var ny)) onChanged?.Invoke(idx, e with { y = ny }); }, null);
             posGrid.Add(new Label { Text = "X", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
             posGrid.Add(xEntry, 1, 0);
             posGrid.Add(new Label { Text = "Y", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
@@ -176,7 +176,7 @@ namespace projectFrameCut.DraftStuff
                 ColumnSpacing = 6
             };
             var sizeEntry = new Entry { Text = e.fontSize.ToString(), Placeholder = "24" };
-            sizeEntry.Unfocused += (s, ev) => { if (float.TryParse(sizeEntry.Text, out var ns)) onChanged?.Invoke(idx, e with { fontSize = ns }); };
+            sizeEntry.Unfocused += (s, ev) => RunPanelAction(() => { if (float.TryParse(sizeEntry.Text, out var ns)) onChanged?.Invoke(idx, e with { fontSize = ns }); }, null);
             fontGrid.Add(new Label { Text = PPLocalizedResources.TextOption_Size, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 1, 0);
             fontGrid.Add(sizeEntry, 2, 0);
 
@@ -191,7 +191,7 @@ namespace projectFrameCut.DraftStuff
                 CornerRadius = 6
             };
 
-            void FontChanged(object? sender, FontItem font)
+            void FontChanged(object? sender, FontItem font) => RunPanelAction(() =>
             {
                 if (font == null) return;
 
@@ -205,7 +205,7 @@ namespace projectFrameCut.DraftStuff
                 UpdateGlyphWarning();
                 HidePicker?.Invoke();
                 onChanged?.Invoke(idx, currentEntry);
-            }
+            }, null);
             if (ShowPicker is not null)
             {
 
@@ -220,20 +220,20 @@ namespace projectFrameCut.DraftStuff
 
                 fontPickerControl.SelectedFontChanged += FontChanged;
 
-                fontSelectBtn.Clicked += (s, ev) =>
+                fontSelectBtn.Clicked += (s, ev) => RunPanelAction(() =>
                 {
                     ShowPicker?.Invoke(fontPickerControl);
-                };
+                }, null);
 
                 fontGrid.Add(fontSelectBtn, 0, 0);
             }
             else
             {
                 var picker = new Picker { ItemsSource = fonts, SelectedIndex = Array.IndexOf(fonts.ToArray(), e.fontFamily) };
-                picker.SelectedIndexChanged += (s, e) =>
+                picker.SelectedIndexChanged += (s, e) => RunPanelAction(() =>
                 {
                     FontChanged(null, fontItems.FirstOrDefault(c => c.FontName == picker.SelectedItem as string, null));
-                };
+                }, null);
                 fontGrid.Add(picker, 0, 0);
 
             }
@@ -244,7 +244,7 @@ namespace projectFrameCut.DraftStuff
 
 
             var stylePicker = new Picker { Title = PPLocalizedResources.TextOption_Style, ItemsSource = new[] { PPLocalizedResources.TextOption_Style_Regular, PPLocalizedResources.TextOption_Style_Bold, PPLocalizedResources.TextOption_Style_Italic, PPLocalizedResources.TextOption_Style_BoldItalic }, SelectedItem = e.fontStyle switch { ClipFontStyle.Regular => PPLocalizedResources.TextOption_Style_Regular, ClipFontStyle.Bold => PPLocalizedResources.TextOption_Style_Bold, ClipFontStyle.Italic => PPLocalizedResources.TextOption_Style_Italic, ClipFontStyle.BoldItalic => PPLocalizedResources.TextOption_Style_BoldItalic, _ => PPLocalizedResources.TextOption_Style_Regular, } };
-            stylePicker.SelectedIndexChanged += (s, ev) =>
+            stylePicker.SelectedIndexChanged += (s, ev) => RunPanelAction(() =>
             {
                 if (stylePicker.SelectedItem is string sel)
                 {
@@ -257,7 +257,7 @@ namespace projectFrameCut.DraftStuff
                     };
                     onChanged?.Invoke(idx, e with { fontStyle = fs });
                 }
-            };
+            }, null);
             stack.Children.Add(stylePicker);
 
             // TEXT COLOR
@@ -272,7 +272,7 @@ namespace projectFrameCut.DraftStuff
             };
             try { colorSwatch.Background = new SolidColorBrush(Color.FromRgba(e.r / 65535.0, e.g / 65535.0, e.b / 65535.0, e.a ?? 1f)); } catch { }
             var colorEntry = new Entry { Text = $"#{((int)Math.Round(e.r / 257.0)):X2}{((int)Math.Round(e.g / 257.0)):X2}{((int)Math.Round(e.b / 257.0)):X2}" };
-            colorEntry.Unfocused += (s, ev) =>
+            colorEntry.Unfocused += (s, ev) => RunPanelAction(() =>
             {
                 try
                 {
@@ -286,7 +286,7 @@ namespace projectFrameCut.DraftStuff
                     onChanged?.Invoke(idx, updated);
                 }
                 catch { }
-            };
+            }, null);
             var colorRow = new Grid
             {
                 ColumnDefinitions = { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) },
@@ -306,10 +306,10 @@ namespace projectFrameCut.DraftStuff
                 ItemsSource = new string[] { PPLocalizedResources.TextOption_LangType_Auto }.Concat(Enum.GetValues<TextLanguage>().Skip(1).Select(TextClipEntry.LocalizeLanguageName)).ToList(),
                 SelectedItem = (int)e.Language
             };
-            langTypePicker.SelectedIndexChanged += (s, ev) =>
+            langTypePicker.SelectedIndexChanged += (s, ev) => RunPanelAction(() =>
             {
                 onChanged?.Invoke(idx, e with { Language = (TextLanguage)langTypePicker.SelectedIndex });
-            };
+            }, null);
             advancedStack.Children.Add(langTypePicker);
             advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Alignment));
             var alignGrid = new Grid
@@ -324,7 +324,7 @@ namespace projectFrameCut.DraftStuff
                 ColumnSpacing = 6
             };
             var hAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_HorizonOption, ItemsSource = new[] { PPLocalizedResources.TextOption_HorizonOption_Left, PPLocalizedResources.TextOption_HorizonOption_Center, PPLocalizedResources.TextOption_HorizonOption_Right }, SelectedItem = e.horizontalAlignment switch { ClipHorizontalAlignment.Left => PPLocalizedResources.TextOption_HorizonOption_Left, ClipHorizontalAlignment.Center => PPLocalizedResources.TextOption_HorizonOption_Center, ClipHorizontalAlignment.Right => PPLocalizedResources.TextOption_HorizonOption_Right, _ => PPLocalizedResources.TextOption_HorizonOption_Left, } };
-            hAlignPicker.SelectedIndexChanged += (s, ev) =>
+            hAlignPicker.SelectedIndexChanged += (s, ev) => RunPanelAction(() =>
             {
                 if (hAlignPicker.SelectedItem is string sel)
                 {
@@ -336,9 +336,9 @@ namespace projectFrameCut.DraftStuff
                     };
                     onChanged?.Invoke(idx, e with { horizontalAlignment = ha });
                 }
-            };
+            }, null);
             var vAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_VerticalOption, ItemsSource = new[] { PPLocalizedResources.TextOption_VerticalOption_Top, PPLocalizedResources.TextOption_VerticalOption_Center, PPLocalizedResources.TextOption_VerticalOption_Bottom }, SelectedItem = e.verticalAlignment switch { ClipVerticalAlignment.Top => PPLocalizedResources.TextOption_VerticalOption_Top, ClipVerticalAlignment.Center => PPLocalizedResources.TextOption_VerticalOption_Center, ClipVerticalAlignment.Bottom => PPLocalizedResources.TextOption_VerticalOption_Bottom, _ => PPLocalizedResources.TextOption_VerticalOption_Top, } };
-            vAlignPicker.SelectedIndexChanged += (s, ev) =>
+            vAlignPicker.SelectedIndexChanged += (s, ev) => RunPanelAction(() =>
             {
                 if (vAlignPicker.SelectedItem is string sel)
                 {
@@ -350,13 +350,13 @@ namespace projectFrameCut.DraftStuff
                     };
                     onChanged?.Invoke(idx, e with { verticalAlignment = va });
                 }
-            };
+            }, null);
             var wrapEntry = new Entry { Text = e.wrappingWidth?.ToString() ?? string.Empty, Placeholder = PPLocalizedResources.TextOption_WrapW_Hint };
-            wrapEntry.Unfocused += (s, ev) =>
+            wrapEntry.Unfocused += (s, ev) => RunPanelAction(() =>
             {
                 if (float.TryParse(wrapEntry.Text, out var w)) onChanged?.Invoke(idx, e with { wrappingWidth = w });
                 else onChanged?.Invoke(idx, e with { wrappingWidth = null });
-            };
+            }, null);
             alignGrid.Add(hAlignPicker, 0, 0);
             alignGrid.Add(vAlignPicker, 1, 0);
             alignGrid.Add(new Label { Text = PPLocalizedResources.TextOption_WrapW, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
@@ -371,8 +371,8 @@ namespace projectFrameCut.DraftStuff
             var verticalLabel = new Label { Text = PPLocalizedResources.TextOption_UseVerticalLayout, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
             var nonCJKHorizentalLabel = new Label { Text = PPLocalizedResources.TextOption_KeepNonCJKHorizontal, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White, IsVisible = verticalLayoutSwitch.IsToggled };
 
-            verticalLayoutSwitch.Toggled += (s, ev) => { keepNonCJKHorizontalSwitch.IsVisible = verticalLayoutSwitch.IsToggled; nonCJKHorizentalLabel.IsVisible = verticalLayoutSwitch.IsToggled; onChanged?.Invoke(idx, e with { UseVerticalLayout = verticalLayoutSwitch.IsToggled }); };
-            keepNonCJKHorizontalSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { KeepNonCJKTextAsHorizontal = keepNonCJKHorizontalSwitch.IsToggled }); };
+            verticalLayoutSwitch.Toggled += (s, ev) => RunPanelAction(() => { keepNonCJKHorizontalSwitch.IsVisible = verticalLayoutSwitch.IsToggled; nonCJKHorizentalLabel.IsVisible = verticalLayoutSwitch.IsToggled; onChanged?.Invoke(idx, e with { UseVerticalLayout = verticalLayoutSwitch.IsToggled }); }, null);
+            keepNonCJKHorizontalSwitch.Toggled += (s, ev) => RunPanelAction(() => { onChanged?.Invoke(idx, e with { KeepNonCJKTextAsHorizontal = keepNonCJKHorizontalSwitch.IsToggled }); }, null);
 
             var verticalLayoutGrid = new HorizontalStackLayout
             {
@@ -388,9 +388,9 @@ namespace projectFrameCut.DraftStuff
             advancedStack.Children.Add(verticalLayoutGrid);
 
             var kerningSwitch = new Switch { IsToggled = e.applyKerning, VerticalOptions = LayoutOptions.Center };
-            kerningSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { applyKerning = kerningSwitch.IsToggled }); };
+            kerningSwitch.Toggled += (s, ev) => RunPanelAction(() => { onChanged?.Invoke(idx, e with { applyKerning = kerningSwitch.IsToggled }); }, null);
             var lineSpacingEntry = new Entry { Text = e.lineSpacing.ToString() };
-            lineSpacingEntry.Unfocused += (s, ev) => { if (float.TryParse(lineSpacingEntry.Text, out var ls)) onChanged?.Invoke(idx, e with { lineSpacing = ls }); };
+            lineSpacingEntry.Unfocused += (s, ev) => RunPanelAction(() => { if (float.TryParse(lineSpacingEntry.Text, out var ls)) onChanged?.Invoke(idx, e with { lineSpacing = ls }); }, null);
             var typRow = new Grid
             {
                 ColumnDefinitions =
@@ -409,13 +409,13 @@ namespace projectFrameCut.DraftStuff
             advancedStack.Children.Add(typRow);
 
             var rotEntry = new Entry { Text = e.rotation.ToString(), Placeholder = "0" };
-            rotEntry.Unfocused += (s, ev) => { if (float.TryParse(rotEntry.Text, out var r)) onChanged?.Invoke(idx, e with { rotation = r }); };
+            rotEntry.Unfocused += (s, ev) => RunPanelAction(() => { if (float.TryParse(rotEntry.Text, out var r)) onChanged?.Invoke(idx, e with { rotation = r }); }, null);
             var dpiEntry = new Entry { Text = e.dpi?.ToString() ?? string.Empty, Placeholder = "auto" };
-            dpiEntry.Unfocused += (s, ev) =>
+            dpiEntry.Unfocused += (s, ev) => RunPanelAction(() =>
             {
                 if (float.TryParse(dpiEntry.Text, out var d)) onChanged?.Invoke(idx, e with { dpi = d });
                 else onChanged?.Invoke(idx, e with { dpi = null });
-            };
+            }, null);
             var rotDpiGrid = new Grid
             {
                 ColumnDefinitions =
@@ -436,11 +436,11 @@ namespace projectFrameCut.DraftStuff
             // STROKE
             advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Stroke));
             var strokeWidthEntry = new Entry { Text = e.strokeWidth?.ToString() ?? string.Empty, Placeholder = PPLocalizedResources.TextOption_Stroke_Hint, MinimumWidthRequest = 150 };
-            strokeWidthEntry.Unfocused += (s, ev) =>
+            strokeWidthEntry.Unfocused += (s, ev) => RunPanelAction(() =>
             {
                 if (float.TryParse(strokeWidthEntry.Text, out var sw)) onChanged?.Invoke(idx, e with { strokeWidth = sw });
                 else onChanged?.Invoke(idx, e with { strokeWidth = null });
-            };
+            }, null);
             var strokeSwatch = new Border
             {
                 WidthRequest = 32,
@@ -451,7 +451,7 @@ namespace projectFrameCut.DraftStuff
             };
             try { strokeSwatch.Background = new SolidColorBrush(Color.FromRgba(e.strokeR / 65535.0, e.strokeG / 65535.0, e.strokeB / 65535.0, 1.0)); } catch { }
             var strokeEntry = new Entry { Text = $"#{((int)Math.Round(e.strokeR / 257.0)):X2}{((int)Math.Round(e.strokeG / 257.0)):X2}{((int)Math.Round(e.strokeB / 257.0)):X2}" };
-            strokeEntry.Unfocused += (s, ev) =>
+            strokeEntry.Unfocused += (s, ev) => RunPanelAction(() =>
             {
                 try
                 {
@@ -464,7 +464,7 @@ namespace projectFrameCut.DraftStuff
                     onChanged?.Invoke(idx, updated);
                 }
                 catch { }
-            };
+            }, null);
             var strokeGrid = new Grid
             {
                 ColumnDefinitions =
@@ -484,7 +484,7 @@ namespace projectFrameCut.DraftStuff
             {
                 var subTrackSwitch = new Switch { IsToggled = e.ShouldInSubtrack, VerticalOptions = LayoutOptions.Center };
                 var subTrackLabel = new Label { Text = PPLocalizedResources.TextOption_PlaceInSubtrack, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
-                subTrackSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { ShouldInSubtrack = subTrackSwitch.IsToggled }); };
+                subTrackSwitch.Toggled += (s, ev) => RunPanelAction(() => { onChanged?.Invoke(idx, e with { ShouldInSubtrack = subTrackSwitch.IsToggled }); }, null);
                 var subTrackGrid = new Grid
                 {
                     ColumnDefinitions =
@@ -511,13 +511,13 @@ namespace projectFrameCut.DraftStuff
                 Padding = new Thickness(0, 4),
                 Margin = new Thickness(0, 4, 0, 0)
             };
-            advancedToggleBtn.Clicked += (s, ev) =>
+            advancedToggleBtn.Clicked += (s, ev) => RunPanelAction(() =>
             {
                 advancedStack.IsVisible = !advancedStack.IsVisible;
                 advancedToggleBtn.Text = advancedStack.IsVisible
                     ? PPLocalizedResources.TextOption_Advanced_Expanded
                     : PPLocalizedResources.TextOption_Advanced_Collapsed;
-            };
+            }, null);
             stack.Children.Add(advancedToggleBtn);
             stack.Children.Add(advancedStack);
 
@@ -580,25 +580,25 @@ namespace projectFrameCut.DraftStuff
 
                     var basic = new projectFrameCut.Render.Text.BasicTextStyleProvider();
                     basic.RestoreParameters(new Dictionary<string, string>
-                        {
-                            ["Text"] = entry.text ?? string.Empty,
-                            ["FontFamily"] = entry.fontFamily ?? "Arial",
-                            ["FontSize"] = entry.fontSize.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            ["Color"] = ToArgbHex(entry.r, entry.g, entry.b, entry.a ?? 1f),
-                            ["FontStyle"] = entry.fontStyle.ToString(),
-                            ["HorizontalAlignment"] = entry.horizontalAlignment.ToString(),
-                            ["VerticalAlignment"] = entry.verticalAlignment.ToString(),
-                            ["WrappingWidth"] = entry.wrappingWidth?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
-                            ["ApplyKerning"] = entry.applyKerning.ToString(),
-                            ["LineSpacing"] = entry.lineSpacing.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            ["Rotation"] = entry.rotation.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            ["StrokeWidth"] = entry.strokeWidth?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
-                            ["StrokeColor"] = ToArgbHexNoAlpha(entry.strokeR, entry.strokeG, entry.strokeB),
-                            ["Dpi"] = entry.dpi?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
-                            ["UseVerticalLayout"] = entry.UseVerticalLayout.ToString(),
-                            ["KeepNonCJKTextAsHorizontal"] = entry.KeepNonCJKTextAsHorizontal.ToString(),
-                            ["LayoutMode"] = "FillClip"
-                        });
+                    {
+                        ["Text"] = entry.text ?? string.Empty,
+                        ["FontFamily"] = entry.fontFamily ?? "Arial",
+                        ["FontSize"] = entry.fontSize.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["Color"] = ToArgbHex(entry.r, entry.g, entry.b, entry.a ?? 1f),
+                        ["FontStyle"] = entry.fontStyle.ToString(),
+                        ["HorizontalAlignment"] = entry.horizontalAlignment.ToString(),
+                        ["VerticalAlignment"] = entry.verticalAlignment.ToString(),
+                        ["WrappingWidth"] = entry.wrappingWidth?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                        ["ApplyKerning"] = entry.applyKerning.ToString(),
+                        ["LineSpacing"] = entry.lineSpacing.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["Rotation"] = entry.rotation.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["StrokeWidth"] = entry.strokeWidth?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                        ["StrokeColor"] = ToArgbHexNoAlpha(entry.strokeR, entry.strokeG, entry.strokeB),
+                        ["Dpi"] = entry.dpi?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+                        ["UseVerticalLayout"] = entry.UseVerticalLayout.ToString(),
+                        ["KeepNonCJKTextAsHorizontal"] = entry.KeepNonCJKTextAsHorizontal.ToString(),
+                        ["LayoutMode"] = "FillClip"
+                    });
                     styleProvider = basic;
                 }
                 else
@@ -622,6 +622,15 @@ namespace projectFrameCut.DraftStuff
 
                     styleProvider = fallback;
                 }
+            }
+
+            var arguments = clip.EffectProviders?.Values.OfType<ClipArgumentProvider>().SingleOrDefault();
+            bool IsBound(string id)
+            {
+                if (id.StartsWith("EffectProviderField|", StringComparison.Ordinal))
+                    id = id[(id.LastIndexOf('|') + 1)..];
+                return arguments?.TryGetFieldBinding(TextClipStyles.ArgumentPrefix + id, out _) == true
+                    || styleProvider.Fields.TryGetValue(id, out var field) && field.IsDynamic;
             }
 
             var styleUI = TextStyleServices.GetUIProvider(styleProvider);
@@ -666,7 +675,7 @@ namespace projectFrameCut.DraftStuff
                         }
                     };
 #else
-                    picker.SelectedIndexChanged += (s, e) =>
+                    picker.SelectedIndexChanged += (s, e) => RunPanelAction(() =>
                     {
                         if (picker.SelectedItem is string modeStr && !string.IsNullOrWhiteSpace(modeStr))
                         {
@@ -674,7 +683,7 @@ namespace projectFrameCut.DraftStuff
                                 styleProvider.LayoutMode = parsedMode;
                             HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", styleProvider.LayoutMode.ToString(), null));
                         }
-                    };
+                    });
 #endif
                 })
             )
@@ -690,11 +699,11 @@ namespace projectFrameCut.DraftStuff
                         IsTextPredictionEnabled = true,
                         Placeholder = PPLocalizedResources.TextOption_Content_Placeholder
                     };
-                    editor.Unfocused += (_, _) => c(editor.Text);
+                    editor.Unfocused += (_, _) => RunPanelAction(() => c(editor.Text));
                     return editor;
                 },
                 "Text", styleProvider.BasicText)
-                .AddButton(Localized._Apply, (_, _) => { })
+                .AddButton(Localized._Apply, (_, _) => RunPanelAction(() => { }))
             )
             .AppendWhen(styleUI.ShowFontPicker,
                 c => c.AddDialogFontPicker(
@@ -717,8 +726,8 @@ namespace projectFrameCut.DraftStuff
             )
             .AddFromAnother(providerPpb, styleProvider)
             .AddSeparator()
-            .AddButton(Localized.TextStyles_Save, async (_, _) => await TextStyleServices.SaveFromClipAsync(page, clip, styleProvider))
-            .AddButton(PPLocalizedResources.TextOption_ChangeStyle, async (_, _) =>
+            .AddButton(Localized.TextStyles_Save, async (_, _) => await RunPanelActionAsync(async () => await TextStyleServices.SaveFromClipAsync(page, clip, styleProvider)))
+            .AddButton(PPLocalizedResources.TextOption_ChangeStyle, async (_, _) => await RunPanelActionAsync(async () =>
             {
                 var available = TextStyleServices.GetAvailableTextStyleProviders();
                 if (available.Count == 0) return;
@@ -770,8 +779,8 @@ namespace projectFrameCut.DraftStuff
                 clip.CanSnapWhileResizing = newProvider.CanSnapWhileResizing;
 
                 handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextStyleChanged", newProvider, newProvider));
-            })
-            .AddButton(PPLocalizedResources.TextOption_ReLayout, (_, _) =>
+            }))
+            .AddButton(PPLocalizedResources.TextOption_ReLayout, (_, _) => RunPanelAction(() =>
             {
                 // 清除所有布局约束，强制重新测量文本的自然尺寸
                 styleProvider.GetParameters().Remove("WrappingWidth");
@@ -802,11 +811,16 @@ namespace projectFrameCut.DraftStuff
                     clip.ExtraData["TextEntries"] = resetEntries.ToList();
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", resetEntries, resetEntries));
                 }
-            }, (c) => c.TextColor = Color.FromArgb("#FF8080"));
+            }), (c) => c.TextColor = Color.FromArgb("#FF8080"));
+
+            foreach (var (id, control) in providerHost.Components.Concat(providerPpb.Components))
+            {
+                if (IsBound(id)) control.IsEnabled = false;
+            }
 
             void HandlePanelChange(object? s, PropertyPanelPropertyChangedEventArgs e)
             {
-                if (s is not ITextClipStyleProvider provider) return;
+                if (s is not ITextClipStyleProvider provider || IsBound(e.Id)) return;
 
                 // 字体变更时，确保 FontFace 已在 TextClipFontRegistry 中注册，
                 // 避免 TextLayoutPipeline.ResolveFont 回退到 fallback 字体导致测量异常。
@@ -847,7 +861,7 @@ namespace projectFrameCut.DraftStuff
                 handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
             }
             ;
-            providerHost.PropertyChanged += (_, e) => HandlePanelChange(styleProvider, e);
+            providerHost.PropertyChanged += GuardPanelChange((_, e) => HandlePanelChange(styleProvider, e));
 
             return providerHost.BuildWithScrollView();
         }
@@ -928,8 +942,6 @@ namespace projectFrameCut.DraftStuff
             var fonts = TextServices.LoadedFonts.Select(c => c.Value);
             var entriesContainer = new VerticalStackLayout { Spacing = 8 };
 
-            entriesContainer.Add(new Label { Text = PPLocalizedResources.TextOption_TabTitle_Classic_Warn, TextColor = Colors.Yellow });
-
             void UpdateStoredEntries()
             {
                 clip.ExtraData["TextEntries"] = entries;
@@ -950,17 +962,17 @@ namespace projectFrameCut.DraftStuff
                         false,
                         (pickerView) =>
                         {
-                            page.Dispatcher.Dispatch(async () =>
+                            page.Dispatcher.Dispatch(async () => await RunPanelActionAsync(async () =>
                             {
                                 await page.ShowAPopup(pickerView, mode: "dialog");
-                            });
+                            }));
                         },
                         () =>
                         {
-                            page.Dispatcher.Dispatch(async () =>
+                            page.Dispatcher.Dispatch(async () => await RunPanelActionAsync(async () =>
                             {
                                 await page.HidePopup();
-                            });
+                            }));
                         });
                     entriesContainer.Children.Add(view);
                 }
@@ -976,7 +988,7 @@ namespace projectFrameCut.DraftStuff
                 FontAttributes = FontAttributes.Bold,
                 Margin = new Thickness(0, 4, 0, 0)
             };
-            addBtn.Clicked += async (s, e) =>
+            addBtn.Clicked += async (s, e) => await RunPanelActionAsync(async () =>
             {
                 Dictionary<string, TextClipEntry> t = new();
                 Setting.SettingPages.EditSettingPage.LoadTextTemplates(ref t);
@@ -1000,7 +1012,7 @@ namespace projectFrameCut.DraftStuff
                 entries.Add(value);
                 UpdateStoredEntries();
                 RebuildEntriesUI();
-            };
+            });
 
             entriesContainer.Children.Add(addBtn);
 
@@ -1019,6 +1031,7 @@ namespace projectFrameCut.DraftStuff
                 Content = entriesContainer,
                 VerticalOptions = LayoutOptions.Start
             };
+            grid.Add(new Label { Text = PPLocalizedResources.TextOption_TabTitle_Classic_Warn, TextColor = Colors.Yellow }, 0, 0);
             grid.Add(scroll, 0, 1);
 
             return new ScrollView { Content = grid };

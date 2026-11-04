@@ -271,6 +271,7 @@ namespace projectFrameCut
                 MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
 
                 IApplicationPluginBase.AppDataRoot = BasicDataPath;
+                projectFrameCut.Render.Text.TextStylePronunciation.DictionaryDirectory = Path.Combine(BasicDataPath, "JapaneseDictionary");
             }
             catch (Exception ex)
             {
@@ -1000,6 +1001,9 @@ namespace projectFrameCut
                     }
                     else
                     {
+#if WINDOWS
+                        TaskHelper.SyncWait(() => WindowsAppExtensionService.RefreshAsync(plugins), CancellationToken.None);
+#endif
                         if (AdminServices.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
                         else Log("User disabled the plugin engine.");
                         PluginService.FailedLoadPlugin.Add("<No plugin ID available>", AdminServices.IsRunningAsAdministrator() ? Localized.PluginEngine_DisabledBecauseAdmin : Localized.PluginEngine_DisabledBecauseUserDisabled);

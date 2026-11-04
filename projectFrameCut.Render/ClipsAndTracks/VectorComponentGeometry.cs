@@ -814,6 +814,11 @@ public partial class VectorComponentWrapperClip : IClip
                     break;
                 case PolygonVectorSegment s:
                     IncludePoints(s.Points, Include);
+                    if (s.AdditionalContours is not null)
+                    {
+                        foreach (var contour in s.AdditionalContours)
+                            IncludePoints(contour, Include);
+                    }
                     if (s.Holes is not null)
                     {
                         foreach (var hole in s.Holes)
@@ -853,6 +858,7 @@ public partial class VectorComponentWrapperClip : IClip
 
     public void ReInit(IPicture.PicturePixelMode targetPPB)
     {
+        ClipInitializationFailure.Clear(this);
         // VectorComponentWrapperClip has no heavy source to reload;
         // component definition is already in memory. Effects are always empty.
     }

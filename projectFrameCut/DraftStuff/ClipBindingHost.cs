@@ -16,7 +16,7 @@ namespace projectFrameCut.DraftStuff
     /// (not the node editor specifically). It is used to inject the bind button into property panels built outside
     /// the node binding view (e.g. the effect list tab).
     /// </summary>
-    public class ClipBindingHost : IEffectBindingHost
+    public class ClipBindingHost : IEffectBindingHost, ICustomEffectPortEditorHost
     {
         private readonly ClipElementUI _clip;
         private readonly IEffectProvider _provider;
@@ -31,6 +31,10 @@ namespace projectFrameCut.DraftStuff
             _page = page;
             _onChanged = onChanged;
         }
+
+        public bool CanOpenExternalEditor(string fieldId) => CustomEffectPortEditorService.IsAvailable(_page, _clip, _provider, fieldId);
+
+        public Task OpenExternalEditorAsync(string fieldId) => CustomEffectPortEditorService.OpenAsync(_page, _clip, _provider, fieldId);
 
         public IReadOnlyList<ValueBindingSource> GetBindingSources()
         {

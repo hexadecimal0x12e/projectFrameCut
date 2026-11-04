@@ -16,6 +16,8 @@ internal static class IsolationKeyFrameCodec
                 Id = p.Key, TypeName = p.Value.TypeName, FromPlugin = p.Value.FromPlugin,
                 FieldType = (ulong)p.Value.FieldType, DefaultValue = p.Value.DefaultValue,
                 TypeContract = IsolationFieldTypeCodec.WriteContract(p.Value.TypeContract),
+                DataFormat = p.Value.DataFormat is PictureDataFormat format ? (int)format : 0,
+                EditorConfiguration = IsolationFieldTypeCodec.WriteEditor(p.Value.DataFormat),
                 MinimumValue = p.Value.MinValue, MaximumValue = p.Value.MaxValue,
                 PresetOptions = p.Value.PresetOptions?.ToList() ?? [], Remarks = p.Value.Remarks ?? "",
                 Value = IsolationValueConverter.FromObject(p.Value.GetGetter()()),

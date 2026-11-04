@@ -814,17 +814,17 @@ public partial class DraftPage
                 | (ClipType == ClipMode.AudioClip ? 0 : EffectTarget.Mixture),
             EffectStage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
             EffectStage.Render => EffectTarget.ValueProvider | (ClipType == ClipMode.AudioClip ? EffectTarget.Audio
-                : EffectTarget.Video | EffectTarget.ColorAdjustment | (!string.IsNullOrWhiteSpace(Dto.BindedSoundTrack) ? EffectTarget.Audio : 0)),
-            _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider,
+                : EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ClipPosition | (!string.IsNullOrWhiteSpace(Dto.BindedSoundTrack) ? EffectTarget.Audio : 0)),
+            _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ClipPosition | EffectTarget.ValueProvider,
         });
 
         public EffectTarget GetEffectTarget() => Live?.GetEffectTarget() ?? (ClipType switch
         {
             ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
             ClipMode.AudioClip => EffectTarget.Audio,
-            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video | EffectTarget.VectorPicture,
-            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent | EffectTarget.VectorPicture,
-            _ => EffectTarget.Video | (SupportedStages.Contains(EffectStage.VectorContent) ? EffectTarget.VectorPicture : 0),
+            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video | EffectTarget.VectorPicture | EffectTarget.ClipPosition,
+            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.ClipPosition,
+            _ => EffectTarget.Video | EffectTarget.ClipPosition | (SupportedStages.Contains(EffectStage.VectorContent) ? EffectTarget.VectorPicture : 0),
         });
     }
 

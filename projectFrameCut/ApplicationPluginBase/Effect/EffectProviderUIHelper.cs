@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.Text;
@@ -33,7 +33,48 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                     || field.TypeContract is not null
                     || field.FieldType.BaseType() is EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SizeAndPosition)
                 {
-                    panel.AddText(Label(provider, field), componentId);
+                    if (field.TypeContract is not null && bindingHost is ICustomEffectPortEditorHost editorHost
+                        && editorHost.CanOpenExternalEditor(field.Id))
+                    {
+                        var button = new Button { Text = Localized.Effect_OpenExternalEditor, IsEnabled = !isBound };
+                        var busy = new ActivityIndicator { IsVisible = false, IsRunning = false, WidthRequest = 24, HeightRequest = 24, VerticalOptions = LayoutOptions.Center };
+                        var row = new Grid
+                        {
+                            ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
+                            ColumnSpacing = 8,
+                        };
+                        row.Add(button, 0);
+                        row.Add(busy, 1);
+                        bool opening = false;
+                        void UpdateState()
+                        {
+                            button.IsEnabled = !isBound && !opening && !CustomEffectPortEditorService.IsOpen;
+                            busy.IsRunning = busy.IsVisible = CustomEffectPortEditorService.IsConnecting(provider, field.Id)
+                                || (opening && !CustomEffectPortEditorService.IsOpen);
+                        }
+                        row.Loaded += (_, _) =>
+                        {
+                            CustomEffectPortEditorService.StateChanged -= UpdateState;
+                            CustomEffectPortEditorService.StateChanged += UpdateState;
+                            UpdateState();
+                        };
+                        row.Unloaded += (_, _) => CustomEffectPortEditorService.StateChanged -= UpdateState;
+                        UpdateState();
+                        button.Clicked += async (_, _) =>
+                        {
+                            if (opening || CustomEffectPortEditorService.IsOpen) return;
+                            opening = true;
+                            UpdateState();
+                            try { await editorHost.OpenExternalEditorAsync(field.Id); }
+                            finally
+                            {
+                                opening = false;
+                                UpdateState();
+                            }
+                        };
+                        panel.AddCustomChild(Label(provider, field), row, componentId);
+                    }
+                    else panel.AddText(Label(provider, field), componentId);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                     continue;
                 }
@@ -73,39 +114,70 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                     case EffectArgumentFieldType.Color:
                         panel.AddCustomChild(Label(provider, field), invoker =>
                         {
-                            var input = new Microsoft.Maui.Controls.Entry { Text = GetString(field), Placeholder = field.DefaultValue };
-                            input.Unfocused += (_, _) => invoker(input.Text);
-                            var button = new Button { Text = "…", WidthRequest = 34 };
-                            button.Clicked += async (_, _) =>
+                            var color = Microsoft.Maui.Graphics.Colors.Transparent;
+                            var value = GetString(field);
+                            if (string.IsNullOrWhiteSpace(value)) value = field.DefaultValue;
+                            try
                             {
-                                if (App.GetCurrentPage() is not DraftPage page) return;
-                                var picker = new projectFrameCut.ApplicationAPIBase.Views.Pickers.ColorPicker();
+                                if (value?.StartsWith('{') == true)
+                                {
+                                    using var json = JsonDocument.Parse(value);
+                                    color = Microsoft.Maui.Graphics.Color.FromRgba(
+                                        json.RootElement.GetProperty("r").GetUInt16() / 65535d,
+                                        json.RootElement.GetProperty("g").GetUInt16() / 65535d,
+                                        json.RootElement.GetProperty("b").GetUInt16() / 65535d,
+                                        json.RootElement.GetProperty("a").GetSingle());
+                                }
+                                else if (!string.IsNullOrWhiteSpace(value))
+                                    color = Microsoft.Maui.Graphics.Color.FromArgb(value);
+                            }
+                            catch (Exception ex) when (ex is ArgumentException or FormatException or JsonException or InvalidOperationException or KeyNotFoundException)
+                            {
+                                projectFrameCut.Shared.Logger.Log(ex, $"Read effect color {field.Id}", provider);
+                            }
+                            var swatch = new BoxView
+                            {
+                                Color = color, WidthRequest = 30, HeightRequest = 30,
+                                CornerRadius = 5, VerticalOptions = LayoutOptions.Center
+                            };
+                            var label = new Microsoft.Maui.Controls.Label
+                            {
+                                Text = ColorHex(color), VerticalOptions = LayoutOptions.Center
+                            };
+                            var row = new HorizontalStackLayout { Spacing = 8, Children = { swatch, label } };
+                            bool opening = false;
+                            var tap = new TapGestureRecognizer();
+                            tap.Tapped += async (_, _) =>
+                            {
+                                if (opening || App.GetCurrentPage() is not DraftPage page) return;
+                                opening = true;
                                 try
                                 {
-                                    if (input.Text?.StartsWith('{') == true)
+                                    var picker = new projectFrameCut.ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = swatch.Color };
+                                    picker.SelectedColorChanged += (_, selected) =>
                                     {
-                                        using var colorJson = JsonDocument.Parse(input.Text);
-                                        var colorValue = colorJson.RootElement;
-                                        picker.SelectedColor = Microsoft.Maui.Graphics.Color.FromRgba(
-                                            colorValue.GetProperty("r").GetUInt16() / 65535d,
-                                            colorValue.GetProperty("g").GetUInt16() / 65535d,
-                                            colorValue.GetProperty("b").GetUInt16() / 65535d,
-                                            colorValue.GetProperty("a").GetSingle());
-                                    }
-                                    else picker.SelectedColor = Microsoft.Maui.Graphics.Color.FromArgb(input.Text);
+                                        swatch.Color = selected;
+                                        label.Text = ColorHex(selected);
+                                        invoker(label.Text);
+                                    };
+                                    await page.ShowAPopup(new ScrollView
+                                    {
+                                        Content = new VerticalStackLayout
+                                        {
+                                            Spacing = 10,
+                                            Padding = new Thickness(10, 0),
+                                            Children =
+                                            {
+                                                new Button { Text = Localized._Hide, Command = new Command(async () => await page.HidePopup(true)) },
+                                                picker
+                                            }
+                                        }
+                                    }, mode: "dialog");
                                 }
-                                catch (FormatException) { }
-                                catch (JsonException) { }
-                                picker.SelectedColorChanged += (_, color) =>
-                                {
-                                    input.Text = $"#{(byte)Math.Round(color.Alpha * 255):X2}{(byte)Math.Round(color.Red * 255):X2}{(byte)Math.Round(color.Green * 255):X2}{(byte)Math.Round(color.Blue * 255):X2}";
-                                    invoker(input.Text);
-                                };
-                                await page.ShowAPopup(picker, null, null, "dialog");
+                                catch (Exception ex) { projectFrameCut.Shared.Logger.Log(ex, $"Open effect color picker {field.Id}", provider); }
+                                finally { opening = false; }
                             };
-                            var row = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) } };
-                            row.Add(input);
-                            row.Add(button, 1);
+                            row.GestureRecognizers.Add(tap);
                             return row;
                         }, componentId, GetString(field));
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
@@ -284,6 +356,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Id = id,
                 FieldType = field.FieldType,
                 TypeContract = field.TypeContract,
+                DataFormat = field.DataFormat,
                 Value = convertedValue!,
                 DefaultValue = field.DefaultValue,
                 MinValue = field.MinValue,
@@ -292,6 +365,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 Remarks = field.Remarks,
             };
         }
+
+        private static string ColorHex(Microsoft.Maui.Graphics.Color color) =>
+            color.Alpha == 1f ? "#" + color.ToArgbHex()[3..] : color.ToArgbHex();
 
         private static bool GetBool(IEffectArgumentField field) => field is StaticEffectArgumentField { Value: true };
 
@@ -321,28 +397,36 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         internal static string PresetOptionName(string prefix, object? value) => PluginManager.GetLocalizationItem(
             (prefix == "Effect_Jitter_Direction_" ? "_Effect_Jitter_" : prefix) + value, value?.ToString() ?? string.Empty);
 
-        private static PropertyPanelItemLabel Label(IEffectProvider provider, IEffectArgumentField field)
+        private static PropertyPanelItemLabel Label(IEffectProvider provider, IEffectArgumentField field) => FieldLabel(provider, field.Id);
+
+        internal static (string name, string description) FieldInfo(IEffectProvider provider, string fieldId)
         {
-            string id = field.Id.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
-                ? field.Id[TextClipStyles.ArgumentPrefix.Length..] : field.Id;
+            string id = fieldId.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
+                ? fieldId[TextClipStyles.ArgumentPrefix.Length..] : fieldId;
             if (provider.MetaData.TryGetValue(TextClipStyles.FromKey, out var from)
                 && provider.MetaData.TryGetValue(TextClipStyles.TypeKey, out var type)
                 && TextClipStyles.Create(from.ToString()!, type.ToString()!) is { } style
                 && style.SettableFields.ContainsKey(id))
-                return TextStyleServices.GetUIProvider(style).GetLocalizedFieldInfo(style, id, PluginManager.CurrentLocale).name;
-            return FieldLabel(provider, field.Id);
+                return TextStyleServices.GetUIProvider(style).GetLocalizedFieldInfo(style, id, PluginManager.CurrentLocale);
+            var info = EffectServices.GetUIProvider(provider).GetLocalizedFieldInfo(provider, fieldId, PluginManager.CurrentLocale);
+            return fieldId switch
+            {
+                MixtureProviderBase.UpperInputKey => (Localized.Effect_MixtureUpper, info.description),
+                MixtureProviderBase.LowerInputKey => (Localized.Effect_MixtureLower, info.description),
+                _ => info,
+            };
         }
 
         internal static PropertyPanelItemLabel FieldLabel(IEffectProvider provider, string id, string? nameKey = null)
         {
-            var (name, description) = EffectServices.GetUIProvider(provider).GetLocalizedFieldInfo(provider, id, PluginManager.CurrentLocale);
+            var (name, description) = FieldInfo(provider, id);
             if (nameKey is not null) name = PluginManager.GetLocalizationItem(nameKey, name);
             return string.IsNullOrWhiteSpace(description) ? new SingleLineLabel(name) : new InfoSingleLineLabel(name, description);
         }
 
         internal static string FieldName(IEffectProvider provider, string id, bool isInput, string? fallback = null)
         {
-            var name = EffectServices.GetUIProvider(provider).GetLocalizedFieldInfo(provider, id, PluginManager.CurrentLocale).name;
+            var name = FieldInfo(provider, id).name;
             return name == id ? fallback ?? name : name;
         }
 

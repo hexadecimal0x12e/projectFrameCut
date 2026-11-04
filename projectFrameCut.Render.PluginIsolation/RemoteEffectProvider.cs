@@ -137,7 +137,7 @@ public class RemoteEffectProvider : IEffectProvider
         if (parameters is not null)
             foreach (var item in parameters)
                 if (Fields.TryGetValue(item.Key, out var field))
-                    Fields[item.Key] = new StaticEffectArgumentField(item.Value, field.FieldType) { TypeContract = field.TypeContract };
+                    Fields[item.Key] = new StaticEffectArgumentField(item.Value, field.FieldType) { TypeContract = field.TypeContract, DataFormat = field.DataFormat };
         return Build().First();
     }
 
@@ -158,6 +158,7 @@ public class RemoteEffectProvider : IEffectProvider
                 FieldType = (ulong)item.Value.FieldType,
                 TypeContract = IsolationFieldTypeCodec.WriteContract(item.Value.TypeContract),
                 DataFormat = item.Value.DataFormat is PictureDataFormat f ? (int)f : 0,
+                EditorConfiguration = IsolationFieldTypeCodec.WriteEditor(item.Value.DataFormat),
                 DefaultValue = item.Value.DefaultValue,
                 MinimumValue = item.Value.MinValue,
                 MaximumValue = item.Value.MaxValue,
@@ -201,7 +202,7 @@ public class RemoteEffectProvider : IEffectProvider
         FromPlugin = value.FromPlugin,
         FieldType = (EffectArgumentFieldType)value.FieldType,
         TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
-        DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
+        DataFormat = IsolationFieldTypeCodec.ReadDataFormat(value),
         DefaultValue = value.DefaultValue,
         MinValue = value.MinimumValue,
         MaxValue = value.MaximumValue,
@@ -219,13 +220,13 @@ public class RemoteEffectProvider : IEffectProvider
             {
                 FieldType = type,
                 TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
-                DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
+                DataFormat = IsolationFieldTypeCodec.ReadDataFormat(value),
             }
             : new StaticEffectArgumentField(fieldValue!, type)
             {
                 Id = value.Id,
                 TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
-                DataFormat = value.DataFormat == 0 ? null : (PictureDataFormat)value.DataFormat,
+                DataFormat = IsolationFieldTypeCodec.ReadDataFormat(value),
                 DefaultValue = value.DefaultValue,
                 MinValue = value.MinimumValue,
                 MaxValue = value.MaximumValue,

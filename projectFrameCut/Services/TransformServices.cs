@@ -12,11 +12,8 @@ namespace projectFrameCut.Services;
 public static class TransformServices
 {
     public static Dictionary<string, Func<IEffectProvider>> GetAvailableTransforms(bool audio = false) =>
-        EffectServices.GetAvailableEffectProviders().Where(p =>
-        {
-            var provider = p.Value();
-            return provider.TypeOfEffect == EffectType.Transform && provider.Target.HasFlag(audio ? EffectTarget.Audio : EffectTarget.Video);
-        }).ToDictionary();
+        EffectServices.GetAvailableEffectProviders(provider =>
+            provider.TypeOfEffect == EffectType.Transform && provider.Target.HasFlag(audio ? EffectTarget.Audio : EffectTarget.Video));
 
     public static string GetTransformName(string typeName)
     {

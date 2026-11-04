@@ -20,11 +20,11 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
     private readonly Dictionary<Guid, Node> nodes;
     private readonly string? finalSource;
     private readonly RenderOutputProvider? renderOutput;
-    public EffectStage Stage => pipeline;
+    public EffectStage Stage => stage;
     public bool AudioNeedsPicture { get; }
     private readonly InlineValueGraph? inlineValues;
     private readonly EffectFieldTypeResolution types;
-    private readonly EffectStage pipeline;
+    private readonly EffectStage stage;
     private readonly HashSet<Guid> contentSources;
     private readonly HashSet<Guid> conditionalNodes;
     private readonly object sync = new();
@@ -36,16 +36,16 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         : this(providers, effects, null) { }
 
     internal DynamicEffectGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers, IReadOnlyDictionary<Guid, IEffect[]> effects,
-        InlineValueGraph? inlineValues, EffectFieldTypeResolution? resolvedTypes = null, EffectStage pipeline = EffectStage.Render)
+        InlineValueGraph? inlineValues, EffectFieldTypeResolution? resolvedTypes = null, EffectStage stage = EffectStage.Render)
     {
-        this.pipeline = pipeline;
+        this.stage = stage;
         renderOutput = providers.Values.OfType<RenderOutputProvider>().SingleOrDefault();
         this.inlineValues = inlineValues;
         types = resolvedTypes ?? inlineValues?.Types ?? new(providers);
         foreach (var provider in providers.Values) provider.ValidateOutputFields();
-        nodes = providers.Values.Where(p => p.Stage == pipeline && DynamicEffectBindings.IsGraphProvider(p)).ToDictionary(p => p.Id,
+        nodes = providers.Values.Where(p => p.Stage == stage && DynamicEffectBindings.IsGraphProvider(p)).ToDictionary(p => p.Id,
             p => new Node(p, DynamicEffectBindings.InputFields(p), new(p.AnchorsBindingState), effects.GetValueOrDefault(p.Id) ?? [], p.Enabled));
-        finalSource = providers.Values.FirstOrDefault(p => p.Stage == pipeline && DynamicEffectBindings.IsGraphProvider(p) && p.IsFinalOutputSource())?.GetFinalOutputSourceId();
+        finalSource = providers.Values.FirstOrDefault(p => p.Stage == stage && DynamicEffectBindings.IsGraphProvider(p) && p.IsFinalOutputSource())?.GetFinalOutputSourceId();
         contentSources = providers.Values.Where(p => p.Stage is EffectStage.Text or EffectStage.VectorContent && !DynamicEffectBindings.IsGraphProvider(p))
             .Select(p => p.Id).ToHashSet();
         var checkingSources = new HashSet<Guid>();
@@ -157,7 +157,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         var endpoints = clip is not null && ClipValueFrameContext.Current?.FrameIndex == frame && clip.ContainsFrame(frame)
             && nodes.Values.Any(n => n.Provider is IClipValueEndpointProvider)
             ? ClipValueFrameContext.Current : null;
-        var key = endpoints is null || pipeline == EffectStage.Composition || requestedOutput is not null ? null : new FrameKey(this, clip!.Id, frame, width, height, relativeWidth,
+        var key = endpoints is null || stage == EffectStage.Composition || requestedOutput is not null ? null : new FrameKey(this, clip!.Id, frame, width, height, relativeWidth,
             relativeHeight, (source as IPicture)?.Width ?? width, (source as IPicture)?.Height ?? height,
             source.GetType(), source, initialPosition, preserveAspect, processFromCanvas, endpoints.IsTransformInput);
         if (key is not null && afterNode is null && endpoints!.TryGetComputed<CachedFrame>(key, out var cachedFrame))
@@ -185,7 +185,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         foreach (var node in nodes.Values)
             foreach (var binding in node.Bindings.Where(p => !EffectProviderAnchorExtensions.IsOutputBindingKey(p.Key))) AddConsumer(binding.Value);
         AddConsumer(finalSource);
-        if (pipeline == EffectStage.Render && renderOutput is { Enabled: true })
+        if (stage == EffectStage.Render && renderOutput is { Enabled: true })
             foreach (var binding in renderOutput.AnchorsBindingState.Values) AddConsumer(binding);
         foreach (var node in nodes.Values.Where(n => n.Provider is IClipValueEndpointProvider { IsExport: true })) remaining[node.Provider.Id]++;
         void RetireInputs(Node node)
@@ -361,7 +361,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             if (ValueProviderFrameContext.IsBuiltInSource(id))
                 return new(ValueProviderFrameContext.Get(id!), initialPosition, preserveAspect);
             if (!EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var guid, out var outputId)) return new(null, initialPosition, preserveAspect);
-            if (!nodes.TryGetValue(guid, out var node)) return new(pipeline == EffectStage.VectorContent && contentSources.Contains(guid)
+            if (!nodes.TryGetValue(guid, out var node)) return new(stage == EffectStage.VectorContent && contentSources.Contains(guid)
                 ? source : null, initialPosition, preserveAspect);
             if (!types.TryGetOutputField(node.Provider, outputId, out var field))
                 throw new InvalidOperationException($"Provider {guid} requires a valid output port in '{id}'.");
@@ -608,7 +608,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                     exported[id] = value;
                 }
             Result result;
-            if (pipeline == EffectStage.Render)
+            if (stage == EffectStage.Render)
             {
                 bool shouldRender = !EffectParamConvert.TryConvertToBool(Terminal(RenderOutputProvider.ShouldRenderKey, true).Value, out bool visible) || visible;
                 if (requestedOutput == RenderOutputProvider.ShouldRenderKey)
@@ -636,10 +636,10 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 RenderOutputProvider.AudioKey => EffectArgumentFieldType.AudioSample,
                 RenderOutputProvider.PositionKey => EffectArgumentFieldType.SizeAndPosition,
                 RenderOutputProvider.ShouldRenderKey => EffectArgumentFieldType.Boolean,
-                _ => pipeline.GetContentType(),
+                _ => stage.GetContentType(),
             };
             if (!EffectFieldTypes.Accepts(outputType, result.Value) || result.Value is null)
-                throw new InvalidOperationException($"Dynamic {pipeline} output on clip {clip?.Id} has invalid content.");
+                throw new InvalidOperationException($"Dynamic {stage} output on clip {clip?.Id} has invalid content.");
             output = result.Value;
             if (endpoints is not null)
             {

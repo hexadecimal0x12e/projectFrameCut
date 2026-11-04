@@ -154,7 +154,7 @@ public partial class ClipInfoBuilder
             .AddCustomChild(externalSource is null ? PPLocalizedResources.General_VideoCodec_Source : mediaResources.General_VideoCodec_SourceInfo,
                 new Label { Text = GetVideoSourceText(), LineBreakMode = LineBreakMode.WordWrap });
 
-        panel.PropertyChanged += (s, e) =>
+        panel.PropertyChanged += GuardPanelChange((s, e) =>
         {
             clip.ExtraData ??= new();
             switch (e.Id)
@@ -171,7 +171,7 @@ public partial class ClipInfoBuilder
                     return;
             }
             handler?.Invoke(s, e);
-        };
+        });
         return panel.Build();
     }
 
@@ -226,7 +226,7 @@ public partial class ClipInfoBuilder
             .AddPositionTupleInputBox("place", new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20), PositionTupleMode.XYWH, (clip.TargetX, clip.TargetY, valW, valH), entryWidth: 70)
             .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, VideoClipRotation.Normalize(clip.Rotation));
 
-        panel.PropertyChanged += (s, e) =>
+        panel.PropertyChanged += GuardPanelChange((s, e) =>
         {
             clip.ExtraData ??= new();
             switch (e.Id)
@@ -258,7 +258,7 @@ public partial class ClipInfoBuilder
                     return;
             }
             handler?.Invoke(s, e);
-        };
+        });
         return panel.Build();
     }
 
@@ -280,7 +280,7 @@ public partial class ClipInfoBuilder
             if (selector.SelectedIndex < 0 || selector.SelectedIndex >= components.Count) return;
             var component = components[selector.SelectedIndex];
             var name = new Entry { Text = component.Name, Placeholder = Localized.VectorContentEditorView_Name };
-            name.Unfocused += (_, _) => { component.Name = name.Text; Save(); };
+            name.Unfocused += (_, _) => RunPanelAction(() => { component.Name = name.Text; Save(); });
             if (components.Count > 1) properties.Children.Add(name);
             var handler = VectorClipServices.GetHandler(component);
             if (component is ComponentGroup group)
@@ -288,11 +288,11 @@ public partial class ClipInfoBuilder
                 var builder = new PropertyPanelBuilder();
                 foreach (string field in timedGroup ? new[] { "Rotation" } : new[] { "Width", "Height", "Rotation" })
                     builder.AddEntry(field, field, group.Parameters.GetFloat(field, 0).ToString(CultureInfo.InvariantCulture), "");
-                builder.PropertyChanged += (_, e) =>
+                builder.PropertyChanged += GuardPanelChange((_, e) =>
                 {
                     if (float.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
                     { group.Parameters[e.Id] = value; Save(true); }
-                };
+                });
                 properties.Children.Add(builder.Build());
                 if (clip.ClipType == ClipMode.VectorCanvasClip)
                 {
@@ -305,7 +305,7 @@ public partial class ClipInfoBuilder
                             else if (VectorClipServices.GetHandler(child) is { } childHandler)
                             {
                                 var childBuilder = childHandler.CreatePropertyUI(child);
-                                childBuilder.PropertyChanged += (_, e) => { childHandler.HandlePropertyChange(child, e); Save(); };
+                                childBuilder.PropertyChanged += GuardPanelChange((_, e) => { childHandler.HandlePropertyChange(child, e); Save(); });
                                 properties.Children.Add(childBuilder.Build());
                             }
                         }
@@ -316,7 +316,7 @@ public partial class ClipInfoBuilder
             else if (handler is not null)
             {
                 var builder = handler.CreatePropertyUI(component);
-                builder.PropertyChanged += (_, e) => { handler.HandlePropertyChange(component, e); Save(true); };
+                builder.PropertyChanged += GuardPanelChange((_, e) => { handler.HandlePropertyChange(component, e); Save(true); });
                 properties.Children.Add(builder.Build());
             }
         }
@@ -324,7 +324,7 @@ public partial class ClipInfoBuilder
 
         if (components.Count > 1)
         {
-            selector.SelectedIndexChanged += (_, _) => ShowComponent();
+            selector.SelectedIndexChanged += (_, _) => RunPanelAction(() => ShowComponent());
             layout.Children.Add(selector);
         }
         ShowComponent();
@@ -332,7 +332,7 @@ public partial class ClipInfoBuilder
         if (clip.ClipType == ClipMode.VectorCanvasClip)
         {
             var add = new Button { Text = Localized.VectorContentEditorView_AddShape };
-            add.Clicked += async (_, _) =>
+            add.Clicked += async (_, _) => await RunPanelActionAsync(async () =>
             {
                 var component = await VectorClipServices.PickComponent(page);
                 if (component is null) return;
@@ -340,18 +340,18 @@ public partial class ClipInfoBuilder
                 selector.ItemsSource = components.Select(c => c.Name).ToList();
                 selector.SelectedIndex = components.Count - 1;
                 Save();
-            };
+            });
             var remove = new Button { Text = Localized._Remove };
-            remove.Clicked += (_, _) =>
+            remove.Clicked += (_, _) => RunPanelAction(() =>
             {
                 if (selector.SelectedIndex < 0) return;
                 components.RemoveAt(selector.SelectedIndex);
                 selector.ItemsSource = components.Select(c => c.Name).ToList();
                 selector.SelectedIndex = components.Count > 0 ? 0 : -1;
                 ShowComponent(); Save();
-            };
+            });
             var import = new Button { Text = Localized.VectorContentEditorView_Import };
-            import.Clicked += async (_, _) =>
+            import.Clicked += async (_, _) => await RunPanelActionAsync(async () =>
             {
                 try
                 {
@@ -363,9 +363,9 @@ public partial class ClipInfoBuilder
                     Save();
                 }
                 catch (Exception ex) { Log(ex, "Import vector canvas component", this); page.SetStateFail(ex.Message); }
-            };
+            });
             var merge = new Button { Text = Localized.VectorContentEditorView_History_Group };
-            merge.Clicked += (_, _) =>
+            merge.Clicked += (_, _) => RunPanelAction(() =>
             {
                 if (components.Count < 2) return;
                 var group = new ComponentGroup { Name = Localized.VectorContentEditorView_Components_GroupProperties };
@@ -373,7 +373,7 @@ public partial class ClipInfoBuilder
                 components.Clear(); components.Add(group);
                 selector.ItemsSource = components.Select(c => c.Name).ToList();
                 selector.SelectedIndex = 0; ShowComponent(); Save();
-            };
+            });
             layout.Children.Add(import);
             layout.Children.Add(merge);
             layout.Children.Add(add);
@@ -383,9 +383,9 @@ public partial class ClipInfoBuilder
         if (components.Count > 1)
         {
             var exportJson = new Button { Text = Localized.VectorContentEditorView_ExportJson };
-            exportJson.Clicked += async (_, _) => await ExportVectorClip(clip, false);
+            exportJson.Clicked += async (_, _) => await RunPanelActionAsync(async () => await ExportVectorClip(clip, false));
             var exportSvg = new Button { Text = Localized.VectorContentEditorView_ExportSVG };
-            exportSvg.Clicked += async (_, _) => await ExportVectorClip(clip, true);
+            exportSvg.Clicked += async (_, _) => await RunPanelActionAsync(async () => await ExportVectorClip(clip, true));
             layout.Children.Add(exportJson);
             layout.Children.Add(exportSvg);
         }
@@ -442,7 +442,7 @@ public partial class ClipInfoBuilder
             .AddPicker("vectorAntiAliasMode", PPLocalizedResources.General_VectorClip_AAMode,
                 [PPLocalizedResources.General_VectorClip_AAMode_Default, PPLocalizedResources.General_VectorClip_AAMode_None,
                     "SSAA 2x", "SSAA 4x", "SSAA 8x"], currentLabel);
-        panel.PropertyChanged += (s, e) =>
+        panel.PropertyChanged += GuardPanelChange((s, e) =>
         {
             clip.ExtraData ??= new();
             clip.ExtraData["VectorAntiAliasMode"] = e.Value?.ToString() switch
@@ -454,7 +454,7 @@ public partial class ClipInfoBuilder
                 _ => ""
             };
             handler?.Invoke(s, e);
-        };
+        });
         return panel;
     }
 
@@ -553,14 +553,14 @@ public partial class ClipInfoBuilder
         provider.Attach(fields, key => fields[key].ReadValue(null!));
         var panel = new PropertyPanelBuilder();
         EffectProviderUIHelper.BuildUI(provider, panel, null, fields.Keys);
-        panel.PropertyChanged += (_, e) =>
+        panel.PropertyChanged += GuardPanelChange((_, e) =>
         {
             var update = EffectProviderUIHelper.HandleChange(provider, e);
             if (update.newFields is not null) provider.Fields = update.newFields;
             foreach (var (key, value) in provider.StaticValues)
                 clip.ExtraData[MaskClip.SourceArgumentKeyPrefix + key[MaskClip.ArgumentPrefix.Length..]] = value;
             changed?.Invoke(this, e);
-        };
+        });
         return panel.Build();
     }
 }

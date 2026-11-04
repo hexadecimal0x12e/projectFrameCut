@@ -103,9 +103,6 @@ namespace projectFrameCut.Render.Effect
         {
             int a = ResolveInt(Parameters, "A");
             int b = ResolveInt(Parameters, "B");
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s A: {a} ({Parameters.GetValueOrDefault("A")?.GetType()?.Name ?? "<null>"})");
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s B: {b} ({Parameters.GetValueOrDefault("B")?.GetType()?.Name ?? "<null>"})");
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s Operation: {Operation} ");
             var result = Operation switch
             {
                 IntArithmeticOperation.Add => a + b,
@@ -114,7 +111,6 @@ namespace projectFrameCut.Render.Effect
                 IntArithmeticOperation.Divide => b == 0 ? 0 : a / b,
                 _ => 0,
             };
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s Result: {result}");
             return result;
 
         };
@@ -145,7 +141,7 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectType TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
 
-        public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
+        public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider;
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 

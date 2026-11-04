@@ -158,6 +158,7 @@ public class SubtitleClip : TextClip, IClip
 
     public override void ReInit(IPicture.PicturePixelMode targetPPB)
     {
+        ClipInitializationFailure.Clear(this);
         lock (subtitleLock)
         {
             if (ExtraData?.TryGetValue(SubtitleDocument.MetadataKey, out var raw) == true)

@@ -46,7 +46,7 @@ namespace projectFrameCut.Render.Effect
         }
 
         public static EffectImplementType? GetPicturePreference(string typeName) => ForcePreferToType is { } type &&
-            RenderAPIBase.Plugins.IPluginBase.EffectImplementations.GetImplementTypes(typeName).Any(x => x is EffectImplementType.IPicture or EffectImplementType.HwAcceleration)
+            RenderAPIBase.Plugins.IPluginBase.EffectImplementations.GetImplementTypes(typeName).Contains(type)
                 ? type : null;
 
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();

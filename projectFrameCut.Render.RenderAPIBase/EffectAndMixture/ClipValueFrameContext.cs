@@ -23,9 +23,6 @@ public static class ClipValueEndpointExtensions
         return sameClip ? EffectStages.Precedes(output.Stage, stage, before) && !output.ValueType.IsContent()
             : output.AllowCrossClip && output.Stage == stage;
     }
-
-    public static bool CanPassTo(this IClipValueEndpointProvider output, EffectPipeline pipeline, bool sameClip) =>
-        output.CanPassTo(pipeline == EffectPipeline.NativeContent ? EffectStage.VectorContent : EffectStage.Render, sameClip);
 }
 
 public sealed class ClipValueBindingException(string message, Exception? inner = null) : InvalidOperationException(message, inner) { }

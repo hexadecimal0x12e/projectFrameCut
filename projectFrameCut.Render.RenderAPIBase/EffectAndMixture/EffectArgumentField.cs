@@ -31,6 +31,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>The shared contract for a <see cref="EffectArgumentFieldType.CustomType"/> port.</summary>
         public EffectPortTypeContract? TypeContract => null;
 
+        /// <summary>
+        /// A field used for defining format of data flows, depends on case of use.
+        /// </summary>
+        /// <remarks>
+        /// When <see cref="FieldType"/> is <see cref="EffectArgumentFieldType.IPicture"/>, this is used internally used field for defining type for which pipeline will use while processing this field.
+        /// <b>DO NOT set or override this it in your plugin implementation at this case.</b>
+        /// <br />
+        /// When <see cref="FieldType"/> is <see cref="EffectArgumentFieldType.CustomType"/>, this is used to declare a <see cref="CustomEffectPortEditorConfiguration"/> here.
+        /// </remarks>
         [System.Text.Json.Serialization.JsonIgnore]
         public object? DataFormat => null;
 
@@ -96,7 +105,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// An unsigned integer (<see langword="uint"/>) type field.
         /// </summary>
         /// <remarks>
-        /// Mostly used for parameters that represent frame (projectFrameCut uses uint as frame index).
+        /// Mostly used for parameters that represent frame (projectFrameCut uses uint as frame index at most case).
         /// </remarks>
         UnsignedInteger = 1 << 3,
         /// <summary>
@@ -137,7 +146,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <remarks>
         /// Results should be a <see cref="Drawing.Base.PictureExtensions.Pixel{T}"/> like this:
-        /// the R,G,B values are 16bit/8bit unsigned integers, and A is a float between 0.0 and 1.0, or null for no-alpha mode.
+        /// the R,G,B values are 16bit/8bit unsigned integers or a <see cref="float16"/> floating number for API v9+, and A is a float or a <see cref="float16"/> between 0.0 and 1.0, or null for no-alpha mode.
         /// </remarks>
         Color = 1 << 9,
 
@@ -169,7 +178,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <remarks>
         /// Results should be a <see cref="Shared.ClipPositionTuple"/>.
         /// <br />
-        /// All fields except <see cref="Shared.ClipPositionTuple.IsDelta"/> of <see cref="Shared.ClipPositionTuple"/> are used to present the size and position of the effect.
+        /// All fields of <see cref="Shared.ClipPositionTuple"/> are used to present the size and position of the effect.
         /// </remarks>
         SizeAndPosition = Size | Position,
 
@@ -265,7 +274,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <remarks>
         /// Contracts with exactly the same ID are compatible across plugins, regardless of their display names.
         /// </remarks>
-        CustomType = 1 << 0,
+        CustomType = 1 << 32,
     }
 
     /// <summary>A clip argument that can retain its original property value until explicitly overridden.</summary>
@@ -402,6 +411,26 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 throw new ArgumentException($"Expected port contract '{Id}', received '{value.ContractId}'.", nameof(value));
             return JsonSerializer.Deserialize<T>(value.Data, options);
         }
+    }
+
+    /// <summary>Optional desktop editors for a custom port, stored in its DataFormat metadata.</summary>
+    public readonly record struct CustomEffectPortEditorConfiguration
+    {
+        public CustomEffectPortEditorLaunchOption? Windows { get; init; }
+        public CustomEffectPortEditorLaunchOption? MacOS { get; init; }
+        public CustomEffectPortEditorLaunchOption? Linux { get; init; }
+
+        public CustomEffectPortEditorLaunchOption? GetCurrentPlatform() =>
+            OperatingSystem.IsWindows() ? Windows : OperatingSystem.IsMacOS() ? MacOS : OperatingSystem.IsLinux() ? Linux : null;
+    }
+
+    public sealed record CustomEffectPortEditorLaunchOption
+    {
+        /// <summary>Absolute executable path or a path relative to the owning plugin directory.</summary>
+        public string EntryPoint { get; init; } = string.Empty;
+        public string[] Arguments { get; init; } = [];
+        public bool UseShellExecute { get; init; }
+        public bool CreateNoWindow { get; init; } = true;
     }
 
     /// <summary>Serializable custom port data, independent of either plugin's CLR types.</summary>

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.Controls.Shapes;
@@ -22,6 +22,7 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -84,17 +85,13 @@ namespace projectFrameCut.DraftStuff
         }
 
         public Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
-            => BuildEffectTab(clip, handler, null);
+            => BuildEffectStageTab(clip, handler, null);
 
-        public Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectPipeline? pipeline)
-            => BuildEffectStageTab(clip, handler, pipeline is null ? null
-                : pipeline == EffectPipeline.NativeContent ? EffectStage.VectorContent : EffectStage.Render);
-
-        public async Task<View> BuildEffectStageTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectStage? pipeline)
+        public async Task<View> BuildEffectStageTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectStage? selectedStage)
         {
             ArgumentNullException.ThrowIfNull(clip);
             EffectStageUI.Resolve(clip, page);
-            if (pipeline is null)
+            if (selectedStage is null)
             {
                 var items = new List<TabbedViewItem>();
                 foreach (var stage in clip.SupportedStages.Where(s => s != EffectStage.SourceReplacement))
@@ -111,17 +108,17 @@ namespace projectFrameCut.DraftStuff
                     SelectedIndex = selectedIndex,
                     TabItems = new(items),
                 };
-                tabs.OnTabSwitched += (_, item) => clip.ExtraData["__EffectStageTab__"] = item.Tag;
+                tabs.OnTabSwitched += (_, item) => RunPanelAction(() => clip.ExtraData["__EffectStageTab__"] = item.Tag);
                 return tabs;
             }
-            return (await BuildEffectStagePanel(clip, handler, pipeline.Value)).BuildWithScrollView();
+            return (await BuildEffectStagePanel(clip, handler, selectedStage.Value)).BuildWithScrollView();
         }
 
         private async Task<PropertyPanelBuilder> BuildEffectStagePanel(ClipElementUI clip,
-            EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectStage pipeline)
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectStage stage)
         {
             var sw = Stopwatch.StartNew();
-            var selectionTarget = clip.GetEffectSelectionTarget(pipeline);
+            var selectionTarget = clip.GetEffectSelectionTarget(stage);
             PropertyPanelBuilder ppb = new();
             var providerSnapshot = new Dictionary<Guid, IEffectProvider>(clip.EffectProviders ?? []);
             var localizedProviderNames = EffectServices.GetLocalizedEffectProviderNames("", false);
@@ -130,6 +127,9 @@ namespace projectFrameCut.DraftStuff
             var types = providerSnapshot.Count > 0 ? await EffectFieldTypeResolution.ResolveAsync(providerSnapshot) : null;
             var bindingDiagnostics = await Task.Run(() => EffectBindingHelper.ValidateBindings(providerSnapshot, types));
             var diagnosticsByProvider = bindingDiagnostics.Where(d => d.ProviderId.HasValue).ToLookup(d => d.ProviderId!.Value);
+            var mixturePlaceholder = stage == EffectStage.Composition && clip.ClipType != ClipMode.AudioClip
+                && !providerSnapshot.Values.Any(p => p.TypeOfEffect == EffectType.MixtureProvider)
+                ? new ClassicOverlayMixtureProvider() : null;
 
             if (bindingDiagnostics.Count > 0)
             {
@@ -143,14 +143,14 @@ namespace projectFrameCut.DraftStuff
                 ppb.AddSeparator();
             }
 
-            ppb.AddButton(PPLocalizedResources.EffectBind_Title, async (s, e) =>
+            ppb.AddButton(PPLocalizedResources.EffectBind_Title, async (s, e) => await RunPanelActionAsync(async () =>
             {
                 try
                 {
                     var bindView = new DraftEffectBindingView();
-                    bindView.LoadStage(clip, page, showAllEffect, pipeline);
+                    bindView.LoadStage(clip, page, showAllEffect, stage);
                     bindView.EffectProvidersChanged += () =>
-                        handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__EFFECT_BINDING_CHANGED__", clip, null));
+                        RunPanelAction(() => handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__EFFECT_BINDING_CHANGED__", clip, null)));
                     bool completed = false;
                     async Task CompleteEditing()
                     {
@@ -165,12 +165,12 @@ namespace projectFrameCut.DraftStuff
                     if (page.IsMobileForm)
                     {
                         page.Popup.Content = bindView;
-                        void OnPopupChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+                        void OnPopupChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args) => RunPanelAction(() =>
                         {
                             if (args.PropertyName != Border.ContentProperty.PropertyName || ReferenceEquals(page.Popup.Content, bindView)) return;
                             page.Popup.PropertyChanged -= OnPopupChanged;
                             _ = CompleteEditing();
-                        }
+                        });
                         page.Popup.PropertyChanged += OnPopupChanged;
                     }
                     else
@@ -183,14 +183,14 @@ namespace projectFrameCut.DraftStuff
                         };
                         page.MainMultiWindowView.AddWindow(v);
                         v.Maximize();
-                        v.CloseClicked += async (s, e) =>
+                        v.CloseClicked += async (s, e) => await RunPanelActionAsync(async () =>
                         {
                             if (!e.Cancel) await CompleteEditing();
-                        };
-                        bindView.Unloaded += (_, _) => bindView.Dispatcher.Dispatch(async () =>
+                        });
+                        bindView.Unloaded += (_, _) => RunPanelAction(() => bindView.Dispatcher.Dispatch(async () => await RunPanelActionAsync(async () =>
                         {
                             if (v.Parent is null && !v.IsInStandaloneWindowMode) await CompleteEditing();
-                        });
+                        })));
                     }
                 }
                 catch (Exception ex)
@@ -200,34 +200,29 @@ namespace projectFrameCut.DraftStuff
                     if (Debugger.IsAttached) throw;
                 }
 
-            });
-            var bundlesFactories = EffectServices.GetAvailableEffectProviders()
-                .Where(p =>
-                {
-                    var provider = p.Value();
-                    return provider.SupportedStages.Contains(pipeline)
-                        && (pipeline != EffectStage.SourceReplacement || provider.TypeOfEffect == EffectType.SourceReplacement);
-                })
-                .ToDictionary(p => p.Key, p => p.Value);
+            }));
+            var bundlesFactories = EffectServices.GetAvailableEffectProviders(provider =>
+                provider.SupportedStages.Contains(stage)
+                && (stage != EffectStage.SourceReplacement || provider.TypeOfEffect == EffectType.SourceReplacement));
             var inputSources = new Dictionary<(Guid ProviderId, string Display), string>();
             var inputDisplayNames = new Dictionary<string, string>();
             var inputEditVersions = new Dictionary<Guid, int>();
             var haveManySpeedVarianceProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
-            var haveManyMixtureProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.MixtureProvider)) ?? 0) >= 2;
-            if (clip.EffectProviders != null)
+            if (providerSnapshot.Count > 0 || mixturePlaceholder is not null)
             {
                 var filteredProviders = providerSnapshot
-                     .Where(c => c.Value.Stage == pipeline
-                         && (pipeline != EffectStage.SourceReplacement || c.Value.TypeOfEffect == EffectType.SourceReplacement)
+                     .Where(c => c.Value.Stage == stage
+                         && (stage != EffectStage.SourceReplacement || c.Value.TypeOfEffect == EffectType.SourceReplacement)
                          && c.Value.TypeOfEffect != EffectType.Transform && (
                          showAllEffect
                          || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
                               && (c.Value.Target.HasFlag(EffectTarget.ValueProvider)
                                   || EffectBindingHelper.AreTargetsCompatible(c.Value.Target,
-                                      pipeline == EffectStage.SourceReplacement ? selectionTarget : clip.GetEffectTarget())))
+                                      stage == EffectStage.SourceReplacement ? selectionTarget : clip.GetEffectTarget())))
                          || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider)
-                         || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider)))
+                         || (c.Value.Target == EffectTarget.Mixture && stage == EffectStage.Composition)))
                      .ToList();
+                if (mixturePlaceholder is not null) filteredProviders.Add(new(mixturePlaceholder.Id, mixturePlaceholder));
 
                 // Sort providers by their single stored picture input. Fan-out is allowed.
                 var sortedProviders = new List<KeyValuePair<Guid, IEffectProvider>>();
@@ -278,10 +273,11 @@ namespace projectFrameCut.DraftStuff
                     if (!outputTargets.TryGetValue(source, out var targets)) outputTargets[source] = targets = [];
                     targets.Add(display);
                 }
-                Log($"Prepared effect panel for {clip.Id}, pipeline {pipeline}, providers {providerSnapshot.Count}, candidates {inputOptions.Values.Sum(o => o.Count)}, elapsed {sw.ElapsedMilliseconds} ms.", "debug");
+                Log($"Prepared effect panel for {clip.Id}, stage {stage}, providers {providerSnapshot.Count}, candidates {inputOptions.Values.Sum(o => o.Count)}, elapsed {sw.ElapsedMilliseconds} ms.", "debug");
 
                 foreach (var bundleKvp in sortedProviders)
                 {
+                    if (bundleKvp.Key != sortedProviders[0].Key) ppb.AddSeparator();
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
                     var locedName = localizedProviderNames.GetValueOrDefault(bundleInstance.TypeName, bundleInstance.TypeName);
@@ -296,6 +292,7 @@ namespace projectFrameCut.DraftStuff
                         Shared.EffectType.VectorComponentEffect => Localized.Effect_VectorComponentEffect,
                         Shared.EffectType.TextEffect => PPLocalizedResources.Effect_TextEffect,
                         Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
+                        Shared.EffectType.ClipPositionProvider => Localized.EffectType_ClipPosition,
                         _ => PPLocalizedResources.Effect_GeneralEffect,
                     };
                     if (string.IsNullOrWhiteSpace(bundleInstance.Name)) bundleInstance.Name = locedName;
@@ -341,6 +338,12 @@ namespace projectFrameCut.DraftStuff
                             bundleBindingHostHolder.BindingHost = new ClipBindingHost(clip, bundleInstance, page,
                                 onChanged: () =>
                                 {
+                                    if (ReferenceEquals(bundleInstance, mixturePlaceholder)
+                                        && !TryMaterializeMixturePlaceholder(clip, bundleInstance))
+                                    {
+                                        handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                        return;
+                                    }
                                     RebuildAllEffects(clip, false);
                                     handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                 });
@@ -371,11 +374,11 @@ namespace projectFrameCut.DraftStuff
                         }
 
                         AddContinuousEffectRangeUI(ppb, bundleInstance, clip, page);
-                        ppb.AddSeparator();
 
                         //they can't be reordered
                         if (bundleInstance.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement) goto remove_btn;
 
+                        ppb.AddSeparator();
 
                         var resolvedInAnchorId = bundleInstance.GetMainInputSource();
                         var inAnchorProviderOptions = inputOptions.GetValueOrDefault(bundleId, []).Select(GetInputAnchorSelection).ToList();
@@ -411,8 +414,8 @@ namespace projectFrameCut.DraftStuff
                                 bundleInstance.IsFinalOutputSource() ? PPLocalizedResources.EffectBind_FinalResult : PPLocalizedResources.EffectBind_NoConnection);
 
                     remove_btn:
-                        ppb.AddButton($"Provider|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
-                        ppb.AddSeparator();
+                        if (stage != EffectStage.Composition || bundleInstance.TypeOfEffect is not (EffectType.Transform or EffectType.MixtureProvider))
+                            ppb.AddButton($"Provider|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                     }
                     catch (Exception ex)
                     {
@@ -426,13 +429,16 @@ namespace projectFrameCut.DraftStuff
                         }
                         Log(ex, $"loading bundle {bundleInstance.TypeName}", this);
                         ppb.AddText(new Label { Text = $"Error loading bundle {bundleInstance.TypeName}: {ex.Message}", TextColor = Colors.Yellow });
-                        ppb.AddSeparator();
                     }
                 }
             }
 
-            ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            ppb.AddCustomChild(BuildAddEffectPanel(selectionTarget, page, bundlesFactories, ppb, handler, hideKeyFramedProviders: true));
+            if (stage != EffectStage.Composition)
+            {
+                ppb.AddSeparator();
+                ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
+                ppb.AddCustomChild(BuildAddEffectPanel(selectionTarget, page, bundlesFactories, ppb, handler, hideKeyFramedProviders: true));
+            }
 
             static bool TryParseAnchorSelection(string? selection, string anchorLabel, Guid anchorGuid, out Guid id)
             {
@@ -470,7 +476,7 @@ namespace projectFrameCut.DraftStuff
                 return false;
             }
 
-            ppb.PropertyChanged += async (s, e) =>
+            ppb.PropertyChanged += GuardPanelChangeAsync(async (s, e) =>
             {
                 ArgumentNullException.ThrowIfNull(clip);
                 clip.EffectProviders ??= new();
@@ -486,6 +492,13 @@ namespace projectFrameCut.DraftStuff
                 {
                     if (s is IEffectProvider eb)
                     {
+                        bool materializing = ReferenceEquals(eb, mixturePlaceholder) && !clip.EffectProviders.ContainsKey(eb.Id);
+                        if (materializing && Equals(e.Value, e.OriginValue)) return;
+                        if (materializing && !TryMaterializeMixturePlaceholder(clip, eb))
+                        {
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                            return;
+                        }
                         var fieldUpdate = EffectServices.GetUIProvider(eb).HandlePropertyPanelChange(eb, e);
                         var data = fieldUpdate.newParams;
                         var newFields = fieldUpdate.newFields;
@@ -510,7 +523,8 @@ namespace projectFrameCut.DraftStuff
 
                         }
                         RebuildAllEffects(clip);
-                        handler?.Invoke(s, e);
+                        handler?.Invoke(s, materializing
+                            ? new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null) : e);
                     }
                 }
                 else
@@ -522,6 +536,13 @@ namespace projectFrameCut.DraftStuff
                         {
                             Guid bundleId = new(parts[1]);
                             string action = parts[2];
+                            if (mixturePlaceholder?.Id == bundleId && Equals(e.Value, e.OriginValue)) return;
+                            if (mixturePlaceholder is not null && mixturePlaceholder.Id == bundleId
+                                && !TryMaterializeMixturePlaceholder(clip, mixturePlaceholder))
+                            {
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                return;
+                            }
                             if (!clip.EffectProviders?.ContainsKey(bundleId) ?? false) return;
 
                             switch (action)
@@ -538,6 +559,7 @@ namespace projectFrameCut.DraftStuff
                                         var locedName = localizedProviderNames.GetValueOrDefault(nameProvider.TypeName, nameProvider.TypeName);
                                         var newName = e.Value?.ToString();
                                         nameProvider.Name = string.IsNullOrWhiteSpace(newName) ? locedName : newName;
+                                        if (mixturePlaceholder?.Id == bundleId) RebuildAllEffects(clip);
                                         handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                     }
                                     break;
@@ -643,36 +665,47 @@ namespace projectFrameCut.DraftStuff
                         {
                             if (bundlesFactories.TryGetValue(bundleTypeName, out var factory))
                             {
-                                var instance = factory();
-                                instance.Stage = pipeline;
-                                if ((pipeline == EffectStage.SourceReplacement && instance.TypeOfEffect != EffectType.SourceReplacement)
-                                    || !CanSelectEffectProvider(instance, selectionTarget, hideKeyFramedProviders: true))
+                                var previousProviders = new Dictionary<Guid, IEffectProvider>(clip.EffectProviders);
+                                var previousBindings = previousProviders.ToDictionary(p => p.Key,
+                                    p => new Dictionary<string, string>(p.Value.AnchorsBindingState));
+                                try
                                 {
-                                    Log($"Rejected effect provider {bundleTypeName} for clip {clip.Id} ({clip.ClipType}).", "warning");
-                                    return;
+                                    var instance = factory();
+                                    instance.Stage = stage;
+                                    if ((stage == EffectStage.SourceReplacement && instance.TypeOfEffect != EffectType.SourceReplacement)
+                                        || !CanSelectEffectProvider(instance, selectionTarget, hideKeyFramedProviders: true))
+                                    {
+                                        Log($"Rejected effect provider {bundleTypeName} for clip {clip.Id} ({clip.ClipType}).", "warning");
+                                        return;
+                                    }
+                                    instance.Id = Guid.NewGuid();
+                                    instance.DisconnectMainInput();
+                                    instance.SetFinalOutputSource(false);
+                                    clip.EffectProviders[instance.Id] = instance;
+                                    EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, instance, clip.GetEffectTarget());
+                                    RebuildAllEffects(clip);
                                 }
-                                instance.Id = Guid.NewGuid();
-                                instance.DisconnectMainInput();
-                                instance.SetFinalOutputSource(false);
-                                clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
-                                clip.EffectProviders[instance.Id] = instance;
-                                EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, instance, clip.GetEffectTarget());
-
-                                RebuildAllEffects(clip);
+                                catch (Exception ex)
+                                {
+                                    clip.EffectProviders = previousProviders;
+                                    foreach (var p in previousProviders) p.Value.AnchorsBindingState = previousBindings[p.Key];
+                                    Log(ex, $"Add effect provider {bundleTypeName} to clip {clip.Id}", this);
+                                    await page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                                }
                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                             }
                         }
                     }
                 }
-            };
+            });
             ppb.AppendWhen(SettingsManager.IsBoolSettingTrue("DeveloperMode"),
                   p => p.AddSeparator()
-                        .AddButton(PPLocalizedResources.EffectTab_ShowAll, (s, e) =>
+                        .AddButton(PPLocalizedResources.EffectTab_ShowAll, (s, e) => RunPanelAction(() =>
                         {
                             showAllEffect = !showAllEffect;
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                        })
-                        .AddButton(PPLocalizedResources.EffectTab_Rebuild, async (s, e) =>
+                        }))
+                        .AddButton(PPLocalizedResources.EffectTab_Rebuild, async (s, e) => await RunPanelActionAsync(async () =>
                         {
                             try
                             {
@@ -684,19 +717,19 @@ namespace projectFrameCut.DraftStuff
                             {
                                 if (await page.DisplayAlertAsync("Error", Localized._ExceptionTemplate(ex), "Throw", Localized._OK)) throw;
                             }
-                        })
-                        .AddButton("Generate bind graph (AnchorsBindingState)", async (s, e) =>
+                        }))
+                        .AddButton("Generate bind graph (AnchorsBindingState)", async (s, e) => await RunPanelActionAsync(async () =>
                         {
                             var graph = EffectBindingHelper.GenerateStoredMermaidDiagram(clip.EffectProviders, EffectGroupHelper.Read(clip.ExtraData));
                             await page.ShowPopupAsync(new MermaidCodeBlockRenderer().Render(graph), new PopupOptions { CanBeDismissedByTappingOutsideOfPopup = true });
-                        })
-                        .AddButton("Generate bind graph (Fields)", async (s, e) =>
+                        }))
+                        .AddButton("Generate bind graph (Fields)", async (s, e) => await RunPanelActionAsync(async () =>
                         {
                             var graph = EffectBindingHelper.GenerateRenderTimeMermaidDiagram(clip.EffectProviders, EffectGroupHelper.Read(clip.ExtraData));
                             await page.ShowPopupAsync(new MermaidCodeBlockRenderer().Render(graph), new PopupOptions { CanBeDismissedByTappingOutsideOfPopup = true });
-                        }));
+                        })));
 
-            Log($"Built effect panel for {clip.Id}, pipeline {pipeline}, providers {providerSnapshot.Count}, elapsed {sw.ElapsedMilliseconds} ms.", "debug");
+            Log($"Built effect panel for {clip.Id}, stage {stage}, providers {providerSnapshot.Count}, elapsed {sw.ElapsedMilliseconds} ms.", "debug");
             return ppb;
         }
 
@@ -790,13 +823,13 @@ namespace projectFrameCut.DraftStuff
                 {
                     Text = Localized.DraftPage_CenterMenuBar_AddClip,
                     Command = new Command(
-                        () =>
+                        () => RunPanelAction(() =>
                         {
                             PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, "AddProvider", item.Key);
-                        })
+                        }))
                 });
             }
-            ppb.PropertyChanged += (s, e) =>
+            ppb.PropertyChanged += GuardPanelChange((s, e) =>
             {
                 if (s is IEffectProvider senderProvider)
                 {
@@ -903,15 +936,15 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
                 handler?.Invoke(s, e);
-            };
+            });
 
-            ppb.AddButton(PPLocalizedResources.ColorAdjustment_Reset, (_, _) =>
+            ppb.AddButton(PPLocalizedResources.ColorAdjustment_Reset, (_, _) => RunPanelAction(() =>
             {
                 if (clip.EffectProviders is { } providers)
                     EffectBindingHelper.RemoveProvider(providers, InternalColorAdjustmentProviderGuid);
                 RebuildAllEffects(clip);
                 handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-            }, (c) => c.TextColor = Color.FromArgb("#FF8080"));
+            }), (c) => c.TextColor = Color.FromArgb("#FF8080"));
 
             return ppb.BuildWithScrollView();
         }
@@ -1081,8 +1114,8 @@ namespace projectFrameCut.DraftStuff
                 collapseButton.Text = isCollapsed ? "▶" : "▼";
                 listHost.IsVisible = !isCollapsed;
             }
-            collapseTap.Tapped += (_, _) => SwitchCollpaseMode();
-            titleTap.Tapped += (_, _) => SwitchCollpaseMode();
+            collapseTap.Tapped += (_, _) => RunPanelAction(() => SwitchCollpaseMode());
+            titleTap.Tapped += (_, _) => RunPanelAction(() => SwitchCollpaseMode());
             collapseButton.GestureRecognizers.Add(collapseTap);
             title.GestureRecognizers.Add(titleTap);
 
@@ -1105,13 +1138,13 @@ namespace projectFrameCut.DraftStuff
                     listHost.Children.Add(new Button
                     {
                         Text = PPLocalizedResources.EffectProp_Remove,
-                        Command = new Command(() =>
+                        Command = new Command(() => RunPanelAction(() =>
                         {
                             if (clip.EffectProviders is { } providers)
                                 EffectBindingHelper.RemoveProvider(providers, provider.Id);
                             handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
                             RebuildList();
-                        }),
+                        })),
                         TextColor = Color.FromArgb("#FF8080")
                     });
                     return;
@@ -1156,19 +1189,20 @@ namespace projectFrameCut.DraftStuff
                         Padding = new Thickness(10, 4),
                         TextColor = Color.FromArgb("#FF8080")
                     };
-                    deleteButton.Clicked += (_, _) =>
+                    deleteButton.Clicked += (_, _) => RunPanelAction(() =>
                     {
                         provider.RemoveStep(idx);
                         RebuildAllEffects(clip);
                         handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
                         RebuildList();
-                    };
+                        handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    });
                     header.Add(deleteButton, 1, 0);
                     stack.Children.Add(header);
 
                     var stepPpb = stepUI.CreateStepUI(stepInfo);
                     var stepView = stepPpb.Build();
-                    stepPpb.PropertyChanged += (s, args) =>
+                    stepPpb.PropertyChanged += GuardPanelChange((s, args) =>
                     {
                         try
                         {
@@ -1182,14 +1216,14 @@ namespace projectFrameCut.DraftStuff
                             }
                         }
                         catch (Exception ex) { Log(ex, $"Edit {provider.TypeName} keyframe", this); }
-                    };
+                    });
                     stack.Children.Add(stepView);
                     card.Content = stack;
                     listHost.Children.Add(card);
                 }
             }
 
-            addButton.Clicked += (_, _) =>
+            addButton.Clicked += (_, _) => RunPanelAction(() =>
             {
                 if (isCollapsed)
                 {
@@ -1204,8 +1238,10 @@ namespace projectFrameCut.DraftStuff
                     var position = getDefaultPosition();
                     step.SetValues(new Dictionary<string, object>
                     {
-                        ["TargetX"] = position.TargetX, ["TargetY"] = position.TargetY,
-                        ["TargetWidth"] = Math.Max(1, position.TargetWidth), ["TargetHeight"] = Math.Max(1, position.TargetHeight),
+                        ["TargetX"] = position.TargetX,
+                        ["TargetY"] = position.TargetY,
+                        ["TargetWidth"] = Math.Max(1, position.TargetWidth),
+                        ["TargetHeight"] = Math.Max(1, position.TargetHeight),
                         ["Rotation"] = position.Rotation,
                         ["Opacity"] = position.Opacity,
                     });
@@ -1214,7 +1250,7 @@ namespace projectFrameCut.DraftStuff
                 RebuildAllEffects(clip);
                 handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
                 RebuildList();
-            };
+            });
 
             RebuildList();
             return section;
@@ -1223,6 +1259,16 @@ namespace projectFrameCut.DraftStuff
         #endregion
 
         #region mixture
+
+        private static bool TryMaterializeMixturePlaceholder(ClipElementUI clip, IEffectProvider placeholder)
+        {
+            clip.EffectProviders ??= new();
+            if (clip.EffectProviders.TryGetValue(placeholder.Id, out var provider)) return ReferenceEquals(provider, placeholder);
+            if (clip.EffectProviders.Values.Any(p => p.TypeOfEffect == EffectType.MixtureProvider)) return false;
+            clip.EffectProviders[placeholder.Id] = placeholder;
+            EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, placeholder, clip.GetEffectTarget());
+            return true;
+        }
 
         private View BuildMixtureTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
@@ -1261,12 +1307,8 @@ namespace projectFrameCut.DraftStuff
                 });
             }
 
-            if (mixtureProviders.Count == 0)
-            {
-                ppb.AddText(new SingleLineLabel(PPLocalizedResources.Mixture_None));
-            }
-
-            var bundle = mixtureProviders.FirstOrDefault();
+            var mixturePlaceholder = mixtureProviders.Count == 0 ? new ClassicOverlayMixtureProvider() : null;
+            var bundle = mixtureProviders.FirstOrDefault() ?? mixturePlaceholder;
             if (bundle is not null)
             {
                 var bundleId = bundle.Id;
@@ -1293,25 +1335,35 @@ namespace projectFrameCut.DraftStuff
                     });
                 }
 
-                ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) =>
+                if (mixturePlaceholder is null)
                 {
-                    if (clip.EffectProviders is { } providers)
-                        EffectBindingHelper.RemoveProvider(providers, bundleId);
-                    RebuildAllEffects(clip);
-                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                    return;
-                });
+                    ppb.AddButton(PPLocalizedResources.EffectProp_Remove, (s, e) => RunPanelAction(() =>
+                    {
+                        if (clip.EffectProviders is { } providers)
+                            EffectBindingHelper.RemoveProvider(providers, bundleId);
+                        RebuildAllEffects(clip);
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    }));
+                }
                 ppb.AddSeparator();
             }
-            else
+            if (mixturePlaceholder is not null)
             {
                 ppb.AppendWhen(mixtureProviderFactoryItems.Count > 0, c => c.AddCustomChild(BuildAddEffectPanel(EffectTarget.Mixture, page, allProviderFactories, ppb, handler, false)));
             }
 
-            ppb.PropertyChanged += (s, e) =>
+            ppb.PropertyChanged += GuardPanelChange((s, e) =>
             {
                 if (s is IEffectProvider senderProvider)
                 {
+                    bool materializing = ReferenceEquals(senderProvider, mixturePlaceholder)
+                        && !clip.EffectProviders.ContainsKey(senderProvider.Id);
+                    if (materializing && Equals(e.Value, e.OriginValue)) return;
+                    if (materializing && !TryMaterializeMixturePlaceholder(clip, senderProvider))
+                    {
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        return;
+                    }
                     if (clip.EffectProviders.TryGetValue(senderProvider.Id, out var editingProvider))
                     {
                         var fieldUpdate = EffectServices.GetUIProvider(senderProvider).HandlePropertyPanelChange(senderProvider, e);
@@ -1330,7 +1382,8 @@ namespace projectFrameCut.DraftStuff
                             editingProvider.Fields = fields;
                         }
                         RebuildAllEffects(clip);
-                        handler?.Invoke(s, e);
+                        handler?.Invoke(s, materializing
+                            ? new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null) : e);
                     }
                     return;
                 }
@@ -1339,10 +1392,10 @@ namespace projectFrameCut.DraftStuff
                     int currentCount = clip.EffectProviders.Values.Count(IsMixtureProvider);
                     if (currentCount >= 1)
                     {
-                        page.Dispatcher.Dispatch(async () =>
+                        page.Dispatcher.Dispatch(async () => await RunPanelActionAsync(async () =>
                         {
                             await page.DisplayAlertAsync(Localized._Info, PPLocalizedResources.Mixture_ErrSingle, Localized._OK);
-                        });
+                        }));
                         return;
                     }
                     if (ppb.Properties.TryGetValue("NewProviderType", out var typeObj) && typeObj is string bundleTypeName)
@@ -1369,7 +1422,7 @@ namespace projectFrameCut.DraftStuff
                 }
 
                 handler?.Invoke(s, e);
-            };
+            });
 
             return ppb.BuildWithScrollView();
         }
@@ -1422,12 +1475,14 @@ namespace projectFrameCut.DraftStuff
 
         private static string GetEffectTypeName(EffectTarget target)
         {
+            if (target.HasFlag(EffectTarget.Pipeline)) return Localized.EffectType_Pipeline;
             StringBuilder result = new();
             if (target.HasFlag(EffectTarget.Video)) result.Append(Localized.EffectType_Video);
             if (target.HasFlag(EffectTarget.Audio)) result.Append(Localized.EffectType_Audio);
             if (target.HasFlag(EffectTarget.SpeedVariance)) result.Append(Localized.EffectType_SpeedVariance);
             if (target.HasFlag(EffectTarget.Mixture)) result.Append(Localized.EffectType_Mixture);
             if (target.HasFlag(EffectTarget.ColorAdjustment)) result.Append(Localized.EffectType_ColorAdjustment);
+            if (target.HasFlag(EffectTarget.ClipPosition)) result.Append(Localized.EffectType_ClipPosition);
             if (target.HasFlag(EffectTarget.Text)) result.Append(PPLocalizedResources.Effect_TextEffect);
             if (target.HasFlag(EffectTarget.VectorComponent)) result.Append(Localized.Effect_VectorComponentEffect);
             if (target.HasFlag(EffectTarget.VectorPicture)) result.Append(Localized.Effect_VectorPictureEffect);
@@ -1439,16 +1494,18 @@ namespace projectFrameCut.DraftStuff
             IEffectProvider provider,
             EffectTarget target,
             bool ignoreIsNotVisibleInNewEffectSelector = false,
-            bool hideKeyFramedProviders = false)
+            bool hideKeyFramedProviders = false,
+            bool includePipelineProviders = false)
         {
             const EffectTarget targetKinds = EffectTarget.Video | EffectTarget.Audio | EffectTarget.Text
                 | EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.SpeedVariance | EffectTarget.Mixture
-                | EffectTarget.ColorAdjustment | EffectTarget.SourceReplacement | EffectTarget.ValueProvider;
-            if (provider.TypeOfEffect == EffectType.Transform)
+                | EffectTarget.ColorAdjustment | EffectTarget.SourceReplacement | EffectTarget.ValueProvider | EffectTarget.ClipPosition;
+            bool pipeline = provider.Target.HasFlag(EffectTarget.Pipeline);
+            if (provider.TypeOfEffect == EffectType.Transform || pipeline && !includePipelineProviders)
                 return false;
-            if (target != EffectTarget.NotSpecified && (provider.Target & target & targetKinds) == 0)
+            if (!pipeline && target != EffectTarget.NotSpecified && (provider.Target & target & targetKinds) == 0)
                 return false;
-            if (target != EffectTarget.NotSpecified && target.HasFlag(EffectTarget.Text)
+            if (!pipeline && target != EffectTarget.NotSpecified && target.HasFlag(EffectTarget.Text)
                 && provider.Target.HasFlag(EffectTarget.SourceReplacement))
                 return false;
             bool keyFramed = provider.Target.HasFlag(EffectTarget.IsKeyFramed) || provider is IKeyFramedEffectProvider;
@@ -1466,7 +1523,8 @@ namespace projectFrameCut.DraftStuff
             EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
             bool showSubfix = true,
             bool ignoreIsNotVisibleInNewEffectSelector = false,
-            bool hideKeyFramedProviders = false)
+            bool hideKeyFramedProviders = false,
+            bool includePipelineProviders = false)
         {
             View EmptyPanel()
             {
@@ -1491,7 +1549,7 @@ namespace projectFrameCut.DraftStuff
             void AddProvider(string bundleTypeName)
             {
                 if (!bundlesFactories.TryGetValue(bundleTypeName, out var factory)
-                    || !CanSelectEffectProvider(factory(), target, ignoreIsNotVisibleInNewEffectSelector, hideKeyFramedProviders))
+                    || !CanSelectEffectProvider(factory(), target, ignoreIsNotVisibleInNewEffectSelector, hideKeyFramedProviders, includePipelineProviders))
                 {
                     Log($"Rejected effect provider {bundleTypeName} for target {target}.", "warning");
                     return;
@@ -1516,7 +1574,7 @@ namespace projectFrameCut.DraftStuff
                     Log(ex, $"Create effect provider {bundleTypeName} for selector", typeof(ClipInfoBuilder));
                     continue;
                 }
-                if (!CanSelectEffectProvider(instance, target, ignoreIsNotVisibleInNewEffectSelector, hideKeyFramedProviders))
+                if (!CanSelectEffectProvider(instance, target, ignoreIsNotVisibleInNewEffectSelector, hideKeyFramedProviders, includePipelineProviders))
                     continue;
                 try
                 {
@@ -1580,12 +1638,12 @@ namespace projectFrameCut.DraftStuff
             cardLayout.IsVisible = cards.Count > 0;
 
 #if WINDOWS
-            cardLayout.Loaded += (_, _) =>
+            cardLayout.Loaded += (_, _) => RunPanelAction(() =>
             {
                 for (Element? e = cardLayout.Parent; e is not null; e = e.Parent)
                     if (e is ScrollView scroll && scroll.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
                         sv.BringIntoViewOnFocusChange = false;
-            };
+            }, page);
 #endif
 
             // Filter state
@@ -1623,11 +1681,11 @@ namespace projectFrameCut.DraftStuff
             {
                 Placeholder = PPLocalizedResources.Effect_Add_Search
             };
-            searchBar.TextChanged += (_, e) =>
+            searchBar.TextChanged += (_, e) => RunPanelAction(() =>
             {
                 filterSearchText = e.NewTextValue;
                 ApplyFilter();
-            };
+            }, page);
 
             // ─── Category filter picker ───
             var categoryPicker = new Picker
@@ -1639,11 +1697,11 @@ namespace projectFrameCut.DraftStuff
             {
                 categoryPicker.Items.Add(cat);
             }
-            categoryPicker.SelectedIndexChanged += (_, _) =>
+            categoryPicker.SelectedIndexChanged += (_, _) => RunPanelAction(() =>
             {
                 filterCategory = categoryPicker.SelectedIndex <= 0 ? null : categoryPicker.Items[categoryPicker.SelectedIndex];
                 ApplyFilter();
-            };
+            }, page);
 
             // ─── Filter bar ───
             var filterBar = new Grid
@@ -1856,7 +1914,7 @@ namespace projectFrameCut.DraftStuff
                     return true;
                 }
 
-                void UpdateVideoPreview(object? sender = null, EventArgs? args = null)
+                void UpdateVideoPreview(object? sender = null, EventArgs? args = null) => RunPanelAction(() =>
                 {
                     if (border.BindingContext is not EffectProviderCardItem item || item.VideoThumbnail is null) return;
                     if (!loaded || !IsCardVisible())
@@ -1877,16 +1935,16 @@ namespace projectFrameCut.DraftStuff
                         Log(ex, $"Play provider preview {item.ProviderTypeName}", typeof(ClipInfoBuilder));
                         StopPreview();
                     }
-                }
+                }, page);
 
-                void OnPreviewLayoutChanged(object? sender, PropertyChangedEventArgs args)
+                void OnPreviewLayoutChanged(object? sender, PropertyChangedEventArgs args) => RunPanelAction(() =>
                 {
                     if (args.PropertyName is "IsVisible" or "Opacity" or "Bounds" or "X" or "Y" or "Width" or "Height" or "TranslationX" or "TranslationY")
                         UpdateVideoPreview();
-                }
+                }, page);
 
                 if (loadPreview is not null) previewGrid.Children.Add(loading);
-                card.Loaded += (_, _) =>
+                card.Loaded += (_, _) => RunPanelAction(() =>
                 {
                     if (loaded) return;
                     loaded = true;
@@ -1898,15 +1956,15 @@ namespace projectFrameCut.DraftStuff
                         if (v is ScrollView scroll) scroll.Scrolled += UpdateVideoPreview;
                     }
                     UpdateVideoPreview();
-                };
-                border.BindingContextChanged += async (_, _) =>
+                }, page);
+                border.BindingContextChanged += async (_, _) => await RunPanelActionAsync(async () =>
                 {
                     StopPreview();
                     UpdateVideoPreview();
                     if (loaded && hovered && border.BindingContext is EffectProviderCardItem { VideoThumbnail: null })
                         await ShowPreview();
-                };
-                card.Unloaded += (_, _) =>
+                }, page);
+                card.Unloaded += (_, _) => RunPanelAction(() =>
                 {
                     loaded = false;
                     hovered = false;
@@ -1918,17 +1976,17 @@ namespace projectFrameCut.DraftStuff
                     visibilityParents.Clear();
                     hoverOverlay.IsVisible = false;
                     StopPreview();
-                };
+                }, page);
 
                 // ─── Hover handling ───
-                async void OnHover(bool isHovered)
+                async void OnHover(bool isHovered) => await RunPanelActionAsync(async () =>
                 {
                     hovered = isHovered;
                     hoverOverlay.IsVisible = isHovered;
                     if (loadPreview is null || border.BindingContext is not EffectProviderCardItem { VideoThumbnail: null }) return;
                     if (isHovered) await ShowPreview();
                     else StopPreview();
-                }
+                }, page);
 
 #if MACCATALYST || WINDOWS
                 var pointerGesture = new PointerGestureRecognizer();
@@ -1952,7 +2010,7 @@ namespace projectFrameCut.DraftStuff
 
                 UIServices.RegisterSelectOrContextMenu(
                     border,
-                    OnSelected: () =>
+                    OnSelected: () => RunPanelAction(() =>
                     {
                         if (border.BindingContext is EffectProviderCardItem item)
                         {
@@ -1960,13 +2018,13 @@ namespace projectFrameCut.DraftStuff
                             SelectCard(border);
                             Log($"Selected effect provider {item.ProviderTypeName}.", "debug");
                         }
-                    },
-                    OnClicked: () =>
+                    }, page),
+                    OnClicked: () => RunPanelAction(() =>
                     {
                         if (border.BindingContext is EffectProviderCardItem item)
                             onAdd(item.ProviderTypeName);
-                    },
-                    OnContextMenuClick: async () =>
+                    }, page),
+                    OnContextMenuClick: async () => await RunPanelActionAsync(async () =>
                     {
                         if (border.BindingContext is not EffectProviderCardItem item) return;
                         var verbs = new[] { addText ?? PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview };
@@ -1980,7 +2038,7 @@ namespace projectFrameCut.DraftStuff
                                 await page.DisplayAlertAsync(Localized._Info, item.Description, Localized._OK);
                                 break;
                         }
-                    }
+                    }, page)
                 );
 
                 return card;
@@ -2058,10 +2116,12 @@ namespace projectFrameCut.DraftStuff
                     ppb.AddCustomChild("IEffect.TypeName", new Label { Text = effect.TypeName });
                     ppb.AddCustomChild("IEffect.TypeOfEffect", new Label { Text = effect.TypeOfEffect.ToString() });
                     ppb.AddCustomChild("IEffect.ImplementType", new Label { Text = effect.ImplementType.ToString() });
+                    ppb.AddCustomChild("IEffect.IsDeterministic", new Label { Text = effect.IsDeterministic.ToString() });
                     ppb.AppendWhen(
                        condition: (Guid.TryParse(effect.BindedEffectProvidingSystemID, out var g) && (clip.EffectProviders?.TryGetValue(g, out eb) ?? false) && eb is not null),
-                       onTrue: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"{eb.Name} ({effect.BindedEffectProvidingSystemID})" })
-                                     .AddCustomChild("IEffectProvider.EffectTarget", new Label { Text = eb?.Target is not null ? eb.Target.ToString() : "No bundle" }),
+                       onTrue: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"{eb?.Name ?? "unknown"} ({effect.BindedEffectProvidingSystemID})" })
+                                     .AddCustomChild("IEffectProvider.EffectTarget", new Label { Text = eb?.Target is not null ? eb.Target.ToString() : "No bundle" })
+                                     .AddCustomChild("IEffectProvider.Stage", new Label { Text = eb?.Stage is not null && Enum.IsDefined(eb.Stage) ? eb.Stage.ToString() : "unknown stage" }),
                        onFalse: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"Unknown bundle '{effect.BindedEffectProvidingSystemID}'" }));
                     ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResources.EffectProp_Remove);
                     ppb.AddSeparator();
@@ -2079,7 +2139,7 @@ namespace projectFrameCut.DraftStuff
             ppb.AddPicker("NewEffectType", PPLocalizedResources.Add_Effect_Select, availableEffectNames.Values.ToArray(), availableEffectNames.Values.FirstOrDefault());
             ppb.AddButton("AddEffect", PPLocalizedResources.Add_Effect);
 
-            ppb.PropertyChanged += async (s, e) =>
+            ppb.PropertyChanged += GuardPanelChangeAsync(async (s, e) =>
             {
                 if (e.Id.StartsWith("Effect|"))
                 {
@@ -2203,7 +2263,7 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
                 handler?.Invoke(s, e);
-            };
+            });
 
             ppb.AddSeparator();
             ppb.AddText(new TitleAndDescriptionLineLabel(PPLocalizedResources.Effect_RenderOrder, PPLocalizedResources.Effect_RenderOrder_Hint));
@@ -2272,16 +2332,16 @@ namespace projectFrameCut.DraftStuff
 
             var dragGesture = new DragGestureRecognizer();
             dragGesture.CanDrag = true;
-            dragGesture.DragStarting += (s, e) =>
+            dragGesture.DragStarting += (s, e) => RunPanelAction(() =>
             {
                 e.Data.Properties.Add("EffectKey", effectKey);
-            };
+            });
             dragHandle.GestureRecognizers.Add(dragGesture);
 
             // Add Drop to the WHOLE container (so dropping anywhere on the item works)
             var dropGesture = new DropGestureRecognizer();
             dropGesture.AllowDrop = true;
-            dropGesture.Drop += (s, e) =>
+            dropGesture.Drop += (s, e) => RunPanelAction(() =>
             {
                 if (clip.Effects == null) return;
                 if (e.Data.Properties.TryGetValue("EffectKey", out var sourceKeyObj) && sourceKeyObj is string sourceKey)
@@ -2301,7 +2361,7 @@ namespace projectFrameCut.DraftStuff
                         handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     }
                 }
-            };
+            });
             container.GestureRecognizers.Add(dropGesture);
 
             container.Children.Add(dragHandle); // Col 0

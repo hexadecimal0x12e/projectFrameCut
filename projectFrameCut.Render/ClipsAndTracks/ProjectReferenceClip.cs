@@ -29,6 +29,7 @@ public sealed class ProjectReferenceClip : MarkingClip
     {
         lock (gate)
         {
+            ClipInitializationFailure.Clear(this);
             if (runtime is not null) return;
             if (ExtraData?.GetValueOrDefault("ProjectReferenceError") is { } error)
                 throw new IOException(error.ToString());
@@ -99,8 +100,11 @@ internal sealed class ReferenceLayerClip(ProjectReferenceRuntime runtime, IClip 
     public bool OwnsRuntime { get; set; }
     public override ClipMode ClipType => ClipMode.ProjectReferenceClip;
     public override void ReInit(IPicture.PicturePixelMode targetPPB)
-        => MixtureInstance = source.MixtureInstance is null ? null : mixture ??= new ReferenceMixture(runtime, source,
+    {
+        ClipInitializationFailure.Clear(this);
+        MixtureInstance = source.MixtureInstance is null ? null : mixture ??= new ReferenceMixture(runtime, source,
             frame => (uint)Math.Floor(((double)RelativeStartFrame + (long)frame - StartFrame) * runtime.Project.TargetFrameRate / parentFps));
+    }
     public override void Dispose() { if (OwnsRuntime) runtime.Dispose(); }
     public override IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
     {
@@ -130,6 +134,7 @@ internal sealed class ReferencePartClip : MarkingClip
     public override ClipMode ClipType => dto.ClipType == ClipMode.AudioClip ? ClipMode.AudioClip : ClipMode.ProjectReferenceClip;
     public override void ReInit(IPicture.PicturePixelMode targetPPB)
     {
+        ClipInitializationFailure.Clear(this);
         if (runtime is not null) return;
         dto.FilePath = FilePath;
         runtime = new ProjectReferenceRuntime(part.Reference.SnapshotPath, ProjectReferenceRuntime.MapId(dto.Id, "detached"), targetPPB, dto, part);

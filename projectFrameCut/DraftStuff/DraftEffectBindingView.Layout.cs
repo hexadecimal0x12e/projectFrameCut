@@ -47,15 +47,15 @@ public partial class DraftEffectBindingView
                 SetNodePosition(node, commit: true);
                 if (node.Provider is { } provider)
                 {
-                    provider.MetaData["__DraftEffectBindingView_InteractiveEditorX__"] = node.X;
-                    provider.MetaData["__DraftEffectBindingView_InteractiveEditorY__"] = node.Y;
+                    provider.MetaData[ProviderPositionKey("X")] = node.X;
+                    provider.MetaData[ProviderPositionKey("Y")] = node.Y;
                 }
             }
             SaveStageLayout();
             EffectGroupHelper.Write(_clip.ExtraData, _groups);
             UpdateGroupBounds();
             FitArrangedNodes(contentSize);
-            Log($"Auto-arranged {layouts.Count} visible nodes and {_drawable.Connections.Count} bindings for clip {_clip.Id}, pipeline {_pipeline}.");
+            Log($"Auto-arranged {layouts.Count} visible nodes and {_drawable.Connections.Count} bindings for clip {_clip.Id}, stage {_stage}.");
         }
         catch (Exception ex)
         {

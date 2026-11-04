@@ -103,6 +103,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
             source = PictureFP16.Load(FilePath);
             source.CanBeDisposed = false;

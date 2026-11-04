@@ -47,6 +47,7 @@ public sealed class CreateGuiProjectPipeRequest
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public bool Isolated { get; set; }
     [ProtoMember(3)] public string ClientName { get; set; } = string.Empty;
+    [ProtoMember(4)] public bool SuppressConnectionNotification { get; set; }
 }
 
 [ProtoContract]
@@ -70,6 +71,7 @@ public sealed class GuiProjectWork
     [ProtoMember(4)] public Guid ConnectionId { get; set; }
     [ProtoMember(5)] public Guid DisconnectedConnectionId { get; set; }
     [ProtoMember(6)] public int ActiveConnectionCount { get; set; }
+    [ProtoMember(7)] public string ConnectionPipeToken { get; set; } = string.Empty;
 }
 
 [ProtoContract]

@@ -103,7 +103,7 @@ public partial class DraftEffectBindingView
     private void RefreshGroupSelection()
     {
         foreach (var node in _nodes.Values)
-            if (node.View is VerticalStackLayout stack && stack.Children.OfType<Border>().FirstOrDefault() is { } border)
+            if (node.Frame is { } border)
                 border.Stroke = _groupSelection.Contains(node.Id) || !_groupMultiSelect && node == _selectedNode ? Colors.Yellow
                     : node.BindingDiagnosticSignature.Length > 0 ? Colors.OrangeRed
                     : node.Kind == NodeKind.Group ? Colors.CornflowerBlue : node.Kind == NodeKind.Effect ? Colors.Gray : Colors.White;
@@ -260,8 +260,8 @@ public partial class DraftEffectBindingView
         foreach (var id in _groups.SelectMany(g => g.ProviderIds))
             if (_nodes.TryGetValue(id, out var node) && node.Provider is { } provider)
             {
-                provider.MetaData["__DraftEffectBindingView_InteractiveEditorX__"] = node.X;
-                provider.MetaData["__DraftEffectBindingView_InteractiveEditorY__"] = node.Y;
+                provider.MetaData[ProviderPositionKey("X")] = node.X;
+                provider.MetaData[ProviderPositionKey("Y")] = node.Y;
             }
     }
 
@@ -512,7 +512,8 @@ public partial class DraftEffectBindingView
         if (_clip?.EffectProviders is not { } providers || node.Group is null) return false;
         var members = EffectGroupHelper.Members(node.Group, _groups);
         bool changed = false;
-        foreach (var target in providers.Values.Where(p => !members.Contains(p.Id)))
+        foreach (var target in providers.Values.Where(p => !members.Contains(p.Id)
+            && (_stage != EffectStage.Composition || IsCurrentPipelineProvider(p))))
             foreach (var binding in target.AnchorsBindingState.ToArray())
                 if (!EffectProviderAnchorExtensions.IsOutputBindingKey(binding.Key)
                     && EffectProviderOutputExtensions.TryParseOutputSourceId(binding.Value, out var id, out var output)
@@ -523,7 +524,7 @@ public partial class DraftEffectBindingView
                     changed = true;
                 }
         var source = providers[port.Id];
-        if (source.IsFinalOutputSource() && (source.GetFinalOutputFieldId() is null || source.GetFinalOutputFieldId() == port.Key))
+        if (!IsTransformPipeline && source.IsFinalOutputSource() && (source.GetFinalOutputFieldId() is null || source.GetFinalOutputFieldId() == port.Key))
         {
             source.SetFinalOutputSource(false);
             changed = true;
@@ -567,9 +568,9 @@ public partial class DraftEffectBindingView
         {
             var template = EffectGroupHelper.Instantiate(item.Template);
             var providers = EffectGroupStore.Restore(template);
-            var target = _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_pipeline) : _clip.GetEffectSelectionTarget();
-            if (providers.Values.Any(p => !ClipInfoBuilder.CanSelectEffectProvider(p, target, hideKeyFramedProviders: true)
-                || p.Stage != _pipeline))
+            var target = _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_stage) : _clip.GetEffectSelectionTarget();
+            if (providers.Values.Any(p => !ClipInfoBuilder.CanSelectEffectProvider(p, target, hideKeyFramedProviders: true, includePipelineProviders: true)
+                || p.Stage != _stage || !CanAddToPipeline(p, _stage, _compositionPipeline)))
                 throw new InvalidOperationException(Localized.Effect_IncompatiblePipeline);
             var combined = new Dictionary<Guid, IEffectProvider>(_clip.EffectProviders ?? []);
             foreach (var p in providers) combined.Add(p.Key, p.Value);
@@ -581,10 +582,12 @@ public partial class DraftEffectBindingView
             foreach (var g in template.Groups) { g.X += dx; g.Y += dy; }
             foreach (var p in providers.Values)
             {
-                double Read(string key) => p.MetaData.TryGetValue(key, out var v) && double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float,
+                double Read(string axis) => p.MetaData.TryGetValue(ProviderPositionKey(axis, ProviderPipeline(p)), out var v)
+                    && double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : 250;
-                p.MetaData["__DraftEffectBindingView_InteractiveEditorX__"] = Read("__DraftEffectBindingView_InteractiveEditorX__") + dx;
-                p.MetaData["__DraftEffectBindingView_InteractiveEditorY__"] = Read("__DraftEffectBindingView_InteractiveEditorY__") + dy;
+                p.MetaData[ProviderPositionKey("X")] = Read("X") + dx;
+                p.MetaData[ProviderPositionKey("Y")] = Read("Y") + dy;
+                AssignCurrentPipeline(p);
             }
             EffectGroupHelper.Validate(groups, combined);
             _clip.EffectProviders = combined;

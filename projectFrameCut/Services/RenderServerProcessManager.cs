@@ -200,6 +200,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Log($"Starting RPC server with HTTP endpoint on port {port} (token: {httpToken})");
             }
 
+            if (Environment.GetCommandLineArgs().Contains("--disablePlugins")) startInfo.ArgumentList.Add("--disablePlugins");
             startInfo.ArgumentList.Add("--consoleLog");
             if (MyLoggerExtensions.LoggingDiagnosticInfo)
             {
@@ -213,6 +214,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 LogDiagnostic($"Starting worker {startInfo.FileName} with args: {JsonSerializer.Serialize(startInfo.ArgumentList)}");
                 _process = Process.Start(startInfo)
                     ?? throw new InvalidOperationException("Unable to start pjfc-cli.exe RPC server.");
+                ProcessPriorityBoost.RaiseToHighest(_process);
                 var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 _process.Exited += (_, _) => exited.TrySetResult();
                 _process.EnableRaisingEvents = true;
@@ -478,6 +480,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("timelineSource", options.TimelineSource);
 
                 _process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the CLI renderer.");
+                ProcessPriorityBoost.RaiseToHighest(_process);
                 AttachProcessLogging(_process);
                 var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
                 var client = new RenderClient(transport, _clientId);

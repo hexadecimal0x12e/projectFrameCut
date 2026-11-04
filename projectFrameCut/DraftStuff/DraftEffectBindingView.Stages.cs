@@ -1,8 +1,8 @@
 ﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using System.Security.Cryptography;
 using System.Text;
-using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -10,8 +10,8 @@ public partial class DraftEffectBindingView
 {
     private void AddContentNodes()
     {
-        if (_clip is null || !HasContentPipeline || !IsSourceOutputEnabled("content")) return;
-        if (_pipeline != EffectStage.Composition && !_nodes.ContainsKey(IEffectProvider.InputAnchorGUID))
+        if (_clip is null || !HasContentStage || !IsSourceOutputEnabled("content")) return;
+        if (_stage != EffectStage.Composition && !_nodes.ContainsKey(IEffectProvider.InputAnchorGUID))
         {
             bool inputHasPosition = _clip.ExtraData.ContainsKey(StagePositionKey("input", "X")) || _clip.ExtraData.ContainsKey(ExtraDataInputXKey);
             var inputX = GetExtraDataDouble(StagePositionKey("input", "X"), GetExtraDataDouble(ExtraDataInputXKey, 50));
@@ -23,13 +23,13 @@ public partial class DraftEffectBindingView
                 Y = inputY,
                 Id = IEffectProvider.InputAnchorGUID,
                 Provider = null,
-                DisplayName = _pipeline == EffectStage.VectorContent ? EffectStageUI.Name(_pipeline) : PPLocalizedResources.EffectBind_SourcePicture,
+                DisplayName = ContentSourceName,
                 OutputPort = new NodePort
                 {
                     Kind = PortKind.AnchorOutput,
                     Key = EffectProviderAnchorExtensions.InputKey,
-                    FieldType = _pipeline.GetContentType(),
-                    DisplayName = _pipeline == EffectStage.VectorContent ? EffectStageUI.Name(_pipeline) : PPLocalizedResources.EffectBind_SourcePicture,
+                    FieldType = _stage.GetContentType(),
+                    DisplayName = ContentSourceName,
                     Index = 0,
                     Id = IEffectProvider.InputAnchorGUID
                 }
@@ -59,15 +59,13 @@ public partial class DraftEffectBindingView
             Y = outputY,
             Id = IEffectProvider.OutputAnchorGUID,
             Provider = null,
-            DisplayName = _pipeline == EffectStage.Composition ? Localized.Effect_PictureOutput
-                : _pipeline == EffectStage.VectorContent ? EffectStageUI.Name(_pipeline) : PPLocalizedResources.EffectBind_FinalResult,
+            DisplayName = ContentOutputName,
             InputPorts = [new NodePort
             {
                 Kind = PortKind.AnchorInput,
                 Key = EffectProviderAnchorExtensions.InputKey,
-                FieldType = _pipeline.GetContentType(),
-                DisplayName = _pipeline == EffectStage.Composition ? Localized.Effect_PictureOutput
-                    : _pipeline == EffectStage.VectorContent ? EffectStageUI.Name(_pipeline) : PPLocalizedResources.EffectBind_FinalResult,
+                FieldType = _stage.GetContentType(),
+                DisplayName = ContentOutputName,
                 Index = 0,
                 Id = IEffectProvider.OutputAnchorGUID
             }]
@@ -82,19 +80,29 @@ public partial class DraftEffectBindingView
         _outputNode = outputNode;
     }
 
+    private static string StageTerminalName(StageTerminal terminal, IEffectProvider provider) => terminal.Id switch
+    {
+        RenderOutputProvider.AudioKey => Localized.Effect_RenderFinalAudio,
+        RenderOutputProvider.PositionKey => Localized.Effect_RenderFinalPosition,
+        RenderOutputProvider.ShouldRenderKey => Localized.Effect_RenderShouldRender,
+        _ => EffectProviderUIHelper.FieldName(provider, terminal.Id, true, terminal.Name),
+    };
+
     private void AddStageTerminals()
     {
-        if (_pipeline is not (EffectStage.Text or EffectStage.Render) || _clip?.EffectProviders is not { } providers) return;
-        double x = Math.Max(600, _nodes.Values.Where(n => n.TerminalField is null).Select(n => n.X).DefaultIfEmpty(250).Max() + 200);
-        foreach (var terminal in EffectStages.GetTerminals(_pipeline, providers.Values))
+        if (_stage is not (EffectStage.Text or EffectStage.Render) || _clip?.EffectProviders is not { } providers) return;
+        double x = _stage == EffectStage.Render && _outputNode is { } output ? output.X
+            : Math.Max(600, _nodes.Values.Where(n => n.TerminalField is null).Select(n => n.X).DefaultIfEmpty(250).Max() + 200);
+        foreach (var terminal in EffectStages.GetTerminals(_stage, providers.Values))
         {
             if (!IsSourceOutputEnabled(TerminalSourceOutputKey(terminal.Id))) continue;
-            if (_pipeline == EffectStage.Render && (terminal.Id == RenderOutputProvider.AudioKey && !HasClipAudio
+            if (_stage == EffectStage.Render && (terminal.Id == RenderOutputProvider.AudioKey && !HasClipAudio
                 || terminal.Id == RenderOutputProvider.PositionKey && _clip.ClipType == ClipMode.AudioClip)) continue;
-            var id = new Guid(SHA256.HashData(Encoding.UTF8.GetBytes($"{_clip.Id}/{_pipeline}/{terminal.Id}"))[..16]);
+            var id = new Guid(SHA256.HashData(Encoding.UTF8.GetBytes($"{_clip.Id}/{_stage}/{terminal.Id}"))[..16]);
             if (_nodes.TryGetValue(id, out var existing))
             {
                 existing.Provider = providers[terminal.ProviderId!.Value];
+                existing.DisplayName = StageTerminalName(terminal, existing.Provider);
                 existing.BuildPortsFromProvider();
                 if (existing.VisualSignature != GetNodeVisualSignature(existing)) RecreateNodeView(existing);
                 continue;
@@ -103,15 +111,9 @@ public partial class DraftEffectBindingView
             {
                 Id = id, Provider = providers[terminal.ProviderId!.Value], Kind = NodeKind.ClipArguments,
                 TerminalField = terminal.Id, TerminalFields = terminal.Inputs.Select(f => f.Id).ToArray(),
-                DisplayName = terminal.Id switch
-                {
-                    RenderOutputProvider.AudioKey => Localized.Effect_RenderFinalAudio,
-                    RenderOutputProvider.PositionKey => Localized.Effect_RenderFinalPosition,
-                    RenderOutputProvider.ShouldRenderKey => Localized.Effect_RenderShouldRender,
-                    _ => terminal.Name,
-                },
+                DisplayName = StageTerminalName(terminal, providers[terminal.ProviderId!.Value]),
                 X = GetExtraDataDouble(StagePositionKey(terminal.Id, "X"), GetExtraDataDouble(StagePositionKey(terminal.Inputs[0].Id, "X"), x)),
-                Y = GetExtraDataDouble(StagePositionKey(terminal.Id, "Y"), GetExtraDataDouble(StagePositionKey(terminal.Inputs[0].Id, "Y"), _pipeline == EffectStage.Render ? terminal.Id switch
+                Y = GetExtraDataDouble(StagePositionKey(terminal.Id, "Y"), GetExtraDataDouble(StagePositionKey(terminal.Inputs[0].Id, "Y"), _stage == EffectStage.Render ? terminal.Id switch
                     {
                         RenderOutputProvider.AudioKey => 350,
                         RenderOutputProvider.PositionKey => 550,
@@ -133,7 +135,7 @@ public partial class DraftEffectBindingView
 
     private void AddRenderPositionSource()
     {
-        if (_pipeline != EffectStage.Render || _clip?.ClipType == ClipMode.AudioClip
+        if (_stage != EffectStage.Render || _clip?.ClipType == ClipMode.AudioClip
             || !IsSourceOutputEnabled("position") || _nodes.ContainsKey(PositionNodeId)) return;
         AddNode(new NodeViewModel
         {
@@ -150,7 +152,7 @@ public partial class DraftEffectBindingView
         });
     }
 
-    private string StagePositionKey(string id, string axis) => $"__EffectStageLayout_{_pipeline}_{id}_{axis}__";
+    private string StagePositionKey(string id, string axis) => $"__EffectStageLayout_{_stage}_{PipelineLayoutPrefix}{id}_{axis}__";
 
     private void SaveStageLayout()
     {

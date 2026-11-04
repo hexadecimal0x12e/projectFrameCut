@@ -3447,6 +3447,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows \u5E94\u7528\u6269\u5C55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "\u672A\u53D1\u73B0 Windows \u5E94\u7528\u6269\u5C55\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "\u5DF2\u542F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "\u6269\u5C55\u5305\u5DF2\u66F4\u65B0\uFF0C\u8BF7\u91CD\u542F\u5E94\u7528\u540E\u4F7F\u7528\u65B0\u7248\u672C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "\u63D2\u4EF6 ID \u4E0E\u5176\u4ED6\u63D2\u4EF6\u51B2\u7A81\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "\u6269\u5C55\u5305\u672A\u5B89\u88C5\u6216\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -6954,6 +7002,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows app extensions",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "No Windows app extensions found.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "Enabled",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "The extension package has been updated. Restart the app to use the new version.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "The plugin ID conflicts with another plugin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "The extension package is not installed or is currently unavailable.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10466,6 +10562,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows \u61C9\u7528\u7A0B\u5F0F\u64F4\u5145\u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "\u672A\u627E\u5230 Windows \u61C9\u7528\u7A0B\u5F0F\u64F4\u5145\u529F\u80FD\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "\u5DF2\u555F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "\u64F4\u5145\u5957\u4EF6\u5DF2\u66F4\u65B0\uFF0C\u8ACB\u91CD\u65B0\u555F\u52D5\u61C9\u7528\u7A0B\u5F0F\u4EE5\u4F7F\u7528\u65B0\u7248\u672C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "\u5916\u639B\u7A0B\u5F0F ID \u8207\u5176\u4ED6\u5916\u639B\u7A0B\u5F0F\u885D\u7A81\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "\u64F4\u5145\u5957\u4EF6\u5C1A\u672A\u5B89\u88DD\u6216\u76EE\u524D\u7121\u6CD5\u4F7F\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13986,6 +14130,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows \u30A2\u30D7\u30EA\u62E1\u5F35\u6A5F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Windows \u30A2\u30D7\u30EA\u62E1\u5F35\u6A5F\u80FD\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "\u6709\u52B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "\u62E1\u5F35\u6A5F\u80FD\u30D1\u30C3\u30B1\u30FC\u30B8\u304C\u66F4\u65B0\u3055\u308C\u307E\u3057\u305F\u3002\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u3092\u4F7F\u7528\u3059\u308B\u306B\u306F\u30A2\u30D7\u30EA\u3092\u518D\u8D77\u52D5\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3 ID \u304C\u5225\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3068\u7AF6\u5408\u3057\u3066\u3044\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "\u62E1\u5F35\u6A5F\u80FD\u30D1\u30C3\u30B1\u30FC\u30B8\u304C\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u3055\u308C\u3066\u3044\u306A\u3044\u304B\u3001\u73FE\u5728\u5229\u7528\u3067\u304D\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -17491,6 +17683,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows \uC571 \uD655\uC7A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Windows \uC571 \uD655\uC7A5\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "\uC0AC\uC6A9 \uC911",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "\uD655\uC7A5 \uD328\uD0A4\uC9C0\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC0C8 \uBC84\uC804\uC744 \uC0AC\uC6A9\uD558\uB824\uBA74 \uC571\uC744 \uB2E4\uC2DC \uC2DC\uC791\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 ID\uAC00 \uB2E4\uB978 \uD50C\uB7EC\uADF8\uC778\uACFC \uCDA9\uB3CC\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "\uD655\uC7A5 \uD328\uD0A4\uC9C0\uAC00 \uC124\uCE58\uB418\uC9C0 \uC54A\uC558\uAC70\uB098 \uD604\uC7AC \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21001,6 +21241,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Extensions d\u2019application Windows",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Aucune extension d\u2019application Windows trouv\u00E9e.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "Activ\u00E9e",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "Le package de l\u2019extension a \u00E9t\u00E9 mis \u00E0 jour. Red\u00E9marrez l\u2019application pour utiliser la nouvelle version.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "L\u2019identifiant du plugin est en conflit avec un autre plugin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "Le package de l\u2019extension n\u2019est pas install\u00E9 ou est actuellement indisponible.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24518,6 +24806,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "\u0645\u0644\u062D\u0642\u0627\u062A \u062A\u0637\u0628\u064A\u0642\u0627\u062A Windows",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0645\u0644\u062D\u0642\u0627\u062A \u062A\u0637\u0628\u064A\u0642\u0627\u062A Windows.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "\u0645\u0641\u0639\u0651\u0644",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u062D\u0632\u0645\u0629 \u0627\u0644\u0645\u0644\u062D\u0642. \u0623\u0639\u062F \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u062C\u062F\u064A\u062F.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "\u064A\u062A\u0639\u0627\u0631\u0636 \u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u0643\u0648\u0651\u0646 \u0627\u0644\u0625\u0636\u0627\u0641\u064A \u0645\u0639 \u0645\u0643\u0648\u0651\u0646 \u0625\u0636\u0627\u0641\u064A \u0622\u062E\u0631.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "\u062D\u0632\u0645\u0629 \u0627\u0644\u0645\u0644\u062D\u0642 \u063A\u064A\u0631 \u0645\u062B\u0628\u062A\u0629 \u0623\u0648 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629 \u062D\u0627\u0644\u064A\u064B\u0627.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -28023,6 +28359,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows-App-Erweiterungen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Keine Windows-App-Erweiterungen gefunden.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "Aktiviert",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "Das Erweiterungspaket wurde aktualisiert. Starten Sie die App neu, um die neue Version zu verwenden.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "Die Plugin-ID steht in Konflikt mit einem anderen Plugin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "Das Erweiterungspaket ist nicht installiert oder derzeit nicht verf\u00FCgbar.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31539,6 +31923,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Extensiones de aplicaciones de Windows",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "No se encontraron extensiones de aplicaciones de Windows.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "Habilitada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "El paquete de la extensi\u00F3n se ha actualizado. Reinicia la aplicaci\u00F3n para usar la nueva versi\u00F3n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "El ID del complemento entra en conflicto con otro complemento.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "El paquete de la extensi\u00F3n no est\u00E1 instalado o no est\u00E1 disponible actualmente.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -35046,6 +35478,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Estensioni delle app Windows",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Nessuna estensione delle app Windows trovata.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "Abilitata",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "Il pacchetto dell\u2019estensione \u00E8 stato aggiornato. Riavvia l\u2019app per usare la nuova versione.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "L\u2019ID del plugin \u00E8 in conflitto con un altro plugin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "Il pacchetto dell\u2019estensione non \u00E8 installato o non \u00E8 attualmente disponibile.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38561,6 +39041,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Rozszerzenia aplikacji Windows",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Nie znaleziono rozszerze\u0144 aplikacji Windows.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "W\u0142\u0105czone",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "Pakiet rozszerzenia zosta\u0142 zaktualizowany. Uruchom ponownie aplikacj\u0119, aby u\u017Cy\u0107 nowej wersji.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "Identyfikator wtyczki koliduje z inn\u0105 wtyczk\u0105.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "Pakiet rozszerzenia nie jest zainstalowany lub jest obecnie niedost\u0119pny.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -42068,6 +42596,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Extens\u00F5es de aplicativos do Windows",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Nenhuma extens\u00E3o de aplicativo do Windows encontrada.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "Habilitada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "O pacote da extens\u00E3o foi atualizado. Reinicie o aplicativo para usar a nova vers\u00E3o.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "O ID do plugin est\u00E1 em conflito com outro plugin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "O pacote da extens\u00E3o n\u00E3o est\u00E1 instalado ou est\u00E1 indispon\u00EDvel no momento.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -45587,6 +46163,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "\u0420\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0439 Windows",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "\u0420\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0439 Windows \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u044B.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "\u0412\u043A\u043B\u044E\u0447\u0435\u043D\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "\u041F\u0430\u043A\u0435\u0442 \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u0438\u044F \u043E\u0431\u043D\u043E\u0432\u043B\u0451\u043D. \u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435, \u0447\u0442\u043E\u0431\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u043D\u043E\u0432\u0443\u044E \u0432\u0435\u0440\u0441\u0438\u044E.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "\u0418\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440 \u043F\u043B\u0430\u0433\u0438\u043D\u0430 \u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442\u0443\u0435\u0442 \u0441 \u0434\u0440\u0443\u0433\u0438\u043C \u043F\u043B\u0430\u0433\u0438\u043D\u043E\u043C.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "\u041F\u0430\u043A\u0435\u0442 \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u0438\u044F \u043D\u0435 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D \u0438\u043B\u0438 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -49096,6 +49720,54 @@
       {
         "Id": "Plugin_TrustBypassed",
         "Value": "Plugin trust validation was skipped (Debug).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows uygulama uzant\u0131lar\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "Windows uygulama uzant\u0131s\u0131 bulunamad\u0131.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "Etkin",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "Uzant\u0131 paketi g\u00FCncellendi. Yeni s\u00FCr\u00FCm\u00FC kullanmak i\u00E7in uygulamay\u0131 yeniden ba\u015Flat\u0131n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "Eklenti kimli\u011Fi ba\u015Fka bir eklentiyle \u00E7ak\u0131\u015F\u0131yor.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "Uzant\u0131 paketi y\u00FCkl\u00FC de\u011Fil veya \u015Fu anda kullan\u0131lam\u0131yor.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

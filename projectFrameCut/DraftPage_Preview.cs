@@ -138,6 +138,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (ClipInitializationFailure.IsMarked(clip.ExtraData)) return;
             ClipInitializationFailure.Mark(clip.ExtraData, "Source or ResolveEffect", new InvalidOperationException(description));
             clip.ApplyInitializationFailureIndicator();
+            if (SelectedClip == clip) RefreshPropertyPanel(clip);
             DraftChanged(this, new ClipUpdateEventArgs
             {
                 DetailInfo = $"Clip initialization failed: {clip.DisplayName}",
@@ -165,8 +166,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         Dispatcher.Dispatch(() =>
         {
-            if (!Clips.TryGetValue(clipId, out var clip) || !ClipInitializationFailure.IsMarked(clip.ExtraData)) return;
+            if (!Clips.TryGetValue(clipId, out var clip)
+                || !ClipInitializationFailure.IsMarked(clip.ExtraData) && !clip.HasInitializationFailureIndicator) return;
             clip.ClearInitializationFailureIndicator();
+            if (SelectedClip == clip) RefreshPropertyPanel(clip);
             DraftChanged(this, new ClipUpdateEventArgs
             {
                 DetailInfo = $"Clip initialization recovered: {clip.DisplayName}",
@@ -1077,6 +1080,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+        using var priority = ProcessPriorityBoost.Acquire();
+        using var priorityCancellation = ct.Register(() => priority?.Dispose());
         var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
         var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
         var view = (VisualElement)ActivePreviewEditor;

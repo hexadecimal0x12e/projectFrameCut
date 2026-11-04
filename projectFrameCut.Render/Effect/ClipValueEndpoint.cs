@@ -12,7 +12,7 @@ public abstract class ClipValueEndpointProvider : EffectProviderBase, IClipValue
     public abstract bool IsExport { get; }
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
-    public override EffectTarget Target => EffectTarget.Video | EffectTarget.ValueProvider | EffectTarget.IsNotVisibleInNewEffectSelector;
+    public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider | EffectTarget.IsNotVisibleInNewEffectSelector;
     public bool AllowCrossClip
     {
         get => !MetaData.TryGetValue(nameof(AllowCrossClip), out var value)

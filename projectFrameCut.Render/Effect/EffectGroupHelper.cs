@@ -134,8 +134,8 @@ public static class EffectGroupHelper
                 throw new InvalidOperationException("Effect groups cannot contain Clip properties or cross-Clip bindings.");
             if (members.Select(id => providers[id]).Where(p => !p.Target.HasFlag(EffectTarget.ValueProvider)
                     || !DynamicEffectBindings.CanInlineValue(p, providers))
-                .Select(p => p.GetPipeline()).Distinct().Count() > 1)
-                throw new InvalidOperationException("Effect group members must use the same pipeline.");
+                .Select(p => p.Stage).Distinct().Count() > 1)
+                throw new InvalidOperationException("Effect group members must use the same stage.");
             if (g.Ports.Select(p => (p.ProviderId, p.FieldId, p.IsInput)).Distinct().Count() != g.Ports.Count)
                 throw new InvalidOperationException("Duplicate effect group ports.");
             foreach (var port in g.Ports)

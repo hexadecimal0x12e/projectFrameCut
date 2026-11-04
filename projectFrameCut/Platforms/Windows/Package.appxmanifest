@@ -52,6 +52,11 @@
 				<uap:SplashScreen Image="$placeholder$.png" />
 			</uap:VisualElements>
 			<Extensions>
+				<uap3:Extension Category="windows.appExtensionHost">
+					<uap3:AppExtensionHost>
+						<uap3:Name>projectFrameCut.ExternalPlugin</uap3:Name>
+					</uap3:AppExtensionHost>
+				</uap3:Extension>
 				<desktop:Extension Category="windows.toastNotificationActivation">
 					<desktop:ToastNotificationActivation ToastActivatorCLSID="6e919706-2634-4d97-a93c-2213b2acc334" />
 				</desktop:Extension>

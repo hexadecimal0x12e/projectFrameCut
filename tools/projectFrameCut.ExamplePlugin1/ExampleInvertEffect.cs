@@ -39,6 +39,21 @@ public sealed class ExampleInvertEffect : INormalEffect
 
     public IPicture Render(IPicture source, int targetWidth, int targetHeight)
     {
+        if (source is IPicture<Half> fpSource)
+        {
+            PictureFP16 result = fpSource is IHDRPicture<Half> ? new HDRPictureFP16(fpSource) : new PictureFP16(fpSource);
+            var red = result.r;
+            var green = result.g;
+            var blue = result.b;
+            for (int i = 0; i < result.Pixels; i++)
+            {
+                red[i] = Mix(red[i]);
+                green[i] = Mix(green[i]);
+                blue[i] = Mix(blue[i]);
+            }
+            return result;
+        }
+
         if (source is IPicture<byte> byteSource)
         {
             var result = new Picture8bpp(byteSource.Width, byteSource.Height)
@@ -74,6 +89,7 @@ public sealed class ExampleInvertEffect : INormalEffect
         throw new NotSupportedException($"Unsupported picture type '{source.GetType().Name}'.");
     }
 
+    private Half Mix(Half value) => (Half)((float)value * (1 - _amount) + (1 - (float)value) * _amount);
     private byte Mix(byte value, byte max) => (byte)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, byte.MaxValue);
     private ushort Mix(ushort value, ushort max) => (ushort)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, ushort.MaxValue);
 }

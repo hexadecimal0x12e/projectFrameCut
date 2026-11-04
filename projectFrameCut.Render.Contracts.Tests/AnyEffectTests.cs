@@ -273,8 +273,8 @@ public sealed class AnyEffectTests
         }
         Assert.AreEqual(2, calls);
         Assert.AreEqual(EffectArgumentFieldType.Any, source.OutFields["Image"].FieldType);
-        Assert.ThrowsExactly<ArgumentException>(() => EffectBindingHelper.SetFinalOutput(providers, source.Id, EffectPipeline.Picture, "Value"));
-        EffectBindingHelper.SetFinalOutput(providers, source.Id, EffectPipeline.Picture, "Image");
+        Assert.ThrowsExactly<ArgumentException>(() => EffectBindingHelper.SetFinalOutput(providers, source.Id, EffectStage.Render, "Value"));
+        EffectBindingHelper.SetFinalOutput(providers, source.Id, EffectStage.Render, "Image");
     }
 
     [TestMethod]
@@ -305,7 +305,7 @@ public sealed class AnyEffectTests
                 return new Dictionary<string, object?> { ["Image"] = Picture(3), ["Unused"] = new object() };
             });
         var providers = Providers(source);
-        EffectBindingHelper.SetFinalOutput(providers, source.Id, EffectPipeline.Picture, "Image");
+        EffectBindingHelper.SetFinalOutput(providers, source.Id, EffectStage.Render, "Image");
         using var input = Picture(0);
         using (var graph = Build(providers))
         using (var result = Evaluate(graph, input)) Assert.AreEqual((byte)3, ((IPicture<byte>)result).r[0]);

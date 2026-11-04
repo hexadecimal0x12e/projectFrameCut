@@ -194,6 +194,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             if (string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
             if (ProjectExternalVideoSource.IsPath(FilePath)) _externalSourceHost ??= ProjectExternalSourceRuntime.Current;
             if (!IsVirtualSourcePath(FilePath) && !File.Exists(FilePath))
@@ -699,6 +700,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// </summary>
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             if (VirtualSource is null)
             {
                 throw new NullReferenceException(

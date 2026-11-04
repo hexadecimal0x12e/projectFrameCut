@@ -8,7 +8,7 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class PictureChannelAverageEffectProvider : EffectProviderBase, IMultipleOutputEffectProvider
 {
-    public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
+    public override IReadOnlyList<EffectStage> SupportedStages => EffectStages.Values;
 
     public override bool IsDeterministic => true;
 
@@ -17,7 +17,7 @@ public sealed class PictureChannelAverageEffectProvider : EffectProviderBase, IM
     public override string TypeName => "PictureChannelAverage";
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
-    public override EffectTarget Target => EffectTarget.Video | EffectTarget.ValueProvider;
+    public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider;
 
     public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields => new Dictionary<string, EffectArgumentFieldDescriptor>
     {

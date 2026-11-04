@@ -1,52 +1,32 @@
 using TinyPinyin;
 using Kawazu;
-using System.IO.Compression;
 
 namespace projectFrameCut.Render.Text;
 
 public static class TextStylePronunciation
 {
-    private static readonly Lazy<KawazuConverter?> japanese = new(LoadJapaneseDictionary);
+    public static string? DictionaryDirectory { get; set; }
+    private static readonly object JapaneseLock = new();
+    private static KawazuConverter? japanese;
     private static int reportedFailure;
-
-    private static KawazuConverter? LoadJapaneseDictionary()
-    {
-        try
-        {
-            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "projectFrameCut", "JapaneseDictionary");
-            if (!File.Exists(Path.Combine(path, "sys.dic")))
-            {
-                using var stream = typeof(TextStylePronunciation).Assembly.GetManifestResourceStream("projectFrameCut.Render.JapaneseDictionary.zip");
-                if (stream is null) return null;
-                Directory.CreateDirectory(path);
-                using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
-                archive.ExtractToDirectory(path, overwriteFiles: true);
-            }
-            return new KawazuConverter(path);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Load Japanese text dictionary", typeof(TextStylePronunciation));
-            return null;
-        }
-    }
 
     public static string Get(string text, bool isJapanese)
     {
         if (!isJapanese) return PinyinHelper.GetPinyin(text, "");
-        if (japanese.Value is { } converter)
+        try
         {
-            try
+            lock (JapaneseLock)
             {
-                lock (converter)
+                if (japanese is null && DictionaryDirectory is { } path && File.Exists(Path.Combine(path, "sys.dic")))
+                    japanese = new KawazuConverter(path);
+                if (japanese is { } converter)
                     return TaskHelper.SyncWait(() => converter.Convert(text, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "", ""));
             }
-            catch (Exception ex)
-            {
-                if (Interlocked.Exchange(ref reportedFailure, 1) == 0)
-                    Logger.Log(ex, "Resolve Japanese text pronunciation", typeof(TextStylePronunciation));
-            }
+        }
+        catch (Exception ex)
+        {
+            if (Interlocked.Exchange(ref reportedFailure, 1) == 0)
+                Logger.Log(ex, "Resolve Japanese text pronunciation", typeof(TextStylePronunciation));
         }
         return string.Concat(text.Select(c => JapaneseKatakanaOrHiraganaMapping.GetValueOrDefault(c) ?? c.ToString()));
     }

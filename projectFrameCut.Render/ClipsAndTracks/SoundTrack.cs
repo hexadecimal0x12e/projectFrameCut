@@ -96,8 +96,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public static void ReInit(ISoundTrack track)
         {
             ReleaseEffects(track);
-            if (IsSourceUnavailable(track.ExtraData) && !ClipInitializationFailure.HasDeferredFailures(track.ExtraData))
-                ClipInitializationFailure.Clear(track.ExtraData);
+            ClipInitializationFailure.Clear(track.ExtraData);
             try { track.ReInit(); }
             catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
             {
@@ -224,6 +223,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            ClipInitializationFailure.Clear(ExtraData);
             AudioSource?.Dispose();
             AudioSource = null;
             if (ProjectExternalAudioSource.IsPath(FilePath)) externalSourceHost ??= ProjectExternalSourceRuntime.Current;
@@ -231,7 +231,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
             try
             {
                 AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
-                if (SoundTrackMetadata.IsSourceUnavailable(ExtraData)) ClipInitializationFailure.Clear(ExtraData);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -330,6 +329,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            ClipInitializationFailure.Clear(this);
             SoundTrack?.Dispose();
             ExtraData ??= new();
             SoundTrack = TrackType switch
@@ -359,6 +359,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             EffectHelper.ResolveClipEffects(this);
         }
     }

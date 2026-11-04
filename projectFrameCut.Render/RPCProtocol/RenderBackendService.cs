@@ -1319,7 +1319,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 if (clip.ClipType == ClipMode.AudioClip) continue;
                 try
                 {
-                    if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData)) ClipInitializationFailure.Clear(clip);
+                    ClipInitializationFailure.Clear(clip);
                     clip.ReInit(IPicture.PicturePixelMode.Float16Picture);
                     if (!ClipInitializationFailure.IsMarked(clip))
                     {
@@ -1500,8 +1500,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 state.PixelMode = 0;
                 continue;
             }
-            if ((state.PixelMode == pixelMode.Value && !ClipInitializationFailure.IsMarked(clip))
-                || ClipInitializationFailure.HasDeferredFailures(clip.ExtraData)) continue;
+            if (state.PixelMode == pixelMode.Value && !ClipInitializationFailure.IsMarked(clip)) continue;
             try
             {
                 ClipInitializationFailure.Clear(clip);

@@ -354,6 +354,14 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                 // ILGPU kernel and the CPU scanline filler.
                 pb.SetFilledRegionDetermination(CanvasFilledRegionDetermination.Winding);
                 AddClosedContour(pb, pts, ox, oy, sx, sy);
+                if (s.AdditionalContours is not null)
+                {
+                    foreach (var contour in s.AdditionalContours)
+                    {
+                        if (contour.Length < 3) continue;
+                        AddClosedContour(pb, contour, ox, oy, sx, sy);
+                    }
+                }
                 if (s.Holes is { Length: > 0 })
                 {
                     foreach (var hole in s.Holes)

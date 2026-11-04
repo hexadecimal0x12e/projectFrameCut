@@ -234,9 +234,8 @@ public sealed class StreamIsolationControlChannel : IIsolationControlChannel
                 var data = await IsolationFrame.ReadAsync(_stream, CancellationToken.None).ConfigureAwait(false);
                 if (data is null) break;
                 var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(data);
-                if (!_pending.TryRemove(response.RequestId, out var completion))
-                    throw new InvalidDataException($"The isolation runtime returned an unknown request ID '{response.RequestId}'.");
-                completion.TrySetResult(response);
+                // A canceled caller may still receive a response from the backend.
+                if (_pending.TryRemove(response.RequestId, out var completion)) completion.TrySetResult(response);
             }
             failure = new EndOfStreamException("The isolation control channel was closed.");
         }

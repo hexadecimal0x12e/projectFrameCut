@@ -92,7 +92,6 @@ namespace projectFrameCut.Render.Effect
         public Func<object> GetGetter() => () =>
         {
             var value = ResolveInt(Parameters, "Value");
-            Log($"IntConstantValueProviderEffect {Id}/{Name}'s Value: {value} ({Parameters.GetValueOrDefault("Value")?.GetType()?.Name ?? "<null>"})");
             return value;
 
         };
@@ -117,7 +116,7 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectType TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
 
-        public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
+        public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider;
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -143,7 +142,7 @@ namespace projectFrameCut.Render.Effect
         {
             return
             [
-                Field("Value", EffectArgumentFieldType.Integer, "0", remarks: "The constant integer to provide. Can be bound to a value provider."),
+                Field("Value", EffectArgumentFieldType.Integer | EffectArgumentFieldType.CannotBeDynamic, "0", remarks: "The constant integer to provide."),
             ];
         }
 

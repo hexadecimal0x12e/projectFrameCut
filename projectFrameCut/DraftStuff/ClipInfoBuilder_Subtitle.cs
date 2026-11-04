@@ -128,7 +128,7 @@ public partial class ClipInfoBuilder
             selecting = false;
         }
 
-        list.SelectionChanged += (_, e) =>
+        list.SelectionChanged += (_, e) => RunPanelAction(() =>
         {
             if (selecting) return;
             var next = (e.CurrentSelection.FirstOrDefault() as SubtitleRow)?.Cue;
@@ -136,10 +136,10 @@ public partial class ClipInfoBuilder
             if (!SaveCurrent()) { RefreshList(selected?.Id); return; }
             Select(next);
             RefreshList(next?.Id);
-        };
-        markdown.TextChanged += (_, _) => RefreshPreview();
-        apply.Clicked += (_, _) => { if (SaveCurrent()) RefreshList(selected?.Id); };
-        delete.Clicked += (_, _) =>
+        });
+        markdown.TextChanged += (_, _) => RunPanelAction(() => RefreshPreview());
+        apply.Clicked += (_, _) => RunPanelAction(() => { if (SaveCurrent()) RefreshList(selected?.Id); });
+        delete.Clicked += (_, _) => RunPanelAction(() =>
         {
             if (selected is null) return;
             var removed = selected;
@@ -156,15 +156,15 @@ public partial class ClipInfoBuilder
                 data.Cues.Insert(index, removed);
                 ShowError(ex);
             }
-        };
-        jump.Clicked += async (_, _) =>
+        });
+        jump.Clicked += async (_, _) => await RunPanelActionAsync(async () =>
         {
             if (!SaveCurrent() || selected is null) return;
             try { await page.JumpToSubtitleAsync(clip, selected); }
             catch (Exception ex) { ShowError(ex); }
-        };
+        });
         var add = new Button { Text = Localized.Subtitle_AddCue };
-        add.Clicked += (_, _) =>
+        add.Clicked += (_, _) => RunPanelAction(() =>
         {
             if (!SaveCurrent()) return;
             SubtitleCue? cue = null;
@@ -182,9 +182,9 @@ public partial class ClipInfoBuilder
                 if (cue is not null) data.Cues.Remove(cue);
                 ShowError(ex);
             }
-        };
+        });
         var import = new Button { Text = Localized.Subtitle_Import };
-        import.Clicked += async (_, _) =>
+        import.Clicked += async (_, _) => await RunPanelActionAsync(async () =>
         {
             if (!SaveCurrent()) return;
             import.IsEnabled = false;
@@ -200,9 +200,9 @@ public partial class ClipInfoBuilder
             }
             catch (Exception ex) { ShowError(ex); }
             finally { import.IsEnabled = true; }
-        };
+        });
         var fit = new Button { Text = Localized.Subtitle_FitLength };
-        fit.Clicked += (_, _) =>
+        fit.Clicked += (_, _) => RunPanelAction(() =>
         {
             if (!SaveCurrent() || data.Cues.Count == 0) return;
             try
@@ -218,7 +218,7 @@ public partial class ClipInfoBuilder
                 handler?.Invoke(this, new("timing", length, old));
             }
             catch (Exception ex) { ShowError(ex); }
-        };
+        });
 
         root.Children.Add(new HorizontalStackLayout { Spacing = 8, Children = { add, delete, import } });
         root.Children.Add(list);
@@ -256,7 +256,7 @@ public partial class ClipInfoBuilder
         style.AddPicker("align", PPLocalizedResources.TextOption_HorizonOption, Enum.GetNames<TextAlignment>(), data.Style.Alignment.ToString());
         style.AddCollapsibleSection(PPLocalizedResources.TextOption_Color, b => AddColor(b, "fill", new Color(data.Style.FillR / 65535f, data.Style.FillG / 65535f, data.Style.FillB / 65535f, (float)data.Style.FillA)));
         style.AddCollapsibleSection(PPLocalizedResources.TextOption_Stroke, b => AddColor(b, "outline", new Color(data.Style.StrokeR / 65535f, data.Style.StrokeG / 65535f, data.Style.StrokeB / 65535f, (float)data.Style.StrokeA)));
-        style.PropertyChanged += (_, e) =>
+        style.PropertyChanged += GuardPanelChange((_, e) =>
         {
             if (!SaveCurrent()) return;
             var before = data.Clone();
@@ -293,7 +293,7 @@ public partial class ClipInfoBuilder
                 data.BottomMargin = before.BottomMargin;
                 ShowError(ex);
             }
-        };
+        });
         root.Children.Add(style.Build());
         Select(data.Cues.FirstOrDefault());
         RefreshList(selected?.Id);
@@ -305,7 +305,7 @@ public partial class ClipInfoBuilder
         panel.AddCustomChild(changed =>
         {
             var picker = new ColorPicker { SelectedColor = color };
-            picker.SelectedColorChanged += (_, c) => changed(c);
+            picker.SelectedColorChanged += (_, c) => RunPanelAction(() => changed(c), null);
             return picker;
         }, id, color);
     }

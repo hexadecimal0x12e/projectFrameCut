@@ -27,11 +27,11 @@ public partial class ClipInfoBuilder
                 Tag = side.ToString(), LazyContentFactory = () => BuildTransformSide(clip, side)
             });
         tabs.SelectByTag(page.SelectedTransformSide.ToString());
-        tabs.OnTabSwitched += (_, item) =>
+        tabs.OnTabSwitched += (_, item) => RunPanelAction(() =>
         {
             page.SelectedTransformSide = Enum.Parse<TransformSide>(item.Tag);
             item.Content = BuildTransformSide(clip, page.SelectedTransformSide);
-        };
+        });
         return tabs;
     }
 
@@ -40,17 +40,20 @@ public partial class ClipInfoBuilder
         bool audio = clip.ClipType == ClipMode.AudioClip;
         var host = new ContentView();
         var previewQueue = new SemaphoreSlim(1);
-        host.Loaded += (_, _) =>
+        host.Loaded += (_, _) => RunPanelAction(() =>
         {
             page.TimelineTimingChanged -= Rebuild;
             page.TimelineTimingChanged += Rebuild;
             Rebuild();
-        };
-        host.Unloaded += (_, _) => page.TimelineTimingChanged -= Rebuild;
+        });
+        host.Unloaded += (_, _) => RunPanelAction(() => page.TimelineTimingChanged -= Rebuild);
         Rebuild();
         return host;
 
         void Rebuild()
+            => RunPanelAction(RebuildContent);
+
+        void RebuildContent()
         {
             if (!page.Clips.TryGetValue(clip.Id, out var current))
             {
@@ -104,6 +107,9 @@ public partial class ClipInfoBuilder
                 ((CheckBox)ppb.Components["PreRender"]).IsChecked ? TransformRenderOrder.BeforeEffects : TransformRenderOrder.AfterEffects;
 
             void LoadParameters()
+                => RunPanelAction(BuildParameters);
+
+            void BuildParameters()
             {
                 parameters.Content = null;
                 if (selected is null) return;
@@ -111,7 +117,7 @@ public partial class ClipInfoBuilder
                 if (ui is IBindingHostHolder bindingHost)
                     bindingHost.BindingHost = new ClipBindingHost(owner, selected, page, LoadParameters);
                 var panel = ui.CreateUI(selected);
-                panel.PropertyChanged += (_, args) =>
+                panel.PropertyChanged += GuardPanelChange((_, args) =>
                 {
                     try
                     {
@@ -127,7 +133,7 @@ public partial class ClipInfoBuilder
                         }
                     }
                     catch (Exception ex) { error.Text = ex.Message; Log(ex, "Edit transform parameters", this); }
-                };
+                });
                 parameters.Content = panel.Build();
             }
 
@@ -213,10 +219,10 @@ public partial class ClipInfoBuilder
 
             async Task Apply()
             {
-                var provider = Configure();
-                if (provider is null) return;
                 try
                 {
+                    var provider = Configure();
+                    if (provider is null) return;
                     if (saved is not null)
                     {
                         owner.EffectProviders![saved.Id] = provider;
@@ -235,15 +241,15 @@ public partial class ClipInfoBuilder
                 }
                 catch (Exception ex) { error.Text = ex.Message; Log(ex, $"Apply transform to {clip.Id}/{side}", this); }
             }
-            if (mode is not null) mode.SelectedIndexChanged += (_, _) => LoadTypes();
+            if (mode is not null) mode.SelectedIndexChanged += (_, _) => RunPanelAction(LoadTypes);
             if (saved is not null)
             {
-                ppb.AddButton(Localized.Transform_Apply, async (_, _) => await Apply());
-                ppb.AddButton(Localized.Transform_Delete, async (_, _) =>
+                ppb.AddButton(Localized.Transform_Apply, async (_, _) => await RunPanelActionAsync(async () => await Apply()));
+                ppb.AddButton(Localized.Transform_Delete, async (_, _) => await RunPanelActionAsync(async () =>
                 {
                     try { await page.DeleteClipTransform(clip, side); Rebuild(); }
                     catch (Exception ex) { error.Text = ex.Message; Log(ex, $"Delete transform from {clip.Id}/{side}", this); }
-                });
+                }));
             }
             
             host.Content = ppb.BuildWithScrollView();

@@ -245,10 +245,13 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
+        internal bool HasInitializationFailureIndicator { get; private set; }
+
         public void ApplyInitializationFailureIndicator()
         {
             if (!ClipInitializationFailure.IsMarked(ExtraData)) return;
 
+            HasInitializationFailureIndicator = true;
             var description = ClipInitializationFailure.GetDescription(ExtraData);
             Clip.Stroke = new SolidColorBrush(Color.FromArgb("#FFFF00FF"));
             Clip.StrokeThickness = 4;
@@ -277,6 +280,7 @@ namespace projectFrameCut.DraftStuff
         public void ClearInitializationFailureIndicator()
         {
             ClipInitializationFailure.Clear(ExtraData);
+            HasInitializationFailureIndicator = false;
             Clip.Stroke = Colors.Gray;
             Clip.StrokeThickness = 2;
             ToolTipProperties.SetText(Clip, DisplayName);
@@ -337,24 +341,17 @@ namespace projectFrameCut.DraftStuff
                 | (ClipType == ClipMode.AudioClip ? 0 : EffectTarget.Mixture),
             EffectStage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
             EffectStage.Render => EffectTarget.ValueProvider | (ClipType == ClipMode.AudioClip ? EffectTarget.Audio
-                : EffectTarget.Video | EffectTarget.ColorAdjustment | (!string.IsNullOrWhiteSpace(BindedSoundTrack) ? EffectTarget.Audio : 0)),
-            _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider,
+                : EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ClipPosition | (!string.IsNullOrWhiteSpace(BindedSoundTrack) ? EffectTarget.Audio : 0)),
+            _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ClipPosition | EffectTarget.ValueProvider,
         };
-
-        public EffectTarget GetEffectSelectionTarget(EffectPipeline pipeline) => pipeline == EffectPipeline.Picture
-            ? EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider
-                | (ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectTarget.Text : 0)
-            : (ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectTarget.Text
-                : ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip ? EffectTarget.VectorComponent : 0)
-                | EffectTarget.VectorPicture | EffectTarget.ValueProvider;
 
         public EffectTarget GetEffectTarget() => ClipType switch
         {
             ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
             ClipMode.AudioClip => EffectTarget.Audio,
-            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video | EffectTarget.VectorPicture,
-            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent | EffectTarget.VectorPicture,
-            _ => EffectTarget.Video | (SupportsNativeEffects ? EffectTarget.VectorPicture : 0)
+            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video | EffectTarget.VectorPicture | EffectTarget.ClipPosition,
+            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.ClipPosition,
+            _ => EffectTarget.Video | EffectTarget.ClipPosition | (SupportsNativeEffects ? EffectTarget.VectorPicture : 0)
         };
 
         public EffectTarget GetEffectSelectionTarget() => GetEffectTarget();

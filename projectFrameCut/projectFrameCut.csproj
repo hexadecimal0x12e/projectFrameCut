@@ -45,9 +45,11 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
 		<WindowsPackageType>MSIX</WindowsPackageType>
+		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
-		<AssemblyVersion>1.7.0.0</AssemblyVersion>
-		<FileVersion>1.7.0.0</FileVersion>
+		<AssemblyVersion>1.8.0.0</AssemblyVersion>
+		<FileVersion>1.8.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut</Product>
 		<Description>projectFrameCut Application</Description>
@@ -66,15 +68,6 @@
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-		<MauiXamlInflator>Runtime</MauiXamlInflator>
-	</PropertyGroup>
-	
-	<PropertyGroup Condition="'$(Configuration)' != 'Debug'">
-		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
-		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">

@@ -24,6 +24,7 @@
 
             <HorizontalStackLayout x:Name="TopCommandBar" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" Spacing="4" ZIndex="10">
                 <Picker x:Name="StagePicker" VerticalOptions="Center" SelectedIndexChanged="OnStageChanged" />
+                <Picker x:Name="CompositionPipelinePicker" IsVisible="False" VerticalOptions="Center" SelectedIndexChanged="OnCompositionPipelineChanged" />
                 <Button x:Name="CanvasActionsButton" Text="☰" VerticalOptions="Center" Clicked="OnCanvasActionsClicked"/>
                 <ActivityIndicator x:Name="PreviewBusyIndicator" IsVisible="False" IsRunning="False" VerticalOptions="Center"/>
             </HorizontalStackLayout>
@@ -39,6 +40,14 @@
                             AnchorX="0" AnchorY="0"
                             InputTransparent="False">
             </AbsoluteLayout>
+
+            <Border x:Name="StaticInputTooltip" IsVisible="False" InputTransparent="True"
+                    HorizontalOptions="Start" VerticalOptions="Start" ZIndex="20"
+                    BackgroundColor="#2d2d2d" Stroke="#555" StrokeThickness="1"
+                    StrokeShape="RoundRectangle 4" Padding="8" MaximumWidthRequest="320">
+                <Label x:Name="StaticInputTooltipText" TextColor="#f2c94c" FontSize="12"
+                       LineBreakMode="WordWrap"/>
+            </Border>
 
             <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect. Pan empty space to move view."
                    x:Name="InfoLabel" TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>

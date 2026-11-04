@@ -25,24 +25,61 @@ public partial class ExtensibilitySettingPage : ContentPage
     public PropertyPanelBuilder rootPPB;
     string AdvanceConfigPageViewing = "";
     string selectedTab = "UserPlugins";
+    bool building;
+    bool rebuildPending;
 
     public ExtensibilitySettingPage()
     {
         AdvanceConfigPageViewing = "";
+#if !WINDOWS
         BuildPPB();
+#endif
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
         AdvanceConfigPageViewing = "";
+#if WINDOWS
+        BuildPPB();
+#else
         if (externalRpcAllowed != ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC) BuildPPB();
+#endif
     }
 
     private bool externalRpcAllowed;
 
     async void BuildPPB()
     {
+        if (building)
+        {
+            rebuildPending = true;
+            return;
+        }
+        building = true;
+        try
+        {
+            do
+            {
+                rebuildPending = false;
+                await BuildPPBCoreAsync();
+            } while (rebuildPending);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Build extensibility settings", this);
+        }
+        finally
+        {
+            building = false;
+        }
+    }
+
+    async Task BuildPPBCoreAsync()
+    {
+#if WINDOWS
+        await WindowsAppExtensionService.RefreshAsync();
+#endif
         externalRpcAllowed = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC;
         if (!string.IsNullOrWhiteSpace(AdvanceConfigPageViewing))
         {
@@ -97,6 +134,9 @@ public partial class ExtensibilitySettingPage : ContentPage
         var ppb = new PropertyPanelBuilder();
         foreach (var item in PluginManager.LoadedPlugins.Where(c => !IsInternalPlugin(c.Value)))
         {
+#if WINDOWS
+            if (WindowsAppExtensionService.IsLoadedExtension(item.Value)) continue;
+#endif
             AddPlugin(ppb, item.Key, item.Value);
         }
 
@@ -116,8 +156,61 @@ public partial class ExtensibilitySettingPage : ContentPage
                     .AddButton($"RemoveFailedPlugin,{plugin.Key}", SettingLocalizedResources.Plugin_Remove);
             }
         }
-        return ppb.AddButton("addButton", SettingLocalizedResources.Plugin_AddOne);
+        ppb.AddButton("addButton", SettingLocalizedResources.Plugin_AddOne);
+#if WINDOWS
+        BuildWindowsAppExtensions(ppb);
+#endif
+        return ppb;
     }
+
+#if WINDOWS
+    private void BuildWindowsAppExtensions(PropertyPanelBuilder ppb)
+    {
+        ppb.AddSeparator().AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_WindowsExtensions, 20));
+        if (WindowsAppExtensionService.DiscoveryFailure is { } failure)
+            ppb.AddText(SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failure));
+        if (WindowsAppExtensionService.Plugins.Count == 0)
+            ppb.AddText(SettingLocalizedResources.Plugin_WindowsExtensions_None);
+        foreach (var extension in WindowsAppExtensionService.Plugins)
+        {
+            var item = extension.Item;
+            var isLoaded = PluginManager.LoadedPlugins.TryGetValue(item.Id, out var plugin)
+                && WindowsAppExtensionService.IsLoadedExtension(plugin)
+                && WindowsAppExtensionService.GetLoadedPluginRoot(item.Id) == extension.PublicRoot;
+            if (isLoaded) AddPlugin(ppb, item.Id, plugin!);
+            else ppb.AddSeparator().AddText(new TitleAndDescriptionLineLabel(item.Name, item.Description));
+            ppb.AddText(new SingleLineLabel(extension.Key, 12))
+                .AddText(item.Enabled ? SettingLocalizedResources.Plugin_WindowsExtensions_Enabled : SettingLocalizedResources.Plugin_FailLoad_Disabled);
+            if (extension.RequiresRestart)
+                ppb.AddText(SettingLocalizedResources.Plugin_WindowsExtensions_Restart);
+            else if (extension.HasConflict)
+                ppb.AddText(SettingLocalizedResources.Plugin_WindowsExtensions_Conflict);
+            else if (extension.Metadata is null && extension.Failure is null)
+                ppb.AddText(SettingLocalizedResources.Plugin_WindowsExtensions_Unavailable);
+            if ((extension.Failure ?? WindowsAppExtensionService.GetLoadFailure(extension)) is { } error)
+                ppb.AddText(SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(error));
+            if (!isLoaded && extension.IsAvailable && WindowsAppExtensionService.DiscoveryFailure is null
+                && WindowsAppExtensionService.IsPluginEngineEnabled)
+                ppb.AddButton(SettingLocalizedResources.Plugin_Enable(item.Name), async (_, _) => await SetWindowsAppExtensionEnabledAsync(extension.Key, true));
+            if (item.Enabled)
+                ppb.AddButton(SettingLocalizedResources.Plugin_Disable(item.Name), async (_, _) => await SetWindowsAppExtensionEnabledAsync(extension.Key, false));
+        }
+    }
+
+    private async Task SetWindowsAppExtensionEnabledAsync(string key, bool enabled)
+    {
+        try
+        {
+            await WindowsAppExtensionService.SetEnabledAsync(key, enabled);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Change Windows plugin extension '{key}'", this);
+            await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        BuildPPB();
+    }
+#endif
 
     private async Task<PropertyPanelBuilder> BuildPluginAdvanced()
     {
@@ -308,8 +401,11 @@ public partial class ExtensibilitySettingPage : ContentPage
               .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(name))
               .AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(name))
               //.AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(name)) //todo
-              .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
-              .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
+              .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir);
+#if WINDOWS
+            if (!WindowsAppExtensionService.IsLoadedExtension(plugin))
+#endif
+                ppb.AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
         }
 
 
@@ -529,8 +625,18 @@ public partial class ExtensibilitySettingPage : ContentPage
                     }
                 case "DisablePlugin":
                     {
-                        PluginService.DisablePlugin(plugin.PluginID);
-                        PluginManager.UnloadPlugin(plugin.PluginID);
+#if WINDOWS
+                        if (WindowsAppExtensionService.IsLoadedExtension(plugin))
+                        {
+                            var extension = WindowsAppExtensionService.Plugins.First(c => c.Item.Id == id && c.IsAvailable);
+                            await WindowsAppExtensionService.SetEnabledAsync(extension.Key, false);
+                        }
+                        else
+#endif
+                        {
+                            PluginService.DisablePlugin(plugin.PluginID);
+                            PluginManager.UnloadPlugin(plugin.PluginID);
+                        }
                         BuildPPB();
                         break;
                     }

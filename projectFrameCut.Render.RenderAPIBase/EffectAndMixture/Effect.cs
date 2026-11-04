@@ -16,9 +16,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     public interface IEffect : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
-        /// <summary>Whether identical complete inputs always produce identical outputs.</summary>
-        public bool IsDeterministic { get; }
-
         /// <summary>
         /// Indicates which plugin this effect comes from.
         /// </summary>
@@ -37,14 +34,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Never set this in your effect's code, this property has been set when you implement the specific effect interface, such as <see cref="INormalEffect"/>, <see cref="IContinuousEffect"/> and so on.
         /// </remarks>
         public EffectType TypeOfEffect { get; }
-
         /// <summary>
         /// Get how this effect is implemented.
         /// </summary>
         public EffectImplementType ImplementType { get; }
-
-        public bool AcceptsHwAccelPictures => this is IHwAccelPictureEffect;
-        public bool IsPictureTransportBoundary => false;
 
         /// <summary>
         /// Name of this effect. Most for display purpose.
@@ -82,6 +75,24 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         [JsonIgnore]
         public bool IsReorderable { get; }
 
+        /// <summary>Whether identical complete inputs always produce identical outputs.</summary>
+        [JsonIgnore]
+        public bool IsDeterministic { get; }
+
+        /// <summary>
+        /// Indicates whether this effect can accept hardware-accelerated pictures (e.g., GPU textures) as input. 
+        /// If true, the effect can process hardware-accelerated pictures directly; if false, the effect will require software-rendered pictures (e.g., CPU bitmaps) as input.
+        /// </summary>
+        [JsonIgnore]
+        public bool AcceptsHwAccelPictures => this is IHwAccelPictureEffect;
+
+        /// <summary>
+        /// Indicates whether this effect is a boundary for picture transport. 
+        /// If true, the effect will be rendered to a picture and passed to the next effect in the stack; if false, the effect will be processed in a streaming manner without intermediate picture transport.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsPictureTransportBoundary => false;
+
         /// <summary>
         /// Gets whether this effect can process a frame after it has been resized to the target canvas size.
         /// </summary>
@@ -106,13 +117,28 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public int RelativeHeight { get; set; }
 
         /// <summary>
+        /// Get the binded effect providing system's ID. 
+        /// Blank means this effect is not binded to any effect providing system (i.e. <see cref="IEffectProvider"/>).
+        /// </summary>
+        /// <remarks>
+        /// <b>DO NOT</b> set this property manually. IEffectProvider will do this.
+        /// </remarks>
+        public string? BindedEffectProvidingSystemID { get; set; }
+
+        /// <summary>
         /// Create a new effect with the given parameters.
         /// </summary>
         /// <param name="parameters"></param>
         /// <returns></returns>
         public IEffect WithParameters(Dictionary<string, object> parameters);
 
+        /// <summary>
+        /// Create a effect with the given parameters and bind it to the given effect providing system.
+        /// </summary>
+        /// <typeparam name="TPicture">The type of the picture to be used.</typeparam>
+        /// <returns></returns>
         public virtual IEffect WithPictureType<TPicture>() where TPicture : IPicture => TypedPictureEffect.Create<TPicture>(this);
+
 
         /// <summary>
         /// Get the info of this effect. Used in MCP calling in agent.
@@ -133,15 +159,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 EffectType = TypeOfEffect
             };
         }
-
-        /// <summary>
-        /// Get the binded effect providing system's ID. 
-        /// Blank means this effect is not binded to any effect providing system (i.e. <see cref="IEffectProvider"/>).
-        /// </summary>
-        /// <remarks>
-        /// <b>DO NOT</b> set this property manually. EffectGroup will do this.
-        /// </remarks>
-        public string? BindedEffectProvidingSystemID { get; set; }
 
         /// <summary>
         /// Compute a graph node for the current frame. Override for picture-to-value or non-picture primary inputs.
@@ -167,17 +184,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                     context.TargetWidth, context.TargetHeight, context.RelativeWidth, context.RelativeHeight),
                 IContinuousEffect continuous when context.Input is IPicture picture => continuous.Render(picture, context.Progress, context.TargetWidth, context.TargetHeight),
                 INormalEffect normal when context.Input is IPicture picture => normal.Render(picture, context.TargetWidth, context.TargetHeight),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support this input. Override Compute to handle it."),
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support automated processing in such case. Override Compute(EffectExecutionContext context) to handle it."),
             };
         }
     }
 
-    /// <summary>Computes all named outputs once for the current node invocation.</summary>
-    public interface IMultipleOutputEffect : IEffect
-    {
-        public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context);
-    }
-
+    /// <summary>
+    /// A basic effect that processes a picture and produces a new picture. This is the most common type of effect.
+    /// </summary>
     public interface INormalEffect : IEffect
     {
         EffectType IEffect.TypeOfEffect => EffectType.NormalEffect;
@@ -193,6 +207,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
     }
 
+    /// <summary>
+    /// Adjust the color of the picture. This is a special kind of effect that does not produce a new picture, but instead modifies the input picture in place.
+    /// </summary>
     public interface IColorAdjustEffect : INormalEffect
     {
         /// <summary>
@@ -228,5 +245,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         EffectType IEffect.TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
 
         bool IEffectArgumentField.IsDynamic => true;
+    }
+
+    /// <summary>Computes all named outputs once for the current node invocation.</summary>
+    public interface IMultipleOutputEffect : IEffect
+    {
+        public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context);
     }
 }

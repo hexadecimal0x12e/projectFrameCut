@@ -173,7 +173,7 @@ public partial class DraftPage
         uint duration = TransformProcessing.ReadDuration(provider.MetaData);
         var order = TransformProcessing.ReadEnum(provider.MetaData, TransformProcessing.OrderKey, TransformServices.DefaultRenderOrder);
         TransformProcessing.Configure(provider, mode == TransformInputMode.TwoInput ? TransformSide.Right : side, mode,
-            duration > 0 ? duration : Math.Max(1u, (uint)Math.Round(ProjectInfo.TargetFrameRate / 2d)),
+            duration > 0 ? duration : Math.Max(1u, (uint)Math.Round(ProjectInfo.TargetFrameRate * 1.5d)),
             mode == TransformInputMode.TwoInput ? (side == TransformSide.Left ? center.Id : neighbor!.Id) : Guid.Empty,
             order);
         var infos = GetTransformClipInfos();

@@ -166,7 +166,7 @@ namespace projectFrameCut.Services
                 List<PluginItem> items = File.Exists(itemsPath)
                     ? JsonSerializer.Deserialize<List<PluginItem>>(await File.ReadAllTextAsync(itemsPath)) ?? []
                     : [];
-                items.RemoveAll(item => item.Id == metadata.PluginID);
+                items.RemoveAll(item => !item.IsMsixExtension && item.Id == metadata.PluginID);
                 items.Add(new PluginItem
                 {
                     Name = metadata.Name,
@@ -183,6 +183,9 @@ namespace projectFrameCut.Services
                     BackendKind = metadata.BackendKind,
                 });
                 await File.WriteAllTextAsync(itemsPath, JsonSerializer.Serialize(items));
+#if WINDOWS
+                await WindowsAppExtensionService.RefreshAsync();
+#endif
 
                 var (newInstance, loadFailure) = await CreateFromID(metadata.PluginID);
                 if (newInstance is not null)
@@ -232,6 +235,11 @@ namespace projectFrameCut.Services
 
         private static async Task<(IPluginBase? Plugin, string FailReason)> CreateFromIDCoreAsync(string pluginID, PluginIsolationMode? isolationMode = null)
         {
+#if WINDOWS
+            var items = ReadPluginItems();
+            if (items.Any(c => c.IsMsixExtension && c.Id == pluginID) && items.All(c => c.IsMsixExtension || c.Id != pluginID))
+                return await WindowsAppExtensionService.CreateFromIDAsync(pluginID);
+#endif
             var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
             if (!Directory.Exists(pluginRoot))
             {
@@ -262,7 +270,7 @@ namespace projectFrameCut.Services
                         try { configuration = JsonSerializer.Deserialize<Dictionary<string, string>>(await File.ReadAllTextAsync(optionPath)) ?? []; }
                         catch (Exception ex) { Log(ex, $"Failed to load plugin configuration from {optionPath}"); }
                     }
-                    return (await PluginIsolationFactory.CreateExternalAsync(verification, pluginRoot, configuration), string.Empty);
+                    return (await PluginIsolationFactory.CreateExternalAsync(verification.Metadata, pluginRoot, configuration), string.Empty);
                 }
 
                 string? loadFailReason = null;
@@ -503,8 +511,47 @@ namespace projectFrameCut.Services
             }
         }
 
+        internal static void LoadRenderPlugins()
+        {
+#if WINDOWS
+            TaskHelper.SyncWait(() => WindowsAppExtensionService.RefreshAsync(persist: false), CancellationToken.None);
+#endif
+            if (SettingsManager.IsBoolSettingTrue("DisablePluginEngine")
+                || Environment.GetCommandLineArgs().Contains("--disablePlugins")
+                || File.Exists(Path.Combine(MauiProgram.BasicDataPath, "noplugin.flag"))) return;
+            var items = ReadPluginItems();
+            foreach (var item in items.Where(p => !p.IsMsixExtension && p.Enabled && !p.ShouldRemove && !PluginManager.LoadedPlugins.ContainsKey(p.Id)))
+            {
+                try
+                {
+                    var result = TaskHelper.SyncWait(() => CreateFromIDCoreAsync(item.Id), CancellationToken.None);
+                    if (result.Plugin is { } plugin)
+                    {
+                        PluginManager.LoadFrom(plugin);
+                    }
+                    else
+                    {
+                        FailedLoadPlugin[item.Id] = result.FailReason;
+                        Log($"Failed to load render plugin '{item.Id}': {result.FailReason}", "warning");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    FailedLoadPlugin[item.Id] = ex.Message;
+                    Log(ex, $"load render plugin '{item.Id}'");
+                }
+            }
+#if WINDOWS
+            foreach (var plugin in WindowsAppExtensionService.LoadEnabledPlugins())
+                PluginManager.LoadFrom(plugin);
+#endif
+        }
+
         public static List<IPluginBase> LoadUserPlugins(Func<string, string>? legacyPemGetter = null, IEnumerable<IPluginBase>? internalPlugins = null)
         {
+#if WINDOWS
+            TaskHelper.SyncWait(() => WindowsAppExtensionService.RefreshAsync(internalPlugins), CancellationToken.None);
+#endif
             List<IPluginBase> plugins = new();
             var itemsPath = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
             var items = File.Exists(itemsPath)
@@ -513,7 +560,7 @@ namespace projectFrameCut.Services
             CleanupOrphanPluginPayloads(items, internalPlugins ?? PluginManager.LoadedPlugins.Values);
             if (!File.Exists(itemsPath)) return plugins;
             bool someRemoved = false;
-            foreach (var item in items.Where(c => c.ShouldRemove))
+            foreach (var item in items.Where(c => !c.IsMsixExtension && c.ShouldRemove))
             {
                 someRemoved = true;
                 try
@@ -530,11 +577,11 @@ namespace projectFrameCut.Services
 
             if (someRemoved)
             {
-                items = items.RemoveRange(items.Where(c => c.ShouldRemove)).ToList();
+                items = items.RemoveRange(items.Where(c => !c.IsMsixExtension && c.ShouldRemove)).ToList();
                 File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"), JsonSerializer.Serialize(items));
             }
 
-            foreach (var item in items.Where(c => c.Enabled))
+            foreach (var item in items.Where(c => !c.IsMsixExtension && c.Enabled))
             {
                 try
                 {
@@ -581,13 +628,18 @@ namespace projectFrameCut.Services
 
 
 
+#if WINDOWS
+            plugins.AddRange(WindowsAppExtensionService.LoadEnabledPlugins());
+#endif
             return plugins;
         }
 
         public static void RemovePlugin(string pluginID)
         {
             var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
-            items.FirstOrDefault(i => i.Id == pluginID)?.ShouldRemove = true;
+            var item = items.FirstOrDefault(i => !i.IsMsixExtension && i.Id == pluginID)
+                ?? throw new InvalidOperationException("Only manually installed plugins can be removed here.");
+            item.ShouldRemove = true;
             File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
             var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
             if (PluginManager.LoadedPlugins.TryGetValue(pluginID, out var instance))
@@ -611,12 +663,12 @@ namespace projectFrameCut.Services
         {
             if (!File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) return new();
             var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
-            return items.Where(c => !c.Enabled).ToList();
+            return items.Where(c => !c.IsMsixExtension && !c.Enabled).ToList();
         }
 
         public static bool TryGetPluginItem(string pluginID, out PluginItem? plugin)
         {
-            plugin = ReadPluginItems().FirstOrDefault(c => c.Id == pluginID);
+            plugin = ReadPluginItems().OrderBy(c => c.IsMsixExtension).FirstOrDefault(c => c.Id == pluginID);
             return plugin is not null;
         }
 
@@ -685,7 +737,7 @@ namespace projectFrameCut.Services
         public static bool SupportsIsolationMode(PluginIsolationMode mode, PluginIsolationMode maximumSupportedMode) =>
             Enum.IsDefined(mode) && Enum.IsDefined(maximumSupportedMode) && (int)mode >= (int)maximumSupportedMode;
 
-        private static List<PluginItem> ReadPluginItems()
+        internal static List<PluginItem> ReadPluginItems()
         {
             var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
             if (!File.Exists(path)) return [];
@@ -807,7 +859,7 @@ namespace projectFrameCut.Services
             var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
             if (!File.Exists(path)) return;
             var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(path)) ?? new();
-            var item = items.FirstOrDefault(c => c.Id == pluginID);
+            var item = items.FirstOrDefault(c => !c.IsMsixExtension && c.Id == pluginID);
             if (item != null)
             {
                 item.Enabled = true;
@@ -820,7 +872,7 @@ namespace projectFrameCut.Services
             var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
             if (!File.Exists(path)) return;
             var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(path)) ?? new();
-            var item = items.FirstOrDefault(c => c.Id == pluginID);
+            var item = items.FirstOrDefault(c => !c.IsMsixExtension && c.Id == pluginID);
             if (item != null)
             {
                 item.Enabled = false;
@@ -836,6 +888,12 @@ namespace projectFrameCut.Services
 
         public class PluginItem
         {
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public string? MsixPackageFamilyName { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public string? MsixExtensionId { get; set; }
+            [JsonIgnore]
+            public bool IsMsixExtension => MsixPackageFamilyName is not null || MsixExtensionId is not null;
             public string Id { get; set; } = string.Empty;
             public string Name { get; set; } = string.Empty;
             public string Author { get; set; } = string.Empty;

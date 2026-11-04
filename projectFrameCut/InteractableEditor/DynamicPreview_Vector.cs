@@ -293,7 +293,7 @@ public sealed partial class DynamicPreview
                 geometry = CreateArcGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
                 break;
             case PolygonVectorSegment s:
-                geometry = CreatePolygonGeometry(s.Points, s.Holes, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
+                geometry = CreatePolygonGeometry(s, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
                 break;
             case PolylineVectorSegment s:
                 geometry = CreatePolylineGeometry(s.Points, scaleX, scaleY, originX, originY, hasRotation, cosA, sinA, deviceLimit);
@@ -501,46 +501,33 @@ public sealed partial class DynamicPreview
         return pg;
     }
 
-    private static Geometry CreatePolygonGeometry(Drawing.Vector.Point[] points, Drawing.Vector.Point[][]? holes,
+    private static Geometry CreatePolygonGeometry(PolygonVectorSegment polygon,
         float sx, float sy, float ox, float oy, bool rot, float cosA, float sinA, int deviceLimit)
     {
-        if (points is null || points.Length == 0)
+        if (polygon.Points is null || polygon.Points.Length == 0)
             return null!;
 
-        var pg = new PathGeometry();
-        if (holes is { Length: > 0 })
-            pg.FillRule = FillRule.EvenOdd;
-
-        var pts = points.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit)).ToArray();
-        var mainFigure = new PathFigure { StartPoint = pts[0], IsClosed = true, IsFilled = true };
-        if (pts.Length > 1)
+        var pg = new PathGeometry { FillRule = FillRule.Nonzero };
+        void AddContour(Drawing.Vector.Point[] points)
         {
-            var segPoints = new PointCollection();
-            for (int i = 1; i < pts.Length; i++) segPoints.Add(pts[i]);
+            if (points.Length < 3) return;
+            var pts = points.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit)).ToArray();
             ValidateSegmentExtent(
                 (float)(pts.Max(p => p.X) - pts.Min(p => p.X)),
                 (float)(pts.Max(p => p.Y) - pts.Min(p => p.Y)),
                 deviceLimit);
-            mainFigure.Segments.Add(new PolyLineSegment { Points = segPoints });
+            var figure = new PathFigure { StartPoint = pts[0], IsClosed = true, IsFilled = true };
+            var segPoints = new PointCollection();
+            for (int i = 1; i < pts.Length; i++) segPoints.Add(pts[i]);
+            figure.Segments.Add(new PolyLineSegment { Points = segPoints });
+            pg.Figures.Add(figure);
         }
-        pg.Figures.Add(mainFigure);
 
-        if (holes is not null)
-        {
-            foreach (var hole in holes)
-            {
-                if (hole is null || hole.Length == 0) continue;
-                var holePts = hole.Select(p => NToP(p.X, p.Y, sx, sy, ox, oy, rot, cosA, sinA, deviceLimit)).ToArray();
-                var holeFigure = new PathFigure { StartPoint = holePts[0], IsClosed = true, IsFilled = true };
-                if (holePts.Length > 1)
-                {
-                    var holeSegPoints = new PointCollection();
-                    for (int i = 1; i < holePts.Length; i++) holeSegPoints.Add(holePts[i]);
-                    holeFigure.Segments.Add(new PolyLineSegment { Points = holeSegPoints });
-                }
-                pg.Figures.Add(holeFigure);
-            }
-        }
+        AddContour(polygon.Points);
+        if (polygon.AdditionalContours is not null)
+            foreach (var contour in polygon.AdditionalContours) AddContour(contour);
+        if (polygon.Holes is not null)
+            foreach (var hole in polygon.Holes) AddContour(hole);
 
         return pg;
     }

@@ -1,4 +1,5 @@
 using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -364,7 +365,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// <summary>
     /// The data structure of a clip. Mostly used in JSON serialization/deserialization.
     /// </summary>
-    public class ClipDraftDTO
+    public class ClipDraftDTO : IJsonOnSerializing
     {
         public const string ProjectFrameRateMetaKey = "__ProjectFrameRate";
         public const string FrameSemanticVersionMetaKey = "__ClipFrameSemanticVersion";
@@ -403,9 +404,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
 
+        void IJsonOnSerializing.OnSerializing() => MetaData = ClipInitializationMetadata.ForPersistence(MetaData);
+
     }
 
-    public class SoundtrackDTO
+    public class SoundtrackDTO : IJsonOnSerializing
     {
         public string FromPlugin { get; set; } = string.Empty;
         public TrackMode TrackType { get; set; } = TrackMode.SpecialTrack;
@@ -425,6 +428,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
+
+        void IJsonOnSerializing.OnSerializing() => MetaData = ClipInitializationMetadata.ForPersistence(MetaData);
 
     }
 

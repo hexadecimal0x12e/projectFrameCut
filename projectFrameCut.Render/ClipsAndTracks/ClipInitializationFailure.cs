@@ -21,11 +21,11 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 /// </summary>
 public static class ClipInitializationFailure
 {
-    public const string FailedKey = "__ClipInitializationFailed";
-    public const string StageKey = "__ClipInitializationFailureStage";
-    public const string MessageKey = "__ClipInitializationFailureMessage";
-    public const string FailedEffectsKey = "__ClipInitializationFailedEffects";
-    public const string FailedEffectProvidersKey = "__ClipInitializationFailedEffectProviders";
+    public const string FailedKey = ClipInitializationMetadata.FailedKey;
+    public const string StageKey = ClipInitializationMetadata.StageKey;
+    public const string MessageKey = ClipInitializationMetadata.MessageKey;
+    public const string FailedEffectsKey = ClipInitializationMetadata.FailedEffectsKey;
+    public const string FailedEffectProvidersKey = ClipInitializationMetadata.FailedEffectProvidersKey;
 
     private const float IconToCanvasScale = 0.32f;    // 图标边长占画布较短边的比例
     private const float IconVerticalAnchor = 0.40f;   // 图标中心在画布中的垂直位置（略偏上，为下方错误文本留出空间）
@@ -97,12 +97,7 @@ public static class ClipInitializationFailure
     }
 
     public static void Clear(Dictionary<string, object>? extraData)
-    {
-        if (extraData is null) return;
-        extraData.Remove(FailedKey);
-        extraData.Remove(StageKey);
-        extraData.Remove(MessageKey);
-    }
+        => ClipInitializationMetadata.Clear(extraData);
 
     public static void ClearRecovered(IClip clip, params string[] stages)
     {

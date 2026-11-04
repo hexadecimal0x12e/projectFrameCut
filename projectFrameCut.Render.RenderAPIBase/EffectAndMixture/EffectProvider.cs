@@ -60,7 +60,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public EffectTarget Target { get; }
 
+        /// <summary>
+        /// Get all supported stages of the effect provider, which is used to determine where this effect can be applied.
+        /// </summary>
         public IReadOnlyList<EffectStage> SupportedStages { get; }
+
+        /// <summary>
+        /// Get the current stage for this effect provider.
+        /// </summary>
         public EffectStage Stage { get; set; }
 
         /// <summary>

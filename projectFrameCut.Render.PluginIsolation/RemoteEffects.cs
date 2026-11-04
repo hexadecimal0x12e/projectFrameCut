@@ -192,7 +192,7 @@ internal sealed class RemoteValueProviderEffect : RemoteEffectBase, IValueProvid
     public bool IsDynamic => true;
     public EffectArgumentFieldType FieldType => (EffectArgumentFieldType)_field.FieldType;
     public EffectPortTypeContract? TypeContract => IsolationFieldTypeCodec.ReadContract(_field.TypeContract);
-    public object? DataFormat => _field.DataFormat == 0 ? null : (PictureDataFormat)_field.DataFormat;
+    public object? DataFormat => IsolationFieldTypeCodec.ReadDataFormat(_field);
     public string DefaultValue { get => _field.DefaultValue; set => _field.DefaultValue = value; }
     public string MinValue { get => _field.MinimumValue; set => _field.MinimumValue = value; }
     public string MaxValue { get => _field.MaximumValue; set => _field.MaximumValue = value; }
