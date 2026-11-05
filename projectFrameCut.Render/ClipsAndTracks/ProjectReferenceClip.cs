@@ -16,7 +16,7 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 
 public sealed class ProjectReferenceClip : MarkingClip
 {
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private ProjectReferenceRuntime? runtime;
     private IClip[]? layers;
     public override ClipMode ClipType => ClipMode.ProjectReferenceClip;

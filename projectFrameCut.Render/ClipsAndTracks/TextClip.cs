@@ -148,7 +148,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         private const int MaxTextFrameCacheEntries = 1024;
-        private readonly object textFrameCacheLock = new();
+        private readonly Lock textFrameCacheLock = new();
         private readonly Dictionary<long, IPicture> textFrameCache = new();
 
         /// <summary>

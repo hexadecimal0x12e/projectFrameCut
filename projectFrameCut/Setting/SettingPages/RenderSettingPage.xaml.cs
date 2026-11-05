@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Services;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.HwAccelEngine;
@@ -53,6 +54,12 @@ public partial class RenderSettingPage : ContentPage
     {
         { SettingLocalizedResources.Render_OutputCacheBehavior_Chunk, "chunk" },
         { SettingLocalizedResources.Render_OutputCacheBehavior_Disabled, "disabled" },
+    };
+
+    Dictionary<string, bool> DynamicCalculationOptions = new()
+    {
+        { SettingLocalizedResources.Render_DynamicCalculationOriginal, false },
+        { SettingLocalizedResources.Render_DynamicCalculation, true },
     };
 
     Dictionary<string, string> ChunkSizeModeMapping = new Dictionary<string, string>
@@ -154,6 +161,10 @@ public partial class RenderSettingPage : ContentPage
             .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), RenderPageViewModel.PostRenderActionNames.ReverseLookup(RenderPageViewModel.GetPlatformPostRenderAction(Enum.TryParse<PostRenderAction>(GetSetting("render_DefaultPostRenderAction", "None"), out var postRenderAction) ? postRenderAction : PostRenderAction.None), Localized.RenderPage_PostRenderAction_None), null))
             .AddPicker("render_preferredAntiAliasMode", SettingLocalizedResources.Render_AntiAliasMode, AntiAliasModeMapping.Keys.ToArray(), AntiAliasModeMapping.ReverseLookup(GetSetting("render_preferredAntiAliasMode", "ssaa4x"), "SSAA 4x"), null)
             .AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true))
+            .AddPicker(DynamicEffectCalculation.EnabledSetting, SettingLocalizedResources.Render_DynamicCalculationMode,
+                DynamicCalculationOptions.Keys.ToArray(), DynamicCalculationOptions.ReverseLookup(IsBoolSettingTrueOrDefault(DynamicEffectCalculation.EnabledSetting, false), SettingLocalizedResources.Render_DynamicCalculationOriginal))
+            .AddEntry(DynamicEffectCalculation.StepsSetting, SettingLocalizedResources.Render_DynamicCalculationSteps,
+                GetSetting(DynamicEffectCalculation.StepsSetting, "10000"), "10000", c => c.Keyboard = Keyboard.Numeric)
             .AddCheckbox("render_reuseDynamicPreviewCache", SettingLocalizedResources.Render_ReuseDynamicPreviewCache, IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_HwAccelOption, SettingLocalizedResources.Render_HwAccelOption_Desc))
@@ -285,6 +296,19 @@ public partial class RenderSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case DynamicEffectCalculation.EnabledSetting:
+                    WriteSetting(args.Id, DynamicCalculationOptions.GetValueOrDefault(args.Value?.ToString() ?? "", false).ToString());
+                    await DraftPage.RefreshCalculationSettingsAsync();
+                    return;
+                case DynamicEffectCalculation.StepsSetting:
+                    if (!int.TryParse(args.Value?.ToString(), out int steps) || steps <= 0)
+                    {
+                        BuildPPB();
+                        return;
+                    }
+                    WriteSetting(args.Id, steps.ToString());
+                    await DraftPage.RefreshCalculationSettingsAsync();
+                    return;
                 case "render_DefaultBitRate":
                     WriteSetting(args.Id, RenderPageViewModel.BitRateOptions.GetValueOrDefault(args.Value?.ToString() ?? "", "auto"));
                     BuildPPB();

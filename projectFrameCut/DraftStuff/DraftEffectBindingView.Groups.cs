@@ -158,8 +158,9 @@ public partial class DraftEffectBindingView
             var p = providers[id];
             ports.AddRange(DynamicEffectBindings.InputFields(p).Select(f => new EffectGroupPort
                 { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {EffectProviderUIHelper.FieldName(p, f.Key, true)}", IsInput = true }));
-            ports.AddRange(p.GetOutputFields().Select(f => new EffectGroupPort
-                { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {EffectProviderUIHelper.FieldName(p, f.Key, false)}" }));
+            if (DynamicEffectBindings.CanBindOutput(p))
+                ports.AddRange(p.GetOutputFields().Select(f => new EffectGroupPort
+                    { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {EffectProviderUIHelper.FieldName(p, f.Key, false)}" }));
         }
         foreach (var id in group.ChildGroupIds) ports.AddRange(EffectGroupHelper.Copy(groups.Single(g => g.Id == id).Ports));
         return ports.Where(port => port.IsInput
@@ -253,6 +254,7 @@ public partial class DraftEffectBindingView
         UpdateClipValuesPanel();
         ConnectionsLayer.Invalidate();
         if (rebuild) OnBindingConfigurationChanged();
+        else RecordEditHistory();
     }
 
     private void SaveGroupPositions()

@@ -55,6 +55,7 @@ public partial class DraftEffectBindingView
             EffectGroupHelper.Write(_clip.ExtraData, _groups);
             UpdateGroupBounds();
             FitArrangedNodes(contentSize);
+            RecordEditHistory();
             Log($"Auto-arranged {layouts.Count} visible nodes and {_drawable.Connections.Count} bindings for clip {_clip.Id}, stage {_stage}.");
         }
         catch (Exception ex)

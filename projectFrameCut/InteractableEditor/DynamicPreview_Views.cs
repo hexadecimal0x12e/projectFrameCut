@@ -2,6 +2,7 @@ using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Controls;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.LivePreview;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Rendering;
@@ -96,6 +97,26 @@ namespace projectFrameCut.InteractableEditor
             target.IsVisible = source.IsVisible;
             target.ZIndex = source.ZIndex;
             target.AutomationId = source.AutomationId;
+        }
+
+        private static void SuppressCompositedPreviews(PreparedPreview[] previews)
+        {
+            IClip? top = null;
+            foreach (var preview in previews)
+            {
+                if (preview.Source is { } clip && preview.ViewFactory is not null && preview.ErrorMessage is null
+                    && PreviewRenderComposer.RequiresBackdrop(clip) && ClipArgumentBinding.ShouldRender(clip)
+                    && (top is null || ClipLayerOrder.BottomToTop.Compare(clip, top) > 0))
+                    top = clip;
+            }
+            if (top is null) return;
+            for (var i = 0; i < previews.Length; i++)
+            {
+                var preview = previews[i];
+                if (preview.Source is not { } clip || ClipLayerOrder.BottomToTop.Compare(clip, top) >= 0) continue;
+                previews[i] = new PreparedPreview(preview.ClipId, () => new ContentView(), null, clip,
+                    isTransparentAt: preview.IsTransparentAt, isPositionedClipPreview: preview.IsPositionedClipPreview);
+            }
         }
 
         private static PreparedPreview CreatePreparedClipPreview(IClip clip, PreviewFrameSource frame, bool positioned)

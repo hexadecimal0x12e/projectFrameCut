@@ -4,11 +4,11 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 namespace projectFrameCut.Render.Effect;
 
-internal sealed class DynamicMixtureGraph(DynamicEffectGraph graph) : IMixture, IDisposable
+internal sealed class FullDynamicMixturePipeline(FullDynamicEffectPipeline graph) : IMixture, IDisposable
 {
     public bool IsDeterministic => graph.IsDeterministic;
     public bool AcceptsHwAccelPictures => true;
-    public string TypeName => "__DynamicMixtureGraph__";
+    public string TypeName => "__FullDynamicMixturePipeline__";
     public string FromPlugin => graph.FromPlugin;
     public string Id { get => graph.Id; set => graph.Id = value; }
     public string Name { get => graph.Name; set => graph.Name = value; }
@@ -16,7 +16,7 @@ internal sealed class DynamicMixtureGraph(DynamicEffectGraph graph) : IMixture, 
     public int Index { get => graph.Index; set => graph.Index = value; }
     public int RelativeWidth { get => graph.RelativeWidth; set => graph.RelativeWidth = value; }
     public int RelativeHeight { get => graph.RelativeHeight; set => graph.RelativeHeight = value; }
-    public string? BindedEffectProvidingSystemID { get; set; } = "__DynamicMixtureGraph__";
+    public string? BindedEffectProvidingSystemID { get; set; } = "__FullDynamicMixturePipeline__";
     public EffectImplementType ImplementType => graph.ImplementType;
     public Dictionary<string, object> Parameters => graph.Parameters;
     public bool IsReorderable => false;
@@ -36,7 +36,7 @@ internal sealed class DynamicMixtureGraph(DynamicEffectGraph graph) : IMixture, 
             cancellationToken: ValueProviderFrameContext.CancellationToken,
             afterNode: ValueProviderFrameContext.NodeObserver, underPicture: basePicture, mixturePixelMode: targetPPB);
         var picture = (IPicture)result.Content;
-        if (ReferenceEquals(picture, topPicture) || ReferenceEquals(picture, basePicture)) picture = DynamicEffectGraph.CopyPicture(picture);
+        if (ReferenceEquals(picture, topPicture) || ReferenceEquals(picture, basePicture)) picture = EffectPictureProcessing.Copy(picture);
         if (result.Position.TargetX == 0 && result.Position.TargetY == 0 && picture.Width == targetWidth && picture.Height == targetHeight)
             return picture;
         try

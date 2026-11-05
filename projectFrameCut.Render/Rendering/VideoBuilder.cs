@@ -159,7 +159,7 @@ namespace projectFrameCut.Render.Rendering
         private int _hasPreviewFrame;
         private int _previewGenerationInProgress;
         private long _previewGeneration;
-        private readonly object _previewFileGate = new();
+        private readonly Lock _previewFileGate = new();
         private char _previewActiveSlot = 'B';
 
         /// <summary>

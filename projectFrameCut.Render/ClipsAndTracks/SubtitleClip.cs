@@ -16,7 +16,7 @@ public class SubtitleClip : TextClip, IClip
     public override ClipMode ClipType => ClipMode.SubtitleClip;
     public SubtitleData SubtitleData { get; set; } = new();
 
-    private readonly object subtitleLock = new();
+    private readonly Lock subtitleLock = new();
     private SubtitleData? preparedData;
     private SubtitleCue[] cues = [];
     private RichTextEntry[] entries = [];

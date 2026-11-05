@@ -126,7 +126,7 @@ internal static class ExternalVideoSourceRegistry
     {
         private IReadOnlyDictionary<string, ExternalVideoSourceDescriptor> _sources = new Dictionary<string, ExternalVideoSourceDescriptor>();
         private readonly ConcurrentDictionary<Guid, string> _instances = new();
-        private readonly object _authorizationGate = new();
+        private readonly Lock _authorizationGate = new();
         private readonly SemaphoreSlim _instanceGate = new(1, 1);
         private long _authorizationValidUntil;
         private bool _authorized;

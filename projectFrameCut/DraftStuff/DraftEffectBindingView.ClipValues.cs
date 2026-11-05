@@ -2,9 +2,7 @@
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
-using System.Text.Json;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -12,6 +10,7 @@ public partial class DraftEffectBindingView
 {
     private string _endpointName = "";
     private EffectArgumentFieldType _endpointType = EffectArgumentFieldType.Numeric;
+    private bool _creatingVariable = true;
     private static readonly EffectArgumentFieldType[] EndpointTypes =
     [
         EffectArgumentFieldType.Numeric, EffectArgumentFieldType.Integer, EffectArgumentFieldType.UnsignedInteger,
@@ -44,10 +43,22 @@ public partial class DraftEffectBindingView
         ClipValuesPanel.Children.Clear();
         ClipValuesContent.IsVisible = _clip is not null && _page is not null;
         if (_clip is null || _page is null) return;
-        var endpointTypes = EndpointTypes.Where(t => (!t.IsContent() || t == _stage.GetContentType())
+        var endpointTypes = EndpointTypes.Where(t => (!_creatingVariable || EffectVariableProvider.SupportsType(t))
+            && (!t.IsContent() || t == _stage.GetContentType())
             && (t != EffectArgumentFieldType.AudioSample || ValueProviderFrameContext.SupportsAudioSample(_stage))).ToArray();
         if (!endpointTypes.Contains(_endpointType)) _endpointType = EffectArgumentFieldType.Numeric;
-        ClipValueCreationPanel.Children.Add(new Label { Text = Localized.Effect_EndpointOutputs, FontAttributes = FontAttributes.Bold });
+        var kind = new Picker { ItemsSource = new[] { Localized.Effect_Variables, Localized.Effect_ValuePassThrough }, SelectedIndex = _creatingVariable ? 0 : 1 };
+        kind.SelectedIndexChanged += (_, _) =>
+        {
+            _creatingVariable = kind.SelectedIndex == 0;
+            UpdateClipValuesPanel();
+        };
+        ClipValueCreationPanel.Children.Add(kind);
+        EndpointCrossClipPanel.IsVisible = !_creatingVariable;
+        CreateValueEndpointButton.Text = _creatingVariable ? Localized.Effect_CreateVariable : Localized.Effect_CreateEndpoint;
+        CreateValueEndpointButton.IsEnabled = !_creatingVariable || CanManageVariables;
+        if (_creatingVariable && !CanManageVariables)
+            ClipValueCreationPanel.Children.Add(new Label { Text = Localized.Effect_VariableRequiresDynamic, FontSize = 12 });
         var name = new Entry { Placeholder = Localized.Effect_EndpointName, Text = _endpointName };
         name.TextChanged += (_, e) => _endpointName = e.NewTextValue ?? "";
         ClipValueCreationPanel.Children.Add(name);
@@ -57,6 +68,8 @@ public partial class DraftEffectBindingView
             if (type.SelectedIndex >= 0) _endpointType = endpointTypes[type.SelectedIndex];
         };
         ClipValueCreationPanel.Children.Add(type);
+        ClipValuesPanel.Children.Add(new Label { Text = Localized.Effect_EndpointInputs, FontAttributes = FontAttributes.Bold });
+        AddVariableRows(ClipValuesPanel);
         foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && IsCurrentPipelineProvider(p)) ?? [])
         {
             var row = new HorizontalStackLayout { Spacing = 4 };
@@ -78,8 +91,7 @@ public partial class DraftEffectBindingView
             row.Children.Add(remove);
             ClipValuesPanel.Children.Add(row);
         }
-        ClipValuesPanel.Children.Add(new Label { Text = Localized.Effect_EndpointInputs, FontAttributes = FontAttributes.Bold });
-        bool any = false;
+        bool any = GetVariables().Count > 0 || _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Any(p => p.IsExport && IsCurrentPipelineProvider(p)) == true;
         foreach (var (source, output) in GetAvailableClipValueInputs())
         {
             any = true;
@@ -111,21 +123,25 @@ public partial class DraftEffectBindingView
         SourceEndpointId = output.Id, ValueType = output.ValueType,
     });
 
-    private void OnCreateClipValueEndpointClicked(object? sender, EventArgs e) => AddEndpointNode(new ClipValueExportProvider
+    private void OnCreateClipValueEndpointClicked(object? sender, EventArgs e)
     {
-        Name = string.IsNullOrWhiteSpace(_endpointName) ? Localized.Effect_EndpointName : _endpointName.Trim(),
-        ValueType = _endpointType,
-        AllowCrossClip = EndpointAllowCrossClipCheckBox.IsChecked,
-    });
+        if (_creatingVariable) CreateVariable();
+        else AddEndpointNode(new ClipValueExportProvider
+        {
+            Name = string.IsNullOrWhiteSpace(_endpointName) ? Localized.Effect_EndpointName : _endpointName.Trim(),
+            ValueType = _endpointType,
+            AllowCrossClip = EndpointAllowCrossClipCheckBox.IsChecked,
+        });
+    }
 
-    private void AddEndpointNode(ClipValueEndpointProvider provider)
+    private void AddEndpointNode(IEffectProvider provider)
     {
         if (_clip is null) return;
         provider.Stage = _stage;
         AssignCurrentPipeline(provider);
         _clip.EffectProviders ??= new();
         _clip.EffectProviders[provider.Id] = provider;
-        var node = new NodeViewModel { Id = provider.Id, Kind = NodeKind.Effect, Provider = provider, DisplayName = provider.Name };
+        var node = new NodeViewModel { Id = provider.Id, Kind = NodeKind.Effect, Provider = provider, DisplayName = ProviderNodeName(provider) };
         node.BuildPortsFromProvider();
         var position = FindNonOverlappingPosition(node, 250 + _nodes.Count * 30, 150);
         node.X = position.X;
@@ -136,7 +152,7 @@ public partial class DraftEffectBindingView
         OnBindingConfigurationChanged();
         RebuildConnections();
         UpdateClipValuesPanel();
-        Log($"Added clip endpoint {provider.Id} ({provider.TypeName}) on {_clip.Id}.");
+        Log($"Added value node {provider.Id} ({provider.TypeName}) on {_clip.Id}.");
     }
 
     private void BuildEndpointProperties(NodeViewModel node, IClipValueEndpointProvider endpoint)
@@ -206,7 +222,7 @@ public partial class DraftEffectBindingView
     {
         if (_clip?.EffectProviders is not { } providers) return [];
         var diagnostics = _fieldTypes is null ? new List<EffectBindingHelper.BindingDiagnostic>()
-            : EffectBindingHelper.ValidateBindings(providers, _fieldTypes).ToList();
+            : EffectBindingHelper.ValidateBindings(providers, _fieldTypes, DynamicEffectCalculation.Enabled(_clip.ExtraData)).ToList();
         foreach (var endpoint in providers.Values.OfType<IClipValueEndpointProvider>())
         {
             if (endpoint.IsExport)
@@ -234,42 +250,5 @@ public partial class DraftEffectBindingView
         else if (_clip is not null && source.Id != _clip.Id && !Precedes(source, _clip)) status = Localized.Effect_EndpointOrderInvalid;
         else return null;
         return $"「{(output is { IsExport: true } ? $"{source.DisplayName} / {output.Name}" : source.DisplayName)}」：{status}";
-    }
-
-    private IClip[] CreateEndpointPreviewClips()
-    {
-        if (_clip is null || _page is null) return [];
-        var clips = new List<IClip>();
-        try
-        {
-            foreach (var element in _page.Clips.Values.Where(c => c.ClipType != ClipMode.MarkingClip))
-            {
-                var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(_page, element, rebuildEffects: false);
-                clips.Add(PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto)));
-            }
-            return clips.ToArray();
-        }
-        catch
-        {
-            foreach (var clip in clips)
-            {
-                try { clip.Dispose(); }
-                catch (Exception ex) { Log(ex, "Release endpoint preview clip", this); }
-            }
-            throw;
-        }
-    }
-
-    private sealed class EndpointPreviewClips(IClip[] clips) : IDisposable
-    {
-        public IClip[] Clips => clips;
-        public void Dispose()
-        {
-            foreach (var clip in clips)
-            {
-                try { clip.Dispose(); }
-                catch (Exception ex) { Log(ex, "Release endpoint preview clip", this); }
-            }
-        }
     }
 }

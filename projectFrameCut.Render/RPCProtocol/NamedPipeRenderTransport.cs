@@ -345,7 +345,7 @@ public sealed class NamedPipeRenderServer(
     private sealed class AdditionalPipeHost(IRenderService service, CancellationToken cancellationToken, string? requestDirectory, Func<string, bool, NamedPipeServerStream>? additionalPipeFactory, Func<bool>? externalPipeSingleConnection, Func<bool> externalRpcAllowed, Func<bool> externalSourcesAllowed, bool allowTestingBackendCrash, Func<string, string[], NamedPipeServerStream>? externalRequestPipeFactory) : IRenderService, IAsyncDisposable, IExternalRpcAuthorizationHost
     {
         private readonly CancellationTokenSource _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
         private readonly List<Task> _listeners = [];
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _pipeLifetimes = new();
         private readonly ExternalRpcRequestBroker? _requests = requestDirectory is null ? null : new(requestDirectory, [], cancellationToken, externalRpcAllowed);

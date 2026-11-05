@@ -6,7 +6,7 @@ namespace projectFrameCut.Render.Text;
 public static class TextStylePronunciation
 {
     public static string? DictionaryDirectory { get; set; }
-    private static readonly object JapaneseLock = new();
+    private static readonly Lock JapaneseLock = new();
     private static KawazuConverter? japanese;
     private static int reportedFailure;
 

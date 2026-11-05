@@ -93,6 +93,7 @@ public sealed partial class DynamicPreview
                         for (var i = 0; i < ordered.Length; i++)
                             prepared[i] = CreatePreparedClipPreview(ClipArgumentBinding.InitializeFrame(ordered[i].Clip, frameIndex), frames[i],
                                 ProjectReferenceRuntime.IsCanvasClip(ordered[i].Clip)
+                                || PreviewRenderComposer.RequiresBackdrop(ordered[i].Clip)
                                 || TransformProcessing.HasActiveTransform(ordered[i].Clip, clips, frameIndex));
                     }
                     else
@@ -114,6 +115,7 @@ public sealed partial class DynamicPreview
                 }
                 token.ThrowIfCancellationRequested();
                 if (checkVersion && prepareVersion != Volatile.Read(ref _prepareVersion)) return null;
+                SuppressCompositedPreviews(prepared);
                 CacheOverlayPreparedPreviews(prepared);
                 return prepared;
             }
@@ -145,6 +147,7 @@ public sealed partial class DynamicPreview
         try
         {
             bool canvasPreview = ProjectReferenceRuntime.IsCanvasClip(request.Clip)
+                || PreviewRenderComposer.RequiresBackdrop(request.Clip)
                 || TransformProcessing.HasActiveTransform(request.Clip, _clips ?? [request.Clip], frameIndex);
             if (_previewer is not null)
             {

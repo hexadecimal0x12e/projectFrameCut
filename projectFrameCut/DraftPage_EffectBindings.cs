@@ -174,10 +174,9 @@ public partial class DraftPage
     }
 
     private static IReadOnlyList<EffectBindingHelper.BindingDiagnostic> GuiBindingErrors(
-        Dictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution types)
+        Dictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution types, GuiEffectClip clip)
     {
-        return EffectBindingHelper.ValidateBindings(providers, types)
-            .Concat(DynamicEffectBindings.Validate(providers, types))
+        return EffectBindingHelper.ValidateBindings(providers, types, DynamicEffectCalculation.Enabled(clip.ExtraData))
             .Distinct()
             .ToArray();
     }
@@ -302,7 +301,7 @@ public partial class DraftPage
         List<EffectGroup> groups, EffectFieldTypeResolution types)
     {
         var outputs = new List<object>();
-        var diagnostics = GuiBindingErrors(providers, types).ToList();
+        var diagnostics = GuiBindingErrors(providers, types, clip).ToList();
         foreach (var provider in providers.Values)
         {
             if (provider.IsFinalOutputSource())
@@ -719,7 +718,7 @@ public partial class DraftPage
                 }
         }
 
-        var before = GuiBindingErrors(providers, await EffectFieldTypeResolution.ResolveAsync(providers, ct)).ToHashSet();
+        var before = GuiBindingErrors(providers, await EffectFieldTypeResolution.ResolveAsync(providers, ct), clip).ToHashSet();
         Guid resultProvider = Guid.Empty, resultGroup = Guid.Empty;
         bool endpointResult = false, stepResult = false;
         switch (operation)
@@ -1233,7 +1232,7 @@ public partial class DraftPage
         {
             throw new InvalidOperationException("The clip effect graph changed during the request. Read it again before retrying.");
         }
-        var errors = GuiBindingErrors(providers, types);
+        var errors = GuiBindingErrors(providers, types, clip);
         var introduced = errors.Where(e => e.Code != "BrokenActivePath" && !before.Contains(e)).ToArray();
         if (introduced.Length != 0)
         {
@@ -1241,7 +1240,7 @@ public partial class DraftPage
         }
         if (clip.Live is { } live)
         {
-            var effects = errors.Count == 0 ? EffectBindingHelper.RebuildAllEffects(providers, live.Effects) : null;
+            var effects = errors.Count == 0 ? EffectBindingHelper.RebuildAllEffects(providers, live.Effects, extraData: clip.ExtraData) : null;
             live.EffectProviders = providers;
             ClipInfoBuilder.SaveTextStyleClipArguments(live);
             if (effects is not null) live.Effects = effects;

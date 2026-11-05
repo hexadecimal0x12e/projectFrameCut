@@ -131,14 +131,12 @@ public class RemoteEffectProvider : IEffectProvider
             : IPluginBase.EffectImplementations.Create<TPicture>(typeName, requested, DefaultImplementType, parameters)];
     }
 
+    public IEffect[] Build(EffectImplementType implementation, Dictionary<string, object> parameters, object? dataFormat = null) =>
+        [IPluginBase.EffectImplementations.CreateForDataFormat(TypeName, implementation, DefaultImplementType, parameters, dataFormat)];
+
     public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
     {
-        MetaData[EffectProviderBase.ImplementTypeParameterKey] = implementType;
-        if (parameters is not null)
-            foreach (var item in parameters)
-                if (Fields.TryGetValue(item.Key, out var field))
-                    Fields[item.Key] = new StaticEffectArgumentField(item.Value, field.FieldType) { TypeContract = field.TypeContract, DataFormat = field.DataFormat };
-        return Build().First();
+        return IPluginBase.EffectImplementations.Create(TypeName, implementType, DefaultImplementType, parameters ?? new());
     }
 
     protected IsolationProviderState CreateState(List<IsolationPayloadLease> leases)

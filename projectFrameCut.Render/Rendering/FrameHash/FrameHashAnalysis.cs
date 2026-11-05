@@ -39,6 +39,8 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
             return new
             {
                 State = DescribeClipState(clip, layout),
+                DynamicCalculation = DynamicEffectCalculation.Enabled(clip.ExtraData),
+                CalculationSteps = DynamicEffectCalculation.MaxSteps,
                 Module = clip.GetType().Module.ModuleVersionId,
                 Source = DescribeSource(clip),
                 Arguments = clip.ArgumentFields.Where(p => layout || !layoutProperties.Contains(p.Key))
@@ -64,7 +66,8 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
                 Speed = clip.SpeedVarianceProviderInstance is { } speed ? DescribeBoundEffect(clip, speed, layout) : null,
                 Mixture = layout && mixture && clip.MixtureInstance is { } mixer && !DynamicEffectBindings.IsGraphEffect(mixer)
                     ? DescribeBoundEffect(clip, mixer, true) : null,
-                Backdrop = clip is MaskClip ? DescribeBackdrop(clip) : null,
+                Backdrop = clip is MaskClip || layout && mixture && PreviewRenderComposer.RequiresBackdrop(clip)
+                    ? DescribeBackdrop(clip) : null,
                 Transforms = transforms ? DescribeTransforms(clip) : null,
                 EffectHelper.ForcePreferToType, EffectHelper.DefaultImplementsType,
                 PreferredPlugins = RenderAPIBase.Plugins.IPluginBase.EffectImplementations.PreferredPlugins
@@ -95,7 +98,9 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
 
     private static IEnumerable<IEffect> Effects(IClip clip) => (clip.EffectsInstances ?? []).Where(e => e.Enabled).SelectMany(e => e switch
     {
-        DynamicEffectGraph graph => graph.NodeEffects,
+        IRenderEffectPipeline graph => graph.NodeEffects,
+        FullDynamicVectorPipeline graph => graph.NodeEffects,
+        FullDynamicMixturePipeline graph => graph.NodeEffects,
         NativeDynamicEffectGraph graph => graph.NodeEffects,
         DynamicMixtureGraph graph => graph.NodeEffects,
         _ => new[] { e },

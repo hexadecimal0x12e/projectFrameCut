@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
@@ -188,7 +188,8 @@ namespace projectFrameCut.Render.Rendering
                 .Where(found => found is not null)
                 .SelectMany(found => new[] { found!.Value.Owner.Id, TransformProcessing.ReadNextClip(found.Value.Provider.MetaData) })
                 .Concat(ClipValuePassThrough.GetSourceClipIds(clip))
-                .Concat(clip is MaskClip ? video.Where(c => ClipLayerOrder.BottomToTop.Compare(c, clip) < 0).Select(c => c.Id) : [])
+                .Concat(clip is MaskClip || PreviewRenderComposer.RequiresBackdrop(clip)
+                    ? video.Where(c => ClipLayerOrder.BottomToTop.Compare(c, clip) < 0).Select(c => c.Id) : [])
                 .Where(id => id != Guid.Empty && id != clip.Id).Distinct().ToArray();
 
             if (dependencyIds.Length == 0)
@@ -332,12 +333,23 @@ namespace projectFrameCut.Render.Rendering
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if ((clipLocalOutput || beforeLayoutOutput) && effect.Name is ("__Internal_Place__" or "__Internal_Resize__")) continue;
-                        if (effect is DynamicEffectGraph graph)
+                        if (effect is IRenderEffectPipeline graph)
                         {
-                            var graphResult = graph.Evaluate(effected, srcFrame.ParentClip, frameIndex, targetWidth, targetHeight,
-                                layoutRelativeWidth, layoutRelativeHeight, clipPos, preserveAspect, ProcessEffectFromCanvas,
-                                cancellationToken, AfterEffectCallback is null && afterNodeCallback is null ? null : ObserveNode,
-                                keepHwAccelPicture: true);
+                            EffectPipelineFrameResult graphResult;
+                            try
+                            {
+                                graphResult = graph.Evaluate(effected, srcFrame.ParentClip, frameIndex, targetWidth, targetHeight,
+                                    layoutRelativeWidth, layoutRelativeHeight, clipPos, preserveAspect, ProcessEffectFromCanvas,
+                                    cancellationToken, AfterEffectCallback is null && afterNodeCallback is null ? null : ObserveNode,
+                                    keepHwAccelPicture: true);
+                            }
+                            catch (ObjectDisposedException ex)
+                            {
+                                // 图在合成途中被其他路径释放（例如 clip 被标记初始化失败并清空效果）：跳过该效果，保留当前画面。
+                                Logger.Log(ex, $"Effect graph of clip {srcFrame.ParentClip.Id} was released while composing frame {frameIndex}; skipping it.",
+                                    nameof(Timeline));
+                                continue;
+                            }
                             Track(effected);
                             effected = Track(graphResult.Picture);
                             clipPos = graphResult.Position;
@@ -457,7 +469,7 @@ namespace projectFrameCut.Render.Rendering
                     if (result is null)
                     {
                         if (!needsPlacement && (transparentBackground || !effected.HasAlphaChannel)
-                            && mixer is not (DynamicMixtureGraph or ReferenceMixture))
+                            && !PreviewRenderComposer.RequiresBackdrop(srcFrame.ParentClip))
                         {
                             result = effected;
                         }

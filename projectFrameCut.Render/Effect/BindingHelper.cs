@@ -258,7 +258,8 @@ namespace projectFrameCut.Render.Effect
                     FieldType = descriptor.FieldType,
                     TypeContract = descriptor.TypeContract,
                     DataFormat = descriptor.DataFormat,
-                    Value = (provider is AdvancedMathEffectProvider && (fieldId is "A" or "B" or "C")
+                    Value = (provider is EffectVariableProvider ? EffectVariableProvider.ConvertValue(descriptor.FieldType.BaseType(), rawValue)
+                        : provider is AdvancedMathEffectProvider && (fieldId is "A" or "B" or "C")
                         ? AdvancedMathEffectProvider.ParseNumber(rawValue)
                         : descriptor.TypeContract is not null ? EffectFieldTypes.ConvertInput(descriptor.FieldType, rawValue)
                         : descriptor.FieldType.HasFlag(EffectArgumentFieldType.Any)
@@ -283,12 +284,12 @@ namespace projectFrameCut.Render.Effect
         /// 被内联的值提供器不再被 <see cref="RebuildAllEffects"/> 构建，从而不会进入渲染管线。
         /// </remarks>
         private static HashSet<Guid> InlineValueProvidersIntoConsumers(IReadOnlyDictionary<Guid, IEffectProvider> providers,
-            bool dynamicGraph = false, InlineValueGraph? inlineValues = null)
+            bool dynamicGraph = false, InlineValueGraph? inlineValues = null, bool forward = false)
         {
             var inlinedIds = new HashSet<Guid>();
             if (providers.Count == 0) return inlinedIds;
 
-            foreach (var consumer in SortEffectProviders(providers))
+            foreach (var consumer in (forward ? providers.Values.ToList() : SortEffectProviders(providers)))
             {
                 if (dynamicGraph && DynamicEffectBindings.IsGraphProvider(consumer)) continue;
                 if (consumer.Fields is null) continue;
@@ -377,8 +378,10 @@ namespace projectFrameCut.Render.Effect
         public static Dictionary<string, IEffect>? RebuildAllEffects(
             IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders,
             Dictionary<string, IEffect>? existingEffects,
-            RenderAPIBase.ClipAndTrack.IClip? clip = null, object? inputDataFormat = null)
+            RenderAPIBase.ClipAndTrack.IClip? clip = null, object? inputDataFormat = null, IReadOnlyDictionary<string, object>? extraData = null)
         {
+            if (DynamicEffectCalculation.Enabled(extraData ?? clip?.ExtraData) && effectProviders is not null)
+                return FullDynamicEffectPipelineBuilder.Build(effectProviders, existingEffects, clip, inputDataFormat);
             var newEffects = new Dictionary<string, IEffect>();
             bool dynamicGraph = DynamicEffectBindings.RequiresGraph(effectProviders);
             InlineValueGraph? inlineValues = null;
@@ -408,7 +411,7 @@ namespace projectFrameCut.Render.Effect
                     MaterializeFields(effectProviders.Values);
                     types = new(effectProviders, inputDataFormat: inputDataFormat);
                     inlineValues = dynamicGraph ? new InlineValueGraph(effectProviders, types) : null;
-                    if (dynamicGraph && ValidateBindings(effectProviders, types) is { Count: > 0 } errors)
+                    if (dynamicGraph && ValidateBindings(effectProviders, types, false) is { Count: > 0 } errors)
                         throw new InvalidOperationException("Invalid effect graph: " + string.Join(" ", errors.Select(e => e.Message)));
                     var activePictureProviders = GetActivePictureProviderIds(effectProviders, types);
                     var inlinedProviderIds = InlineValueProvidersIntoConsumers(effectProviders, dynamicGraph, inlineValues);
@@ -824,11 +827,11 @@ namespace projectFrameCut.Render.Effect
         }
 
         /// <summary>Validates stored bindings without mutating them.</summary>
-        public static IReadOnlyList<BindingDiagnostic> ValidateBindings(IReadOnlyDictionary<Guid, IEffectProvider>? providers, EffectFieldTypeResolution? types = null)
+        public static IReadOnlyList<BindingDiagnostic> ValidateBindings(IReadOnlyDictionary<Guid, IEffectProvider>? providers, EffectFieldTypeResolution? types = null, bool forward = false)
         {
             var diagnostics = new List<BindingDiagnostic>();
             if (providers is null) return diagnostics;
-            if (DynamicEffectBindings.RequiresGraph(providers)) return DynamicEffectBindings.Validate(providers, types);
+            if (forward || DynamicEffectBindings.RequiresGraph(providers)) return DynamicEffectBindings.Validate(providers, types, forward);
 
             if (providers.Values.OfType<ClipArgumentProvider>().Count() > 1)
                 diagnostics.Add(new(null, "MultipleClipArguments", "A clip can only have one argument provider."));

@@ -80,7 +80,7 @@ namespace projectFrameCut.DraftStuff
                 clip.Effects.Remove(InternalRotationID);
                 Log($"Migrated rotation for clip {clip.Id}: {clip.Rotation} degrees.");
             }
-            var effects = EffectBindingHelper.RebuildAllEffects(clip.EffectProviders, clip.Effects);
+            var effects = EffectBindingHelper.RebuildAllEffects(clip.EffectProviders, clip.Effects, extraData: clip.ExtraData);
             if (effects != null) clip.Effects = effects;
         }
 
@@ -125,7 +125,7 @@ namespace projectFrameCut.DraftStuff
             foreach (var p in providerSnapshot.Values)
                 if (string.IsNullOrWhiteSpace(p.Name)) p.Name = localizedProviderNames.GetValueOrDefault(p.TypeName, p.TypeName);
             var types = providerSnapshot.Count > 0 ? await EffectFieldTypeResolution.ResolveAsync(providerSnapshot) : null;
-            var bindingDiagnostics = await Task.Run(() => EffectBindingHelper.ValidateBindings(providerSnapshot, types));
+            var bindingDiagnostics = await Task.Run(() => EffectBindingHelper.ValidateBindings(providerSnapshot, types, DynamicEffectCalculation.Enabled(clip.ExtraData)));
             var diagnosticsByProvider = bindingDiagnostics.Where(d => d.ProviderId.HasValue).ToLookup(d => d.ProviderId!.Value);
             var mixturePlaceholder = stage == EffectStage.Composition && clip.ClipType != ClipMode.AudioClip
                 && !providerSnapshot.Values.Any(p => p.TypeOfEffect == EffectType.MixtureProvider)
@@ -259,7 +259,7 @@ namespace projectFrameCut.DraftStuff
                 }
 
                 var inputOptions = types is null ? new Dictionary<Guid, List<string>>()
-                    : await Task.Run(() => BuildInputCandidateSources(sortedProviders.Select(p => p.Value).ToArray(), providerSnapshot, types, showAllEffect));
+                    : await Task.Run(() => BuildInputCandidateSources(sortedProviders.Select(p => p.Value).ToArray(), providerSnapshot, types, showAllEffect, DynamicEffectCalculation.Enabled(clip.ExtraData)));
                 var outputTargets = new Dictionary<string, List<string>>();
                 foreach (var p in providerSnapshot.Values)
                 {
@@ -603,7 +603,7 @@ namespace projectFrameCut.DraftStuff
                                                         [bundleId] = new Dictionary<string, string>(inProvider.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = source },
                                                     });
                                                     if (version != inputEditVersions[bundleId] || !ReferenceEquals(clip.EffectProviders?.GetValueOrDefault(bundleId), inProvider)) return;
-                                                    if (!candidate.AreInputsCompatible(inProvider) || candidate.Diagnostics.Count > 0)
+                                                    if (!candidate.AreInputsCompatible(inProvider) || DynamicEffectCalculation.HasTypeErrors(candidate, clip.ExtraData))
                                                     {
                                                         Log($"Rejected effect input {source} for provider {bundleId} on clip {clip.Id}.", "warning");
                                                         handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -734,7 +734,7 @@ namespace projectFrameCut.DraftStuff
         }
 
         private static Dictionary<Guid, List<string>> BuildInputCandidateSources(IReadOnlyList<IEffectProvider> targets,
-            IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution types, bool showInternal)
+            IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution types, bool showInternal, bool forward)
         {
             var outputs = providers.Values.Where(p => showInternal || !p.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))
                 .SelectMany(p => types.GetContext(p.Id).State.Outputs.Keys.Select(key =>
@@ -750,9 +750,9 @@ namespace projectFrameCut.DraftStuff
                 var sources = options[target.Id] = [];
                 foreach (var output in outputs)
                 {
-                    if (output.Provider.Id == target.Id || output.Provider.Stage != target.Stage
+                    if ((!forward && output.Provider.Id == target.Id) || output.Provider.Stage != target.Stage
                         || output.Provider is ClipArgumentProvider || output.Provider.TypeOfEffect == EffectType.Transform) continue;
-                    var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, output.Source);
+                    var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, output.Source, forward);
                     if (candidate is not null && output.Provider.CanConnectContent(target, output.OutputId, candidate)
                         && candidate.AreInputsCompatible(target)) sources.Add(output.Source);
                 }
@@ -761,7 +761,7 @@ namespace projectFrameCut.DraftStuff
                     ValueProviderFrameContext.BuiltInProjectProgressProviderId, ValueProviderFrameContext.BuiltInAudioSampleProviderId,
                     ValueProviderFrameContext.ClipAudioProviderId, ValueProviderFrameContext.ClipPositionProviderId })
                 {
-                    var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, source);
+                    var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, source, forward);
                     var sourceType = source == IEffectProvider.InputAnchorGUID.ToString() ? target.Stage.GetContentType()
                         : ValueProviderFrameContext.SourceType(source);
                     if (candidate is not null && EffectFieldTypes.AreCompatible(sourceType, candidate.GetInputType(target, EffectProviderAnchorExtensions.InputKey))

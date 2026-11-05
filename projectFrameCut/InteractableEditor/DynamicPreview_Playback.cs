@@ -71,6 +71,7 @@ namespace projectFrameCut.InteractableEditor
                             prepared[i] = new PreparedPreview(frameClips[i].Id, null, ex.Message, frameClips[i]);
                         }
                     });
+                    SuppressCompositedPreviews(prepared);
                     return prepared;
                 }
                 finally { ReleaseClipsSnapshot(); }

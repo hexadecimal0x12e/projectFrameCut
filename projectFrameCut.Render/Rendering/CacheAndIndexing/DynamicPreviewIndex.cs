@@ -8,7 +8,7 @@ public sealed class DynamicPreviewIndex : IDisposable
     private readonly CacheIndexDatabase database;
     private readonly SqliteConnection connection;
     private readonly SqliteCommand? write;
-    private readonly object gate = new();
+    private readonly Lock gate = new();
 
     public DynamicPreviewIndex(string directory, bool readOnly = false)
     {

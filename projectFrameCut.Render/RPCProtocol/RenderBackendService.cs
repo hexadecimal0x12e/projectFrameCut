@@ -49,7 +49,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private Timer? _previewCacheTimer;
     private readonly ConditionalWeakTable<IClip, PreviewClipInitialization> _previewClipInitializations = new();
     private long _lastSlowPreviewLog;
-    private readonly object _persistGate = new();
+    private readonly Lock _persistGate = new();
     private readonly SemaphoreSlim _projectLifecycleGate = new(1, 1);
     private int _disposed;
     private readonly ConcurrentDictionary<string, ProjectExternalSourceHost> _externalSources = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
@@ -88,6 +88,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 RenderOperation.GetPreviewAudioClock => Success(request, GetPreviewAudioClock(Read<PreviewAudioClockRequest>(request))),
                 RenderOperation.RenderClipPreview => Success(request, await RenderClipPreviewAsync(Read<ClipPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.GenerateTimelineThumbnails => Success(request, await GenerateTimelineThumbnailsAsync(Read<TimelineThumbnailsRequest>(request), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.RenderEffectBindingPreview => Success(request, await RenderEffectBindingPreviewAsync(Read<EffectBindingPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.RenderClipPreviewBatch => Success(request, await RenderClipPreviewBatchAsync(Read<ClipPreviewBatchRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.StartDynamicPreview => Success(request, await StartDynamicPreviewAsync(Read<StartDynamicPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.StopDynamicPreview => Success(request, await StopDynamicPreviewAsync(Read<StopDynamicPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
@@ -699,7 +700,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var clips = snapshot is null ? sessionClips : sessionClips.Select(c => c.Id == clip.Id ? clip : c).ToArray();
             if (request.BeforeLayout && clip.GetRelativeFrameIndex(request.FrameIndex) is null)
                 throw new ArgumentOutOfRangeException(nameof(request.FrameIndex), "The frame is outside the clip's timeline interval.");
-            if (!request.BeforeLayout && (ProjectReferenceRuntime.IsCanvasClip(clip)
+            if (!request.BeforeLayout && (ProjectReferenceRuntime.IsCanvasClip(clip) || PreviewRenderComposer.RequiresBackdrop(clip)
                 || TransformProcessing.HasActiveTransform(clip, GetVisualClips(clips), request.FrameIndex)))
             {
                 previewWidth = canvasWidth;
@@ -1722,12 +1723,12 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 + ExternalAudioSourceRegistry.CacheToken + ExternalMaskSourceRegistry.CacheToken);
         public SemaphoreSlim RenderGate { get; } = new(1, 1);
         public FrameHashCache NodeCache { get; } = new();
-        private readonly object _lifetimeGate = new();
+        private readonly Lock _lifetimeGate = new();
         private readonly CancellationTokenSource _lifetime = new();
         private readonly TaskCompletionSource _operationsCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _activeOperations;
         private Task? _disposeTask;
-        private readonly object _previewAudioGate = new();
+        private readonly Lock _previewAudioGate = new();
         private PreviewAudioSession? _previewAudio;
         private readonly IReadOnlyDictionary<uint, string> _frameHashLookup = hashIndex.FrameHashes
             .GroupBy(entry => entry.FrameIndex)
@@ -1841,7 +1842,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
 
     private sealed class JobEntry
     {
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
         private readonly RenderJob _job;
         private readonly Action _changed;
         public JobEntry(RenderJob job, Action? changed = null) { _job = job; _changed = changed ?? new Action(() => { }); Cancellation = new CancellationTokenSource(); }

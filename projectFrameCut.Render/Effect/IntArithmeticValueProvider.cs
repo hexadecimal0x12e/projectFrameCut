@@ -99,19 +99,20 @@ namespace projectFrameCut.Render.Effect
         string[]? IEffectArgumentField.PresetOptions { get => null; set { } }
         string? IEffectArgumentField.Remarks { get => null; set { } }
 
+        internal static int Calculate(int a, int b, IntArithmeticOperation operation) => operation switch
+        {
+            IntArithmeticOperation.Add => a + b,
+            IntArithmeticOperation.Subtract => a - b,
+            IntArithmeticOperation.Multiply => a * b,
+            IntArithmeticOperation.Divide => b == 0 ? 0 : a / b,
+            _ => 0,
+        };
+
         public Func<object> GetGetter() => () =>
         {
             int a = ResolveInt(Parameters, "A");
             int b = ResolveInt(Parameters, "B");
-            var result = Operation switch
-            {
-                IntArithmeticOperation.Add => a + b,
-                IntArithmeticOperation.Subtract => a - b,
-                IntArithmeticOperation.Multiply => a * b,
-                IntArithmeticOperation.Divide => b == 0 ? 0 : a / b,
-                _ => 0,
-            };
-            return result;
+            return Calculate(a, b, Operation);
 
         };
     }

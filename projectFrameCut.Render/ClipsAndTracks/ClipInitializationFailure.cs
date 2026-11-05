@@ -6,6 +6,7 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
@@ -39,7 +40,7 @@ public static class ClipInitializationFailure
     /// 资源按需懒加载并常驻内存（图标尺寸小、数量少，可接受）；加载失败缓存 null 以免重复尝试。
     /// </summary>
     private static readonly ConcurrentDictionary<string, IPicture?> IconCache = new();
-    private static readonly object FallbackFrameGate = new();
+    private static readonly Lock FallbackFrameGate = new();
     private static readonly FrameHashCache FallbackFrames = new();
 
     /// <summary>
@@ -86,6 +87,13 @@ public static class ClipInitializationFailure
     {
         ArgumentNullException.ThrowIfNull(extraData);
         ArgumentNullException.ThrowIfNull(exception);
+        for (var current = exception; current is not null; current = current.InnerException)
+            if (current is DynamicCalculationLimitException)
+            {
+                stage = "DynamicCalculationLimit";
+                exception = current;
+                break;
+            }
         extraData[FailedKey] = true;
         extraData[StageKey] = string.IsNullOrWhiteSpace(stage) ? "Initialization" : stage;
         extraData[MessageKey] = GetUsefulMessage(exception);
@@ -129,6 +137,13 @@ public static class ClipInitializationFailure
     {
         if (!IsMarked(extraData)) return string.Empty;
         var stage = ReadString(extraData, StageKey, "Initialization");
+        if (stage == "DynamicCalculationLimit")
+        {
+            var text = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources?.ClipFallback_DynamicCalculationLimit;
+            if (string.IsNullOrEmpty(text) || text.StartsWith("Unset localization item:", StringComparison.Ordinal))
+                text = ISimpleLocalizerBase_PropertyPanel.GetMapping()["zh-CN"].ClipFallback_DynamicCalculationLimit;
+            return $"{text}{Environment.NewLine}{ReadString(extraData, MessageKey, string.Empty)}";
+        }
         if (stage == "ExternalSourceUnavailable")
         {
             var text = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources?.ClipFallback_ExternalSourceUnavailable;

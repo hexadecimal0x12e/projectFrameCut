@@ -26,6 +26,7 @@
                 <Picker x:Name="StagePicker" VerticalOptions="Center" SelectedIndexChanged="OnStageChanged" />
                 <Picker x:Name="CompositionPipelinePicker" IsVisible="False" VerticalOptions="Center" SelectedIndexChanged="OnCompositionPipelineChanged" />
                 <Button x:Name="CanvasActionsButton" Text="☰" VerticalOptions="Center" Clicked="OnCanvasActionsClicked"/>
+                <Button x:Name="StepDebugToggleButton" Text="⏱" VerticalOptions="Center" Clicked="OnStepDebugToggleClicked"/>
                 <ActivityIndicator x:Name="PreviewBusyIndicator" IsVisible="False" IsRunning="False" VerticalOptions="Center"/>
             </HorizontalStackLayout>
 
@@ -56,6 +57,42 @@
                 <Button x:Name="ResetButton" Margin="4,0,4,0" Text="↺"/>
                 <Button x:Name="ZoomOutButton" Margin="4,0,4,0" Text="-"/>
             </HorizontalStackLayout>
+
+            <!-- Single-step execution controls -->
+            <HorizontalStackLayout x:Name="StepDebugBar" IsVisible="False" ZIndex="23"
+                                   HorizontalOptions="Center" VerticalOptions="End" Margin="10,0,10,10" Spacing="6"
+                                   BackgroundColor="#CC1e1e1e" Padding="6,2">
+                <Button x:Name="StepPrevButton" Text="◀" Clicked="OnStepPrevClicked"/>
+                <Label x:Name="StepDebugCounterLabel" TextColor="#00E5FF" FontSize="13"
+                       VerticalOptions="Center" HorizontalTextAlignment="Center" MinimumWidthRequest="42"/>
+                <Button x:Name="StepNextButton" Text="▶" Clicked="OnStepNextClicked"/>
+                <Button x:Name="StepLastButton" Text="⏭" Clicked="OnStepLastClicked"/>
+                <Button x:Name="StepRunButton" Text="⟳" Clicked="OnStepRunClicked"/>
+                <Button x:Name="StepStopButton" Text="✕" Clicked="OnStepStopClicked"/>
+            </HorizontalStackLayout>
+
+            <!-- Single-step execution inspector -->
+            <Border x:Name="StepDebugPanel" IsVisible="False" ZIndex="24" InputTransparent="False"
+                    HorizontalOptions="Start" VerticalOptions="End" Margin="10,0,0,32"
+                    WidthRequest="{OnIdiom Phone=320, Default=520}"
+                    HeightRequest="{OnIdiom Phone=300, Default=330}"
+                    BackgroundColor="#F2181818" Stroke="#3a3a3a" StrokeThickness="1"
+                    StrokeShape="RoundRectangle 6" Padding="8">
+                <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,*" ColumnSpacing="8" RowSpacing="4">
+                    <Label Grid.Row="0" Grid.ColumnSpan="2" x:Name="StepDebugTitleLabel" TextColor="#00E5FF"
+                           FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation"/>
+                    <ScrollView Grid.Row="1" Grid.Column="0" x:Name="StepDebugListScroll" VerticalScrollBarVisibility="Default">
+                        <VerticalStackLayout x:Name="StepDebugListPanel" Spacing="2"/>
+                    </ScrollView>
+                    <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto" RowSpacing="4">
+                        <ScrollView VerticalScrollBarVisibility="Default">
+                            <VerticalStackLayout x:Name="StepDebugDetailPanel" Spacing="4"/>
+                        </ScrollView>
+                        <Label Grid.Row="1" x:Name="StepDebugHintLabel" TextColor="Gray" FontSize="10"
+                               LineBreakMode="WordWrap"/>
+                    </Grid>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- Splitter -->
@@ -96,15 +133,15 @@
                         <VerticalStackLayout x:Name="AddEffectsPanel" Spacing="10"/>
                     </ScrollView>
                 </tv:TabbedViewItem>
-                <tv:TabbedViewItem Header="{l:Localized Key=Effect_ValuePassThrough}">
+                <tv:TabbedViewItem Header="{l:Localized Key=Effect_VariablesAndPassThrough}">
                     <ScrollView x:Name="ClipValuesScrollView" Padding="10">
                         <VerticalStackLayout x:Name="ClipValuesContent" Spacing="10" IsVisible="False">
                             <VerticalStackLayout x:Name="ClipValueCreationPanel" Spacing="10"/>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                            <Grid x:Name="EndpointCrossClipPanel" ColumnDefinitions="Auto,*" ColumnSpacing="6">
                                 <CheckBox x:Name="EndpointAllowCrossClipCheckBox"/>
                                 <Label Grid.Column="1" Text="{l:Localized Key=Effect_EndpointAllowCrossClip}" VerticalOptions="Center"/>
                             </Grid>
-                            <Button Text="{l:Localized Key=Effect_CreateEndpoint}" Clicked="OnCreateClipValueEndpointClicked"/>
+                            <Button x:Name="CreateValueEndpointButton" Clicked="OnCreateClipValueEndpointClicked"/>
                             <VerticalStackLayout x:Name="ClipValuesPanel" Spacing="10"/>
                         </VerticalStackLayout>
                     </ScrollView>

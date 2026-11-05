@@ -14,7 +14,7 @@ internal static class RemoteEffectFactory
 {
     public static IEffect Create(IPluginIsolationSession session, IsolationEffectDescriptor descriptor, Dictionary<string, Func<object>>? dynamicGetters = null)
     {
-        IEffect effect = descriptor.HasMultipleOutputs
+        IEffect effect = descriptor.IsFullDynamic ? new RemoteFullDynamicEffect(session, descriptor) : descriptor.HasMultipleOutputs
             ? descriptor.EffectType == (int)EffectType.ContinuousEffect
                 ? new RemoteContinuousMultipleOutputEffect(session, descriptor) : new RemoteMultipleOutputEffect(session, descriptor)
             : descriptor.EffectType switch
@@ -370,7 +370,9 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
 
     internal void SetDynamicGetters(Dictionary<string, Func<object>> getters) => _dynamicGetters = getters;
 
-    public object? Compute(EffectExecutionContext context)
+    public object? Compute(EffectExecutionContext context) => ComputeCore(context);
+
+    protected object? ComputeCore(EffectExecutionContext context, FullDynamicEffectContext? dynamicContext = null, string port = "", bool inspect = false)
     {
         List<IsolationPayloadLease> leases = [];
         var request = new IsolationEffectComputeRequest
@@ -387,6 +389,20 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
             RelativeWidth = context.RelativeWidth, RelativeHeight = context.RelativeHeight,
             InputTypes = context.InputTypes.ToDictionary(p => p.Key, p => (int)p.Value),
         };
+        if (dynamicContext is not null)
+        {
+            request.FullDynamic = new()
+            {
+                Inspect = inspect, Port = port, InvocationId = dynamicContext.InvocationId.ToString(),
+                InputStates = dynamicContext.InputTypes.Keys.ToDictionary(k => k, k => (int)dynamicContext.PeekInput(k).State),
+                InputErrors = dynamicContext.InputTypes.Keys.Where(k => dynamicContext.PeekInput(k).Error is not null)
+                    .ToDictionary(k => k, k => dynamicContext.PeekInput(k).Error!.Message),
+                OutputTypes = dynamicContext.OutputTypes.ToDictionary(p => p.Key, p => (int)p.Value),
+                OutputContracts = dynamicContext.OutputContracts.Where(p => p.Value is not null).ToDictionary(p => p.Key, p => IsolationFieldTypeCodec.WriteContract(p.Value)!),
+                Metadata = dynamicContext.Metadata.ToDictionary(p => p.Key, p => IsolationValueConverter.FromObject(p.Value)),
+                Variables = dynamicContext.Services.Variables.ToDictionary(p => p.Key.ToString(), p => IsolationValueConverter.FromObject(p.Value)),
+            };
+        }
         IsolationPayloadReference Publish(IPicture picture)
         {
             var lease = PicturePayloadCodec.WriteAsync(picture, Session.Payloads, Session.PreferredPayloadKind, context.CancellationToken).AsTask().GetAwaiter().GetResult();
@@ -409,7 +425,14 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
             foreach (var id in DynamicProviderIds) AddValue(id, GetDynamicValue(id));
             foreach (var parameter in context.Parameters) AddValue(parameter.Key, parameter.Value);
             var response = Session.InvokeAsync<IsolationEffectComputeRequest, IsolationEffectComputeResponse>(
-                RenderOperation.IsolationComputeEffect, request, context.CancellationToken).AsTask().GetAwaiter().GetResult();
+                dynamicContext is null ? RenderOperation.IsolationComputeEffect : RenderOperation.IsolationFullDynamicEffect, request, context.CancellationToken).AsTask().GetAwaiter().GetResult();
+            if (dynamicContext is not null && response.FullDynamic is { } dynamicResponse)
+            {
+                foreach (var i in dynamicResponse.RequestedInputs) dynamicContext.InspectInput(i);
+                if (inspect) return dynamicResponse;
+                foreach (var pair in dynamicResponse.VariableWrites)
+                    dynamicContext.Services.WriteVariable(Guid.Parse(pair.Key), IsolationValueConverter.ToObject(pair.Value));
+            }
             if (response.HasMultipleOutputs)
             {
                 var outputs = new Dictionary<string, object?>();

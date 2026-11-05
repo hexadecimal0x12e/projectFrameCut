@@ -54,13 +54,13 @@
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14d;}" Command="{Binding CopyCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14d;}" Command="{Binding CopyCommand}" IsEnabled="{Binding CanEditSelection}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="C" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14e;}" Command="{Binding CutCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14e;}" Command="{Binding CutCommand}" IsEnabled="{Binding CanEditSelection}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="X" />
@@ -151,7 +151,7 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
 
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding DeleteCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding DeleteCommand}" IsEnabled="{Binding CanEditSelection}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator
                     Key="Delete" />

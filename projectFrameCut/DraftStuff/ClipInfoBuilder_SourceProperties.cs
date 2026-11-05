@@ -36,9 +36,9 @@ public partial class ClipInfoBuilder
 
     private async Task<View> BuildSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
     {
-        if (clip.ClipType == ClipMode.ProjectReferenceClip) return BuildProjectReferenceProperties(clip);
         View? properties = clip.ClipType switch
         {
+            ClipMode.ProjectReferenceClip => BuildProjectReferenceProperties(clip),
             ClipMode.VideoClip => BuildVideoSourcePropertiesTab(clip, handler),
             ClipMode.SolidColorClip => BuildSolidColorSourcePropertiesTab(clip, handler),
             ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => BuildVectorSourcePropertiesTab(clip, handler),
@@ -47,6 +47,19 @@ public partial class ClipInfoBuilder
             _ => null
         };
         var layout = new VerticalStackLayout { Spacing = 8 };
+        var r = Setting.SettingManager.SettingsManager.SettingLocalizedResources;
+        string[] labels = [r.Render_DynamicCalculationGlobal, r.Render_DynamicCalculationOriginal, r.Render_DynamicCalculation];
+        string[] modes = ["global", "original", "dynamic"];
+        var modePanel = new PropertyPanelBuilder().AddPicker(DynamicEffectCalculation.ModeKey, r.Render_DynamicCalculationMode,
+            labels, labels[Math.Max(0, Array.IndexOf(modes, DynamicEffectCalculation.Mode(clip.ExtraData)))]);
+        modePanel.PropertyChanged += GuardPanelChange((s, e) =>
+        {
+            clip.ExtraData ??= new();
+            clip.ExtraData[DynamicEffectCalculation.ModeKey] = modes[Math.Max(0, Array.IndexOf(labels, e.Value?.ToString()))];
+            RebuildAllEffects(clip);
+            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__EFFECT_BINDING_CHANGED__", clip, null));
+        });
+        layout.Children.Add(modePanel.Build());
         if (properties is not null) layout.Children.Add(properties);
         if (clip.SupportedStages.Contains(EffectStage.SourceReplacement))
         {

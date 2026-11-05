@@ -5,7 +5,7 @@ namespace projectFrameCut.Render.Effect;
 
 public static class DynamicEffectBindings
 {
-    public static bool IsGraphEffect(IEffect effect) => effect is DynamicEffectGraph or NativeDynamicEffectGraph or DynamicMixtureGraph;
+    public static bool IsGraphEffect(IEffect effect) => effect is IRenderEffectPipeline or NativeDynamicEffectGraph or DynamicMixtureGraph or FullDynamicVectorPipeline or FullDynamicMixturePipeline;
 
     public static bool IsGraphProvider(IEffectProvider p) => p is RenderOutputProvider
         || p.Stage == EffectStage.Composition && (p.TypeOfEffect == EffectType.MixtureProvider || p.Target.HasFlag(EffectTarget.ValueProvider))
@@ -14,7 +14,7 @@ public static class DynamicEffectBindings
         or EffectType.ContinuousClipPositionProvider or EffectType.NonIPictureOutputValueProvider or EffectType.VectorPictureEffect
         or EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect;
 
-    public static bool CanBindOutput(IEffectProvider p) => p is not (ClipArgumentProvider or RenderOutputProvider or IClipValueEndpointProvider { IsExport: true })
+    public static bool CanBindOutput(IEffectProvider p) => p is not (ClipArgumentProvider or RenderOutputProvider or EffectVariableWriteProvider or IClipValueEndpointProvider { IsExport: true })
         && (p.Target.HasFlag(EffectTarget.ValueProvider)
             || p.Stage is EffectStage.Render or EffectStage.VectorContent or EffectStage.Text or EffectStage.Composition);
 
@@ -69,6 +69,7 @@ public static class DynamicEffectBindings
     public static bool CanInlineValue(IEffectProvider provider, IReadOnlyDictionary<Guid, IEffectProvider> providers, HashSet<Guid>? seen = null,
         EffectFieldTypeResolution? types = null)
     {
+        if (provider is EffectVariableProvider or ConditionalLoopNodeEffectProvider) return false;
         if (provider is IClipValueEndpointProvider { IsExport: false }) return true;
         types ??= new(providers);
         return CanInlineValue(provider, providers, types, seen is null ? [] : new(seen), new());
@@ -83,7 +84,7 @@ public static class DynamicEffectBindings
         try
         {
             if (provider is IClipValueEndpointProvider { IsExport: false }) return cache[provider.Id] = true;
-            if (provider is IClipValueEndpointProvider { IsExport: true }
+            if (provider is EffectVariableProvider or ConditionalLoopNodeEffectProvider or IClipValueEndpointProvider { IsExport: true }
                 || !provider.Target.HasFlag(EffectTarget.ValueProvider)
                 || provider.GetOutputFields().Keys.Any(key => types.GetOutputType(provider, key).IsContent()
                     || types.GetOutputType(provider, key).HasFlag(EffectArgumentFieldType.Any))
@@ -144,10 +145,11 @@ public static class DynamicEffectBindings
         return diagnostics;
     }
 
-    public static IReadOnlyList<EffectBindingHelper.BindingDiagnostic> Validate(IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution? types = null)
+    public static IReadOnlyList<EffectBindingHelper.BindingDiagnostic> Validate(IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution? types = null, bool forward = false)
     {
         types ??= new(providers);
-        var errors = types.Diagnostics.Select(d => new EffectBindingHelper.BindingDiagnostic(d.ProviderId, d.Code, d.Message)).ToList();
+        var errors = types.Diagnostics.Where(d => !(forward && d.Code == "BindingCycle"
+            && providers.TryGetValue(d.ProviderId, out var cyclic) && IsGraphProvider(cyclic) && DynamicEffectCalculation.Supports(cyclic.Stage))).Select(d => new EffectBindingHelper.BindingDiagnostic(d.ProviderId, d.Code, d.Message)).ToList();
         var inlineable = new Dictionary<Guid, bool>();
         var inlineVisiting = new HashSet<Guid>();
         foreach (var group in providers.Values.Where(p => p.IsFinalOutputSource()).GroupBy(p => p.Stage))
@@ -187,6 +189,18 @@ public static class DynamicEffectBindings
         {
             try { EffectStages.Validate(p); }
             catch (Exception ex) { errors.Add(new(p.Id, "UnsupportedStage", ex.Message)); }
+            if (p is ConditionalLoopNodeEffectProvider { Enabled: true } && !forward)
+                errors.Add(new(p.Id, "LoopRequiresDynamicCalculation", "Conditional loops require dynamic calculation."));
+            if (p is EffectVariableProvider variable)
+            {
+                if (p.Enabled && (!forward || !DynamicEffectCalculation.Supports(p.Stage)))
+                    errors.Add(new(p.Id, "VariableRequiresDynamicCalculation", "Variables require dynamic calculation in a supported stage."));
+                if (!EffectVariableProvider.SupportsType(variable.ValueType))
+                    errors.Add(new(p.Id, "InvalidVariableType", $"Variable {p.Id} has an unsupported value type."));
+                if (variable.VariableId == Guid.Empty || providers.Values.OfType<EffectVariableProvider>()
+                    .Any(v => v.VariableId == variable.VariableId && (v.Stage != variable.Stage || v.ValueType != variable.ValueType)))
+                    errors.Add(new(p.Id, "InvalidVariableReference", $"Variable endpoint {p.Id} has an incompatible variable."));
+            }
             if (p is IClipValueEndpointProvider { IsExport: false } input
                 && providers.GetValueOrDefault(input.SourceEndpointId) is IClipValueEndpointProvider { IsExport: true } endpointOutput
                 && !endpointOutput.CanPassTo(p.Stage, true, providers.Values))
@@ -279,7 +293,8 @@ public static class DynamicEffectBindings
             }
             foreach (var source in providers[id].AnchorsBindingState.Where(p => !EffectProviderAnchorExtensions.IsOutputBindingKey(p.Key))
                 .Select(p => EffectProviderOutputExtensions.TryParseOutputSourceId(p.Value, out var next, out _) ? next : IEffectProvider.NoConnectionGUID).Distinct())
-                if (providers.ContainsKey(source)) Visit(source);
+                if (providers.ContainsKey(source) && !(forward && DynamicEffectCalculation.Supports(providers[id].Stage)
+                    && providers[source].Stage == providers[id].Stage && IsGraphProvider(providers[id]) && IsGraphProvider(providers[source]))) Visit(source);
             visiting.Remove(id);
             visited.Add(id);
         }

@@ -57,7 +57,9 @@ namespace projectFrameCut.Render.Effect
                     .Concat(new IEffect?[] { c.MixtureInstance, c.AlternativeSource }).OfType<IEffect>())
                 .SelectMany(e => e switch
                 {
-                    DynamicEffectGraph graph => graph.NodeEffects,
+                    IRenderEffectPipeline graph => graph.NodeEffects,
+                    FullDynamicVectorPipeline graph => graph.NodeEffects,
+                    FullDynamicMixturePipeline graph => graph.NodeEffects,
                     DynamicMixtureGraph graph => graph.NodeEffects,
                     _ => new[] { e },
                 })
@@ -116,7 +118,7 @@ namespace projectFrameCut.Render.Effect
             try
             {
                 bindingDiagnostics = restoreDiagnostics
-                    .Concat(EffectBindingHelper.ValidateBindings(providers))
+                    .Concat(EffectBindingHelper.ValidateBindings(providers, forward: DynamicEffectCalculation.Enabled(target.ExtraData)))
                     .Distinct()
                     .ToArray();
             }

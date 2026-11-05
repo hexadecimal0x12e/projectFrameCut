@@ -42,7 +42,7 @@ public static class ClipValuePassThrough
                 throw new ClipValueBindingException($"Source clip {source.Id} failed to initialize at {frame}.");
             if (source.ClipType == projectFrameCut.Shared.ClipMode.AudioClip)
             {
-                source.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == projectFrameCut.Shared.EffectStage.Render)
+                source.EffectsInstances?.OfType<IRenderEffectPipeline>().FirstOrDefault(g => g.Stage == projectFrameCut.Shared.EffectStage.Render)
                     ?.EvaluateRenderValue(source, frame, RenderOutputProvider.AudioKey, token: token);
                 return;
             }

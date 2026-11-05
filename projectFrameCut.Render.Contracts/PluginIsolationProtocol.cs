@@ -514,6 +514,9 @@ public sealed class IsolationEffectDescriptor
     [ProtoMember(24), System.ComponentModel.DefaultValue(true)] public bool PreserveAspectRatio { get; set; } = true;
     [ProtoMember(25)] public bool HasMultipleOutputs { get; set; }
     [ProtoMember(26)] public bool IsDeterministic { get; set; }
+    [ProtoMember(27)] public bool IsFullDynamic { get; set; }
+    [ProtoMember(28)] public bool HasSideEffects { get; set; }
+    [ProtoMember(29)] public List<string> FeedbackPorts { get; set; } = [];
 }
 
 [ProtoContract]
@@ -588,6 +591,32 @@ public sealed class IsolationEffectComputeRequest
     [ProtoMember(7)] public Dictionary<string, int> InputTypes { get; set; } = [];
     [ProtoMember(8)] public IsolationAudioSamplesResponse? InputAudio { get; set; }
     [ProtoMember(9)] public int AudioSampleIndex { get; set; }
+    [ProtoMember(10)] public IsolationFullDynamicRequest? FullDynamic { get; set; }
+}
+
+[ProtoContract]
+public sealed class IsolationFullDynamicRequest
+{
+    [ProtoMember(1)] public bool Inspect { get; set; }
+    [ProtoMember(2)] public string Port { get; set; } = "";
+    [ProtoMember(3)] public Dictionary<string, int> InputStates { get; set; } = [];
+    [ProtoMember(4)] public Dictionary<string, string> InputErrors { get; set; } = [];
+    [ProtoMember(5)] public Dictionary<string, int> OutputTypes { get; set; } = [];
+    [ProtoMember(6)] public Dictionary<string, IsolationValue> Metadata { get; set; } = [];
+    [ProtoMember(7)] public Dictionary<string, IsolationValue> Variables { get; set; } = [];
+    [ProtoMember(8)] public Dictionary<string, IsolationPortTypeContract> OutputContracts { get; set; } = [];
+    [ProtoMember(9)] public string InvocationId { get; set; } = "";
+    [ProtoMember(10)] public bool Release { get; set; }
+}
+
+[ProtoContract]
+public sealed class IsolationFullDynamicResponse
+{
+    [ProtoMember(1)] public Dictionary<string, int> OutputStates { get; set; } = [];
+    [ProtoMember(2)] public Dictionary<string, string> Messages { get; set; } = [];
+    [ProtoMember(3)] public Dictionary<string, int> OutputTypes { get; set; } = [];
+    [ProtoMember(4)] public List<string> RequestedInputs { get; set; } = [];
+    [ProtoMember(5)] public Dictionary<string, IsolationValue> VariableWrites { get; set; } = [];
 }
 
 [ProtoContract]
@@ -600,6 +629,7 @@ public sealed class IsolationEffectComputeResponse
     [ProtoMember(5)] public Dictionary<string, IsolationPayloadReference> Pictures { get; set; } = [];
     [ProtoMember(6)] public IsolationAudioSamplesResponse? Audio { get; set; }
     [ProtoMember(7)] public Dictionary<string, IsolationAudioSamplesResponse> Audios { get; set; } = [];
+    [ProtoMember(8)] public IsolationFullDynamicResponse? FullDynamic { get; set; }
 }
 
 [ProtoContract]

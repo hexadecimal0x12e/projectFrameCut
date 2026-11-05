@@ -61,7 +61,7 @@ internal static class FrameComposition
                     x += (int)Math.Round((pos.TargetWidth - frame.Width) / 2d);
                     y += (int)Math.Round((pos.TargetHeight - frame.Height) / 2d);
                 }
-                if (result is null && clip.Clip.MixtureInstance is not (DynamicMixtureGraph or ReferenceMixture)
+                if (result is null && !PreviewRenderComposer.RequiresBackdrop(clip.Clip)
                     && !frame.HasAlphaChannel
                     && x == 0 && y == 0 && frame.Width == options.TargetWidth && frame.Height == options.TargetHeight)
                     result = frame;

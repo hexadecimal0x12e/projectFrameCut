@@ -147,6 +147,18 @@ public sealed class EffectFieldTypeResolution
             visiting.Remove(id);
         }
         foreach (var id in providers.Keys) Visit(id);
+        if (diagnostics.Any(d => d.Code == "BindingCycle"))
+        {
+            // Resolve feedback port types from the concrete types entering the loop.
+            for (int pass = 0; pass < providers.Count; pass++)
+            {
+                var previous = new Dictionary<(Guid Provider, bool Input, string Field), EffectArgumentFieldType>(types);
+                contexts.Clear();
+                diagnostics.Clear();
+                foreach (var id in providers.Keys) Visit(id);
+                if (types.Count == previous.Count && types.All(p => previous.GetValueOrDefault(p.Key) == p.Value)) break;
+            }
+        }
     }
 
     private void ResolveFields(IEffectProvider provider, EffectFieldTypeContext context)
@@ -240,13 +252,13 @@ public sealed class EffectFieldTypeResolution
     }
 
     /// <summary>Resolves only the edited provider, reusing the upstream type snapshot.</summary>
-    public EffectFieldTypeResolution? ResolveBindingCandidate(IEffectProvider provider, string fieldId, string source)
+    public EffectFieldTypeResolution? ResolveBindingCandidate(IEffectProvider provider, string fieldId, string source, bool allowCycles = false)
     {
         if (!GetContext(provider.Id).State.Fields.ContainsKey(fieldId)) return null;
-        if (EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _)
+        if (!allowCycles && EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _)
             && (id == provider.Id || GetDependents(provider.Id).Contains(id))) return null;
         var state = WithBinding(GetContext(provider.Id).State, fieldId, source);
-        if (Diagnostics.Count > 0)
+        if (allowCycles || Diagnostics.Count > 0)
         {
             var snapshots = providers.Keys.ToDictionary(key => key, key => GetContext(key).State);
             snapshots[provider.Id] = state;

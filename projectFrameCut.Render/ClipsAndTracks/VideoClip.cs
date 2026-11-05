@@ -16,7 +16,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     {
         private static readonly int MaxDecoderPoolSize = 12;
 
-        private static readonly object DecoderPoolRegistryLock = new();
+        private static readonly Lock DecoderPoolRegistryLock = new();
         private static readonly Dictionary<string, VideoDecoderPool> DecoderPools = new(StringComparer.OrdinalIgnoreCase);
 
         private VideoDecoderPool? _decoderPool;

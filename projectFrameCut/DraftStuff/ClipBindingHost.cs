@@ -202,8 +202,8 @@ namespace projectFrameCut.DraftStuff
                     var ids = new HashSet<string>();
                     foreach (var source in sources)
                     {
-                        var candidate = types.ResolveBindingCandidate(_provider, fieldId, source.Id);
-                        if (candidate is not null && candidate.AreInputsCompatible(_provider) && candidate.Diagnostics.Count == 0) ids.Add(source.Id);
+                        var candidate = types.ResolveBindingCandidate(_provider, fieldId, source.Id, DynamicEffectCalculation.Enabled(_clip.ExtraData));
+                        if (candidate is not null && candidate.AreInputsCompatible(_provider) && !DynamicEffectCalculation.HasTypeErrors(candidate, _clip.ExtraData)) ids.Add(source.Id);
                     }
                     return ids;
                 });

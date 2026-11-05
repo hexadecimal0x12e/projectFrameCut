@@ -85,7 +85,7 @@ internal static class ExternalMaskSourceRegistry
     {
         private IReadOnlyDictionary<string, ExternalMaskSourceDescriptor> sources = new Dictionary<string, ExternalMaskSourceDescriptor>();
         private readonly SemaphoreSlim gate = new(1, 1);
-        private readonly object authorizationGate = new();
+        private readonly Lock authorizationGate = new();
         private long authorizationValidUntil;
         private bool authorized;
         private int connected = 1;

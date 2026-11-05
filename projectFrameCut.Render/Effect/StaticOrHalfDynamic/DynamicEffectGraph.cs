@@ -11,13 +11,11 @@ using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.Effect;
 
-public sealed class DynamicEffectGraph : INormalEffect, IDisposable
+public sealed class DynamicEffectGraph : IRenderEffectPipeline, IDisposable
 {
     public bool IsDeterministic => nodes.Values.All(n => !n.Enabled || n.Provider.IsDeterministic && n.Effects.All(e => e.IsDeterministic)) && (inlineValues?.IsDeterministic ?? true);
 
-    private sealed record Node(IEffectProvider Provider, Dictionary<string, IEffectArgumentField> Fields,
-        Dictionary<string, string> Bindings, IEffect[] Effects, bool Enabled);
-    private readonly Dictionary<Guid, Node> nodes;
+    private readonly Dictionary<Guid, DynamicEffectNode> nodes;
     private readonly string? finalSource;
     private readonly RenderOutputProvider? renderOutput;
     public EffectStage Stage => stage;
@@ -27,10 +25,16 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
     private readonly EffectStage stage;
     private readonly HashSet<Guid> contentSources;
     private readonly HashSet<Guid> conditionalNodes;
-    private readonly object sync = new();
+    private readonly Lock sync = new();
     private bool initialized;
     private bool disposed;
     private int activeFrames;
+
+    internal IReadOnlyDictionary<Guid, DynamicEffectNode> Nodes => nodes;
+    internal EffectFieldTypeResolution Types => types;
+    internal RenderOutputProvider? RenderOutput => renderOutput;
+    internal string? FinalSource => finalSource;
+    internal IReadOnlySet<Guid> ContentSources => contentSources;
 
     public DynamicEffectGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers, IReadOnlyDictionary<Guid, IEffect[]> effects)
         : this(providers, effects, null) { }
@@ -44,7 +48,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         types = resolvedTypes ?? inlineValues?.Types ?? new(providers);
         foreach (var provider in providers.Values) provider.ValidateOutputFields();
         nodes = providers.Values.Where(p => p.Stage == stage && DynamicEffectBindings.IsGraphProvider(p)).ToDictionary(p => p.Id,
-            p => new Node(p, DynamicEffectBindings.InputFields(p), new(p.AnchorsBindingState), effects.GetValueOrDefault(p.Id) ?? [], p.Enabled));
+            p => new DynamicEffectNode(p, DynamicEffectBindings.InputFields(p), new(p.AnchorsBindingState), effects.GetValueOrDefault(p.Id) ?? [], p.Enabled));
         finalSource = providers.Values.FirstOrDefault(p => p.Stage == stage && DynamicEffectBindings.IsGraphProvider(p) && p.IsFinalOutputSource())?.GetFinalOutputSourceId();
         contentSources = providers.Values.Where(p => p.Stage is EffectStage.Text or EffectStage.VectorContent && !DynamicEffectBindings.IsGraphProvider(p))
             .Select(p => p.Id).ToHashSet();
@@ -76,7 +80,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
 
     public string TypeName => "__DynamicEffectGraph__";
     public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Id { get; set; } = "Pipeline:DynamicEffectGraph";
     public string Name { get; set; } = "Dynamic effect graph";
     public bool Enabled { get; set; } = true;
     public int Index { get; set; }
@@ -109,8 +113,15 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         targetWidth, targetHeight, targetWidth, targetHeight, new(0, 0, targetWidth, targetHeight, false)).Picture;
 
     public sealed record FrameResult(IPicture Picture, ClipPositionTuple Position, bool PreserveAspect);
-    private sealed record Result(object? Value, ClipPositionTuple Position, bool PreserveAspect,
-        IReadOnlyDictionary<string, object?>? Outputs = null);
+    EffectPipelineFrameResult IRenderEffectPipeline.Evaluate(IPicture source, IClip? clip, uint frame, int width, int height,
+        int relativeWidth, int relativeHeight, ClipPositionTuple initialPosition, bool preserveAspect,
+        bool processFromCanvas, CancellationToken cancellationToken, Action<IEffect, object?>? afterNode, bool keepHwAccelPicture)
+    {
+        var result = Evaluate(source, clip, frame, width, height, relativeWidth, relativeHeight, initialPosition,
+            preserveAspect, processFromCanvas, cancellationToken, afterNode, keepHwAccelPicture);
+        return new(result.Picture, result.Position, result.PreserveAspect);
+    }
+
     private sealed record FrameKey(DynamicEffectGraph Graph, Guid Clip, uint Frame, int Width, int Height,
         int RelativeWidth, int RelativeHeight, int SourceWidth, int SourceHeight, Type SourceType, object SourceIdentity,
         ClipPositionTuple Position, bool PreserveAspect, bool ProcessFromCanvas, bool TransformInput);
@@ -170,12 +181,12 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             Initialize();
             activeFrames++;
         }
-        var results = new Dictionary<Guid, Result>();
+        var results = new Dictionary<Guid, DynamicEffectValue>();
         var visiting = new HashSet<Guid>();
         var activation = new Dictionary<(Guid, string), bool?>();
         var checkingActivation = new HashSet<(Guid, string, bool)>();
         var conditions = new Dictionary<Guid, bool>();
-        var mainInputs = new Dictionary<Guid, Result>();
+        var mainInputs = new Dictionary<Guid, DynamicEffectValue>();
         var pictures = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
         var remaining = nodes.Keys.ToDictionary(id => id, _ => 0);
         void AddConsumer(string? binding)
@@ -188,7 +199,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         if (stage == EffectStage.Render && renderOutput is { Enabled: true })
             foreach (var binding in renderOutput.AnchorsBindingState.Values) AddConsumer(binding);
         foreach (var node in nodes.Values.Where(n => n.Provider is IClipValueEndpointProvider { IsExport: true })) remaining[node.Provider.Id]++;
-        void RetireInputs(Node node)
+        void RetireInputs(DynamicEffectNode node)
         {
             foreach (var binding in node.Bindings.Where(p => !EffectProviderAnchorExtensions.IsOutputBindingKey(p.Key)))
             {
@@ -207,48 +218,19 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             : Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) ?? 0f));
         using var clipScope = ValueProviderFrameContext.PushClip(clip ?? ValueProviderFrameContext.CurrentClip);
         using var scope = ValueProviderFrameContext.PushFrame(frame, progress, reuseComputed: true);
-
-        IPicture Track(IPicture p)
-        {
-            if (!ReferenceEquals(p, source) && !ReferenceEquals(p, underPicture)) pictures.Add(p);
-            return p;
-        }
-        object? Copy(object? value) => value is IPicture p ? Track(CopyPicture(p))
-            : value is VectorPicture v ? VectorPictureEffectProcessing.Copy(v) : value;
-        void ReleaseDeviceInput(object? value, object? kept, IReadOnlyDictionary<string, object?>? outputs = null)
-        {
-            if (value is IHwAccelPicture picture && !ReferenceEquals(value, kept)
-                && !(outputs?.Values.Any(v => ReferenceEquals(v, value)) ?? false) && pictures.Remove(picture)) picture.Dispose();
-        }
-        int AudioOffset() => source is IAudioSamples ? ValueProviderFrameContext.AudioSampleIndex
-            : (int)Math.Max(0, Math.Round(((double)frame - (clip?.StartFrame ?? 0))
-                * (EffectProcessing.CurrentAudioSource?.SamplePerSecond ?? 48000) / (EffectProcessing.CurrentAudioSource?.FrameRate ?? 30)));
-        float? Progress(IEffect effect)
-        {
-            if (effect is IVectorPictureEffect) return vectorProgress ?? progress;
-            if (effect is IAudioContinuousEffect audio && (audio.StartPoint != 0 || audio.EndPoint != 0))
-            {
-                int offset = AudioOffset();
-                int length = (source as IAudioSamples)?.SampleCount ?? 1;
-                if (offset + (long)length <= audio.StartPoint || offset > audio.EndPoint) return null;
-            }
-            if (effect is not IContinuousEffect continuous || !continuous.IsScoped && clip is null) return progress;
-            long start = continuous.IsScoped ? continuous.StartPoint : clip?.StartFrame ?? 0;
-            long end = continuous.IsScoped ? continuous.EndPoint : start + (clip?.GetEffectiveDuration() ?? 1);
-            return end > start && frame >= start && frame < end ? Math.Clamp((float)(frame - start) / (end - start), 0, 1) : null;
-        }
-        Result Inactive(Guid id)
+        var frameContext = new DynamicEffectFrame(this, source, clip, frame, width, height, relativeWidth, relativeHeight,
+            initialPosition, preserveAspect, processFromCanvas, cancellationToken, afterNode, progress, clipProgress,
+            vectorProgress, underPicture, mixturePixelMode) { Pictures = pictures };
+        DynamicEffectValue Inactive(Guid id)
         {
             if (results.TryGetValue(id, out var cached)) return cached;
             Logger.LogDiagnostic($"Skipped inactive provider {id}, clip {clip?.Id}, frame {frame}.");
-            return results[id] = new(EffectBranchState.Inactive, initialPosition, preserveAspect,
-                nodes[id].Provider is IMultipleOutputEffectProvider
-                    ? nodes[id].Provider.GetOutputFields().Keys.ToDictionary(key => key, _ => (object?)EffectBranchState.Inactive) : null);
+            return results[id] = frameContext.CreateInactive(nodes[id].Provider);
         }
-        Result MainInput(Node node, bool useDefault)
+        DynamicEffectValue MainValue(DynamicEffectNode node, bool useDefault)
         {
             if (mainInputs.TryGetValue(node.Provider.Id, out var cached)) return cached;
-            Result input;
+            DynamicEffectValue input;
             try { input = Resolve(node.Bindings.GetValueOrDefault(EffectProviderAnchorExtensions.InputKey)); }
             catch (Exception ex) when (useDefault && ex is not OperationCanceledException)
             {
@@ -257,14 +239,12 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             }
             return mainInputs[node.Provider.Id] = input;
         }
-        bool Condition(Node node, string key)
+        bool Condition(DynamicEffectNode node, string key)
         {
             if (conditions.TryGetValue(node.Provider.Id, out bool cached)) return cached;
             var field = node.Fields[key];
             var input = Resolve(node.Bindings.GetValueOrDefault(key));
-            var value = EffectFieldTypes.ConvertInput(field.FieldType, input.Value ?? Fallback(field));
-            types.ValidateValue(node.Provider, key, true, field, value, frame);
-            if (value is not bool condition) throw new InvalidOperationException($"Provider {node.Provider.Id} requires a bool condition, frame {frame}.");
+            var condition = frameContext.ReadCondition(node.Provider, key, field, input);
             Logger.LogDiagnostic($"Condition provider {node.Provider.Id} selected {condition}, clip {clip?.Id}, frame {frame}.");
             return conditions[node.Provider.Id] = condition;
         }
@@ -286,7 +266,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             try
             {
                 bool? active;
-                bool hasEffects = node.Enabled && node.Effects.Any(e => Progress(e).HasValue);
+                bool hasEffects = node.Enabled && node.Effects.Any(e => frameContext.EffectProgress(e).HasValue);
                 var main = node.Bindings.GetValueOrDefault(EffectProviderAnchorExtensions.InputKey);
                 if (node.Provider is ConditionComputeNodeEffectProvider)
                 {
@@ -303,7 +283,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 else if (hasEffects && node.Provider is IsUpstreamAvailableOrDefaultEffectProvider)
                 {
                     if (!resolveAvailability) return activation[key] = null;
-                    var value = MainInput(node, true).Value;
+                    var value = MainValue(node, true).Value;
                     active = value is not null && !ReferenceEquals(value, EffectBranchState.Inactive)
                         || IsSourceActive(node.Bindings.GetValueOrDefault("DefaultValue"));
                 }
@@ -332,37 +312,13 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             }
             finally { checkingActivation.Remove(checkingKey); }
         }
-        IPicture? sourcePicture = null;
-        IAudioSamples<float>? audioFrame = source as IAudioSamples<float>;
-        object ReadPicture()
-        {
-            if (source is IPicture or VectorPicture) return source;
-            if (clip is null) throw new InvalidOperationException("A clip is required to read the source picture.");
-            return sourcePicture ??= Track(clip.GetFrameRelativeToStartPointOfSource(clip.GetRelativeFrameIndex(frame) ?? 0,
-                width, height, IPicture.PicturePixelMode.Float16Picture));
-        }
-        Result Terminal(string field, object fallback)
-        {
-            if (renderOutput is not { Enabled: true }) return new(fallback, initialPosition, preserveAspect);
-            var binding = renderOutput.AnchorsBindingState.GetValueOrDefault(field);
-            var result = string.IsNullOrWhiteSpace(binding) || binding == IEffectProvider.NoConnectionGUID.ToString()
-                ? new Result(renderOutput.Fields.GetValueOrDefault(field)?.GetGetter()(), initialPosition, preserveAspect) : Resolve(binding);
-            return result.Value is null || ReferenceEquals(result.Value, EffectBranchState.Inactive) || result.Value is string { Length: 0 }
-                ? new(fallback, initialPosition, preserveAspect) : result;
-        }
-        Result Resolve(string? id)
+        DynamicEffectValue Resolve(string? id)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (id == IEffectProvider.InputAnchorGUID.ToString()) return new(ReadPicture(), initialPosition, preserveAspect);
-            if (id == ValueProviderFrameContext.ClipPositionProviderId) return new(initialPosition, initialPosition, preserveAspect);
-            if (id == ValueProviderFrameContext.ClipAudioProviderId)
-                return new(audioFrame ??= EffectProcessing.CurrentAudioSource?.ReadClipFrame(clip!, frame, cancellationToken)
-                    ?? new FloatAudioSamples { Channels = [Array.Empty<float>(), Array.Empty<float>()], SampleCount = 0, SamplePerSecond = 48000 }, initialPosition, preserveAspect);
-            if (ValueProviderFrameContext.IsBuiltInSource(id))
-                return new(ValueProviderFrameContext.Get(id!), initialPosition, preserveAspect);
-            if (!EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var guid, out var outputId)) return new(null, initialPosition, preserveAspect);
-            if (!nodes.TryGetValue(guid, out var node)) return new(stage == EffectStage.VectorContent && contentSources.Contains(guid)
-                ? source : null, initialPosition, preserveAspect);
+            if (frameContext.TryResolveExternal(id, out var external)) return external;
+            if (!EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var guid, out var outputId))
+                return new(null, initialPosition, preserveAspect);
+            if (!nodes.TryGetValue(guid, out var node)) return new(null, initialPosition, preserveAspect);
             if (!types.TryGetOutputField(node.Provider, outputId, out var field))
                 throw new InvalidOperationException($"Provider {guid} requires a valid output port in '{id}'.");
             if (types.GetOutputType(node.Provider, field.Id).HasFlag(EffectArgumentFieldType.Any))
@@ -375,216 +331,18 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             var result = EvaluateNode(guid);
             return result.Outputs is null ? result : result with { Value = result.Outputs.GetValueOrDefault(field.Id) };
         }
-        object? Fallback(IEffectArgumentField field)
-        {
-            object? value = field switch
-            {
-                StaticEffectArgumentField f => f.Value,
-                DynamicEffectParamField f => f.StaticFallbackValue,
-                EffectArgumentFieldDescriptor => EffectFieldTypes.DefaultValue(field),
-                _ => field.GetGetter()(),
-            };
-            return field.FieldType.IsContent() && !EffectFieldTypes.Accepts(field.FieldType, value) ? null : value;
-        }
-        Result EvaluateNode(Guid id)
+        DynamicEffectValue EvaluateNode(Guid id)
         {
             if (results.TryGetValue(id, out var cached)) return cached;
             if (!visiting.Add(id)) throw new InvalidOperationException($"Effect cycle at {id}.");
-            var node = nodes[id];
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (node.Provider is MixtureSourceProvider mixtureSource)
-                {
-                    if (!node.Enabled) throw new InvalidOperationException($"Mixture source {id} is disabled.");
-                    return results[id] = mixtureSource.IsUnder
-                        ? new(underPicture ?? throw new InvalidOperationException("The underlying picture is unavailable."), new(0, 0, width, height, false), false)
-                        : new(source, initialPosition, preserveAspect);
-                }
-                if (node.Provider is IClipValueEndpointProvider { IsExport: false } endpointInput)
-                {
-                    if (!node.Enabled || clip is null || ClipValueFrameContext.Current is null)
-                        throw new ClipValueBindingException($"Endpoint input {id} on clip {clip?.Id}, frame {frame}, is unavailable.");
-                    var imported = Copy(ClipValueFrameContext.Current.Read(clip, frame, endpointInput));
-                    var field = types.GetOutputField(node.Provider);
-                    types.ValidateValue(node.Provider, field.Id, false, field, imported, frame);
-                    ValueProviderFrameContext.Set(id.ToString(), imported);
-                    ValueProviderFrameContext.Set(EffectProviderOutputExtensions.CreateOutputSourceId(id, field.Id), imported);
-                    foreach (var effect in node.Effects) afterNode?.Invoke(effect, imported);
-                    return results[id] = new(imported, initialPosition, preserveAspect);
-                }
-                bool multiple = node.Provider is IMultipleOutputEffectProvider;
-                if (multiple && (!node.Enabled || node.Effects.Length == 0 || !Progress(node.Effects[^1]).HasValue))
-                    return results[id] = new(null, initialPosition, preserveAspect, new Dictionary<string, object?>());
-                bool useDefault = node.Provider is IsUpstreamAvailableOrDefaultEffectProvider;
-                var activeEffects = node.Enabled ? node.Effects.Select(e => (Effect: e, Progress: Progress(e)))
-                    .Where(e => e.Progress.HasValue).ToArray() : [];
-                var input = MainInput(node, useDefault && activeEffects.Length > 0);
-                if (node.Provider.TypeOfEffect == EffectType.MixtureProvider && activeEffects.Length == 0)
-                    return results[id] = Resolve(node.Bindings.GetValueOrDefault(MixtureProviderBase.UpperInputKey));
-                if (useDefault && activeEffects.Length > 0 && (input.Value is null || ReferenceEquals(input.Value, EffectBranchState.Inactive)))
-                    input = Resolve(node.Bindings.GetValueOrDefault("DefaultValue"));
-                if (ReferenceEquals(input.Value, EffectBranchState.Inactive)) return Inactive(id);
-                if (node.Provider is IClipValueEndpointProvider { IsExport: true } && input.Value is null)
-                    throw new ClipValueBindingException($"Endpoint {id} on clip {clip?.Id}, frame {frame}, has no source value.");
-                var position = input.Value is ClipPositionTuple inputPosition ? initialPosition.Apply(inputPosition)
-                    : input.Value is IPicture ? input.Position : initialPosition;
-                bool aspect = input.Value is IPicture ? input.PreserveAspect : preserveAspect;
-                node.Fields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var main);
-                object? value = input.Value ?? (main is null || useDefault ? null : Fallback(main));
-                IReadOnlyDictionary<string, object?>? outputs = null;
-                if (activeEffects.Length == 0)
-                {
-                    if (main is null || (main.FieldType.HasFlag(EffectArgumentFieldType.Any)
-                        ? !EffectFieldTypes.Accepts(types.GetOutputType(node.Provider), value, types.GetOutputContract(node.Provider))
-                        : !EffectFieldTypes.AreCompatible(types.GetInputType(node.Provider, EffectProviderAnchorExtensions.InputKey),
-                            types.GetOutputType(node.Provider), types.GetInputContract(node.Provider, EffectProviderAnchorExtensions.InputKey),
-                            types.GetOutputContract(node.Provider)))) value = null;
-                    if (value is IHwAccelPicture) value = Copy(value);
-                }
-                else
-                {
-                    if (main is not null)
-                    {
-                        value = EffectFieldTypes.ConvertInput(main.FieldType, value, false);
-                        if (value is IHwAccelPicture hardwareInput) Track(hardwareInput);
-                    }
-                    if (main is not null && value is null && main.FieldType.IsContent())
-                        throw new InvalidOperationException($"Invalid primary input on provider {id}.");
-                    if (main is not null) types.ValidateValue(node.Provider, EffectProviderAnchorExtensions.InputKey, true, main, value, frame);
-                    string? selectedKey = node.Provider is IfConditionNodeEffectProvider
-                        ? (Condition(node, IfConditionNodeEffectProvider.ConditionKey) ? "TrueValue" : "FalseValue") : null;
-                    var selectedInput = selectedKey is null ? null : Resolve(node.Bindings.GetValueOrDefault(selectedKey));
-                    if (ReferenceEquals(selectedInput?.Value, EffectBranchState.Inactive)) return Inactive(id);
-                    if (selectedInput?.Value is IPicture)
-                    {
-                        position = selectedInput.Position;
-                        aspect = selectedInput.PreserveAspect;
-                    }
-                    var parameters = new Dictionary<string, object?>();
-                    var values = new Dictionary<string, object?>();
-                    foreach (var (key, field) in node.Fields.Where(p => p.Key != EffectProviderAnchorExtensions.InputKey))
-                    {
-                        if (useDefault && key == "DefaultValue") continue;
-                        if (selectedKey is not null && (key is "TrueValue" or "FalseValue") && key != selectedKey) continue;
-                        var binding = node.Bindings.GetValueOrDefault(key);
-                        object? parameter;
-                        if (node.Provider is ConditionComputeNodeEffectProvider && key == ConditionComputeNodeEffectProvider.ConditionKey
-                            || node.Provider is IfConditionNodeEffectProvider && key == IfConditionNodeEffectProvider.ConditionKey)
-                            parameter = Condition(node, key);
-                        else
-                        {
-                            var resolved = key == selectedKey ? selectedInput!.Value : Resolve(binding).Value;
-                            if (ReferenceEquals(resolved, EffectBranchState.Inactive)) return Inactive(id);
-                            parameter = key == selectedKey || node.Provider is EqualityComparisonNodeEffectProvider && (key is "A" or "B")
-                                ? resolved : resolved ?? Fallback(field);
-                        }
-                        // Preserve operand types for numeric comparison and overload selection.
-                        if (!(node.Provider is NumericComparisonNodeEffectProvider && (key is "A" or "B")
-                            || node.Provider is AdvancedMathEffectProvider && (key is "A" or "B" or "C")))
-                            parameter = EffectFieldTypes.ConvertInput(field.FieldType, parameter, false);
-                        if (parameter is IHwAccelPicture hardwareParameter) Track(hardwareParameter);
-                        types.ValidateValue(node.Provider, key, true, field, parameter, frame);
-                        parameters[key] = activeEffects[0].Effect is IHwAccelPictureEffect && parameter is IPicture and not IHwAccelPicture
-                            ? parameter : Copy(parameter);
-                        if (!string.IsNullOrEmpty(binding)) values[binding] = parameters[key];
-                    }
-                    if (activeEffects[0].Effect is not IHwAccelPictureEffect || value is not IPicture || value is IHwAccelPicture)
-                        value = Copy(value);
-                    var inputTypes = node.Fields.ToDictionary(p => p.Key, p => p.Value.FieldType);
-                    foreach (var field in node.Fields)
-                        if (node.Bindings.TryGetValue(field.Key, out var binding)) inputTypes[binding] = field.Value.FieldType;
-                    using var diagnostic = RenderFrameDiagnostics.Current?.Measure($"Provider {id} ({node.Provider.GetType().Name})", $"Provider ({node.Provider.GetType().Name})");
-                    using var nodeScope = ValueProviderFrameContext.PushValues(values);
-                    foreach (var (effect, nodeProgress) in activeEffects)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        using var effectTiming = RenderFrameDiagnostics.Current?.Measure($"Node effect {effect.Name} ({effect.Id}, {effect.GetType().Name})", $"Node effect ({effect.GetType().Name})");
-                        if (processFromCanvas && effect.CanProcessFromCanvas && value is IPicture picture
-                                && position.TargetWidth > 0 && position.TargetHeight > 0
-                                && (picture.Width != position.TargetWidth || picture.Height != position.TargetHeight))
-                        {
-                            value = Track(EffectPictureProcessing.Resize(picture, position.TargetWidth, position.TargetHeight, aspect));
-                            if (!parameters.Values.Any(p => ReferenceEquals(p, picture))) ReleaseDeviceInput(picture, value);
-                        }
-                        var effectInput = value;
-                        IRenderContext.CurrentFrameBuffer = value as IPicture;
-                        var context = new EffectExecutionContext
-                        {
-                            Input = value, Parameters = parameters, Clip = clip, FrameIndex = frame, AudioSampleIndex = AudioOffset(),
-                            Progress = nodeProgress!.Value, ClipProgress = progress, TargetWidth = width, TargetHeight = height,
-                            RelativeWidth = relativeWidth, RelativeHeight = relativeHeight, CancellationToken = cancellationToken,
-                            InputTypes = inputTypes,
-                        };
-                        object? computed;
-                        object? Compute()
-                        {
-                            if (effect is not IMixture mixer) return EffectPictureProcessing.Compute(effect, context, values);
-                            if (parameters.GetValueOrDefault(MixtureProviderBase.UpperInputKey) is not IPicture upper
-                                || parameters.GetValueOrDefault(MixtureProviderBase.LowerInputKey) is not IPicture lower)
-                                throw new InvalidOperationException($"Mixture {id} requires upper and lower pictures.");
-                            var upperPosition = Resolve(node.Bindings.GetValueOrDefault(MixtureProviderBase.UpperInputKey)).Position;
-                            var lowerPosition = Resolve(node.Bindings.GetValueOrDefault(MixtureProviderBase.LowerInputKey)).Position;
-                            upper = Track(EffectRuntimeDefaults.ApplyOpacity(upper, upperPosition.Opacity));
-                            lower = Track(EffectRuntimeDefaults.ApplyOpacity(lower, lowerPosition.Opacity));
-                            var pixelMode = mixturePixelMode ?? lower.BitPerPixel;
-                            if (lowerPosition.TargetX != 0 || lowerPosition.TargetY != 0 || lower.Width != width || lower.Height != height)
-                                lower = Track(EffectPictureProcessing.Mix(ClassicOverlayMixture.Default,
-                                    Track(PictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero)), lower, pixelMode,
-                                    lowerPosition.TargetX, lowerPosition.TargetY, width, height));
-                            position = new(0, 0, width, height, false);
-                            return EffectPictureProcessing.Mix(mixer, lower, upper, pixelMode,
-                                upperPosition.TargetX, upperPosition.TargetY, width, height);
-                        }
-                        computed = effect is not IMixture && FrameHashContext.Current is { } hashes
-                            ? hashes.ComputeEffect(effect, context, Compute, node.Provider.IsDeterministic, node.Provider, Array.IndexOf(node.Effects, effect)) : Compute();
-                        if (effect is IMultipleOutputEffect)
-                        {
-                            outputs = computed as IReadOnlyDictionary<string, object?>
-                                ?? throw new InvalidOperationException($"Provider {id} returned no output map.");
-                            foreach (var pictureOutput in outputs.Values.OfType<IPicture>()) Track(pictureOutput);
-                        }
-                        if (effect is IClipPositionProvider or IContinuousClipPositionProvider)
-                        {
-                            position = position.Apply(computed is ClipPositionTuple pos ? pos
-                                : throw new InvalidOperationException($"Position effect {effect.Id} did not return a position."));
-                            value = position;
-                            if (effect is IClipPositionProvider p) aspect &= p.PreserveAspectRatio;
-                            if (effect is IContinuousClipPositionProvider cp) aspect &= cp.PreserveAspectRatio;
-                        }
-                        else value = computed;
-                        if (value is IPicture rendered) Track(rendered);
-                        if (!parameters.Values.Any(p => ReferenceEquals(p, effectInput))) ReleaseDeviceInput(effectInput, value, outputs);
-                    }
-                    foreach (var parameter in parameters.Values) ReleaseDeviceInput(parameter, value, outputs);
-                }
-                if (multiple) DynamicEffectBindings.ValidateOutputValues(node.Provider, outputs!, types, frame);
-                else
-                {
-                    var field = types.GetOutputField(node.Provider);
-                    types.ValidateValue(node.Provider, field.Id, false, field, value, frame);
-                }
-                if (activeEffects.Length > 0 && afterNode is not null)
-                {
-                    object? observed = multiple ? outputs : value;
-                    if (outputs is not null && outputs.Values.Any(v => ReferenceEquals(v, EffectBranchState.Inactive)))
-                        observed = outputs.ToDictionary(p => p.Key, p => ReferenceEquals(p.Value, EffectBranchState.Inactive) ? null : p.Value);
-                    afterNode(activeEffects[^1].Effect, observed);
-                }
-                var result = new Result(multiple ? null : value, position, aspect, outputs);
+                if (nodes[id].Provider is ConditionalLoopNodeEffectProvider or EffectVariableProvider)
+                    throw new InvalidOperationException("Variables and conditional loops require dynamic calculation.");
+                var result = new DynamicEffectNodeEvaluator(frameContext, id, new DelegateInputResolver(Resolve)).Evaluate();
                 results[id] = result;
-                if (outputs is not null)
-                    foreach (var (key, outputValue) in outputs)
-                        ValueProviderFrameContext.Set(EffectProviderOutputExtensions.CreateOutputSourceId(id, key),
-                            ReferenceEquals(outputValue, EffectBranchState.Inactive) ? null : outputValue);
-                else
-                {
-                    ValueProviderFrameContext.Set(id.ToString(), value);
-                    var field = types.GetOutputField(node.Provider);
-                    if (!string.IsNullOrWhiteSpace(field.Id))
-                        ValueProviderFrameContext.Set(EffectProviderOutputExtensions.CreateOutputSourceId(id, field.Id), value);
-                }
-                RetireInputs(node);
+                RetireInputs(nodes[id]);
                 return result;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -593,6 +351,15 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 throw;
             }
             finally { visiting.Remove(id); }
+        }
+        DynamicEffectValue Terminal(string field, object fallback)
+        {
+            if (renderOutput is not { Enabled: true }) return new(fallback, initialPosition, preserveAspect);
+            var binding = renderOutput.AnchorsBindingState.GetValueOrDefault(field);
+            var result = string.IsNullOrWhiteSpace(binding) || binding == IEffectProvider.NoConnectionGUID.ToString()
+                ? new DynamicEffectValue(renderOutput.Fields.GetValueOrDefault(field)?.GetGetter()(), initialPosition, preserveAspect) : Resolve(binding);
+            return result.Value is null || result.IsInactive || result.Value is string { Length: 0 }
+                ? new(fallback, initialPosition, preserveAspect) : result;
         }
         try
         {
@@ -607,7 +374,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                     if (value is null) throw new ClipValueBindingException($"Endpoint {id} on clip {clip?.Id}, frame {frame}, produced no value.");
                     exported[id] = value;
                 }
-            Result result;
+            DynamicEffectValue result;
             if (stage == EffectStage.Render)
             {
                 bool shouldRender = !EffectParamConvert.TryConvertToBool(Terminal(RenderOutputProvider.ShouldRenderKey, true).Value, out bool visible) || visible;
@@ -622,8 +389,8 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 {
                     result = requestedOutput == RenderOutputProvider.PositionKey
                         ? Terminal(RenderOutputProvider.PositionKey, initialPosition)
-                        : shouldRender ? finalSource is not null ? Resolve(finalSource) : new(ReadPicture(), initialPosition, preserveAspect)
-                        : new(Track(Timeline.CreateTransparentFrame(width, height, IPicture.PicturePixelMode.Float16Picture)), initialPosition, preserveAspect);
+                        : shouldRender ? finalSource is not null ? Resolve(finalSource) : new(frameContext.ReadPicture(), initialPosition, preserveAspect)
+                        : new(frameContext.Track(Timeline.CreateTransparentFrame(width, height, IPicture.PicturePixelMode.Float16Picture)), initialPosition, preserveAspect);
                     var position = Terminal(RenderOutputProvider.PositionKey, result.Position);
                     if (position.Value is not ClipPositionTuple pos) throw new InvalidOperationException("Render position output must be a ClipPositionTuple.");
                     result = result with { Position = initialPosition.Apply(pos), PreserveAspect = result.PreserveAspect && position.PreserveAspect };

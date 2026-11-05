@@ -7437,6 +7437,203 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "条件循环",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "首次使用起始值判断条件，之后使用循环输入的回接值。条件为真时发送到循环输出，为假时发送到跳出输出。四个数据端口必须同类型，仅支持动态计算。",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "起始值",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "循环输入",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "循环输出",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "跳出输出",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "循环条件",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "动态计算超过步数上限，此片段无法渲染。",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "当前帧的效果图计算超过 {limit} 步，已停止计算。请检查循环的终止条件，或在渲染设置中提高动态计算步数上限。\n帧：{frame}；节点：{provider}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "类型转换",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "将任意输入值转换为所选类型。",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "目标类型",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "数值",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "整数",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "无符号整数",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "64 位整数",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "无符号 64 位整数",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "布尔值",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "文本",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "颜色",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "尺寸",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "位置",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "位置与尺寸",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -11188,6 +11385,203 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Conditional loop",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Check the condition using the start value, then each value returned to the loop input. True routes to the loop output; false routes to the exit output. All four data ports share one type. Requires dynamic calculation.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Start value",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Loop input",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Loop output",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Exit output",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Loop condition",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Dynamic calculation exceeded the step limit. This clip could not be rendered.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Effect graph calculation exceeded {limit} steps for this frame and was stopped. Check loop termination conditions or increase the dynamic calculation step limit in rendering settings.\nFrame: {frame}; node: {provider}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Convert value type",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Converts an input value to the selected type.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Target type",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Number",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Integer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unsigned integer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "64-bit integer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "64-bit unsigned integer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Boolean",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Text",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Position",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Position and size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -14762,6 +15156,203 @@
       {
         "Id": "Effect_AdvancedMathField_Result",
         "Value": "Unset localization item:Effect_AdvancedMathField_Result()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18343,6 +18934,203 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -21919,6 +22707,203 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -25486,6 +26471,203 @@
       {
         "Id": "Effect_AdvancedMathField_Result",
         "Value": "Unset localization item:Effect_AdvancedMathField_Result()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29071,6 +30253,203 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -32635,6 +34014,203 @@
       {
         "Id": "Effect_AdvancedMathField_Result",
         "Value": "Unset localization item:Effect_AdvancedMathField_Result()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36206,6 +37782,203 @@
       {
         "Id": "Effect_AdvancedMathField_Result",
         "Value": "Unset localization item:Effect_AdvancedMathField_Result()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39787,6 +41560,203 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -43359,6 +45329,203 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -46924,6 +49091,203 @@
       {
         "Id": "Effect_AdvancedMathField_Result",
         "Value": "Unset localization item:Effect_AdvancedMathField_Result()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -50507,6 +52871,203 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -54072,6 +56633,203 @@
       {
         "Id": "Effect_AdvancedMathField_Result",
         "Value": "Unset localization item:Effect_AdvancedMathField_Result()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:DisplayName_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ConditionalLoopNode",
+        "Value": "Unset localization item:Description_Effect_ConditionalLoopNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_StartValue",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_StartValue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopInput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_LoopOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_LoopOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_ExitOutput",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_ExitOutput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ConditionalLoopNode_Condition",
+        "Value": "Unset localization item:Effect_ConditionalLoopNode_Condition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimit",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimit()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_DynamicCalculationLimitDetails",
+        "Value": "Unset localization item:ClipFallback_DynamicCalculationLimitDetails(limit limit: {limit})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "limit"
+          },
+          {
+            "Key": "string",
+            "Value": "frame"
+          },
+          {
+            "Key": "string",
+            "Value": "provider"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:DisplayName_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ValueTypeConversionNode",
+        "Value": "Unset localization item:Description_Effect_ValueTypeConversionNode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Numeric",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Numeric()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Integer",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Integer()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedInteger",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedInteger()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Long",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Long()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_UnsignedLong",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_UnsignedLong()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Boolean",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Boolean()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_String",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_String()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Color",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Size",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Size()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_Position",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_Position()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
+        "Value": "Unset localization item:Effect_ValueTypeConversionNode_TargetType_SizeAndPosition()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

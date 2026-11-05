@@ -234,22 +234,4 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         int IEffect.Index { get => int.MinValue; set { } }
 
     }
-
-    /// <summary>
-    /// A value provider effect is a special kind of effect that does not produce picture output, but instead provides a dynamic value to other effects. 
-    /// <para />
-    /// It implements both <see cref="IEffect"/> and <see cref="IEffectArgumentField"/>, allowing it to be used as a source of dynamic parameters for other effects in the rendering pipeline.
-    /// </summary>
-    public interface IValueProviderEffect : IEffect, IEffectArgumentField
-    {
-        EffectType IEffect.TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
-
-        bool IEffectArgumentField.IsDynamic => true;
-    }
-
-    /// <summary>Computes all named outputs once for the current node invocation.</summary>
-    public interface IMultipleOutputEffect : IEffect
-    {
-        public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context);
-    }
 }

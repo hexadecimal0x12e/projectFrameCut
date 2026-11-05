@@ -9,7 +9,7 @@ public static class ExternalRpcAuthorizationStore
 {
     private const string EncryptedFileName = "ExternalRpcClients.dat";
     private const string LegacyFileName = "ExternalRpcClients.json";
-    private static readonly object Gate = new();
+    private static readonly Lock Gate = new();
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static byte[]? _encryptionKey;
 

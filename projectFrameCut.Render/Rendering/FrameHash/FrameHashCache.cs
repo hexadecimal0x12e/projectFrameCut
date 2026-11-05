@@ -5,7 +5,7 @@ namespace projectFrameCut.Render.Rendering;
 /// <summary>A caller-owned cache of deterministic node outputs.</summary>
 public sealed class FrameHashCache : IDisposable
 {
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private readonly Dictionary<string, Entry> values = new(StringComparer.Ordinal);
     private long hits, misses, unsupported;
     private bool disposed;

@@ -11,7 +11,7 @@ public static class ProjectExternalSourceRuntime
     private static readonly AsyncLocal<ProjectExternalSourceHost?> Context = new();
     public static ProjectExternalSourceHost Current => Context.Value ?? Default;
     public static Func<bool> IsAllowed { get; set; } = () => true;
-    private static readonly object PolicyLock = new();
+    private static readonly Lock PolicyLock = new();
     private static long policyValidUntil;
     private static bool sourcesAllowed = true;
 

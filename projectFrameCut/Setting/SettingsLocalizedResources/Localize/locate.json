@@ -1745,6 +1745,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Plugin_AddDevelopmentRoot",
+        "Value": "\u5BFC\u5165\u6839\u8BC1\u4E66\uFF08PEM / DER\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Plugin_AddOne",
         "Value": "\u6DFB\u52A0\u63D2\u4EF6",
         "Mode": "ConstString",
@@ -1881,6 +1889,30 @@
         "DontTranslate": false
       },
       {
+        "Id": "Plugin_DevelopmentRoots",
+        "Value": "\u81EA\u5B9A\u4E49\u6839\u4FE1\u4EFB\u8BC1\u4E66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentRoots_Description",
+        "Value": "\u652F\u6301 PEM \u6216 DER \u683C\u5F0F\u7684 CA \u8BC1\u4E66\uFF1B\u542F\u7528\u4FE1\u4EFB\u6821\u9A8C\u65F6\uFF0C\u4ECD\u9700\u9A8C\u8BC1\u63D2\u4EF6\u7B7E\u540D\u5E76\u786E\u8BA4\u53D1\u5E03\u8005\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DevelopmentTrust",
+        "Value": "\u63D2\u4EF6\u5F00\u53D1\u6D4B\u8BD5\uFF08Debug\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Plugin_Disable",
         "Value": "\u7981\u7528\u300C{name}\u300D",
         "Mode": "InterpolationString",
@@ -1896,6 +1928,22 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust",
+        "Value": "\u7981\u7528\u63D2\u4EF6\u4FE1\u4EFB\u6821\u9A8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_DisableTrust_Description",
+        "Value": "\u8DF3\u8FC7\u8BC1\u4E66\u94FE\u3001\u7B7E\u540D\u3001\u6587\u4EF6\u6458\u8981\u3001\u540A\u9500\u548C\u53D1\u5E03\u8005\u4FE1\u4EFB\u6821\u9A8C\u3002\u66F4\u6539\u5F71\u54CD\u540E\u7EED\u52A0\u8F7D\uFF1B\u5DF2\u52A0\u8F7D\u63D2\u4EF6\u8BF7\u91CD\u65B0\u52A0\u8F7D\u6216\u91CD\u542F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -2099,6 +2147,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Plugin_NoDevelopmentRoots",
+        "Value": "\u5C1A\u672A\u6DFB\u52A0\u81EA\u5B9A\u4E49\u6839\u8BC1\u4E66\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Plugin_OpenDataDir",
         "Value": "\u6253\u5F00\u6570\u636E\u6587\u4EF6\u5939",
         "Mode": "ConstString",
@@ -2117,6 +2173,14 @@
       {
         "Id": "Plugin_Remove",
         "Value": "\u5378\u8F7D\u6269\u5C55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_RemoveDevelopmentRoot",
+        "Value": "\u79FB\u9664\u6839\u8BC1\u4E66",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2146,6 +2210,14 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_TrustBypassed",
+        "Value": "\u5DF2\u8DF3\u8FC7\u63D2\u4EF6\u4FE1\u4EFB\u6821\u9A8C\uFF08Debug\uFF09\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -2190,6 +2262,54 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions",
+        "Value": "Windows \u5E94\u7528\u6269\u5C55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Conflict",
+        "Value": "\u63D2\u4EF6 ID \u4E0E\u5176\u4ED6\u63D2\u4EF6\u51B2\u7A81\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Enabled",
+        "Value": "\u5DF2\u542F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_None",
+        "Value": "\u672A\u53D1\u73B0 Windows \u5E94\u7528\u6269\u5C55\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Restart",
+        "Value": "\u6269\u5C55\u5305\u5DF2\u66F4\u65B0\uFF0C\u8BF7\u91CD\u542F\u5E94\u7528\u540E\u4F7F\u7528\u65B0\u7248\u672C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_WindowsExtensions_Unavailable",
+        "Value": "\u6269\u5C55\u5305\u672A\u5B89\u88C5\u6216\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -2452,6 +2572,46 @@
       {
         "Id": "Render_DumpDiagData",
         "Value": "\u4FDD\u5B58\u6E32\u67D3\u65F6\u7684\u8BE6\u7EC6\u8BCA\u65AD\u62A5\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "\u5B8C\u5168\u52A8\u6001",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "\u4F7F\u7528\u9ED8\u8BA4\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "\u7ED1\u5B9A\u56FE\u8BA1\u7B97\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "\u9759\u6001/\u534A\u52A8\u6001",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "\u5355\u6B21\u8BA1\u7B97\u6700\u5927\u5141\u8BB8\u6B65\u6570",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2923,6 +3083,35 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_SchedulingInvalidValue",
+        "Value": "\u8C03\u5EA6\u8BBE\u7F6E\u4E2D\u7684\u201C{name}\u201D\u65E0\u6548\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride",
+        "Value": "\u8986\u76D6\u672C\u6B21\u6E32\u67D3\u7684\u8C03\u5EA6\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_SchedulingOverride_Desc",
+        "Value": "\u4EC5\u7528\u4E8E\u672C\u6B21\u6E32\u67D3\u53CA\u751F\u6210\u7684 CLI \u547D\u4EE4\uFF1B\u5173\u95ED\u540E\u4F7F\u7528\u5168\u5C40\u8BBE\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_SelectAccel",
         "Value": "\u9009\u62E9\u7528\u4E8E\u6E32\u67D3/\u7F16\u8F91\u65F6\uFF0C\u7528\u4E8E\u786C\u4EF6\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
@@ -3342,155 +3531,6 @@
       {
         "Id": "Security_Script_EnableScript",
         "Value": "\u542F\u7528 PowerShell \u811A\u672C\u5F15\u64CE",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_SchedulingOverride",
-        "Value": "\u8986\u76D6\u672C\u6B21\u6E32\u67D3\u7684\u8C03\u5EA6\u8BBE\u7F6E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_SchedulingOverride_Desc",
-        "Value": "\u4EC5\u7528\u4E8E\u672C\u6B21\u6E32\u67D3\u53CA\u751F\u6210\u7684 CLI \u547D\u4EE4\uFF1B\u5173\u95ED\u540E\u4F7F\u7528\u5168\u5C40\u8BBE\u7F6E\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_SchedulingInvalidValue",
-        "Value": "\u8C03\u5EA6\u8BBE\u7F6E\u4E2D\u7684\u201C{name}\u201D\u65E0\u6548\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_DevelopmentTrust",
-        "Value": "\u63d2\u4ef6\u5f00\u53d1\u6d4b\u8bd5\uff08Debug\uff09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_DisableTrust",
-        "Value": "\u7981\u7528\u63d2\u4ef6\u4fe1\u4efb\u6821\u9a8c",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_DisableTrust_Description",
-        "Value": "\u8df3\u8fc7\u8bc1\u4e66\u94fe\u3001\u7b7e\u540d\u3001\u6587\u4ef6\u6458\u8981\u3001\u540a\u9500\u548c\u53d1\u5e03\u8005\u4fe1\u4efb\u6821\u9a8c\u3002\u66f4\u6539\u5f71\u54cd\u540e\u7eed\u52a0\u8f7d\uff1b\u5df2\u52a0\u8f7d\u63d2\u4ef6\u8bf7\u91cd\u65b0\u52a0\u8f7d\u6216\u91cd\u542f\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_DevelopmentRoots",
-        "Value": "\u81ea\u5b9a\u4e49\u6839\u4fe1\u4efb\u8bc1\u4e66",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_DevelopmentRoots_Description",
-        "Value": "\u652f\u6301 PEM \u6216 DER \u683c\u5f0f\u7684 CA \u8bc1\u4e66\uff1b\u542f\u7528\u4fe1\u4efb\u6821\u9a8c\u65f6\uff0c\u4ecd\u9700\u9a8c\u8bc1\u63d2\u4ef6\u7b7e\u540d\u5e76\u786e\u8ba4\u53d1\u5e03\u8005\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_AddDevelopmentRoot",
-        "Value": "\u5bfc\u5165\u6839\u8bc1\u4e66\uff08PEM / DER\uff09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_RemoveDevelopmentRoot",
-        "Value": "\u79fb\u9664\u6839\u8bc1\u4e66",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_NoDevelopmentRoots",
-        "Value": "\u5c1a\u672a\u6dfb\u52a0\u81ea\u5b9a\u4e49\u6839\u8bc1\u4e66\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_TrustBypassed",
-        "Value": "\u5df2\u8df3\u8fc7\u63d2\u4ef6\u4fe1\u4efb\u6821\u9a8c\uff08Debug\uff09\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_WindowsExtensions",
-        "Value": "Windows \u5E94\u7528\u6269\u5C55",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_WindowsExtensions_None",
-        "Value": "\u672A\u53D1\u73B0 Windows \u5E94\u7528\u6269\u5C55\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_WindowsExtensions_Enabled",
-        "Value": "\u5DF2\u542F\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_WindowsExtensions_Restart",
-        "Value": "\u6269\u5C55\u5305\u5DF2\u66F4\u65B0\uFF0C\u8BF7\u91CD\u542F\u5E94\u7528\u540E\u4F7F\u7528\u65B0\u7248\u672C\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_WindowsExtensions_Conflict",
-        "Value": "\u63D2\u4EF6 ID \u4E0E\u5176\u4ED6\u63D2\u4EF6\u51B2\u7A81\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Plugin_WindowsExtensions_Unavailable",
-        "Value": "\u6269\u5C55\u5305\u672A\u5B89\u88C5\u6216\u5F53\u524D\u4E0D\u53EF\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7054,6 +7094,46 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Dynamic calculation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Maximum calculation steps per clip per frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Binding graph calculation mode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Follow global setting",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Original system",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -10610,6 +10690,46 @@
       {
         "Id": "Plugin_WindowsExtensions_Unavailable",
         "Value": "\u64F4\u5145\u5957\u4EF6\u5C1A\u672A\u5B89\u88DD\u6216\u76EE\u524D\u7121\u6CD5\u4F7F\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14178,6 +14298,46 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -17731,6 +17891,46 @@
       {
         "Id": "Plugin_WindowsExtensions_Unavailable",
         "Value": "\uD655\uC7A5 \uD328\uD0A4\uC9C0\uAC00 \uC124\uCE58\uB418\uC9C0 \uC54A\uC558\uAC70\uB098 \uD604\uC7AC \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21289,6 +21489,46 @@
       {
         "Id": "Plugin_WindowsExtensions_Unavailable",
         "Value": "Le package de l\u2019extension n\u2019est pas install\u00E9 ou est actuellement indisponible.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24854,6 +25094,46 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -28407,6 +28687,46 @@
       {
         "Id": "Plugin_WindowsExtensions_Unavailable",
         "Value": "Das Erweiterungspaket ist nicht installiert oder derzeit nicht verf\u00FCgbar.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31971,6 +32291,46 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -35526,6 +35886,46 @@
       {
         "Id": "Plugin_WindowsExtensions_Unavailable",
         "Value": "Il pacchetto dell\u2019estensione non \u00E8 installato o non \u00E8 attualmente disponibile.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39089,6 +39489,46 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -42644,6 +43084,46 @@
       {
         "Id": "Plugin_WindowsExtensions_Unavailable",
         "Value": "O pacote da extens\u00E3o n\u00E3o est\u00E1 instalado ou est\u00E1 indispon\u00EDvel no momento.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -46211,6 +46691,46 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -49768,6 +50288,46 @@
       {
         "Id": "Plugin_WindowsExtensions_Unavailable",
         "Value": "Uzant\u0131 paketi y\u00FCkl\u00FC de\u011Fil veya \u015Fu anda kullan\u0131lam\u0131yor.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculation",
+        "Value": "Unset localization item:Render_DynamicCalculation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationSteps",
+        "Value": "Unset localization item:Render_DynamicCalculationSteps()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationMode",
+        "Value": "Unset localization item:Render_DynamicCalculationMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationGlobal",
+        "Value": "Unset localization item:Render_DynamicCalculationGlobal()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DynamicCalculationOriginal",
+        "Value": "Unset localization item:Render_DynamicCalculationOriginal()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

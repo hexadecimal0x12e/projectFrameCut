@@ -623,7 +623,8 @@ public sealed partial class RenderBackendService
                 IClip[] dependencies = [clip, .. Timeline.CollectHashDependencies(_renderClips, clip, [clip.Id])];
                 bool CanPersist() => dependencies.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c));
                 IPicture Render() => DynamicEffectGraph.CopyPicture(picture);
-                bool positioned = ProjectReferenceRuntime.IsCanvasClip(clip) || TransformProcessing.HasActiveTransform(clip, _renderClips, job.Frame);
+                bool positioned = ProjectReferenceRuntime.IsCanvasClip(clip) || PreviewRenderComposer.RequiresBackdrop(clip)
+                    || TransformProcessing.HasActiveTransform(clip, _renderClips, job.Frame);
                 if (MemoryOnly) return new(job, clip.Id, null, positioned, false, Render());
                 if (!_request.UsePreviewMetadata)
                 {

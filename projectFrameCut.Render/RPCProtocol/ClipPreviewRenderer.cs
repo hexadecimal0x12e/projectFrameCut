@@ -4,6 +4,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
@@ -54,6 +55,16 @@ public static class ClipPreviewRenderer
         bool transform = !beforeLayout && TransformProcessing.HasActiveTransform(clip, allClips, frameIndex);
         if (!ClipArgumentBinding.ShouldRender(clip))
             return Timeline.CreateTransparentFrame(transform ? canvasWidth : sourceWidth, transform ? canvasHeight : sourceHeight, pixelMode);
+        if (!beforeLayout && !ignoreMixture && PreviewRenderComposer.RequiresBackdrop(clip))
+        {
+            var lower = allClips.Where(c => c.ClipType is not (ClipMode.AudioClip or ClipMode.MarkingClip)
+                && ClipLayerOrder.BottomToTop.Compare(c, clip) < 0).Append(clip).ToArray();
+            return Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(lower, frameIndex, canvasWidth, canvasHeight,
+                pixelMode, projectWidth, projectHeight, initializeClips: initializeClips), frameIndex, canvasWidth, canvasHeight,
+                (int)pixelMode, projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
+                transparentBackground: true, disposeIntermediateFrames: true, cancellationToken: token,
+                allClips: allClips, keepHwAccelPicture: keepHwAccelPicture);
+        }
         if (transform)
             return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode,
                 initializeClips: initializeClips, keepHwAccelPicture: keepHwAccelPicture);

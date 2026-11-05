@@ -13,6 +13,7 @@ using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -149,6 +150,7 @@ public partial class DraftEffectBindingView : ContentView
 #endif
 
         InfoLabel.Text = Localized.Effect_ClickConnectHint;
+        ToolTipProperties.SetText(StepDebugToggleButton, StepL("Hint", "单步执行：用 ◀ / ▶ 逐步查看被激活的节点和各接口的值。"));
         _panelWidthBeforeCollapse = RightPanelColumn.Width.Value;
         UpdatePanelToggleText();
 
@@ -344,6 +346,7 @@ public partial class DraftEffectBindingView : ContentView
     public void LoadStage(ClipElementUI clip, DraftPage? page, bool showIsNotVisibleInEffectEditorEffect, EffectStage? stage = null)
     {
         EffectStageUI.Resolve(clip, page);
+        StopStepDebug();
         _previewCts?.Cancel();
         _fieldTypesCts?.Cancel();
         if (!ReferenceEquals(_page, page)) UnsubscribeFromPageEvents();
@@ -420,6 +423,7 @@ public partial class DraftEffectBindingView : ContentView
         ApplySavedViewTransform();
         UpdateSourcesAndOutputsPanel();
         ConnectionsLayer.Invalidate();
+        InitializeEditHistory();
     }
 
     private void EnsureClipArgumentProvider()
@@ -553,6 +557,11 @@ public partial class DraftEffectBindingView : ContentView
         AbsoluteLayout.SetLayoutBounds(view, new Rect(node.X, node.Y, -1, AbsoluteLayout.AutoSize));
         node.VisualSignature = GetNodeVisualSignature(node);
         ConnectionsLayer.Invalidate();
+        if (_stepDebugEnabled && _stepIndex >= 0 && _stepIndex < _steps.Count)
+        {
+            try { ApplyStepHighlight(_steps[_stepIndex]); }
+            catch (Exception ex) { Log(ex, "Reapply single-step highlight", this); }
+        }
     }
 
     private string GetNodeVisualSignature(NodeViewModel node)
@@ -725,6 +734,7 @@ public partial class DraftEffectBindingView : ContentView
             RenderOutputProvider.ShouldRenderKey => Localized.Effect_RenderShouldRender,
             MixtureProviderBase.UpperInputKey => Localized.Effect_MixtureUpper,
             MixtureProviderBase.LowerInputKey => Localized.Effect_MixtureLower,
+            EffectVariableReadProvider.InitialValueKey => Localized.Effect_VariableInitialValue,
             nameof(IClip.TargetX) => "X",
             nameof(IClip.TargetY) => "Y",
             nameof(IClip.TargetWidth) => Localized.Effect_ClipWidth,
@@ -740,6 +750,8 @@ public partial class DraftEffectBindingView : ContentView
     {
         if (provider is MixtureSourceProvider source)
             return source.IsUnder ? Localized.Effect_UnderClip : Localized.Effect_CurrentClip;
+        if (provider is EffectVariableProvider)
+            return $"{provider.Name} ({(provider is EffectVariableReadProvider ? Localized.Effect_VariableRead : Localized.Effect_VariableWrite)})";
         return string.IsNullOrWhiteSpace(provider.Name) || provider.Name.Replace(" ", "") == provider.TypeName
             || provider.Name is "New Effect" or "Int Arithmetic" or "Classic Speed"
             ? EffectServices.GetUIProvider(provider).GetLocalizedEffectName(provider, PluginManager.CurrentLocale) : provider.Name;
@@ -934,17 +946,7 @@ public partial class DraftEffectBindingView : ContentView
                     VerticalOptions = LayoutOptions.Center
                 }, 1, 0);
                 var pointer = new PointerGestureRecognizer();
-                pointer.PointerEntered += (_, _) =>
-                {
-                    if (_closing || _isDraggingNodeOrPort) return;
-                    var pos = GetPortPosition(node, PortKind.AnchorInput, index);
-                    StaticInputTooltipText.Text = value;
-                    StaticInputTooltip.TranslationX = Math.Clamp(NodesContainer.TranslationX + pos.X * NodesContainer.Scale - 160,
-                        0, Math.Max(0, ConnectionsLayer.Width - 320));
-                    StaticInputTooltip.TranslationY = Math.Clamp(NodesContainer.TranslationY + (pos.Y + PortSize) * NodesContainer.Scale,
-                        0, Math.Max(0, ConnectionsLayer.Height - 80));
-                    StaticInputTooltip.IsVisible = true;
-                };
+                pointer.PointerEntered += (_, _) => ShowStaticInputTooltip(valueLabel, value);
                 pointer.PointerExited += (_, _) => StaticInputTooltip.IsVisible = false;
                 valueRow.GestureRecognizers.Add(pointer);
                 valueRow.Unloaded += (_, _) => StaticInputTooltip.IsVisible = false;
@@ -1200,6 +1202,30 @@ public partial class DraftEffectBindingView : ContentView
         return stack;
     }
 
+    private void ShowStaticInputTooltip(View anchor, string value)
+    {
+        if (_closing || _isDraggingNodeOrPort || anchor.Width <= 0 || anchor.Height <= 0
+            || ConnectionsLayer.Width <= 0 || ConnectionsLayer.Height <= 0) return;
+        double x = 0, y = 0;
+        View? v = anchor;
+        for (; v is not null && !ReferenceEquals(v, NodesContainer); v = v.Parent as View)
+        {
+            x += v.X + v.TranslationX;
+            y += v.Y + v.TranslationY;
+        }
+        if (v is null) return;
+        x = NodesContainer.X + NodesContainer.TranslationX + x * NodesContainer.Scale;
+        y = NodesContainer.Y + NodesContainer.TranslationY + y * NodesContainer.Scale;
+        StaticInputTooltipText.Text = value;
+        StaticInputTooltip.MaximumWidthRequest = Math.Min(320, ConnectionsLayer.Width);
+        StaticInputTooltip.IsVisible = true;
+        var size = ((IView)StaticInputTooltip).Measure(StaticInputTooltip.MaximumWidthRequest, ConnectionsLayer.Height);
+        double below = y + anchor.Height * NodesContainer.Scale + 4;
+        StaticInputTooltip.TranslationX = Math.Clamp(x, 0, Math.Max(0, ConnectionsLayer.Width - size.Width));
+        StaticInputTooltip.TranslationY = Math.Clamp(below + size.Height <= ConnectionsLayer.Height ? below : y - size.Height - 4,
+            0, Math.Max(0, ConnectionsLayer.Height - size.Height));
+    }
+
     private string? GetInputStaticDisplayValue(NodeViewModel node, NodePort port)
     {
         var provider = node.Group is null ? node.Provider : _clip?.EffectProviders?.GetValueOrDefault(port.Id);
@@ -1353,6 +1379,7 @@ public partial class DraftEffectBindingView : ContentView
                     SaveSystemNodePosition(node);
                 }
                 ConnectionsLayer.Invalidate();
+                RecordEditHistory();
                 break;
         }
     }
@@ -1443,6 +1470,7 @@ public partial class DraftEffectBindingView : ContentView
     {
         if (_page == null || _subscribedToPageEvents) return;
         _page.OnClipChanged += OnPageClipChanged;
+        _page.EditCommandRequested += OnEditCommandRequested;
         _subscribedToPageEvents = true;
         Unloaded += OnViewUnloaded;
     }
@@ -1451,6 +1479,7 @@ public partial class DraftEffectBindingView : ContentView
     {
         if (_page == null || !_subscribedToPageEvents) return;
         _page.OnClipChanged -= OnPageClipChanged;
+        _page.EditCommandRequested -= OnEditCommandRequested;
         _subscribedToPageEvents = false;
         Unloaded -= OnViewUnloaded;
     }
@@ -1491,6 +1520,7 @@ public partial class DraftEffectBindingView : ContentView
                 _drawable.DragPoint = null;
             }
             Reload();
+            InitializeEditHistory(reset: true);
         });
     }
 
@@ -1667,7 +1697,7 @@ public partial class DraftEffectBindingView : ContentView
         }
         if (_closing || !ReferenceEquals(_clip, owner) || version != _fieldTypeVersion
             || selected is not null && !ReferenceEquals(_connectionPort, selected)) return false;
-        if (types.Diagnostics.Count != 0 || targetProvider is not null && !types.AreInputsCompatible(targetProvider)
+        if (DynamicEffectCalculation.HasTypeErrors(types, _clip?.ExtraData) || targetProvider is not null && !types.AreInputsCompatible(targetProvider)
             || target.Kind == NodeKind.Output && target.Provider is null && sourceProvider is not null
                 && !EffectFieldTypes.AreCompatible(types.GetOutputType(sourceProvider, sourcePortKey), _stage.GetContentType()))
         {
@@ -1974,6 +2004,11 @@ public partial class DraftEffectBindingView : ContentView
             BuildEndpointProperties(node, endpoint);
             return;
         }
+        if (node.Provider is EffectVariableProvider variable)
+        {
+            BuildVariableProperties(node, variable);
+            return;
+        }
 
         try
         {
@@ -2118,6 +2153,7 @@ public partial class DraftEffectBindingView : ContentView
         // 参数条上下切换后节点端口 Y 偏移变化，重建连线让端点刷新。
         RebuildConnections();
         ConnectionsLayer.Invalidate();
+        RecordEditHistory();
     }
 
     private static bool GetParamDirection(NodeViewModel node)
@@ -2176,218 +2212,94 @@ public partial class DraftEffectBindingView : ContentView
 
     }
 
-    private static string RenderValueText(object? value) => value is IAudioSamples samples
-        ? $"{samples.SampleCount} / {samples.SamplePerSecond} Hz / {samples.channelCount} ch" : value?.ToString() ?? "";
-
-    private async Task GenerateAudioPreviews()
-    {
-        if (_clip is null || _page is null) return;
-        _previewCts?.Cancel();
-        using var cts = new CancellationTokenSource();
-        _previewCts = cts;
-        try
-        {
-            ClipInfoBuilder.RebuildAllEffects(_clip);
-            using var clips = new EndpointPreviewClips(CreateEndpointPreviewClips());
-            var clip = clips.Clips.First(c => c.Id == _clip.Id);
-            clip.ReInit(8);
-            uint frame = (uint)Math.Clamp(_page.CurrentFrame, clip.StartFrame, (double)clip.StartFrame + Math.Max(1u, clip.GetEffectiveDuration()) - 1);
-            using var audioScope = EffectProcessing.OpenAudioFrame(_page.previewer.AudioSamples);
-            using var clipScope = ValueProviderFrameContext.PushClip(clip);
-            using var frameScope = ValueProviderFrameContext.PushFrame(frame,
-                Math.Clamp(((float)frame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, cts.Token);
-            using var observer = ValueProviderFrameContext.ObserveNodes((effect, value) =>
-            {
-                if (Guid.TryParse(effect.BindedEffectProvidingSystemID, out var id) && _nodes.TryGetValue(id, out var node))
-                    node.PreviewValue = RenderValueText(value);
-            });
-            var graph = clip.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render);
-            if (graph is null) return;
-            var source = _page.previewer.AudioSamples?.ReadClipFrame(clip, frame, cts.Token);
-            foreach (var node in _nodes.Values.Where(n => n.Provider is RenderOutputProvider))
-                node.PreviewValue = RenderValueText(graph.EvaluateRenderValue(clip, frame, node.TerminalField!, source, cts.Token));
-            if (_nodes.TryGetValue(AudioSampleNodeId, out var input)) input.PreviewValue = RenderValueText(source);
-            UpdateBuiltInPreviews(clip, frame, cts.Token);
-            await MainThread.InvokeOnMainThreadAsync(() => AfterEffectBigPreview.Source = null);
-        }
-        catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
-        catch (Exception ex) { Log(ex, $"Preview audio effects for clip {_clip.Id}", this); SetStatusText(ex.Message); }
-        finally { if (ReferenceEquals(_previewCts, cts)) _previewCts = null; }
-    }
-
     private async Task GeneratePreviews()
     {
-        if (_clip == null || _page == null) return;
-        if (_clip.ClipType == ClipMode.MarkingClip) return;
-        if (_clip.ClipType == ClipMode.AudioClip)
-        {
-            await GenerateAudioPreviews();
-            return;
-        }
-
-        // Get source image
-        ClipInfoBuilder.RebuildAllEffects(_clip);
-        var w = _page.previewWidth;
-        var h = _page.previewHeight;
-        var projectRelativeWidth = Math.Max(1, _page.ProjectInfo.RelativeWidth);
-        var projectRelativeHeight = Math.Max(1, _page.ProjectInfo.RelativeHeight);
+        if (_clip is null || _page is null || _clip.ClipType == ClipMode.MarkingClip) return;
         _previewCts?.Cancel();
         using var cts = new CancellationTokenSource();
         _previewCts = cts;
-
+        var clip = _clip;
+        var stage = _stage;
+        bool recordSteps = _stepDebugEnabled;
+        if (recordSteps) BeginStepRecording();
         try
         {
-            using var previewClips = new EndpointPreviewClips(CreateEndpointPreviewClips());
-            using var audio = EffectProcessing.OpenAudioFrame(_page.previewer.AudioSamples);
-            var owner = previewClips.Clips.First(c => c.Id == _clip.Id);
-            owner.ReInit(8);
-            uint targetFrame = (uint)Math.Clamp(_page.CurrentFrame, owner.StartFrame,
-                (double)owner.StartFrame + Math.Max(1u, owner.GetEffectiveDuration()) - 1);
-            using var endpoints = ClipValuePassThrough.Open(previewClips.Clips, targetFrame, w, h,
-                projectRelativeWidth, projectRelativeHeight, 8, cts.Token);
-            var clip = ClipArgumentBinding.InitializeFrame(owner, targetFrame);
-            if (!ClipArgumentBinding.ShouldRender(clip))
+            var draft = DraftImportAndExportHelper.ExportFromDraftPage(_page, includeUiOnlyClips: false, rebuildEffects: false);
+            draft.Clips = [.. draft.Clips, .. _page.Clips.Values
+                .Where(c => c.ClipType == ClipMode.AudioClip && !draft.Clips.Any(d => d.Id == c.Id))
+                .Select(c => DraftImportAndExportHelper.ExportClipElementFromDraftPage(_page, c, rebuildEffects: false))];
+            var response = await _page.previewer.RenderEffectBindingPreviewAsync(new()
             {
-                await MainThread.InvokeOnMainThreadAsync(() =>
-                {
-                    if (cts.IsCancellationRequested) return;
-                    foreach (var node in _nodes.Values)
+                ClipId = clip.Id,
+                TimelineJson = JsonSerializer.Serialize(draft),
+                FrameIndex = (uint)Math.Max(0, _page.CurrentFrame),
+                Width = _page.previewWidth,
+                Height = _page.previewHeight,
+                ProjectWidth = Math.Max(1, _page.ProjectInfo.RelativeWidth),
+                ProjectHeight = Math.Max(1, _page.ProjectInfo.RelativeHeight),
+                Stage = (int)stage,
+                RecordSteps = recordSteps,
+                Terminals = _nodes.Values.Where(n => n.TerminalField is not null && n.Provider is not null)
+                    .Select(n => new EffectBindingPreviewTerminal
                     {
-                        node.PreviewImage = null;
-                        node.PreviewValue = "";
-                    }
-                    AfterEffectBigPreview.Source = null;
-                    foreach (var terminal in _nodes.Values.Where(n => n.TerminalField == RenderOutputProvider.ShouldRenderKey))
-                        terminal.PreviewValue = bool.FalseString;
-                });
-                return;
-            }
-            var previews = new Dictionary<NodeViewModel, object?>();
-            void Capture(IEffect effect, object? value)
-            {
-                if (!Guid.TryParse(effect.BindedEffectProvidingSystemID, out var id) || !_nodes.TryGetValue(id, out var node)) return;
-                if (previews.GetValueOrDefault(node) is IPicture old) old.Dispose();
-                previews[node] = value switch
-                {
-                    IHwAccelPicture gpu => gpu.Download(),
-                    IPicture picture => DynamicEffectGraph.CopyPicture(picture),
-                    projectFrameCut.Drawing.Vector.VectorPicture vector => IVectorContentClip.GlobalDefaultRasterizer.Convert(vector, w, h, true,
-                        cancellationToken: cts.Token),
-                    IReadOnlyDictionary<string, object?> outputs => string.Join(Environment.NewLine, outputs.Select(p =>
-                        $"{p.Key}: {(p.Value is IPicture pic ? $"{pic.Width}×{pic.Height}"
-                            : p.Value is projectFrameCut.Drawing.Vector.VectorPicture ? Localized.Effect_VectorContentType : p.Value?.ToString() ?? "-")}")),
-                    _ => value,
-                };
-            }
-            IPicture? inputFrame = null;
-            IPicture? underFrame = null;
-            IPicture? result = null;
-            try
-            {
-                if (_stage == EffectStage.Composition)
-                {
-                    using var background = Timeline.FallBackImageGetter(w, h);
-                    var lowerClips = previewClips.Clips.Where(c => c.ClipType != ClipMode.AudioClip && ClipLayerOrder.BottomToTop.Compare(c, owner) < 0).ToArray();
-                    underFrame = Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(lowerClips, targetFrame, w, h, 8,
-                        projectRelativeWidth, projectRelativeHeight), targetFrame, w, h, 8,
-                        projectRelativeWidth: projectRelativeWidth, projectRelativeHeight: projectRelativeHeight,
-                        disposeIntermediateFrames: true, cancellationToken: cts.Token, allClips: previewClips.Clips, basePicture: background);
-                }
-                IPicture ReadSource(bool nativeInput = false)
-                {
-                    using var context = ValueProviderFrameContext.PushFrame(targetFrame,
-                        Math.Clamp(((float)targetFrame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, cts.Token);
-                    using var observer = ValueProviderFrameContext.ObserveNodes(Capture);
-                    var source = clip;
-                    if (nativeInput && clip is IVectorContentClip)
-                    {
-                        source = clip.CopyForFrame();
-                        source.EffectsInstances = clip.EffectsInstances?.Where(e => e is not IVectorPictureEffect).ToArray();
-                    }
-                    return VideoClipRotation.ReadFrame(source, clip.GetRelativeFrameIndex(targetFrame) ?? 0,
-                        clip.TargetWidth > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetWidth * w / projectRelativeWidth)) : w,
-                        clip.TargetHeight > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetHeight * h / projectRelativeHeight)) : h, 8);
-                }
-                using var srcFrame = ReadSource();
-                if (_inputNode is not null)
-                    inputFrame = _stage == EffectStage.VectorContent ? ReadSource(true) : DynamicEffectGraph.CopyPicture(srcFrame);
-                result = Timeline.MixtureLayers([new OneFrame(targetFrame, clip, srcFrame, resolveEffects: false)], targetFrame, w, h, 8,
-                    AfterEffectCallback: (effect, picture) => Capture(effect, picture),
-                    projectRelativeWidth: projectRelativeWidth, projectRelativeHeight: projectRelativeHeight,
-                    disposeIntermediateFrames: true,
-                    cancellationToken: cts.Token,
-                    afterNodeCallback: (effect, value) => { if (value is not IPicture) Capture(effect, value); },
-                    allClips: previewClips.Clips, basePicture: underFrame);
-                if (_inputNode is not null && inputFrame is not null) await UpdateNodePreview(_inputNode, inputFrame, cts.Token);
-                if (underFrame is not null && _nodes.Values.FirstOrDefault(n => n.Provider is MixtureSourceProvider { IsUnder: true }) is { } underNode)
-                    await UpdateNodePreview(underNode, underFrame, cts.Token);
-                foreach (var (node, value) in previews)
-                {
-                    cts.Token.ThrowIfCancellationRequested();
-                    if (value is IPicture picture) await UpdateNodePreview(node, picture, cts.Token);
-                    else node.PreviewValue = value?.ToString() ?? "";
-                }
-                if (_outputNode is not null) await UpdateNodePreview(_outputNode, result, cts.Token);
-                foreach (var node in _nodes.Values.Where(n => n.TerminalField is not null))
-                {
-                    if (node.Provider is RenderOutputProvider && clip.EffectsInstances?.OfType<DynamicEffectGraph>()
-                        .FirstOrDefault(g => g.Stage == EffectStage.Render) is { } render)
-                        node.PreviewValue = RenderValueText(render.EvaluateRenderValue(clip, targetFrame, node.TerminalField!, token: cts.Token));
-                    else node.PreviewValue = string.Join(Environment.NewLine, node.TerminalFields.Select(field =>
-                        $"{EffectProviderUIHelper.FieldName(node.Provider!, field, true, HumanizePortName(field))}: {clip.ArgumentFields.GetValueOrDefault(field)?.ReadValue(clip)}"));
-                }
-                UpdateBuiltInPreviews(clip, targetFrame, cts.Token);
-                if (_nodes.TryGetValue(PositionNodeId, out var positionNode)) positionNode.PreviewValue = clip.PositionTuple.ToString();
-                if (_nodes.TryGetValue(AudioSampleNodeId, out var audioNode))
-                    audioNode.PreviewValue = RenderValueText(_stage == EffectStage.Render
-                        ? _page.previewer.AudioSamples?.ReadClipFrame(clip, targetFrame, cts.Token)
-                        : _page.previewer.AudioSamples?.ReadFrame(targetFrame, cts.Token));
-            }
-            finally
-            {
-                inputFrame?.Dispose();
-                underFrame?.Dispose();
-                result?.Dispose();
-                foreach (var picture in previews.Values.OfType<IPicture>()) picture.Dispose();
-            }
-
+                        NodeId = n.Id, ProviderId = n.Provider!.Id, Fields = n.TerminalFields.ToList(),
+                    }).ToList(),
+                BuiltInSources = BuiltInSources.Where(s => _nodes.ContainsKey(s.Id)).Select(s => s.Source).ToList(),
+            }, cts.Token);
+            cts.Token.ThrowIfCancellationRequested();
+            if (_closing || !ReferenceEquals(_clip, clip) || _stage != stage) return;
+            ApplyBackendPreviews(response);
+            if (recordSteps && _stepDebugEnabled) FinishStepRecording(response);
+            if (!string.IsNullOrWhiteSpace(response.Error)) SetStatusText(response.Error);
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
         catch (Exception ex)
         {
-            Log(ex, $"Failed to render", this);
-#if DEBUG
-            if (await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), "Throw", Localized._OK)) throw;
-#else
-            await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), Localized._OK);
-#endif
+            Log(ex, $"Preview effect bindings for clip {clip.Id}", this);
+            if (cts.IsCancellationRequested) return;
+            if (_stepDebugEnabled)
+            {
+                _stepError = ex.Message;
+                UpdateStepDebugUI();
+            }
+            SetStatusText(ex.Message);
         }
         finally
         {
             if (ReferenceEquals(_previewCts, cts)) _previewCts = null;
         }
-
     }
 
-    private async Task UpdateNodePreview(NodeViewModel node, IPicture picture, CancellationToken token = default)
+    private void ApplyBackendPreviews(EffectBindingPreviewResponse response)
     {
-        await MainThread.InvokeOnMainThreadAsync(async () =>
+        foreach (var node in _nodes.Values)
         {
-            try
-            {
-                using var stream = new MemoryStream();
-                await Task.Run(() => picture.SaveToPng(stream), token);
-                token.ThrowIfCancellationRequested();
-                stream.Position = 0;
-                var imageSource = ImageSource.FromStream(() => new MemoryStream(stream.ToArray()));
-                node.PreviewValue = "";
-                node.PreviewImage = imageSource;
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                Log(ex, "Failed to update preview image", this);
-            }
-        });
+            node.PreviewImage = null;
+            node.PreviewValue = "";
+        }
+        void Apply(NodeViewModel? node, EffectBindingPreviewValue? value)
+        {
+            if (node is null || value is null) return;
+            var snapshot = ReadStepValue(value);
+            node.PreviewImage = snapshot.Image;
+            node.PreviewValue = snapshot.Image is null ? snapshot.Text : "";
+        }
+        foreach (var step in response.Steps)
+        {
+            var node = _nodes.GetValueOrDefault(step.NodeId == Guid.Empty ? step.ProviderId : step.NodeId);
+            if (node is null) continue;
+            Apply(node, step.Outputs.Values.FirstOrDefault(v => v.Png.Length > 0) ?? step.Outputs.Values.FirstOrDefault());
+            if (node.PreviewImage is null && step.Outputs.Count > 1)
+                node.PreviewValue = string.Join(Environment.NewLine, step.Outputs.Select(p => $"{p.Key}: {ReadStepValue(p.Value).Text}"));
+        }
+        Apply(_inputNode, response.Sources.GetValueOrDefault("input"));
+        Apply(_outputNode, response.Sources.GetValueOrDefault("output"));
+        Apply(_nodes.Values.FirstOrDefault(n => n.Provider is MixtureSourceProvider { IsUnder: true }), response.Sources.GetValueOrDefault("under"));
+        Apply(_nodes.GetValueOrDefault(PositionNodeId), response.Sources.GetValueOrDefault("position"));
+        Apply(_nodes.GetValueOrDefault(AudioSampleNodeId), response.Sources.GetValueOrDefault("audio"));
+        foreach (var source in BuiltInSources) Apply(_nodes.GetValueOrDefault(source.Id), response.Sources.GetValueOrDefault(source.Source));
+        if (response.Sources.GetValueOrDefault("output") is { } output) AfterEffectBigPreview.Source = ReadStepValue(output).Image;
+        else AfterEffectBigPreview.Source = null;
     }
 
     [DebuggerDisplay("{Id}, {Provider?.TypeName}")]
@@ -2484,7 +2396,8 @@ public partial class DraftEffectBindingView : ContentView
                     FieldType = FieldTypes?.GetInputType(Provider, kv.Key) ?? kv.Value.FieldType,
                     DeclaredFieldType = kv.Value.FieldType,
                     TypeContract = FieldTypes?.GetInputContract(Provider, kv.Key) ?? kv.Value.TypeContract,
-                    DisplayName = EffectProviderUIHelper.FieldName(Provider, kv.Key, true), Index = i })
+                    DisplayName = EffectProviderUIHelper.FieldName(Provider, kv.Key, true,
+                        Provider is EffectVariableProvider ? HumanizePortName(kv.Key) : null), Index = i })
                 .ToList();
         }
 
@@ -2601,6 +2514,7 @@ public partial class DraftEffectBindingView : ContentView
         ];
         if (!PreviewBusyIndicator.IsRunning)
             actions.Add((Localized.AssetPage_ShowPreview, () => GeneratePreviewButton_Clicked(this, EventArgs.Empty)));
+        actions.Add((StepL("Title", "单步执行"), ToggleStepDebug));
         actions.Add(("图", () => ShowUiBindingsGraphButton_Clicked(this, EventArgs.Empty)));
 
         if (IContextMenuBuilder.Default?.CreateNewInstance() is { } menu)
@@ -2625,7 +2539,7 @@ public partial class DraftEffectBindingView : ContentView
         try { await GeneratePreviews(); }
         finally
         {
-            PreviewBusyIndicator.IsVisible = PreviewBusyIndicator.IsRunning = false;
+            if (_previewCts is null) PreviewBusyIndicator.IsVisible = PreviewBusyIndicator.IsRunning = false;
         }
 
     }
@@ -2838,6 +2752,7 @@ public partial class DraftEffectBindingView : ContentView
         _fieldTypes = null;
         if (!_availableStages.SequenceEqual(GetAvailableStages(_clip))) Reload();
         else RefreshFieldTypes();
+        RecordEditHistory();
         return true;
     }
 
@@ -2892,6 +2807,7 @@ public partial class DraftEffectBindingView : ContentView
     {
         if (_clip == null) return;
         _closing = true;
+        UnsubscribeFromPageEvents();
         EndPortConnection();
         IsEnabled = false;
         await _providerAddTask;
@@ -2994,6 +2910,8 @@ public partial class DraftEffectBindingView : ContentView
         public List<RectF> GroupBounds = new();
         public double PanX, PanY;
         public double Scale = 1.0;
+        /// <summary>Single-step execution focus: its inbound edges are highlighted, everything else is dimmed.</summary>
+        public NodeViewModel? StepFocusNode;
 
         // Dragging State
         public NodeViewModel? DragSourceNode;
@@ -3019,8 +2937,24 @@ public partial class DraftEffectBindingView : ContentView
 
             foreach (var conn in Connections)
             {
-                canvas.StrokeColor = PortTypeHelper.GetTypeColor(conn.FieldType);
-                canvas.StrokeSize = (float)((conn.IsValueBinding ? 1.5 : 2.5) * Scale);
+                var color = PortTypeHelper.GetTypeColor(conn.FieldType);
+                float emphasis = 1f;
+                if (StepFocusNode is not null)
+                {
+                    if (conn.To == StepFocusNode)
+                    {
+                        color = Color.FromArgb("#00E5FF");
+                        emphasis = 1.8f;
+                    }
+                    else if (conn.From == StepFocusNode)
+                    {
+                        color = color.WithAlpha(0.75f);
+                        emphasis = 1.4f;
+                    }
+                    else color = color.WithAlpha(0.12f);
+                }
+                canvas.StrokeColor = color;
+                canvas.StrokeSize = (float)((conn.IsValueBinding ? 1.5 : 2.5) * Scale * emphasis);
 
                 var start = Transform(GetPortPosition(conn.From, PortKind.AnchorOutput, conn.FromPortIndex));
                 var end = Transform(GetPortPosition(conn.To, conn.ToKind, conn.ToPortIndex));

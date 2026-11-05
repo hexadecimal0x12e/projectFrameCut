@@ -168,6 +168,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </remarks>
         public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null);
 
+        /// <summary>Build for a pipeline without changing persisted metadata or editable fields.</summary>
+        public virtual IEffect[] Build(EffectImplementType implementation, Dictionary<string, object> parameters, object? dataFormat = null) =>
+            SupportsImplementTypes.Length == 0 && implementation == DefaultImplementType
+                ? this.BuildForDataFormat(dataFormat) : [RestoreInstance(implementation, parameters)];
+
+
         /// <summary>
         /// Get the supported implement types of this effect.
         /// </summary>

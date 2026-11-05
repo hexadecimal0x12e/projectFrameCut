@@ -738,6 +738,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void RegisterCommands()
     {
+        calculationPages.Add(new WeakReference<DraftPage>(this));
         AddCommand = new Command(() => AddClip_Clicked(this, EventArgs.Empty));
         AddTrackCommand = new Command(() => AddTrack(false));
         AddSubTrackCommand = new Command(() => AddTrack(true));
@@ -746,18 +747,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         ExportSelectedClipFrameCommand = new Command(async () => await ExportCurrentFrameAsync(true));
         GoRenderCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
         SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
-        UndoCommand = new Command(async () => await UndoChanges());
-        RedoCommand = new Command(async () => await RedoChanges());
+        UndoCommand = new Command(async () => { if (!RouteEditCommand(DraftEditCommand.Undo)) await UndoChanges(); });
+        RedoCommand = new Command(async () => { if (!RouteEditCommand(DraftEditCommand.Redo)) await RedoChanges(); });
         SelectCommand = new Command(async () => await SelectAClip());
         ShowClipInfoPanelCommand = new Command(async () => { if (_selectedClipIds.Count == 1) await ShowAPopup(clip: _selected, border: _selected?.Clip); else SetStateFail(Localized.DraftPage_SelectExactlyOneToContinue); });
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
         SpiltOrCombineCommand = new Command(async () => { if (MultiSelectEnabled) await CombineSelection(); else Split_Clicked(this, null!); });
         CombineCommand = new Command(async () => await CombineSelection());
         MoveCommand = new Command(async () => await MoveSelection());
-        DeleteCommand = new Command(() => DeleteAClip());
-        CopyCommand = new Command(() => CaptureSelectionToClipboard(false));
-        CutCommand = new Command(async () => await CutSelectionAsync());
-        PasteCommand = new Command(async () => await PasteClipboardAsync());
+        DeleteCommand = new Command(() => { if (!RouteEditCommand(DraftEditCommand.Delete)) DeleteAClip(); });
+        CopyCommand = new Command(() => { if (!RouteEditCommand(DraftEditCommand.Copy)) CaptureSelectionToClipboard(false); });
+        CutCommand = new Command(async () => { if (!RouteEditCommand(DraftEditCommand.Cut)) await CutSelectionAsync(); });
+        PasteCommand = new Command(async () => { if (!RouteEditCommand(DraftEditCommand.Paste)) await PasteClipboardAsync(); });
         DuplicateCommand = new Command(async () => await DuplicateSelectionAsync());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
         GotoCommand = new Command(async () => await GotoButtonClicked());
@@ -3152,6 +3153,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         clip.Clip.Background = Colors.YellowGreen;
         _selected = clip;
         OnPropertyChanged(nameof(SelectedAnyClip));
+        OnPropertyChanged(nameof(CanEditSelection));
     }
 
     private void RemoveClipFromSelection(ClipElementUI clip)
@@ -3198,6 +3200,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         OnPropertyChanged(nameof(SelectedAnyClip));
+        OnPropertyChanged(nameof(CanEditSelection));
     }
 
     private async Task RefreshSelectionUiAsync(bool refreshPreview = true, string? selectedTab = null)
@@ -3280,6 +3283,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         OnPropertyChanged(nameof(SelectedAnyClip));
+        OnPropertyChanged(nameof(CanEditSelection));
         SelectedClipChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -4040,6 +4044,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         OnPropertyChanged(nameof(SelectedAnyClip));
+        OnPropertyChanged(nameof(CanEditSelection));
     }
 
     private int CaptureSelectionToClipboard(bool fromCut)
@@ -5181,6 +5186,26 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
     }
 
+    private static readonly List<WeakReference<DraftPage>> calculationPages = [];
+
+    internal static async Task RefreshCalculationSettingsAsync()
+    {
+        calculationPages.RemoveAll(p => !p.TryGetTarget(out _));
+        foreach (var reference in calculationPages.ToArray())
+        {
+            if (!reference.TryGetTarget(out var page) || page.AlreadyDisappeared) continue;
+            try
+            {
+                foreach (var clip in page.Clips.Values) ClipInfoBuilder.RebuildAllEffects(clip);
+                page.ClearClipPreviews();
+                await page.previewer.UpdateDraft(DraftImportAndExportHelper.ExportFromDraftPage(page,
+                    includeUiOnlyClips: false, rebuildEffects: false));
+                page.DynamicPreviewProvider.SetClips(page.previewer.Clips);
+                await page.RefreshPreviewAfterPropertyChangeAsync();
+            }
+            catch (Exception ex) { Logger.Log(ex, "Refresh dynamic calculation settings", page); }
+        }
+    }
 
     #endregion
 
@@ -6638,7 +6663,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             // 更新所有已启用ExtendToWholeDraft的clips，使其宽度能随着其他clips的变化而调整
             UpdateAllExtendToWholeDraftClips();
-            foreach (var item in new string[] { nameof(SelectedAnyClip), nameof(_ShouldShowClipMoveControlInCenterInfoBar), nameof(_ShouldShowCenterCompactControlGrid), nameof(UseCompactLayout), nameof(MultiSelectEnabled) })
+            foreach (var item in new string[] { nameof(SelectedAnyClip), nameof(CanEditSelection), nameof(_ShouldShowClipMoveControlInCenterInfoBar), nameof(_ShouldShowCenterCompactControlGrid), nameof(UseCompactLayout), nameof(MultiSelectEnabled) })
             {
                 OnPropertyChanged(item);
             }
@@ -8185,7 +8210,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         GC.Collect();
         GC.WaitForPendingFinalizers();
 #endif
-        foreach (var item in new string[] { nameof(SelectedAnyClip), nameof(_ShouldShowClipMoveControlInCenterInfoBar), nameof(_ShouldShowCenterCompactControlGrid), nameof(UseCompactLayout), nameof(UnNullUseCompactLayout), nameof(MultiSelectEnabled), nameof(UseDynamicPreview) })
+        foreach (var item in new string[] { nameof(SelectedAnyClip), nameof(CanEditSelection), nameof(_ShouldShowClipMoveControlInCenterInfoBar), nameof(_ShouldShowCenterCompactControlGrid), nameof(UseCompactLayout), nameof(UnNullUseCompactLayout), nameof(MultiSelectEnabled), nameof(UseDynamicPreview) })
         {
             OnPropertyChanged(item);
         }

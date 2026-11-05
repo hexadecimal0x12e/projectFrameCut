@@ -13,7 +13,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         Dictionary<string, string> Bindings, IEffect[] Effects, bool Enabled);
     private readonly Dictionary<Guid, Node> nodes = new();
     private readonly HashSet<IEffect> initialized = new(ReferenceEqualityComparer.Instance);
-    private readonly object sync = new();
+    private readonly Lock sync = new();
     private int activeCalls;
     private bool disposed;
     private Action? release;

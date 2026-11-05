@@ -76,6 +76,7 @@ public enum RenderOperation
     [ProtoEnum] StartDynamicPreview = 58,
     [ProtoEnum] StopDynamicPreview = 59,
     [ProtoEnum] GenerateTimelineThumbnails = 60,
+    [ProtoEnum] RenderEffectBindingPreview = 61,
     [ProtoEnum] RegisterGuiProject = 30,
     [ProtoEnum] UnregisterGuiProject = 31,
     [ProtoEnum] GetGuiProjectWork = 32,
@@ -163,6 +164,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationListProjectExternalAudioSources = 2065,
     [ProtoEnum] IsolationListProjectExternalMaskSources = 2066,
     [ProtoEnum] IsolationEditKeyFrames = 2067,
+    [ProtoEnum] IsolationFullDynamicEffect = 2068,
 
     [ProtoEnum] TestingBackendCrash = int.MaxValue, 
 

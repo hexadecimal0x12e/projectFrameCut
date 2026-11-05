@@ -217,7 +217,7 @@ namespace projectFrameCut.Render.Compose
                     if (owner is not null && owner.EffectProviders is { Length: > 0 })
                     {
                         if (owner.EffectProvidersInstances is not { Length: > 0 }) EffectHelper.ResolveClipEffects(owner);
-                        if (owner.EffectsInstances?.OfType<DynamicEffectGraph>().Any(g => g.AudioNeedsPicture) == true
+                        if (owner.EffectsInstances?.OfType<IRenderEffectPipeline>().Any(g => g.AudioNeedsPicture) == true
                             && owner is VideoClip { Decoder: null } or PhotoClip { source: null })
                             owner.ReInit(projectFrameCut.Drawing.Base.IPicture.PicturePixelMode.Float16Picture);
                     }
@@ -478,7 +478,7 @@ namespace projectFrameCut.Render.Compose
             using var endpoints = context.StageClips.Count == 0 ? null : new ClipValueFrameContext(context.StageClips, frame,
                 source =>
                 {
-                    if (source.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render) is { } render)
+                    if (source.EffectsInstances?.OfType<IRenderEffectPipeline>().FirstOrDefault(g => g.Stage == EffectStage.Render) is { } render)
                     {
                         var audioContext = context.AudioContexts.FirstOrDefault(c => c.Owner?.Id == source.Id);
                         FloatAudioSamples? samples = null;
@@ -498,8 +498,8 @@ namespace projectFrameCut.Render.Compose
             try
             {
                 var owner = context.Owner;
-                var graph = owner?.EffectsInstances?.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render)
-                    ?? context.Effects.OfType<DynamicEffectGraph>().FirstOrDefault(g => g.Stage == EffectStage.Render);
+                var graph = owner?.EffectsInstances?.OfType<IRenderEffectPipeline>().FirstOrDefault(g => g.Stage == EffectStage.Render)
+                    ?? context.Effects.OfType<IRenderEffectPipeline>().FirstOrDefault(g => g.Stage == EffectStage.Render);
                 if (graph is not null && owner is not null)
                 {
                     var output = (IAudioSamples)graph.EvaluateRenderValue(owner, frame, RenderOutputProvider.AudioKey, input,

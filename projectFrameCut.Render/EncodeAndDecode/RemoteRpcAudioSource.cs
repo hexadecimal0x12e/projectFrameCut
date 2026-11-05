@@ -11,7 +11,7 @@ public class RemoteRpcAudioSource : IAudioSource<float>
 
     public const string DecoderTypeName = nameof(RemoteRpcAudioSource);
     private readonly ExternalAudioSourceReference source;
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private ExternalAudioSourceDescriptor descriptor;
     private Guid instanceId;
 

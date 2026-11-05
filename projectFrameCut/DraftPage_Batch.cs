@@ -1214,7 +1214,7 @@ public partial class DraftPage
     {
         if (clip.ClipType == ClipMode.ProjectReferenceClip || clip.MetaData?.ContainsKey(ProjectReferencePart.MetadataKey) == true) return null;
         if (clip.EffectProviders?.Any(p => p.Stage == EffectStage.Composition) != true) return null;
-        return EffectBindingHelper.RebuildAllEffects(EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null), null)
+        return EffectBindingHelper.RebuildAllEffects(EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null), null, extraData: clip.MetaData)
             ?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
     }
     private static uint GuiBatchDuration(ClipDraftDTO clip) => ClipTiming.EffectiveDuration(clip.Duration, GuiBatchSpeed(clip));

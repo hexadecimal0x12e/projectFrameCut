@@ -143,7 +143,7 @@ public static class EffectGroupHelper
                 if (!members.Contains(port.ProviderId) || string.IsNullOrWhiteSpace(port.Name)) throw new InvalidOperationException("Invalid group port.");
                 var p = providers[port.ProviderId];
                 if (port.IsInput ? !DynamicEffectBindings.InputFields(p).ContainsKey(port.FieldId)
-                    : !p.GetOutputFields().ContainsKey(port.FieldId)) throw new InvalidOperationException("Missing group port field.");
+                    : !DynamicEffectBindings.CanBindOutput(p) || !p.GetOutputFields().ContainsKey(port.FieldId)) throw new InvalidOperationException("Missing group port field.");
                 if (port.IsInput && p.AnchorsBindingState.TryGetValue(port.FieldId, out var source)
                     && EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _) && members.Contains(id))
                     throw new InvalidOperationException("An internally connected input cannot be exposed.");
@@ -195,8 +195,17 @@ public static class EffectGroupHelper
         var t = Copy(source);
         ValidateTemplate(t);
         var ids = t.Providers.Select(p => p.Id).Concat(t.Groups.Select(g => g.Id)).ToDictionary(id => id, _ => Guid.NewGuid());
+        var variableIds = t.Providers.Where(p => p.TypeName is "EffectVariableRead" or "EffectVariableWrite")
+            .Select(p => Guid.TryParse(p.MetaData?.GetValueOrDefault(nameof(EffectVariableProvider.VariableId))?.ToString(), out var id) ? id : p.Id)
+            .Distinct().ToDictionary(id => id, _ => Guid.NewGuid());
         foreach (var p in t.Providers)
         {
+            if (p.TypeName is "EffectVariableRead" or "EffectVariableWrite")
+            {
+                p.MetaData ??= new();
+                var variableId = Guid.TryParse(p.MetaData.GetValueOrDefault(nameof(EffectVariableProvider.VariableId))?.ToString(), out var sourceVariableId) ? sourceVariableId : p.Id;
+                p.MetaData[nameof(EffectVariableProvider.VariableId)] = variableIds[variableId].ToString();
+            }
             p.Id = ids[p.Id];
             foreach (var key in p.AnchorsBindingState.Keys.ToArray())
                 if (EffectProviderOutputExtensions.TryParseOutputSourceId(p.AnchorsBindingState[key], out var id, out var output) && ids.TryGetValue(id, out var mapped))

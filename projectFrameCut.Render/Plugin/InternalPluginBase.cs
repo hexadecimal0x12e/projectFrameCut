@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Text;
 using projectFrameCut.Render.RenderAPIBase.Text;
@@ -105,6 +105,8 @@ public class InternalPluginBase : IPluginBase
         { "IsUpstreamAvailableOrDefault", () => new IsUpstreamAvailableOrDefaultEffectProvider() },
         { "IfConditionNode", () => new IfConditionNodeEffectProvider() },
         { "ConditionComputeNode", () => new ConditionComputeNodeEffectProvider() },
+        { "ConditionalLoopNode", () => new ConditionalLoopNodeEffectProvider() },
+        { "ValueTypeConversionNode", () => new ValueTypeConversionNodeProvider() },
         { "NumericComparisonNode", () => new NumericComparisonNodeEffectProvider() },
         { "AdvancedMath1", () => new AdvancedMathEffectProvider(1) },
         { "AdvancedMath2", () => new AdvancedMathEffectProvider(2) },
@@ -113,10 +115,16 @@ public class InternalPluginBase : IPluginBase
         { "IntOverlay", () => new IntOverlayEffectProvider() },
         { "SplitPictureChannels", () => new SplitPictureChannelsEffectProvider() },
         { "MergePictureChannels", () => new MergePictureChannelsEffectProvider() },
+        { "CreatePictureFP16", () => new CreatePictureFP16Provider() },
+        { "CreateHDRPictureFP16", () => new CreateHDRPictureFP16Provider() },
+        { "ReadPictureFP16Pixel", () => new ReadPictureFP16PixelProvider() },
+        { "WritePictureFP16Pixel", () => new WritePictureFP16PixelProvider() },
         { "PictureChannelAverage", () => new PictureChannelAverageEffectProvider() },
         { "Oscilloscope", () => new OscilloscopeEffectProvider() },
         { "ClipValueOutput", () => new ClipValueExportProvider() },
         { "ClipValueInput", () => new ClipValueImportProvider() },
+        { "EffectVariableWrite", () => new EffectVariableWriteProvider() },
+        { "EffectVariableRead", () => new EffectVariableReadProvider() },
         { "BlendModeMixture", () => new BlendModeMixtureProvider { ProviderTypeName = "BlendModeMixture" } },
         { "AddMixture", () => new BlendModeMixtureProvider { MixtureType = "Add" } },
         { "SubtractMixture", () => new BlendModeMixtureProvider { MixtureType = "Subtract" } },
@@ -129,7 +137,7 @@ public class InternalPluginBase : IPluginBase
     };
 
     public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
-        new Dictionary<EffectImplementationKey, Func<IEffect>>
+        FullDynamicEffectFactories.Add(new Dictionary<EffectImplementationKey, Func<IEffect>>
         {
             [new("Fade", EffectImplementType.IPicture)] = () => new FadeTransform(),
             [new("Crossfade", EffectImplementType.IPicture)] = () => new CrossfadeTransform(),
@@ -162,10 +170,13 @@ public class InternalPluginBase : IPluginBase
             [new("Jelly", EffectImplementType.NotSpecified)] = () => new JellyEffect(),
             [new("ProgressPlacer", EffectImplementType.NotSpecified)] = () => new ProgressPlacer(),
             [new("ClassicSpeedVarianceProvider", EffectImplementType.NotSpecified)] = () => new ClassicSpeedVarianceProvider(),
+            [new("SplitPictureChannels", EffectImplementType.NotSpecified)] = () => new SplitPictureChannelsEffect(),
             [new("IntConstant", EffectImplementType.NotSpecified)] = () => new IntConstantValueProviderEffect(),
             [new("IsUpstreamAvailableOrDefault", EffectImplementType.NotSpecified)] = () => new IsUpstreamAvailableOrDefaultEffect(),
             [new("IfConditionNode", EffectImplementType.NotSpecified)] = () => new IfConditionNodeEffect(),
             [new("ConditionComputeNode", EffectImplementType.NotSpecified)] = () => new ConditionComputeNodeEffect(),
+            [new("ConditionalLoopNode", EffectImplementType.NotSpecified)] = () => new ConditionalLoopNodeEffect(),
+            [new("ValueTypeConversionNode", EffectImplementType.NotSpecified)] = () => new ValueTypeConversionNodeEffect(),
             [new("NumericComparisonNode", EffectImplementType.NotSpecified)] = () => new NumericComparisonNodeEffect(),
             [new("AdvancedMath1", EffectImplementType.NotSpecified)] = () => new AdvancedMathEffect(1),
             [new("AdvancedMath2", EffectImplementType.NotSpecified)] = () => new AdvancedMathEffect(2),
@@ -173,15 +184,21 @@ public class InternalPluginBase : IPluginBase
             [new("EqualityComparisonNode", EffectImplementType.NotSpecified)] = () => new EqualityComparisonNodeEffect(),
             [new("IntOverlay", EffectImplementType.NotSpecified)] = () => new IntOverlayEffect(),
             [new("MergePictureChannels", EffectImplementType.NotSpecified)] = () => new MergePictureChannelsEffect(),
+            [new("CreatePictureFP16", EffectImplementType.NotSpecified)] = () => new CreateFP16PictureEffect("CreatePictureFP16", false),
+            [new("CreateHDRPictureFP16", EffectImplementType.NotSpecified)] = () => new CreateFP16PictureEffect("CreateHDRPictureFP16", true),
+            [new("ReadPictureFP16Pixel", EffectImplementType.NotSpecified)] = () => new ReadPictureFP16PixelEffect(),
+            [new("WritePictureFP16Pixel", EffectImplementType.NotSpecified)] = () => new WritePictureFP16PixelEffect(),
             [new("PictureChannelAverage", EffectImplementType.IPicture)] = () => new PictureChannelAverageEffect(),
             [new("Oscilloscope", EffectImplementType.IPicture)] = () => new OscilloscopeEffect(),
             [new("ClipValueOutput", EffectImplementType.NotSpecified)] = () => new ClipValueEndpointEffect("ClipValueOutput", true),
             [new("ClipValueInput", EffectImplementType.NotSpecified)] = () => new ClipValueEndpointEffect("ClipValueInput", false),
+            [new("EffectVariableWrite", EffectImplementType.NotSpecified)] = () => new EffectVariableEffect("EffectVariableWrite"),
+            [new("EffectVariableRead", EffectImplementType.NotSpecified)] = () => new EffectVariableEffect("EffectVariableRead"),
             [new("IntArithmeticAdd", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticAdd", Operation = IntArithmeticOperation.Add },
             [new("IntArithmeticSubtract", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticSubtract", Operation = IntArithmeticOperation.Subtract },
             [new("IntArithmeticMultiply", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticMultiply", Operation = IntArithmeticOperation.Multiply },
             [new("IntArithmeticDivide", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticDivide", Operation = IntArithmeticOperation.Divide },
-        };
+        });
 
 
 

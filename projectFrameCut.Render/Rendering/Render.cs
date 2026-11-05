@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base.ReadWriteConvert;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -106,7 +106,7 @@ namespace projectFrameCut.Render.Rendering
         public event Action<long, long>? OnHashPreparationProgressChanged;
         public event Action<ChunkRenderProgress>? OnChunkProgressChanged;
         private readonly Stopwatch _renderTotalStopwatch = new();
-        private readonly object progressGate = new();
+        private readonly Lock progressGate = new();
         private readonly Stopwatch progressStopwatch = new();
         private readonly Queue<(TimeSpan Elapsed, int Finished)> progressSamples = new();
         private (TimeSpan Elapsed, int Finished) progressSample;
@@ -165,6 +165,7 @@ namespace projectFrameCut.Render.Rendering
         private ClipWorker[] endpointWorkers = [];
         private IClip[] orderedClips = [];
         private readonly ConcurrentDictionary<Guid, IEffect[]> EffectCache = new();
+        private readonly ConcurrentDictionary<Guid, IRenderEffectPipeline> PipelineCache = new();
         private readonly ClipArgumentFrameCache clipArgumentFrames = new();
         private readonly EffectRuntimeContext effectRuntime = new();
         private readonly FrameHashCache nodeCache = new();
@@ -190,7 +191,7 @@ namespace projectFrameCut.Render.Rendering
         private sealed record ClipRequest(IClip Clip, uint Frame, ClipCacheKey Key);
         private sealed class RenderThreadTracker(string name, uint firstFrame, ulong endFrame, bool isCompositor)
         {
-            private readonly object gate = new();
+            private readonly Lock gate = new();
             private readonly Stopwatch elapsed = new();
             private RenderThreadState state = RenderThreadState.Paused;
             private uint? currentFrame;
@@ -588,6 +589,7 @@ namespace projectFrameCut.Render.Rendering
             if (UseClipInitializationFallback && ClipInitializationFailure.IsMarked(clip))
             {
                 EffectCache[clip.Id] = [];
+                PipelineCache.TryRemove(clip.Id, out _);
                 return;
             }
             try { InitializeClipCore(clip); }
@@ -595,6 +597,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 ClipInitializationFailure.Mark(clip, "Source or ResolveEffect", ex);
                 EffectCache[clip.Id] = [];
+                PipelineCache.TryRemove(clip.Id, out _);
                 Log(ex, $"Initialize preview clip {clip.Id}; using checkerboard fallback", this);
             }
         }
@@ -614,7 +617,19 @@ namespace projectFrameCut.Render.Rendering
             var effects = clipEffects
                 .Where(e => e.Enabled && e.TypeOfEffect.GetStage() is not (EffectStage.Text or EffectStage.VectorContent));
             if (HasExplicitTargetRect(clip)) effects = effects.Where(e => !IsLegacyInternalLayoutEffect(e));
-            EffectCache[clip.Id] = effects.ToArray();
+            if (effects.Count() == 1 && effects.First() is IRenderEffectPipeline pipeline)
+            {
+                PipelineCache[clip.Id] = pipeline;
+            }
+            else
+            {
+                EffectCache[clip.Id] = effects.ToArray();
+                if (EffectCache[clip.Id].OfType<IRenderEffectPipeline>().Any())
+                {
+                    Log($"[Render] Clip {clip.Name} ({clip.Id}) has both a pipeline provider and other effects, this may cause performance slow as we can't inline pipeline processing.", "warn");
+                }
+            }
+
             if (clip.AlternativeSource is ISourceReplacementEffect replacement)
                 replacement.ProjectFrameRate = (int)Math.Round(builder?.Writer.FramePerSecond ?? FrameRate);
         }
@@ -717,6 +732,8 @@ namespace projectFrameCut.Render.Rendering
             using var diagnostic = RenderFrameDiagnostics.Current?.Measure("Effects, transition and HDR");
             int layoutRelativeWidth = ProjectRelativeWidth, layoutRelativeHeight = ProjectRelativeHeight;
             long effectsStarted = Stopwatch.GetTimestamp();
+            bool preserveAspect = true;
+
             try
             {
                 IRenderContext.SetWorkerState(targetFrame, RenderWorkerStage.ProcessingEffects, Thread.CurrentThread.Name, clip);
@@ -737,10 +754,33 @@ namespace projectFrameCut.Render.Rendering
                     clip.TargetY,
                     clip.TargetWidth > 0 ? ScaleDimensionToTarget(clip.TargetWidth, layoutRelativeWidth, TargetWidth) : TargetWidth,
                     clip.TargetHeight > 0 ? ScaleDimensionToTarget(clip.TargetHeight, layoutRelativeHeight, TargetHeight) : TargetHeight,
-                    false, clip.Rotation, clip.Opacity);
-                bool preserveAspect = true;
+                    false,
+                    clip.Rotation,
+                    clip.Opacity);
 
-                if (EffectCache.TryGetValue(clip.Id, out var effects) && effects is not null)
+                [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+                void ProcessPipeline(IRenderEffectPipeline graph)
+                {
+                    EffectPipelineFrameResult result = graph.Evaluate(frame, clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, targetPos, preserveAspect, ProcessEffectFromCanvas, token, keepHwAccelPicture: true);
+                    if (!ReferenceEquals(frame, result.Picture)) frame.Dispose();
+                    frame = result.Picture;
+                    targetPos = result.Position;
+                    preserveAspect = result.PreserveAspect;
+                }
+
+                if (ClipInitializationFailure.IsMarked(clip))
+                {
+                    if (EffectCache.TryGetValue(clip.Id, out var stale) && stale is { Length: > 0 }) EffectCache[clip.Id] = [];
+                    PipelineCache.TryRemove(clip.Id, out _);
+                }
+                else if (PipelineCache.TryGetValue(clip.Id, out var pipeline))
+                {
+                    using (RenderFrameDiagnostics.Current?.Measure($"{clip.Id}: Effect Pipeline", pipeline.TypeName))
+                    {
+                        ProcessPipeline(pipeline);
+                    }
+                }
+                else if (EffectCache.TryGetValue(clip.Id, out var effects) && effects is not null)
                 {
                     var clipDuration = clip.GetEffectiveDuration();
                     var clipProgress = clipDuration > 0
@@ -753,15 +793,12 @@ namespace projectFrameCut.Render.Rendering
                         var item = effects[_effectIdx];
                         if (item is null) throw new InvalidOperationException($"Effect(index: #{_effectIdx}) is null in clip {clip.Id}. This indicates a logic error.");
                         using var effectTiming = RenderFrameDiagnostics.Current?.Measure($"Effect {item.Name} ({item.Id}, {item.GetType().Name})", $"Effect ({item.GetType().Name})");
-                        if (item is DynamicEffectGraph graph)
+                        if (item is IRenderEffectPipeline graph)
                         {
-                            var result = graph.Evaluate(frame, clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, targetPos, preserveAspect, ProcessEffectFromCanvas, token, keepHwAccelPicture: true);
-                            if (!ReferenceEquals(frame, result.Picture)) frame.Dispose();
-                            frame = result.Picture;
-                            targetPos = result.Position;
-                            preserveAspect = result.PreserveAspect;
+                            ProcessPipeline(graph);
                             continue;
                         }
+
                         if (reusedPreview && item is not IClipPositionProvider and not IContinuousClipPositionProvider)
                             continue;
                         IRenderContext.CurrentFrameBuffer = frame;
@@ -784,21 +821,23 @@ namespace projectFrameCut.Render.Rendering
                                     frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight, preserveAspect);
                                     frame = ReplaceFrame(frame, FrameHashContext.Compute(item, clip, targetFrame, frame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => EffectPictureProcessing.Render(item, frame, TargetWidth, TargetHeight, continuousProgress), continuousProgress));
                                     continue;
+
                                 case EffectType.ContinuousClipPositionProvider:
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
                                     var pos = FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight));
                                     preserveAspect &= cp.PreserveAspectRatio;
                                     targetPos = targetPos.Apply(pos);
                                     continue;
-
                                 case EffectType.ClipPositionProvider:
                                     if (item is not IClipPositionProvider p) goto notdefined;
                                     var pos1 = FrameHashContext.Compute(item, clip, targetFrame, null, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(clip, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight));
                                     preserveAspect &= p.PreserveAspectRatio;
                                     targetPos = targetPos.Apply(pos1);
                                     continue;
+
                                 case EffectType.NonIPictureOutputValueProvider:
-                                    throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a NonIPictureOutputValueProvider and should have been handled in the EffectBindingHelper.RebuildAllEffects or dynamically in the dynamic pipeline. This indicates a logic error.");
+                                case EffectType.FullDynamicValueProviderEffect:
+                                    throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a NonIPictureOutputValueProvider/FullDynamicValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects or FullDynamicEffectPipeline. This indicates a logic error.");
 
                                 case EffectType.MixtureProvider:
                                 case EffectType.Transform:
@@ -1400,8 +1439,8 @@ namespace projectFrameCut.Render.Rendering
             frame = null!;
             if (!ReuseDynamicPreviewCache || string.IsNullOrWhiteSpace(DynamicPreviewCacheProjectRoot))
                 return false;
-            if (UseHDR || clip is MaskClip || VideoClipRotation.GetAngle(clip) != 0
-                || clip.EffectsInstances?.Any(e => e.Enabled && e is (IClipPositionProvider or IContinuousClipPositionProvider or DynamicEffectGraph or NativeDynamicEffectGraph)) == true)
+            if (UseHDR || clip is MaskClip || PreviewRenderComposer.RequiresBackdrop(clip) || VideoClipRotation.GetAngle(clip) != 0
+                || clip.EffectsInstances?.Any(e => e.Enabled && e is (IClipPositionProvider or IContinuousClipPositionProvider or IRenderEffectPipeline or NativeDynamicEffectGraph or FullDynamicVectorPipeline)) == true)
                 return false;
             if (EncodeAndDecode.RemoteRpcVideoSource.IsExternalPath(clip.FilePath)) return false;
             if (TransformProcessing.HasActiveTransform(clip, Clips, frameIndex)) return false;
@@ -1854,6 +1893,7 @@ namespace projectFrameCut.Render.Rendering
                     catch (Exception ex) { Log(ex, $"Release render effects for clip {clip.Id}", this); }
                 }
             EffectCache.Clear();
+            PipelineCache.Clear();
             try { BlankFrame?.Dispose(true); }
             catch (Exception ex) { Log(ex, "Release render canvas", this); }
             nodeCache.Dispose();

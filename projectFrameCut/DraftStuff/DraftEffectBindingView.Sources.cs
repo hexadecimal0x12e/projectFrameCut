@@ -229,6 +229,8 @@ public partial class DraftEffectBindingView
             AddSourceOutputRow(entry.Name, enabled, () => SetSourceOutputEnabled(entry.Key, !enabled));
         }
         if (_clip is null) return;
+        SourcesAndOutputsPanel.Children.Add(new Label { Text = Localized.Effect_Variables, FontAttributes = FontAttributes.Bold });
+        AddVariableRows(SourcesAndOutputsPanel);
         SourcesAndOutputsPanel.Children.Add(new Label { Text = Localized.Effect_ValuePassThrough, FontAttributes = FontAttributes.Bold });
         foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(IsCurrentPipelineProvider) ?? [])
             AddSourceOutputRow(endpoint.Name, true, () =>
@@ -238,7 +240,7 @@ public partial class DraftEffectBindingView
         foreach (var (source, output) in GetAvailableClipValueInputs())
             AddSourceOutputRow($"{source.DisplayName} / {EffectStageUI.Name(output.Stage)}: {output.Name} ({PortTypeHelper.HumanizeTypeName(output.ValueType)})",
                 false, () => AddEndpointInput(source, output), output.Enabled);
-        var create = new Button { Text = Localized.Effect_CreateEndpoint };
+        var create = new Button { Text = Localized.Effect_VariablesAndPassThrough };
         create.Clicked += (_, _) => RightTabView.SelectedIndex = 2;
         SourcesAndOutputsPanel.Children.Add(create);
     }
@@ -252,14 +254,5 @@ public partial class DraftEffectBindingView
         Grid.SetColumn(button, 1);
         row.Children.Add(button);
         SourcesAndOutputsPanel.Children.Add(row);
-    }
-
-    private void UpdateBuiltInPreviews(IClip clip, uint frame, CancellationToken token)
-    {
-        using var clipScope = ValueProviderFrameContext.PushClip(clip);
-        using var frameScope = ValueProviderFrameContext.PushFrame(frame,
-            Math.Clamp(((float)frame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, token);
-        foreach (var source in BuiltInSources)
-            if (_nodes.TryGetValue(source.Id, out var node)) node.PreviewValue = RenderValueText(ValueProviderFrameContext.Get(source.Source));
     }
 }

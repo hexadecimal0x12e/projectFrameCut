@@ -23,7 +23,7 @@ public static class TextClipFontRegistry
     private static readonly ConcurrentDictionary<string, byte> ScannedPaths = new(StringComparer.OrdinalIgnoreCase);
 
     private static bool _scanned;
-    private static readonly object ScanLock = new();
+    private static readonly Lock ScanLock = new();
     private static string? _fallbackFamilyName;
 
     /// <summary>

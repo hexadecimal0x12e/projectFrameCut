@@ -12,7 +12,7 @@ public sealed class AudioSampleSource(IClip[] clips, ISoundTrack[] tracks, int f
     internal static readonly object Sync = new();
     private const int ChunkSamples = 40960;
     private const int MaxChunks = 8;
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private readonly Dictionary<int, FloatAudioSamples> chunks = new();
     private readonly LinkedList<int> recent = new();
     private readonly Dictionary<ISoundTrack, (string? Path, long Length, DateTime Modified)> files = new();

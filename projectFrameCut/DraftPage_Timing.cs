@@ -141,6 +141,7 @@ public partial class DraftPage
         if (selected is Guid active && Clips.TryGetValue(active, out var clip) && _selectedClipIds.Contains(active))
             _selected = clip;
         OnPropertyChanged(nameof(SelectedAnyClip));
+        OnPropertyChanged(nameof(CanEditSelection));
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         await RefreshSelectionUiAsync(refreshPreview, tab);

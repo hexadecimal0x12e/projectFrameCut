@@ -63,6 +63,7 @@ namespace projectFrameCut.Shared
         VectorComponentEffect = 14,
         Transform = 15,
         VectorPictureEffect = 16,
+        FullDynamicValueProviderEffect = 17,
         NotSpecified = -1,
     }
 
@@ -115,6 +116,8 @@ namespace projectFrameCut.Shared
         Custom3,
         Custom4,
         Custom5,
+        StaticOrHalfDynamicValueProvider,
+        FullDynamicValueProvider,
     }
 
     [Flags]

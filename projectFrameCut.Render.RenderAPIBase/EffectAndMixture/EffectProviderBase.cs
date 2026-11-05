@@ -21,7 +21,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </remarks>
     public abstract class EffectProviderBase : IEffectProvider
     {
-        public abstract bool IsDeterministic { get; }
 
         /// <summary>
         /// The parameter key used to pass the desired <see cref="EffectImplementType"/> into <see cref="Build()"/>.
@@ -55,6 +54,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// mistakes a previous build's inline object for persisted binding configuration.
         /// </summary>
         private readonly Dictionary<string, IValueProviderEffect> _inlinedFieldValues = new();
+
+        /// <summary>
+        /// Indicates whether the effect is deterministic or not. Non-deterministic effects may produce different outputs for the same inputs.
+        /// </summary>
+        public abstract bool IsDeterministic { get; }
 
         protected EffectProviderBase()
         {
@@ -316,6 +320,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
             get
             {
+                if (SupportsImplementTypes.Contains(EffectImplementType.StaticOrHalfDynamicValueProvider))
+                    return EffectImplementType.StaticOrHalfDynamicValueProvider;
                 var declared = SupportedImplementTypes();
                 return declared.Length > 0 ? declared[0] : EffectImplementType.NotSpecified;
             }
@@ -398,6 +404,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public virtual IEffect[] Build<TPicture>() where TPicture : IPicture =>
             BuildRegisteredEffects(ResolveImplementType(SupportedImplementTypes(), DefaultImplementType), BuildDynamicParameters(),
                 (typeName, implementation, parameters) => Plugins.IPluginBase.EffectImplementations.Create<TPicture>(typeName, implementation, DefaultImplementType, parameters));
+
+        public virtual IEffect[] Build(EffectImplementType implementation, Dictionary<string, object> parameters, object? dataFormat = null) =>
+            BuildRegisteredEffects(implementation, parameters,
+                (name, type, p) => Plugins.IPluginBase.EffectImplementations.CreateForDataFormat(name, type, DefaultImplementType, p, dataFormat));
 
         private IEffect[] BuildRegisteredEffects(EffectImplementType implementType, Dictionary<string, object> parameters,
             Func<string, EffectImplementType, Dictionary<string, object>, IEffect>? create = null)

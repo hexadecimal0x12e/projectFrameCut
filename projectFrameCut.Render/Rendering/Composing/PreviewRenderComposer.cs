@@ -1,20 +1,25 @@
 using System.Diagnostics;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 
 namespace projectFrameCut.Render.Rendering;
 
-/// <summary>Delivers clip-local pictures borrowed for the duration of each callback.</summary>
+/// <summary>Delivers preview pictures borrowed for the duration of each callback.</summary>
 public sealed class PreviewRenderComposer(
     Action<uint, RenderClipContent, CancellationToken> receiveClip,
     Action<uint, CancellationToken>? completeFrame = null) : RenderComposerBase
 {
+    public static bool RequiresBackdrop(IClip clip) => clip.MixtureInstance is not null and not ClassicOverlayMixture;
+
     protected override bool SeparateOutput => true;
 
     protected override IPicture? ComposeFrame(RenderCompositionFrame frame, IReadOnlyDictionary<Guid, RenderClipContent?> clips,
         IPicture blank, CancellationToken token)
     {
         var prepared = new List<RenderClipContent>();
+        var lower = new List<RenderClipContent>();
         try
         {
             foreach (var id in frame.Clips)
@@ -32,9 +37,11 @@ public sealed class PreviewRenderComposer(
                     continue;
                 }
                 if (ProjectReferenceRuntime.IsCanvasClip(clip.Clip)) clip = clip with { IsCanvas = true };
-                var picture = FrameComposition.Compose([clip], frame.FrameIndex, Options, blank, token,
-                    clipLocalOutput: true, keepHwAccelPicture: true);
-                prepared.Add(clip with { Picture = picture });
+                lower.Add(clip);
+                bool mixture = RequiresBackdrop(clip.Clip);
+                var picture = FrameComposition.Compose(mixture ? lower : [clip], frame.FrameIndex, Options, blank, token,
+                    clipLocalOutput: !mixture, keepHwAccelPicture: true);
+                prepared.Add(clip with { Picture = picture, IsCanvas = clip.IsCanvas || mixture });
             }
             frame.PreviewClips = prepared.ToArray();
             return null;

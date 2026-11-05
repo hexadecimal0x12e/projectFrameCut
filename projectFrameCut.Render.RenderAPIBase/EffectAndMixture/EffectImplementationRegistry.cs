@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
@@ -62,6 +63,18 @@ public sealed class EffectImplementationRegistry
 
     public IEffect Create(string typeName, EffectImplementType requestedType, EffectImplementType defaultType, Dictionary<string, object> parameters)
         => CreateCore(typeName, requestedType, defaultType, parameters, null);
+
+    public IEffect CreateForDataFormat(string name, EffectImplementType implementation, EffectImplementType defaultType,
+        Dictionary<string, object> parameters, object? dataFormat) => dataFormat is PictureDataFormat format
+        ? PictureDataFormats.GetPictureType(format) switch
+        {
+            Type t when t == typeof(PictureFP16) => Create<PictureFP16>(name, implementation, defaultType, parameters),
+            Type t when t == typeof(HDRPictureFP16) => Create<HDRPictureFP16>(name, implementation, defaultType, parameters),
+            Type t when t == typeof(Picture8bpp) => Create<Picture8bpp>(name, implementation, defaultType, parameters),
+            Type t when t == typeof(Picture16bpp) => Create<Picture16bpp>(name, implementation, defaultType, parameters),
+            Type t when t == typeof(HDRPicture16bpp) => Create<HDRPicture16bpp>(name, implementation, defaultType, parameters),
+            _ => Create(name, implementation, defaultType, parameters),
+        } : Create(name, implementation, defaultType, parameters);
 
     public IEffect Create<TPicture>(string typeName, EffectImplementType requestedType, EffectImplementType defaultType, Dictionary<string, object> parameters)
         where TPicture : projectFrameCut.Drawing.Base.IPicture

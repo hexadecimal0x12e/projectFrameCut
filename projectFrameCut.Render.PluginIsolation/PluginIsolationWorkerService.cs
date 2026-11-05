@@ -15,7 +15,7 @@ using System.Reflection;
 
 namespace projectFrameCut.Render.PluginIsolation;
 
-internal sealed class PluginIsolationWorkerService(
+internal sealed partial class PluginIsolationWorkerService(
     string authenticationToken,
     int expectedHostProcessId,
     string sessionRoot,
@@ -113,6 +113,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationMapSpeedLength => MapSpeed(request, true),
                     RenderOperation.IsolationGetClipPosition => GetClipPosition(request),
                     RenderOperation.IsolationGetEffectValue => GetEffectValue(request),
+                    RenderOperation.IsolationFullDynamicEffect => await ComputeFullDynamicEffectAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationComputeEffect => await ComputeEffectAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationShutdown => Shutdown(request),
                     _ => UnsupportedOperation(request),
@@ -1117,6 +1118,9 @@ internal sealed class PluginIsolationWorkerService(
         foreach (var item in _objects.Values.OfType<IDisposable>())
             try { item.Dispose(); } catch { }
         _objects.Clear();
+        foreach (var invocation in fullDynamicInvocations.Values)
+            try { invocation.Dispose(); } catch { }
+        fullDynamicInvocations.Clear();
         try { _plugin?.OnClosing(); } catch { }
         if (_plugin is not null) IPluginBase.EffectImplementations.Unregister(_plugin.PluginID);
         MyLoggerExtensions.OnLog -= CaptureLog;
@@ -1268,6 +1272,10 @@ internal sealed class PluginIsolationWorkerService(
             _ => true,
         },
         HasMultipleOutputs = effect is IMultipleOutputEffect,
+        IsFullDynamic = effect is IFullDynamicValueProviderEffect,
+        HasSideEffects = effect is IFullDynamicSchedulingEffect { HasSideEffects: true },
+        FeedbackPorts = effect is IFullDynamicSchedulingEffect { Feedback: { } feedback }
+            ? [feedback.StartInput, feedback.FeedbackInput, feedback.ConditionInput, feedback.BodyOutput, feedback.ExitOutput] : [],
     };
 
     private static void ApplyEffectState(IEffect effect, IsolationEffectMutableState state)
