@@ -1,4 +1,5 @@
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Shared;
 using System;
@@ -70,7 +71,7 @@ namespace projectFrameCut.InteractableEditor
         private int _videoFrameWidth;
         private double _videoPreviewHeight;
         private int _videoCountOfFrame;
-        private (uint SourceStart, uint SourceLength, uint Duration, double PixelWidth, double SourceRate) _lastVideoTiming;
+        private (uint SourceStart, uint SourceLength, uint Duration, double PixelWidth, double SourceRate, ISpeedVarianceProvider? SpeedProvider) _lastVideoTiming;
         private List<int>? _videoAvailableFrames;
         private AbsoluteLayout? _videoFrameContainer;
         private readonly List<Image> _videoFramePool = [];
@@ -507,7 +508,7 @@ namespace projectFrameCut.InteractableEditor
             double contentWidth = ContentWidth;
             int count = GetPreviewTileCount(contentWidth, _videoFrameWidth);
             var timing = (clip.relativeStartFrame, clip.lengthInFrame, page.GetClipFrameRange(clip).Duration,
-                page.FrameToPixel(1), page.ProjectInfo.TargetFrameRate * (double)clip.sourceSecondPerFrame);
+                page.FrameToPixel(1), page.ProjectInfo.TargetFrameRate * (double)clip.sourceSecondPerFrame, clip.SpeedProvider);
             if (count == _videoCountOfFrame && Math.Abs(contentWidth - _lastContentWidth) < 0.1 && timing.Equals(_lastVideoTiming))
                 return;
 
@@ -525,7 +526,13 @@ namespace projectFrameCut.InteractableEditor
         {
             uint duration = page.GetClipFrameRange(clip).Duration;
             uint offset = Math.Min(page.PixelToFrame(ContentOffsetX + tileIndex * (double)_videoFrameWidth), duration > 0 ? duration - 1 : 0);
-            uint sourceOffset = ClipTiming.SourceOffset(offset, clip.lengthInFrame, clip.SpeedProvider, duration);
+            uint sourceOffset;
+            if (clip.SpeedProvider is projectFrameCut.Render.Effect.CustomSpeedVarianceEffect custom)
+            {
+                var task = custom.GetFrameMapAsync(clip.lengthInFrame, clip.AvailableSourceLength);
+                sourceOffset = task.IsCompletedSuccessfully && offset < task.Result.Length ? task.Result.GetSourceFrame(offset) : 0;
+            }
+            else sourceOffset = ClipTiming.SourceOffset(offset, clip.lengthInFrame, clip.SpeedProvider, duration, clip.AvailableSourceLength);
             double sourceFrame = (ulong)clip.relativeStartFrame + sourceOffset;
             if (page.ProjectInfo.TargetFrameRate > 0 && float.IsFinite(clip.sourceSecondPerFrame) && clip.sourceSecondPerFrame > 0)
                 sourceFrame /= page.ProjectInfo.TargetFrameRate * (double)clip.sourceSecondPerFrame;

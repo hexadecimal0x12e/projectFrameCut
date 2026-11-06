@@ -7634,6 +7634,214 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ReverseSpeedVarianceProvider",
+        "Value": "\u5012\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ReverseSpeedVarianceProvider",
+        "Value": "\u4ECE\u9009\u53D6\u7247\u6BB5\u7684\u672B\u5C3E\u53CD\u5411\u64AD\u653E\u753B\u9762\u548C\u97F3\u9891\uFF0C\u4FDD\u6301\u7247\u6BB5\u65F6\u957F\u4E0D\u53D8\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ReverseSpeedVarianceProvider___Output__",
+        "Value": "\u901F\u5EA6\u8F93\u51FA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Field_ReverseSpeedVarianceProvider___Output__",
+        "Value": "\u6309\u7247\u6BB5\u957F\u5EA6\u5C06\u65F6\u95F4\u7EBF\u5E27\u53CD\u5411\u6620\u5C04\u5230\u7D20\u6750\u5E27\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_CustomToSpeedVariance",
+        "Value": "\u81EA\u5B9A\u4E49\u8F6C\u53D8\u901F\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_CustomToSpeedVariance",
+        "Value": "\u5C06\u6E90\u5E27\u548C\u7ED3\u675F\u6E32\u67D3\u8868\u8FBE\u5F0F\u8F6C\u6362\u4E3A\u53EF\u8FDE\u63A5\u7684\u53D8\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_SpeedVarianceToCustom",
+        "Value": "\u53D8\u901F\u5668\u8F6C\u81EA\u5B9A\u4E49",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_SpeedVarianceToCustom",
+        "Value": "\u67E5\u8BE2\u53D8\u901F\u5668\u7684\u6E90\u5E27\u3001\u7ED3\u675F\u6E32\u67D3\u4FE1\u53F7\u548C\u8F93\u51FA\u957F\u5EA6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_CustomSpeedVariance",
+        "Value": "\u81EA\u5B9A\u4E49\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_PortType_SpeedVariance",
+        "Value": "\u53D8\u901F\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_Speed",
+        "Value": "\u53D8\u901F\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Speed",
+        "Value": "\u53D8\u901F\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Frame",
+        "Value": "\u67E5\u8BE2\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Length",
+        "Value": "\u8F93\u5165\u957F\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_SourceLength",
+        "Value": "\u53EF\u7528\u6E90\u957F\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_HasSourceLength",
+        "Value": "\u6E90\u957F\u5EA6\u6709\u6548",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_SourceFrame",
+        "Value": "\u6E90\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Finished",
+        "Value": "\u7ED3\u675F\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_OutputLength",
+        "Value": "\u8F93\u51FA\u957F\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance___Output__",
+        "Value": "\u53D8\u901F\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance_SourceFrame",
+        "Value": "\u6E90\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance_Finished",
+        "Value": "\u7ED3\u675F\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance_ScanLimit",
+        "Value": "\u626B\u63CF\u4E0A\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_SourceFrame",
+        "Value": "\u6E90\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_Finished",
+        "Value": "\u7ED3\u675F\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_ScanLimit",
+        "Value": "\u626B\u63CF\u4E0A\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -11578,6 +11786,214 @@
       {
         "Id": "Effect_ValueTypeConversionNode_TargetType_SizeAndPosition",
         "Value": "Position and size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_ReverseSpeedVarianceProvider",
+        "Value": "Reverse",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_ReverseSpeedVarianceProvider",
+        "Value": "Play the selected video and audio range backwards without changing its duration.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ReverseSpeedVarianceProvider___Output__",
+        "Value": "Speed output",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Field_ReverseSpeedVarianceProvider___Output__",
+        "Value": "Map timeline frames to source frames in reverse using the clip length.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_CustomToSpeedVariance",
+        "Value": "Custom to Speed Provider",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_CustomToSpeedVariance",
+        "Value": "Convert source frame and finished expressions into a connectable speed provider.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_SpeedVarianceToCustom",
+        "Value": "Speed Provider to Custom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_SpeedVarianceToCustom",
+        "Value": "Query a speed provider for its source frame, finished signal and output length.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_CustomSpeedVariance",
+        "Value": "Custom Speed",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_PortType_SpeedVariance",
+        "Value": "Speed provider",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_Speed",
+        "Value": "Speed provider",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Speed",
+        "Value": "Speed provider",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Frame",
+        "Value": "Query frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Length",
+        "Value": "Input length",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_SourceLength",
+        "Value": "Available source length",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_HasSourceLength",
+        "Value": "Has source length",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_SourceFrame",
+        "Value": "Source frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_Finished",
+        "Value": "Finished",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedVarianceToCustom_OutputLength",
+        "Value": "Output length",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance___Output__",
+        "Value": "Speed provider",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance_SourceFrame",
+        "Value": "Source frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance_Finished",
+        "Value": "Finished",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomSpeedVariance_ScanLimit",
+        "Value": "Scan limit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_SourceFrame",
+        "Value": "Source frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_Finished",
+        "Value": "Finished",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CustomToSpeedVariance_ScanLimit",
+        "Value": "Scan limit",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

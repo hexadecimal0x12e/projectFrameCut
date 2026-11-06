@@ -40,6 +40,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The built-in binding source id for the current clip progress (0..1, exposed as <see cref="float"/>).
         /// </summary>
         public const string BuiltInProgressProviderId = "builtin://progress";
+        public const string SpeedFrameProviderId = "builtin://speed-frame";
+        public const string SpeedClipLengthProviderId = "builtin://speed-clip-length";
+        public const string SpeedSourceLengthProviderId = "builtin://speed-source-length";
+        public const string SpeedHasSourceLengthProviderId = "builtin://speed-has-source-length";
+        public const string SpeedFinishedProviderId = "builtin://speed-finished";
+        public static bool IsSpeedSource(string? id) => id is SpeedFrameProviderId or SpeedClipLengthProviderId
+            or SpeedSourceLengthProviderId or SpeedHasSourceLengthProviderId or SpeedFinishedProviderId;
+
         public const string BuiltInClipFrameProviderId = "builtin://clip-frame";
         public const string BuiltInProjectProgressProviderId = "builtin://project-progress";
 
@@ -65,6 +73,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public const string ClipPositionProviderId = "builtin://clip-position";
         public static EffectArgumentFieldType SourceType(string id) => id switch
         {
+            SpeedHasSourceLengthProviderId or SpeedFinishedProviderId => EffectArgumentFieldType.Boolean,
             BuiltInAudioSampleProviderId or ClipAudioProviderId => EffectArgumentFieldType.AudioSample,
             ClipPositionProviderId => EffectArgumentFieldType.SizeAndPosition,
             _ => EffectArgumentFieldType.Numeric,
@@ -82,7 +91,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static int AudioSampleIndex => AudioIndex.Value;
         [ThreadStatic] private static uint currentFrame;
 
-        public static bool IsBuiltInSource(string? id) => id is BuiltInFrameProviderId or BuiltInProgressProviderId
+        public static bool IsBuiltInSource(string? id) => IsSpeedSource(id) || id is BuiltInFrameProviderId or BuiltInProgressProviderId
             or BuiltInClipFrameProviderId or BuiltInProjectProgressProviderId or BuiltInAudioSampleProviderId or ClipAudioProviderId or ClipPositionProviderId;
 
         public static bool SupportsAudioSample(EffectStage stage) => stage is EffectStage.Render or EffectStage.VectorContent or EffectStage.Text or EffectStage.Composition;
@@ -193,6 +202,17 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             var result = compute();
             _computed[key] = result;
             return result;
+        }
+
+        public static IDisposable PushSpeedFrame(uint frame, uint length, uint? sourceLength, CancellationToken token = default)
+        {
+            var scope = PushFrame(frame, 0, false, token);
+            Set(SpeedFrameProviderId, (double)frame);
+            Set(SpeedClipLengthProviderId, (double)length);
+            Set(SpeedSourceLengthProviderId, (double)(sourceLength ?? 0));
+            Set(SpeedHasSourceLengthProviderId, sourceLength.HasValue);
+            Set(SpeedFinishedProviderId, frame >= length);
+            return scope;
         }
 
         public static IDisposable PushFrame(uint frameIndex, float progress) => PushFrame(frameIndex, progress, false);

@@ -18,6 +18,8 @@ internal static class FullDynamicEffectPipelineBuilder
         {
             Rendering.TransformProcessing.ValidateProviders(providers);
             foreach (var provider in providers.Values) provider.ValidateOutputFields();
+            foreach (var provider in providers.Values.Where(p => p.Enabled && (SpeedVarianceBindings.IsConversion(p) || SpeedVarianceBindings.IsSpeed(p))))
+                CustomSpeedVarianceProvider.ValidateGraph(provider, providers);
             var types = new EffectFieldTypeResolution(providers, inputDataFormat: inputDataFormat);
             var errors = types.Diagnostics.Where(d => d.Code != "BindingCycle").ToArray();
             if (errors.Length > 0) throw new InvalidOperationException(string.Join(" ", errors.Select(e => e.Message)));
@@ -26,11 +28,21 @@ internal static class FullDynamicEffectPipelineBuilder
             int index = 0;
             foreach (var provider in providers.Values.OrderBy(p => p.Id))
             {
-                if (provider is RenderOutputProvider or ClipArgumentProvider) continue;
+                if (provider is RenderOutputProvider or ClipArgumentProvider
+                    || SpeedVarianceBindings.IsConversion(provider) || SpeedVarianceBindings.IsConsumed(provider, providers)) continue;
+                if (provider is CustomSpeedVarianceProvider)
+                {
+                    if (!provider.Enabled) continue;
+                    var speed = CustomSpeedVarianceProvider.BuildGraph(provider, providers);
+                    speed.BindedEffectProvidingSystemID = provider.Id.ToString();
+                    result[$"{provider.Id}_0"] = speed;
+                    owned.Add(speed);
+                    continue;
+                }
                 var state = EffectProviderTypeState.Capture(provider);
-                bool scheduled = provider.Target.HasFlag(EffectTarget.ValueProvider)
+                bool scheduled = provider.TypeOfEffect != EffectType.SpeedVarianceProvider && (provider.Target.HasFlag(EffectTarget.ValueProvider)
                     || provider.Stage is EffectStage.Render or EffectStage.VectorContent or EffectStage.Composition
-                        && provider.TypeOfEffect != EffectType.Transform;
+                        && provider.TypeOfEffect != EffectType.Transform);
                 var parameters = state.Parameters.ToDictionary(p => p.Key, p => p.Value!);
                 foreach (var pair in state.Metadata.Where(p => p.Key == IEffectProvider.IsContinuousEffectParameterKey)) parameters[pair.Key] = pair.Value;
                 foreach (var field in state.Bindings.Where(p => state.Fields.ContainsKey(p.Key)

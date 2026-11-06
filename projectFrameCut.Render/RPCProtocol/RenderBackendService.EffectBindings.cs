@@ -77,20 +77,34 @@ public sealed partial class RenderBackendService
                 var clip = ClipArgumentBinding.InitializeFrame(owner, frame);
                 if (owner.ClipType != ClipMode.AudioClip && ClipArgumentBinding.ShouldRender(clip)) RenderPicture(clip);
                 CaptureTerminals(clip);
+                if ((EffectStage)request.Stage == EffectStage.Composition && clip.SpeedVarianceProviderInstance is CustomSpeedVarianceEffect speed)
+                {
+                    uint local = frame - clip.StartFrame;
+                    speed.InspectFrame(local, clip.Duration, clip.GetAvailableSourceLength(), (finished, sourceFrame) =>
+                    {
+                        Capture(speed, new Dictionary<string, object?>
+                        {
+                            [CustomSpeedVarianceProvider.FinishedKey] = finished,
+                            [CustomSpeedVarianceProvider.SourceFrameKey] = sourceFrame,
+                        });
+                        foreach (var source in request.BuiltInSources.Where(ValueProviderFrameContext.IsSpeedSource))
+                            result.Sources[source] = Snapshot(ValueProviderFrameContext.Get(source), false);
+                    }, token);
+                }
                 using var clipScope = ValueProviderFrameContext.PushClip(clip);
                 using var frameScope = ValueProviderFrameContext.PushFrame(frame,
                     Math.Clamp(((float)frame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, token);
                 result.Sources["position"] = Snapshot(clip.PositionTuple, false);
                 result.Sources["audio"] = Snapshot((EffectStage)request.Stage == EffectStage.Render
                     ? audio.ReadClipFrame(clip, frame, token) : audio.ReadFrame(frame, token), false);
-                foreach (var source in request.BuiltInSources.Where(ValueProviderFrameContext.IsBuiltInSource))
+                foreach (var source in request.BuiltInSources.Where(s => ValueProviderFrameContext.IsBuiltInSource(s) && !ValueProviderFrameContext.IsSpeedSource(s)))
                     result.Sources[source] = Snapshot(ValueProviderFrameContext.Get(source), false);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 Log(ex, $"Preview effect bindings for clip {owner.Id}", this);
-                result.Error = ex.Message;
+                ReportError(ex);
             }
             return result;
         }
@@ -151,17 +165,26 @@ public sealed partial class RenderBackendService
             {
                 token.ThrowIfCancellationRequested();
                 if (!providers.TryGetValue(terminal.ProviderId, out var provider) || terminal.Fields.Count == 0) continue;
-                object? value = null;
-                if (provider is RenderOutputProvider && clip.EffectsInstances?.OfType<IRenderEffectPipeline>()
-                    .FirstOrDefault(g => g.Stage == EffectStage.Render) is { } render)
-                    value = render.EvaluateRenderValue(clip, frame, terminal.Fields[0],
-                        clip.ClipType == ClipMode.AudioClip ? audio.ReadClipFrame(clip, frame, token) : null, token);
-                var step = new EffectBindingPreviewStep { NodeId = terminal.NodeId, ProviderId = terminal.ProviderId };
-                if (value is not null) step.Outputs[terminal.Fields[0]] = Snapshot(value);
-                else foreach (var field in terminal.Fields)
-                    step.Outputs[field] = Snapshot(clip.ArgumentFields.GetValueOrDefault(field)?.ReadValue(clip));
-                if (request.RecordSteps) CaptureInputs(step, provider);
-                result.Steps.Add(step);
+                try
+                {
+                    object? value = null;
+                    if (provider is RenderOutputProvider && clip.EffectsInstances?.OfType<IRenderEffectPipeline>()
+                        .FirstOrDefault(g => g.Stage == EffectStage.Render) is { } render)
+                        value = render.EvaluateRenderValue(clip, frame, terminal.Fields[0],
+                            clip.ClipType == ClipMode.AudioClip ? audio.ReadClipFrame(clip, frame, token) : null, token);
+                    var step = new EffectBindingPreviewStep { NodeId = terminal.NodeId, ProviderId = terminal.ProviderId };
+                    if (value is not null) step.Outputs[terminal.Fields[0]] = Snapshot(value, providerId: provider.Id, fieldId: terminal.Fields[0]);
+                    else foreach (var field in terminal.Fields)
+                        step.Outputs[field] = Snapshot(clip.ArgumentFields.GetValueOrDefault(field)?.ReadValue(clip), providerId: provider.Id, fieldId: field);
+                    if (request.RecordSteps) CaptureInputs(step, provider);
+                    result.Steps.Add(step);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Preview effect terminal {terminal.NodeId}", this);
+                    ReportError(ex, provider.Id, terminal.Fields[0]);
+                }
             }
         }
 
@@ -187,13 +210,13 @@ public sealed partial class RenderBackendService
             catch (Exception ex)
             {
                 Log(ex, $"Capture effect preview for provider {id}", this);
-                result.Error ??= ex.Message;
+                ReportError(ex, id);
             }
         }
 
         private void AddOutput(EffectBindingPreviewStep step, string field, object? value)
         {
-            var snapshot = Snapshot(value);
+            var snapshot = Snapshot(value, providerId: step.ProviderId, fieldId: field);
             step.Outputs[field] = snapshot;
             if (!string.IsNullOrWhiteSpace(field))
                 values[EffectProviderOutputExtensions.CreateOutputSourceId(step.ProviderId, field)] = snapshot;
@@ -229,7 +252,18 @@ public sealed partial class RenderBackendService
             }
         }
 
-        private EffectBindingPreviewValue Snapshot(object? value, bool image = true)
+        private void ReportError(Exception ex, Guid? providerId = null, string? fieldId = null)
+        {
+            var origin = EffectProviderFailure.Read(ex);
+            providerId = origin.ProviderId ?? providerId;
+            fieldId = origin.FieldId ?? fieldId;
+            var message = EffectProviderFailure.Describe(ex);
+            result.Error ??= message;
+            if (!result.Diagnostics.Any(d => d.ProviderId == (providerId ?? Guid.Empty) && d.FieldId == fieldId && d.Message == message))
+                result.Diagnostics.Add(new() { ProviderId = providerId ?? Guid.Empty, FieldId = fieldId, Message = message });
+        }
+
+        private EffectBindingPreviewValue Snapshot(object? value, bool image = true, Guid? providerId = null, string? fieldId = null)
         {
             token.ThrowIfCancellationRequested();
             var snapshot = new EffectBindingPreviewValue
@@ -263,7 +297,7 @@ public sealed partial class RenderBackendService
             catch (Exception ex)
             {
                 Log(ex, "Snapshot effect binding preview", this);
-                result.Error ??= ex.Message;
+                ReportError(ex, providerId, fieldId);
             }
             return snapshot;
         }

@@ -402,8 +402,8 @@ Get-ProjectClipEffectGroup -ClipId $clipId
 Set-ProjectClipEffectGroup -ClipId $clipId -GroupId $group.GroupId -Collapsed $false -Ports @(
   @{ ProviderId = $effect.ProviderId; FieldId = '__Input__'; Name = '画面'; IsInput = $true }
 )
-Export-ProjectClipEffectGroup -ClipId $clipId -GroupId $group.GroupId | Set-Content ./effect-group.json
-Import-ProjectClipEffectGroup -ClipId $otherClipId -TemplateJson (Get-Content ./effect-group.json -Raw)
+Export-ProjectClipEffectGroup -ClipId $clipId -GroupId $group.GroupId | Set-Content ./effect-group.mmd
+Import-ProjectClipEffectGroup -ClipId $otherClipId -TemplateMermaid (Get-Content ./effect-group.mmd -Raw)
 $saved = Save-ProjectClipEffectGroup -ClipId $clipId -GroupId $group.GroupId -PassThru
 Get-ProjectEffectGroupTemplate
 Import-ProjectClipEffectGroup -ClipId $otherClipId -Hash $saved.Hash
@@ -413,7 +413,7 @@ Save-Project
 
 `Add-ProjectClipEffectGroup` 的 `ProviderIds/ChildGroupIds` 可组合相同父组下的节点和子组。`Ports` 按数组顺序配置公开端口，每项包含 `ProviderId/FieldId/Name/IsInput`；外部连线需要的端口自动补齐。`Add/Set` 支持 `Collapsed/X/Y`，移动已有组会同步移动成员。Clip 参数、跨 Clip 端点和转场不能打包。
 
-`Remove-ProjectClipEffectGroup` 默认解组，加 `-RemoveProviders` 删除组及所有嵌套成员。导出返回可直接保存的 JSON；导入重新生成全部节点和分组 ID，保留内部连线，外部项目连线不导入，可用 `-X/-Y` 放置。`Save-ProjectClipEffectGroup [-ReplaceHash ...]` 保存到应用的效果组库；`Get-ProjectEffectGroupTemplate [-Hash ...]` 返回名称、哈希、JSON 和加载错误。保存到库和导出均不替代 `Save-Project`。
+`Remove-ProjectClipEffectGroup` 默认解组，加 `-RemoveProviders` 删除组及所有嵌套成员。导出返回可直接保存的 Mermaid；导入重新生成全部节点和分组 ID，保留内部连线，外部项目连线不导入，可用 `-X/-Y` 放置。`Save-ProjectClipEffectGroup [-ReplaceHash ...]` 保存到应用的效果组库；`Get-ProjectEffectGroupTemplate [-Hash ...]` 返回名称、哈希、`TemplateMermaid` 和加载错误。保存到库和导出均不替代 `Save-Project`。文件格式与从零创建示例见 [Effect 组 Mermaid](../../docs/effect-group-mermaid.md)。
 
 ## 批量操作
 

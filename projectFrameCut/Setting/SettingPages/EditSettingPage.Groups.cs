@@ -29,14 +29,19 @@ internal sealed class EffectGroupLibraryPage : ContentPage
         import.Clicked += async (_, _) => await RunAsync(ImportAsync);
         var refresh = new Button { Text = Localized.EffectGroup_Refresh };
         refresh.Clicked += (_, _) => Refresh();
-        Content = new ScrollView { Content = new VerticalStackLayout
+        Content = new ScrollView
         {
-            Padding = 16, Spacing = 12, Children =
+            Content = new VerticalStackLayout
+            {
+                Padding = 16,
+                Spacing = 12,
+                Children =
             {
                 new Label { Text = Localized.EffectGroup_LibraryDescription },
                 new HorizontalStackLayout { Spacing = 8, Children = { import, refresh } }, list
             }
-        } };
+            }
+        };
     }
 
     protected override void OnAppearing()
@@ -105,13 +110,23 @@ internal sealed class EffectGroupLibraryPage : ContentPage
 
     private async Task ImportAsync()
     {
-        var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = Localized.EffectGroup_Import });
+        var file = await FilePicker.Default.PickAsync(new PickOptions
+        {
+            PickerTitle = Localized.EffectGroup_Import,
+            FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                [DevicePlatform.WinUI] = [".pjfcEBG", ".mmd", ".md"],
+                [DevicePlatform.macOS] = ["pjfcEBG", "mmd", "md"],
+                [DevicePlatform.Android] = ["text/*", "application/octet-stream"],
+                [DevicePlatform.iOS] = ["public.text", "public.data"],
+            }),
+        });
         if (file is null) return;
         using var source = await file.OpenReadAsync();
         using var stream = new MemoryStream();
         await source.CopyToAsync(stream);
-        var json = stream.ToArray();
-        if (await EffectGroupStore.SaveWithChoiceAsync(json, this) is not null)
+        var content = stream.ToArray();
+        if (await EffectGroupStore.SaveWithChoiceAsync(content, this) is not null)
             await DisplayAlertAsync(Localized._Info, Localized._Done, Localized._OK);
     }
 

@@ -188,9 +188,21 @@ namespace projectFrameCut.Render.Compose
                         continue;
                     }
 
+                    var owner = Clips.FirstOrDefault(c => c.BindedSoundTrack == track.Id || c.Id.ToString() == track.Id)
+                        ?? Clips.FirstOrDefault(c => c.Id == SoundTrackMetadata.ReadSourceClipId(track.ExtraData)
+                            && !SoundTrackMetadata.ReadBool(c.ExtraData, SoundTrackMetadata.DetachedKey));
+                    if (owner is not null && owner.EffectProviders is { Length: > 0 })
+                    {
+                        if (owner.EffectProvidersInstances is not { Length: > 0 }) EffectHelper.ResolveClipEffects(owner);
+                        if (owner.EffectsInstances?.OfType<IRenderEffectPipeline>().Any(g => g.AudioNeedsPicture) == true
+                            && owner is VideoClip { Decoder: null } or PhotoClip { source: null })
+                            owner.ReInit(projectFrameCut.Drawing.Base.IPicture.PicturePixelMode.Float16Picture);
+                    }
+                    SpeedVarianceFrameMap? speedMap = owner?.SpeedVarianceProviderInstance is IDirectSpeedVarianceProvider speed
+                        ? speed.GetFrameMap(owner.Duration, owner.GetAvailableSourceLength()) : null;
                     float ratio = track.Ratio <= 0f ? 1f : track.Ratio;
                     int trackStartSample = FrameToSample(track.StartFrame, videoFramerate, outputSampleRate);
-                    int durationFrames = (int)Math.Max(0, Math.Round(track.Duration * ratio));
+                    int durationFrames = speedMap is not null ? checked((int)speedMap.Length) : (int)Math.Max(0, Math.Round(track.Duration * ratio));
                     int trackDurationSamples = FrameToSample(durationFrames, videoFramerate, outputSampleRate);
                     if (trackDurationSamples <= 0)
                     {
@@ -211,16 +223,6 @@ namespace projectFrameCut.Render.Compose
                         .Where(e => e.Enabled)
                         .OrderBy(e => e.Index)
                         .ToArray();
-                    var owner = Clips.FirstOrDefault(c => c.BindedSoundTrack == track.Id || c.Id.ToString() == track.Id)
-                        ?? Clips.FirstOrDefault(c => c.Id == SoundTrackMetadata.ReadSourceClipId(track.ExtraData)
-                            && !SoundTrackMetadata.ReadBool(c.ExtraData, SoundTrackMetadata.DetachedKey));
-                    if (owner is not null && owner.EffectProviders is { Length: > 0 })
-                    {
-                        if (owner.EffectProvidersInstances is not { Length: > 0 }) EffectHelper.ResolveClipEffects(owner);
-                        if (owner.EffectsInstances?.OfType<IRenderEffectPipeline>().Any(g => g.AudioNeedsPicture) == true
-                            && owner is VideoClip { Decoder: null } or PhotoClip { source: null })
-                            owner.ReInit(projectFrameCut.Drawing.Base.IPicture.PicturePixelMode.Float16Picture);
-                    }
                     contexts.Add(new SoundTrackContext
                     {
                         SoundTrack = track,
@@ -235,6 +237,7 @@ namespace projectFrameCut.Render.Compose
                         SourceStartSample = sourceStartSample,
                         Volume = track.Volume,
                         Ratio = ratio,
+                        SpeedMap = speedMap,
                         Effects = effects
                     });
                 }
@@ -246,7 +249,8 @@ namespace projectFrameCut.Render.Compose
             {
                 context.StageClips = stageClips;
                 context.AudioContexts = contexts;
-                if (context.SoundTrack.EffectStagePlan is { } plan) plan.Owner.Duration = context.ClipInfo.Duration;
+                if (context.SoundTrack.EffectStagePlan is { } plan && plan.Owner.SpeedVarianceProviderInstance is not IDirectSpeedVarianceProvider)
+                    plan.Owner.Duration = context.ClipInfo.Duration;
             }
             return (contexts, totalSamples);
         }
@@ -402,6 +406,8 @@ namespace projectFrameCut.Render.Compose
             int outputSampleRate,
             int outputChannels)
         {
+            if (context.SpeedMap is not null)
+                return ReadCustomSpeedWindow(context, clipOutputOffset, outputCount, outputSampleRate, outputChannels);
             int sourceRate = Math.Max(1, context.SourceSampleRate);
             float ratio = context.Ratio <= 0f ? 1f : context.Ratio;
 
@@ -460,6 +466,49 @@ namespace projectFrameCut.Render.Compose
                 SampleCount = outputCount,
                 SamplePerSecond = outputSampleRate
             };
+        }
+
+        private static FloatAudioSamples ReadCustomSpeedWindow(SoundTrackContext context, int offset, int count, int rate, int channels)
+        {
+            var map = context.SpeedMap!;
+            var output = CreateZeroChannels(channels, count);
+            int position = 0;
+            while (position < count)
+            {
+                ValueProviderFrameContext.CancellationToken.ThrowIfCancellationRequested();
+                int sample = offset + position;
+                if (sample < 0) { position++; continue; }
+                int frame = SampleToFrame(sample, context.FrameRate, rate);
+                if ((uint)frame >= map.Length) break;
+                int first = FrameToSample(frame, context.FrameRate, rate);
+                int end = FrameToSample(frame + 1, context.FrameRate, rate);
+                int n = Math.Min(count - position, end - sample);
+                uint current = map.GetSourceFrame((uint)frame);
+                double delta = map.GetSourceFrameStep((uint)frame);
+                double step = delta * context.SourceSampleRate / context.FrameRate / Math.Max(1, end - first);
+                double start = context.SourceStartSample + (double)current * context.SourceSampleRate / context.FrameRate + (sample - first) * step;
+                if (delta < 0) start += context.SourceSampleRate / context.FrameRate - 1;
+                if (Math.Abs(step) > 0) n = Math.Min(n, Math.Max(1, (int)Math.Min(int.MaxValue, Math.Floor(65534 / Math.Abs(step)) + 1)));
+                double last = start + (n - 1) * step;
+                int readStart = checked((int)Math.Max(0, Math.Floor(Math.Min(start, last))));
+                int readCount = checked((int)Math.Max(2, Math.Ceiling(Math.Max(start, last)) - readStart + 2));
+                var raw = context.SoundTrack.GetAudioSamplesRelatedToStartPointOfSource((uint)readStart, readCount);
+                var input = ToFloatChannels(raw);
+                for (int c = 0; c < channels; c++)
+                {
+                    var src = input[raw.channelCount == 1 ? 0 : Math.Min(c, raw.channelCount - 1)];
+                    for (int i = 0; i < n; i++)
+                    {
+                        double p = start + i * step - readStart;
+                        int index = (int)Math.Floor(p);
+                        float x = index >= 0 && index < src.Length ? src[index] : 0;
+                        float y = index + 1 >= 0 && index + 1 < src.Length ? src[index + 1] : x;
+                        output[c][position + i] = (float)(x + (y - x) * (p - index));
+                    }
+                }
+                position += n;
+            }
+            return new FloatAudioSamples { Channels = output, SampleCount = count, SamplePerSecond = rate };
         }
 
         private static FloatAudioSamples ApplyAudioEffects(
@@ -672,6 +721,7 @@ namespace projectFrameCut.Render.Compose
             public int SourceStartSample { get; init; }
             public float Volume { get; init; }
             public float Ratio { get; init; }
+            public SpeedVarianceFrameMap? SpeedMap { get; init; }
             public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
             public IClip? Owner { get; init; }
             public int RenderedFrame { get; set; } = -1;

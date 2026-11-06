@@ -68,6 +68,17 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public uint Duration { get; set; }
 
+        /// <summary>Finite source length in native source frames; null for unbounded or unknown sources.</summary>
+        [JsonIgnore]
+        public virtual uint? SourceFrameCount => null;
+
+        public uint? GetAvailableSourceLength()
+        {
+            if (SourceFrameCount is not { } count) return null;
+            return ClipTiming.AvailableSourceLength(count, ClipType == ClipMode.VideoClip ? FrameTime : 0,
+                TryResolveProjectFrameRate(this, out var fps) ? fps : 0, RelativeStartFrame);
+        }
+
         /// <summary>
         /// The target width of this clip. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
         /// </summary>
@@ -415,41 +426,46 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
     internal sealed class SpeedVarianceProfile
     {
-        public required uint Duration { get; init; }
-        public required ISpeedVarianceProvider? Provider { get; init; }
-        public required uint EffectiveDurationFrames { get; init; }
+        public uint Duration { get; init; }
+        public ISpeedVarianceProvider? Provider { get; init; }
+        public uint EffectiveDurationFrames { get; init; }
+        public uint? SourceLength { get; init; }
+        public SpeedVarianceFrameMap? FrameMap { get; init; }
 
         public ulong MapTimelineOffsetToSourceOffset(uint timelineOffset) =>
-            ClipTiming.SourceOffset(timelineOffset, Duration, Provider, EffectiveDurationFrames);
+            FrameMap is { } map ? map.GetSourceFrame(timelineOffset)
+                : ClipTiming.SourceOffset(timelineOffset, Duration, Provider, EffectiveDurationFrames, SourceLength);
     }
 
     internal static class SpeedVarianceMapCache
     {
-        private static readonly ConditionalWeakTable<IClip, SpeedVarianceProfile> Cache = new();
-        private static readonly object CacheLock = new();
-
+        private sealed class CacheSlot { public SpeedVarianceProfile? Profile; }
+        private static readonly ConditionalWeakTable<IClip, CacheSlot> Cache = new();
         public static SpeedVarianceProfile GetOrBuild(IClip clip)
         {
-            lock (CacheLock)
+            var slot = Cache.GetValue(clip, _ => new CacheSlot());
+            lock (slot)
             {
-                if (Cache.TryGetValue(clip, out var cached)
-                    && cached.Duration == clip.Duration
-                    && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
-                {
-                    return cached;
-                }
-
-                Cache.Remove(clip);
-                var rebuilt = Build(clip);
-                Cache.Add(clip, rebuilt);
-                return rebuilt;
+                uint? sourceLength = clip.SpeedVarianceProviderInstance is not null ? clip.GetAvailableSourceLength() : null;
+                if (slot.Profile is { } cached && cached.Provider == clip.SpeedVarianceProviderInstance
+                    && cached.Duration == clip.Duration && cached.SourceLength == sourceLength) return cached;
+                return slot.Profile = Build(clip, sourceLength);
             }
         }
 
-        private static SpeedVarianceProfile Build(IClip clip)
+        private static SpeedVarianceProfile Build(IClip clip, uint? sourceLength)
         {
             uint duration = clip.Duration;
             var provider = clip.SpeedVarianceProviderInstance;
+
+            if (provider is IDirectSpeedVarianceProvider direct)
+            {
+                var map = direct.GetFrameMap(duration, sourceLength);
+                return new SpeedVarianceProfile
+                {
+                    Duration = duration, Provider = provider, EffectiveDurationFrames = map.Length, FrameMap = map, SourceLength = sourceLength,
+                };
+            }
 
             if (duration == 0)
             {
@@ -471,12 +487,13 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
                 };
             }
 
-            uint effectiveDuration = ClipTiming.EffectiveDuration(duration, provider);
+            uint effectiveDuration = ClipTiming.EffectiveDuration(duration, provider, sourceLength);
             return new SpeedVarianceProfile
             {
                 Duration = duration,
                 Provider = provider,
                 EffectiveDurationFrames = effectiveDuration,
+                SourceLength = sourceLength,
             };
         }
     }

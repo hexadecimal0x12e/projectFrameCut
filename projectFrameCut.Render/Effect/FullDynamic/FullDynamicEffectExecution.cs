@@ -148,6 +148,7 @@ internal sealed class FullDynamicEffectExecution : IDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException and not DynamicCalculationLimitException)
         {
+            EffectProviderFailure.Attach(ex, id, port);
             var failed = new FullDynamicValue(FullDynamicInputState.Failed, null, initialPosition, preserveAspect, ex);
             scope.Outputs[key] = failed;
             return failed;

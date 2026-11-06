@@ -254,6 +254,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         private EffectArgumentFieldType ContentType => TypeOfEffect switch
         {
+            EffectType.SpeedVarianceProvider => EffectArgumentFieldType.SpeedVariance,
             EffectType.ClipPositionProvider or EffectType.ContinuousClipPositionProvider => EffectArgumentFieldType.SizeAndPosition,
             EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect => EffectArgumentFieldType.AudioSample,
             _ => Stage.GetContentType(),
@@ -480,7 +481,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         private static object ParseDefault(EffectArgumentFieldDescriptor desc)
         {
             if (desc.TypeContract is not null) return EffectFieldTypes.DefaultValue(desc)!;
-            if (desc.FieldType.BaseType() == EffectArgumentFieldType.AudioSample) return null!;
+            if (desc.FieldType.BaseType() is EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SpeedVariance) return null!;
             if (desc.FieldType.HasFlag(EffectArgumentFieldType.Any)) return desc.DefaultValue;
             var baseType = desc.FieldType & (EffectArgumentFieldType)0x3FF;
             return baseType switch

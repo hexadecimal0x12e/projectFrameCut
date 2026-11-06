@@ -5454,7 +5454,7 @@
       },
       {
         "Id": "EffectGroup_LibraryDescription",
-        "Value": "\u7BA1\u7406\u6301\u4E45\u4FDD\u5B58\u7684 Effect \u7EC4\uFF0C\u5E76\u901A\u8FC7 JSON \u5BFC\u5165\u6216\u5BFC\u51FA\u590D\u7528\u3002\u5DF2\u6DFB\u52A0\u7684\u5B9E\u4F8B\u4E0D\u968F\u6A21\u677F\u53D8\u5316\u3002",
+        "Value": "\u7BA1\u7406\u6301\u4E45\u4FDD\u5B58\u7684 Effect \u7EC4\uFF0C\u5E76\u901A\u8FC7 Mermaid (.mmd) \u5BFC\u5165\u6216\u5BFC\u51FA\u590D\u7528\u3002\u5DF2\u6DFB\u52A0\u7684\u5B9E\u4F8B\u4E0D\u968F\u6A21\u677F\u53D8\u5316\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11463,6 +11463,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "\u6DFB\u52A0\u5199",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "\u4E00\u952E\u6574\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "\u5BFC\u5165 Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "\u5207\u6362\u53C2\u6570\u65B9\u5411",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "\u53D8\u901F\uFF1A\u7247\u6BB5\u5185\u65F6\u95F4\u7EBF\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "\u53D8\u901F\uFF1AClip \u8BBE\u7F6E\u957F\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "\u53D8\u901F\uFF1A\u53EF\u7528\u6E90\u957F\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "\u53D8\u901F\uFF1A\u6E90\u957F\u5EA6\u6709\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "\u53D8\u901F\uFF1A\u8FBE\u5230\u8BBE\u7F6E\u957F\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "\u5355\u6B65\u6267\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "\u6B63\u5728\u6267\u884C\u7BA1\u7EBF\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "\u5355\u6B65\u6267\u884C\uFF1A\u7528 \u25C0 / \u25B6 \u9010\u6B65\u67E5\u770B\u88AB\u6FC0\u6D3B\u7684\u8282\u70B9\u548C\u5404\u63A5\u53E3\u7684\u503C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 \u672A\u6FC0\u6D3B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "\u6CA1\u6709\u6355\u83B7\u5230\u8282\u70B9\u6267\u884C\u3002\u8BF7\u70B9\u51FB \u27F3 \u91CD\u65B0\u6267\u884C\uFF0C\u6216\u786E\u8BA4\u5F53\u524D\u9636\u6BB5\u7684\u7BA1\u7EBF\u5B58\u5728\u6709\u6548\u7ED1\u5B9A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "\u8BE5\u8282\u70B9\u5728\u5F53\u524D\u5E27\u672A\u6FC0\u6D3B\uFF08\u5206\u652F\u672A\u9009\u4E2D\uFF09\uFF0C\u5176\u63A5\u53E3\u672A\u53C2\u4E0E\u8BA1\u7B97\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "\u753B\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\u4E0A\u4E00\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "\u4E0B\u4E00\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\u6700\u540E\u4E00\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "\u91CD\u65B0\u6267\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "\u9000\u51FA\u5355\u6B65\u6267\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "\u5C55\u5F00\u4FA7\u680F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "\u6536\u8D77\u4FA7\u680F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "\u5728\u6B64\u7C98\u8D34 Mermaid \u56FE\u4EE3\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "\u9884\u89C8\u5E76\u4FEE\u590D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "\u95EE\u9898\u8282\u70B9\u548C\u8FDE\u7EBF\u5DF2\u6807\u7EA2\u3002\u62D6\u52A8\u7AEF\u53E3\uFF0C\u6216\u53CC\u51FB\u672A\u8FDE\u63A5\u7AEF\u53E3\u540E\u70B9\u51FB\u76EE\u6807\u7AEF\u53E3\u4EE5\u91CD\u65B0\u7ED1\u5B9A\uFF1B\u62D6\u5230\u7A7A\u767D\u5904\u6216\u9009\u62E9\u8282\u70B9\u540E\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u65AD\u5F00\u8FDE\u63A5\u3002\u540C\u6B65\u7AEF\u53E3\u58F0\u660E\u53EF\u4FEE\u590D\u7F3A\u5931\u6216\u62FC\u9519\u7684\u58F0\u660E\u3002\u4FEE\u6539\u6E90\u7801\u4F1A\u6E05\u9664\u56FE\u4E0A\u7684\u4FEE\u590D\uFF0C\u5B8C\u6210\u540E\u70B9\u51FB\u5BFC\u5165\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "\u540C\u6B65\u7AEF\u53E3\u58F0\u660E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22319,6 +22535,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "Add write",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "Auto arrange",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Graph",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Import Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Toggle parameter direction",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "Speed: timeline frame within clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "Speed: configured clip length",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "Speed: available source length",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "Speed: source length is finite",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "Speed: configured length reached",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Step execution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "Running pipeline\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "Use \u25C0 / \u25B6 to inspect activated nodes and their port values step by step.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Inactive",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "No node execution was captured. Click \u27F3 to run again, or check that the current stage has valid bindings.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "This node was inactive in the current frame because its branch was not selected. Its ports were not evaluated.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "Picture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "Previous step",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "Next step",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "Last step",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Run again",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Exit step execution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Show side panel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Hide side panel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Paste Mermaid graph code here",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Preview and repair",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Problem nodes and connections are red. Drag ports, or double-click an unconnected port then click the target to reconnect. Drag to empty space, or select a node and use the buttons below to disconnect. Sync port declarations to fix missing or misspelled declarations. Editing the source clears graphical repairs. Click Import when finished.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Sync port declarations",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33190,6 +33622,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "Unset localization item:Effect_AddVariableWrite()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "\u4E00\u9375\u6574\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "\u5716",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "\u532F\u5165 Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "\u5207\u63DB\u53C3\u6578\u65B9\u5411",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "\u8B8A\u901F\uFF1A\u7247\u6BB5\u5167\u6642\u9593\u8EF8\u5F71\u683C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "\u8B8A\u901F\uFF1AClip \u8A2D\u5B9A\u9577\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "\u8B8A\u901F\uFF1A\u53EF\u7528\u4F86\u6E90\u9577\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "\u8B8A\u901F\uFF1A\u4F86\u6E90\u9577\u5EA6\u6709\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "\u8B8A\u901F\uFF1A\u9054\u5230\u8A2D\u5B9A\u9577\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "\u55AE\u6B65\u57F7\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "\u6B63\u5728\u57F7\u884C\u7BA1\u7DDA\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "\u55AE\u6B65\u57F7\u884C\uFF1A\u7528 \u25C0 / \u25B6 \u9010\u6B65\u6AA2\u8996\u88AB\u555F\u7528\u7684\u7BC0\u9EDE\u548C\u5404\u9023\u63A5\u57E0\u7684\u503C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 \u672A\u555F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "\u672A\u64F7\u53D6\u5230\u7BC0\u9EDE\u57F7\u884C\u3002\u8ACB\u9EDE\u9078 \u27F3 \u91CD\u65B0\u57F7\u884C\uFF0C\u6216\u78BA\u8A8D\u76EE\u524D\u968E\u6BB5\u7684\u7BA1\u7DDA\u5B58\u5728\u6709\u6548\u7D81\u5B9A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "\u6B64\u7BC0\u9EDE\u5728\u76EE\u524D\u5F71\u683C\u672A\u555F\u7528\uFF08\u5206\u652F\u672A\u9078\u53D6\uFF09\uFF0C\u5176\u9023\u63A5\u57E0\u672A\u53C3\u8207\u8A08\u7B97\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "\u756B\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\u4E0A\u4E00\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "\u4E0B\u4E00\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\u6700\u5F8C\u4E00\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "\u91CD\u65B0\u57F7\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "\u7D50\u675F\u55AE\u6B65\u57F7\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "\u5C55\u958B\u5074\u6B04",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "\u6536\u5408\u5074\u6B04",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "\u5728\u6B64\u8CBC\u4E0A Mermaid \u5716\u7A0B\u5F0F\u78BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -44071,6 +44719,222 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "\u81EA\u52D5\u6574\u5217",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "\u30B0\u30E9\u30D5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Mermaid \u3092\u8AAD\u307F\u8FBC\u3080",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "\u30D1\u30E9\u30E1\u30FC\u30BF\u30FC\u306E\u65B9\u5411\u3092\u5207\u308A\u66FF\u3048",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "\u901F\u5EA6\uFF1A\u30AF\u30EA\u30C3\u30D7\u5185\u306E\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u30D5\u30EC\u30FC\u30E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "\u901F\u5EA6\uFF1A\u8A2D\u5B9A\u3055\u308C\u305F\u30AF\u30EA\u30C3\u30D7\u9577",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "\u901F\u5EA6\uFF1A\u4F7F\u7528\u53EF\u80FD\u306A\u30BD\u30FC\u30B9\u9577",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "\u901F\u5EA6\uFF1A\u30BD\u30FC\u30B9\u9577\u304C\u6709\u9650",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "\u901F\u5EA6\uFF1A\u8A2D\u5B9A\u3055\u308C\u305F\u9577\u3055\u306B\u5230\u9054",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "\u30B9\u30C6\u30C3\u30D7\u5B9F\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "\u30D1\u30A4\u30D7\u30E9\u30A4\u30F3\u3092\u5B9F\u884C\u4E2D\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "\u25C0 / \u25B6 \u3067\u3001\u5B9F\u884C\u3055\u308C\u305F\u30CE\u30FC\u30C9\u3068\u5404\u30DD\u30FC\u30C8\u306E\u5024\u3092\u9806\u306B\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 \u672A\u5B9F\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "\u30CE\u30FC\u30C9\u306E\u5B9F\u884C\u304C\u8A18\u9332\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002\u27F3 \u3067\u518D\u5B9F\u884C\u3059\u308B\u304B\u3001\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30B8\u306B\u6709\u52B9\u306A\u30D0\u30A4\u30F3\u30C9\u304C\u3042\u308B\u304B\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "\u3053\u306E\u30D5\u30EC\u30FC\u30E0\u3067\u306F\u5206\u5C90\u304C\u9078\u629E\u3055\u308C\u306A\u304B\u3063\u305F\u305F\u3081\u3001\u3053\u306E\u30CE\u30FC\u30C9\u3068\u305D\u306E\u30DD\u30FC\u30C8\u306F\u8A08\u7B97\u3055\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "\u753B\u50CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\u524D\u306E\u30B9\u30C6\u30C3\u30D7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "\u6B21\u306E\u30B9\u30C6\u30C3\u30D7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\u6700\u5F8C\u306E\u30B9\u30C6\u30C3\u30D7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "\u518D\u5B9F\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "\u30B9\u30C6\u30C3\u30D7\u5B9F\u884C\u3092\u7D42\u4E86",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "\u30B5\u30A4\u30C9\u30D1\u30CD\u30EB\u3092\u8868\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "\u30B5\u30A4\u30C9\u30D1\u30CD\u30EB\u3092\u96A0\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Mermaid \u30B0\u30E9\u30D5\u306E\u30B3\u30FC\u30C9\u3092\u3053\u3053\u306B\u8CBC\u308A\u4ED8\u3051",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -54934,6 +55798,222 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "\uC790\uB3D9 \uC815\uB82C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "\uADF8\uB798\uD504",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Mermaid \uAC00\uC838\uC624\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "\uB9E4\uAC1C\uBCC0\uC218 \uBC29\uD5A5 \uC804\uD658",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "\uC18D\uB3C4: \uD074\uB9BD \uB0B4 \uD0C0\uC784\uB77C\uC778 \uD504\uB808\uC784",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "\uC18D\uB3C4: \uC124\uC815\uB41C \uD074\uB9BD \uAE38\uC774",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "\uC18D\uB3C4: \uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uC18C\uC2A4 \uAE38\uC774",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "\uC18D\uB3C4: \uC18C\uC2A4 \uAE38\uC774\uAC00 \uC720\uD55C\uD568",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "\uC18D\uB3C4: \uC124\uC815\uB41C \uAE38\uC774\uC5D0 \uB3C4\uB2EC\uD568",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "\uB2E8\uACC4\uBCC4 \uC2E4\uD589",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "\uD30C\uC774\uD504\uB77C\uC778 \uC2E4\uD589 \uC911\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "\u25C0 / \u25B6 \uB85C \uD65C\uC131\uD654\uB41C \uB178\uB4DC\uC640 \uAC01 \uD3EC\uD2B8\uC758 \uAC12\uC744 \uB2E8\uACC4\uBCC4\uB85C \uD655\uC778\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 \uBE44\uD65C\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "\uAE30\uB85D\uB41C \uB178\uB4DC \uC2E4\uD589\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \u27F3 \uB97C \uB20C\uB7EC \uB2E4\uC2DC \uC2E4\uD589\uD558\uAC70\uB098 \uD604\uC7AC \uB2E8\uACC4\uC5D0 \uC720\uD6A8\uD55C \uBC14\uC778\uB529\uC774 \uC788\uB294\uC9C0 \uD655\uC778\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "\uD604\uC7AC \uD504\uB808\uC784\uC5D0\uC11C \uBD84\uAE30\uAC00 \uC120\uD0DD\uB418\uC9C0 \uC54A\uC544 \uC774 \uB178\uB4DC\uC640 \uD3EC\uD2B8\uAC00 \uACC4\uC0B0\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "\uC774\uBBF8\uC9C0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\uC774\uC804 \uB2E8\uACC4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "\uB2E4\uC74C \uB2E8\uACC4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\uB9C8\uC9C0\uB9C9 \uB2E8\uACC4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "\uB2E4\uC2DC \uC2E4\uD589",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "\uB2E8\uACC4\uBCC4 \uC2E4\uD589 \uC885\uB8CC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "\uC0AC\uC774\uB4DC \uD328\uB110 \uD45C\uC2DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "\uC0AC\uC774\uB4DC \uD328\uB110 \uC228\uAE30\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "\uC5EC\uAE30\uC5D0 Mermaid \uADF8\uB798\uD504 \uCF54\uB4DC \uBD99\uC5EC\uB123\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -65790,6 +66870,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "Unset localization item:Effect_AddVariableWrite()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "R\u00E9organiser",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Graphe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Importer Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Inverser la direction des param\u00E8tres",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "Vitesse : image de la timeline dans le clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "Vitesse : dur\u00E9e configur\u00E9e du clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "Vitesse : dur\u00E9e disponible de la source",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "Vitesse : dur\u00E9e de source finie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "Vitesse : dur\u00E9e configur\u00E9e atteinte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Ex\u00E9cution pas \u00E0 pas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "Ex\u00E9cution du pipeline\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "Utilisez \u25C0 / \u25B6 pour inspecter les n\u0153uds activ\u00E9s et les valeurs de leurs ports, \u00E9tape par \u00E9tape.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Inactif",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "Aucune ex\u00E9cution de n\u0153ud enregistr\u00E9e. Cliquez sur \u27F3 pour relancer ou v\u00E9rifiez les liaisons de l\u2019\u00E9tape actuelle.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "Ce n\u0153ud \u00E9tait inactif pour cette image car sa branche n\u2019a pas \u00E9t\u00E9 s\u00E9lectionn\u00E9e. Ses ports n\u2019ont pas \u00E9t\u00E9 \u00E9valu\u00E9s.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "Image",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\u00C9tape pr\u00E9c\u00E9dente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "\u00C9tape suivante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "Derni\u00E8re \u00E9tape",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Relancer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Quitter le pas \u00E0 pas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Afficher le panneau lat\u00E9ral",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Masquer le panneau lat\u00E9ral",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Collez ici le code du graphe Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -76663,6 +77959,222 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "\u062A\u0631\u062A\u064A\u0628 \u062A\u0644\u0642\u0627\u0626\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "\u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "\u0627\u0633\u062A\u064A\u0631\u0627\u062F Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "\u062A\u0628\u062F\u064A\u0644 \u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0645\u0639\u0644\u0645\u0627\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "\u0627\u0644\u0633\u0631\u0639\u0629: \u0625\u0637\u0627\u0631 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0632\u0645\u0646\u064A \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0642\u0637\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "\u0627\u0644\u0633\u0631\u0639\u0629: \u0637\u0648\u0644 \u0627\u0644\u0645\u0642\u0637\u0639 \u0627\u0644\u0645\u062D\u062F\u062F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "\u0627\u0644\u0633\u0631\u0639\u0629: \u0637\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0645\u062A\u0627\u062D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "\u0627\u0644\u0633\u0631\u0639\u0629: \u0637\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631 \u0645\u062D\u062F\u0648\u062F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "\u0627\u0644\u0633\u0631\u0639\u0629: \u062A\u0645 \u0628\u0644\u0648\u063A \u0627\u0644\u0637\u0648\u0644 \u0627\u0644\u0645\u062D\u062F\u062F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "\u062A\u0646\u0641\u064A\u0630 \u062E\u0637\u0648\u0629 \u0628\u062E\u0637\u0648\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "\u062C\u0627\u0631\u064D \u062A\u0646\u0641\u064A\u0630 \u0645\u0633\u0627\u0631 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "\u0627\u0633\u062A\u062E\u062F\u0645 \u25C0 / \u25B6 \u0644\u0641\u062D\u0635 \u0627\u0644\u0639\u0642\u062F \u0627\u0644\u0646\u0634\u0637\u0629 \u0648\u0642\u064A\u0645 \u0645\u0646\u0627\u0641\u0630\u0647\u0627 \u062E\u0637\u0648\u0629 \u0628\u062E\u0637\u0648\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 \u063A\u064A\u0631 \u0646\u0634\u0637",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "\u0644\u0645 \u064A\u064F\u0633\u062C\u0644 \u0623\u064A \u062A\u0646\u0641\u064A\u0630 \u0644\u0644\u0639\u0642\u062F. \u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u27F3 \u0644\u0644\u062A\u0646\u0641\u064A\u0630 \u0645\u062C\u062F\u062F\u064B\u0627 \u0623\u0648 \u062A\u062D\u0642\u0642 \u0645\u0646 \u0635\u062D\u0629 \u0627\u0631\u062A\u0628\u0627\u0637\u0627\u062A \u0627\u0644\u0645\u0631\u062D\u0644\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "\u0644\u0645 \u062A\u0643\u0646 \u0647\u0630\u0647 \u0627\u0644\u0639\u0642\u062F\u0629 \u0646\u0634\u0637\u0629 \u0641\u064A \u0627\u0644\u0625\u0637\u0627\u0631 \u0627\u0644\u062D\u0627\u0644\u064A \u0644\u0623\u0646 \u0641\u0631\u0639\u0647\u0627 \u0644\u0645 \u064A\u064F\u062D\u062F\u062F\u060C \u0648\u0644\u0645 \u062A\u064F\u062D\u0633\u0628 \u0642\u064A\u0645 \u0645\u0646\u0627\u0641\u0630\u0647\u0627.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "\u0635\u0648\u0631\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\u0627\u0644\u062E\u0637\u0648\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "\u0627\u0644\u062E\u0637\u0648\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\u0627\u0644\u062E\u0637\u0648\u0629 \u0627\u0644\u0623\u062E\u064A\u0631\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "\u062A\u0646\u0641\u064A\u0630 \u0645\u062C\u062F\u062F\u064B\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "\u0625\u0646\u0647\u0627\u0621 \u0627\u0644\u062A\u0646\u0641\u064A\u0630 \u062E\u0637\u0648\u0629 \u0628\u062E\u0637\u0648\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u0644\u0648\u062D\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0644\u0648\u062D\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "\u0623\u0644\u0635\u0642 \u0631\u0645\u0632 \u0631\u0633\u0645 Mermaid \u0647\u0646\u0627",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -87531,6 +89043,222 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "Automatisch anordnen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Graph",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Mermaid importieren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Parameterrichtung umschalten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "Tempo: Zeitleistenbild im Clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "Tempo: eingestellte Clipl\u00E4nge",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "Tempo: verf\u00FCgbare Quelll\u00E4nge",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "Tempo: Quelll\u00E4nge ist begrenzt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "Tempo: eingestellte L\u00E4nge erreicht",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Schrittweise ausf\u00FChren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "Pipeline wird ausgef\u00FChrt\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "Mit \u25C0 / \u25B6 aktivierte Knoten und die Werte ihrer Anschl\u00FCsse schrittweise pr\u00FCfen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Inaktiv",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "Keine Knotenausf\u00FChrung erfasst. Mit \u27F3 erneut ausf\u00FChren oder die Bindungen der aktuellen Stufe pr\u00FCfen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "Dieser Knoten war im aktuellen Bild inaktiv, da sein Zweig nicht ausgew\u00E4hlt wurde. Seine Anschl\u00FCsse wurden nicht ausgewertet.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "Bild",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "Vorheriger Schritt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "N\u00E4chster Schritt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "Letzter Schritt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Erneut ausf\u00FChren",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Schrittweise Ausf\u00FChrung beenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Seitenbereich anzeigen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Seitenbereich ausblenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Mermaid-Graphcode hier einf\u00FCgen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -98392,6 +100120,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "Unset localization item:Effect_AddVariableWrite()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "Organizar autom\u00E1ticamente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Grafo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Importar Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Cambiar direcci\u00F3n de par\u00E1metros",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "Velocidad: fotograma de la l\u00EDnea de tiempo dentro del clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "Velocidad: duraci\u00F3n configurada del clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "Velocidad: duraci\u00F3n disponible de la fuente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "Velocidad: duraci\u00F3n de fuente limitada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "Velocidad: duraci\u00F3n configurada alcanzada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Ejecuci\u00F3n paso a paso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "Ejecutando la cadena\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "Use \u25C0 / \u25B6 para inspeccionar los nodos activados y los valores de sus puertos paso a paso.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Inactivo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "No se registr\u00F3 ninguna ejecuci\u00F3n de nodos. Pulse \u27F3 para ejecutar de nuevo o compruebe los enlaces de la etapa actual.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "Este nodo estuvo inactivo en el fotograma actual porque su rama no fue seleccionada. Sus puertos no se evaluaron.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "Imagen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "Paso anterior",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "Paso siguiente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\u00DAltimo paso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Ejecutar de nuevo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Salir de la ejecuci\u00F3n paso a paso",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Mostrar panel lateral",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Ocultar panel lateral",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Pegue aqu\u00ED el c\u00F3digo del grafo Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -109265,6 +111209,222 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "Disponi automaticamente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Grafo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Importa Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Cambia direzione dei parametri",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "Velocit\u00E0: fotogramma della timeline nel clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "Velocit\u00E0: durata configurata del clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "Velocit\u00E0: durata disponibile della sorgente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "Velocit\u00E0: durata della sorgente limitata",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "Velocit\u00E0: durata configurata raggiunta",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Esecuzione passo passo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "Esecuzione della pipeline\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "Usa \u25C0 / \u25B6 per esaminare i nodi attivati e i valori delle loro porte passo dopo passo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Inattivo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "Nessuna esecuzione di nodi registrata. Premi \u27F3 per eseguire di nuovo o verifica i collegamenti della fase attuale.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "Questo nodo era inattivo nel fotogramma corrente perch\u00E9 il suo ramo non era selezionato. Le sue porte non sono state valutate.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "Immagine",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "Passo precedente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "Passo successivo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "Ultimo passo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Esegui di nuovo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Esci dall\u2019esecuzione passo passo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Mostra pannello laterale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Nascondi pannello laterale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Incolla qui il codice del grafo Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -120123,6 +122283,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "Unset localization item:Effect_AddVariableWrite()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "Rozmie\u015B\u0107 automatycznie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Graf",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Importuj Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Zmie\u0144 kierunek parametr\u00F3w",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "Pr\u0119dko\u015B\u0107: klatka osi czasu w klipie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "Pr\u0119dko\u015B\u0107: ustawiona d\u0142ugo\u015B\u0107 klipu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "Pr\u0119dko\u015B\u0107: dost\u0119pna d\u0142ugo\u015B\u0107 \u017Ar\u00F3d\u0142a",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "Pr\u0119dko\u015B\u0107: d\u0142ugo\u015B\u0107 \u017Ar\u00F3d\u0142a jest sko\u0144czona",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "Pr\u0119dko\u015B\u0107: osi\u0105gni\u0119to ustawion\u0105 d\u0142ugo\u015B\u0107",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Wykonanie krokowe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "Wykonywanie potoku\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "U\u017Cyj \u25C0 / \u25B6, aby krok po kroku sprawdza\u0107 aktywne w\u0119z\u0142y i warto\u015Bci ich port\u00F3w.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Nieaktywny",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "Nie zarejestrowano wykonania w\u0119z\u0142\u00F3w. Kliknij \u27F3, aby uruchomi\u0107 ponownie, lub sprawd\u017A powi\u0105zania bie\u017C\u0105cego etapu.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "Ten w\u0119ze\u0142 by\u0142 nieaktywny w bie\u017C\u0105cej klatce, poniewa\u017C jego ga\u0142\u0105\u017A nie zosta\u0142a wybrana. Jego porty nie zosta\u0142y obliczone.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "Obraz",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "Poprzedni krok",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "Nast\u0119pny krok",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "Ostatni krok",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Uruchom ponownie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Zako\u0144cz wykonanie krokowe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Poka\u017C panel boczny",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Ukryj panel boczny",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Wklej tutaj kod grafu Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -130987,6 +133363,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "Unset localization item:Effect_AddVariableWrite()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "Organizar automaticamente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Grafo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Importar Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Alternar dire\u00E7\u00E3o dos par\u00E2metros",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "Velocidade: quadro da linha do tempo no clipe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "Velocidade: dura\u00E7\u00E3o configurada do clipe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "Velocidade: dura\u00E7\u00E3o dispon\u00EDvel da fonte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "Velocidade: dura\u00E7\u00E3o da fonte \u00E9 finita",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "Velocidade: dura\u00E7\u00E3o configurada atingida",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Execu\u00E7\u00E3o passo a passo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "Executando pipeline\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "Use \u25C0 / \u25B6 para inspecionar os n\u00F3s ativados e os valores de suas portas passo a passo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Inativo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "Nenhuma execu\u00E7\u00E3o de n\u00F3 foi registrada. Clique em \u27F3 para executar novamente ou verifique as vincula\u00E7\u00F5es da etapa atual.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "Este n\u00F3 estava inativo no quadro atual porque sua ramifica\u00E7\u00E3o n\u00E3o foi selecionada. Suas portas n\u00E3o foram avaliadas.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "Imagem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "Passo anterior",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "Pr\u00F3ximo passo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\u00DAltimo passo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Executar novamente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Sair da execu\u00E7\u00E3o passo a passo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Mostrar painel lateral",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Ocultar painel lateral",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Cole aqui o c\u00F3digo do grafo Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -141858,6 +144450,222 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "\u0423\u043F\u043E\u0440\u044F\u0434\u043E\u0447\u0438\u0442\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "\u0413\u0440\u0430\u0444",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "\u0418\u043C\u043F\u043E\u0440\u0442 Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u043E\u0432",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C: \u043A\u0430\u0434\u0440 \u0448\u043A\u0430\u043B\u044B \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0432\u043D\u0443\u0442\u0440\u0438 \u043A\u043B\u0438\u043F\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C: \u0437\u0430\u0434\u0430\u043D\u043D\u0430\u044F \u0434\u043B\u0438\u043D\u0430 \u043A\u043B\u0438\u043F\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C: \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430\u044F \u0434\u043B\u0438\u043D\u0430 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C: \u0434\u043B\u0438\u043D\u0430 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0430 \u043A\u043E\u043D\u0435\u0447\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C: \u0434\u043E\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u0430 \u0437\u0430\u0434\u0430\u043D\u043D\u0430\u044F \u0434\u043B\u0438\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "\u041F\u043E\u0448\u0430\u0433\u043E\u0432\u043E\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 \u043A\u043E\u043D\u0432\u0435\u0439\u0435\u0440\u0430\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u25C0 / \u25B6 \u0434\u043B\u044F \u043F\u043E\u0448\u0430\u0433\u043E\u0432\u043E\u0433\u043E \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0430 \u0430\u043A\u0442\u0438\u0432\u043D\u044B\u0445 \u0443\u0437\u043B\u043E\u0432 \u0438 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439 \u0438\u0445 \u043F\u043E\u0440\u0442\u043E\u0432.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 \u041D\u0435\u0430\u043A\u0442\u0438\u0432\u0435\u043D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435 \u0443\u0437\u043B\u043E\u0432 \u043D\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u27F3 \u0434\u043B\u044F \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u043E\u0433\u043E \u0437\u0430\u043F\u0443\u0441\u043A\u0430 \u0438\u043B\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0441\u0432\u044F\u0437\u0438 \u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E \u044D\u0442\u0430\u043F\u0430.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "\u042D\u0442\u043E\u0442 \u0443\u0437\u0435\u043B \u0431\u044B\u043B \u043D\u0435\u0430\u043A\u0442\u0438\u0432\u0435\u043D \u0432 \u0442\u0435\u043A\u0443\u0449\u0435\u043C \u043A\u0430\u0434\u0440\u0435, \u043F\u043E\u0441\u043A\u043E\u043B\u044C\u043A\u0443 \u0435\u0433\u043E \u0432\u0435\u0442\u0432\u044C \u043D\u0435 \u0431\u044B\u043B\u0430 \u0432\u044B\u0431\u0440\u0430\u043D\u0430. \u0415\u0433\u043E \u043F\u043E\u0440\u0442\u044B \u043D\u0435 \u0432\u044B\u0447\u0438\u0441\u043B\u044F\u043B\u0438\u0441\u044C.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "\u0418\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0439 \u0448\u0430\u0433",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0448\u0430\u0433",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0448\u0430\u0433",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "\u0412\u044B\u043F\u043E\u043B\u043D\u0438\u0442\u044C \u0441\u043D\u043E\u0432\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u043F\u043E\u0448\u0430\u0433\u043E\u0432\u043E\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0431\u043E\u043A\u043E\u0432\u0443\u044E \u043F\u0430\u043D\u0435\u043B\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "\u0421\u043A\u0440\u044B\u0442\u044C \u0431\u043E\u043A\u043E\u0432\u0443\u044E \u043F\u0430\u043D\u0435\u043B\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "\u0412\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0441\u044E\u0434\u0430 \u043A\u043E\u0434 \u0433\u0440\u0430\u0444\u0430 Mermaid",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -152718,6 +155526,222 @@
       {
         "Id": "Effect_AddVariableWrite",
         "Value": "Unset localization item:Effect_AddVariableWrite()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AutoArrange",
+        "Value": "Otomatik d\u00FCzenle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_BindingsGraph",
+        "Value": "Grafik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ImportMermaid",
+        "Value": "Mermaid i\u00E7e aktar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ToggleParamDirection",
+        "Value": "Parametre y\u00F6n\u00FCn\u00FC de\u011Fi\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFrame",
+        "Value": "H\u0131z: klip i\u00E7indeki zaman \u00E7izelgesi karesi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedClipLength",
+        "Value": "H\u0131z: ayarlanan klip uzunlu\u011Fu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedSourceLength",
+        "Value": "H\u0131z: kullan\u0131labilir kaynak uzunlu\u011Fu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedHasSourceLength",
+        "Value": "H\u0131z: kaynak uzunlu\u011Fu sonlu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_SpeedFinished",
+        "Value": "H\u0131z: ayarlanan uzunlu\u011Fa ula\u015F\u0131ld\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Title",
+        "Value": "Ad\u0131m ad\u0131m \u00E7al\u0131\u015Ft\u0131rma",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Running",
+        "Value": "\u0130\u015Flem hatt\u0131 \u00E7al\u0131\u015Ft\u0131r\u0131l\u0131yor\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Hint",
+        "Value": "Etkin d\u00FC\u011F\u00FCmleri ve ba\u011Flant\u0131 noktalar\u0131n\u0131n de\u011Ferlerini ad\u0131m ad\u0131m incelemek i\u00E7in \u25C0 / \u25B6 kullan\u0131n.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Inactive",
+        "Value": "\u2205 Etkin de\u011Fil",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Empty",
+        "Value": "D\u00FC\u011F\u00FCm \u00E7al\u0131\u015Ft\u0131rmas\u0131 kaydedilmedi. Yeniden \u00E7al\u0131\u015Ft\u0131rmak i\u00E7in \u27F3 d\u00FC\u011Fmesine t\u0131klay\u0131n veya ge\u00E7erli a\u015Famadaki ba\u011Flant\u0131lar\u0131 kontrol edin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_InactiveNode",
+        "Value": "Bu d\u00FC\u011F\u00FCm\u00FCn dal\u0131 se\u00E7ilmedi\u011Fi i\u00E7in ge\u00E7erli karede etkin de\u011Fildi. Ba\u011Flant\u0131 noktalar\u0131 hesaplanmad\u0131.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Content",
+        "Value": "G\u00F6r\u00FCnt\u00FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Previous",
+        "Value": "\u00D6nceki ad\u0131m",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Next",
+        "Value": "Sonraki ad\u0131m",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Last",
+        "Value": "Son ad\u0131m",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Rerun",
+        "Value": "Yeniden \u00E7al\u0131\u015Ft\u0131r",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_StepDebug_Stop",
+        "Value": "Ad\u0131m ad\u0131m \u00E7al\u0131\u015Ft\u0131rmadan \u00E7\u0131k",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ShowSidePanel",
+        "Value": "Yan paneli g\u00F6ster",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_HideSidePanel",
+        "Value": "Yan paneli gizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPlaceholder",
+        "Value": "Mermaid grafik kodunu buraya yap\u0131\u015Ft\u0131r\u0131n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidPreview",
+        "Value": "Unset localization item:Effect_MermaidPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidRepairHint",
+        "Value": "Unset localization item:Effect_MermaidRepairHint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_MermaidSyncPorts",
+        "Value": "Unset localization item:Effect_MermaidSyncPorts()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

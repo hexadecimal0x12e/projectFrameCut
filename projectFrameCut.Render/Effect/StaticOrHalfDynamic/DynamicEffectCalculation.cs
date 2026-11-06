@@ -47,7 +47,10 @@ public static class DynamicEffectCalculation
 
 public sealed class DynamicCalculationLimitException : InvalidOperationException
 {
-    public DynamicCalculationLimitException(int limit, uint frame, Guid provider) : base(Describe(limit, frame, provider)) { }
+    public DynamicCalculationLimitException(int limit, uint frame, Guid provider) : base(Describe(limit, frame, provider))
+    {
+        EffectProviderFailure.Attach(this, provider);
+    }
 
     private static string Describe(int limit, uint frame, Guid provider)
     {

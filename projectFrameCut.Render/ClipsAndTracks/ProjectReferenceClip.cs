@@ -20,6 +20,10 @@ public sealed class ProjectReferenceClip : MarkingClip
     private ProjectReferenceRuntime? runtime;
     private IClip[]? layers;
     public override ClipMode ClipType => ClipMode.ProjectReferenceClip;
+    [System.Text.Json.Serialization.JsonIgnore]
+    public override uint? SourceFrameCount => runtime is null ? null
+        : (uint)Math.Clamp(Math.Ceiling((double)Math.Max(runtime.Draft.Duration, runtime.Draft.AudioDuration)
+            * ParentFps / Math.Max(1u, runtime.Project.TargetFrameRate)), 0, uint.MaxValue);
     internal ProjectReferenceRuntime Runtime => runtime ?? throw new InvalidOperationException("Project reference is not initialized.");
     private uint ParentFps => ExtraData?.GetValueOrDefault(ClipDraftDTO.ProjectFrameRateMetaKey) is { } value
         && uint.TryParse(value.ToString(), out var fps) && fps > 0 ? fps

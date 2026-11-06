@@ -211,7 +211,7 @@ public partial class ClipInfoBuilder
                 if (last <= clip.relativeStartFrame) throw new InvalidOperationException(Localized.Subtitle_OutsideClip);
                 uint old = clip.lengthInFrame;
                 uint length = last - clip.relativeStartFrame;
-                if ((ulong)page.GetClipFrameRange(clip).Start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider) > uint.MaxValue)
+                if ((ulong)page.GetClipFrameRange(clip).Start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider, clip.AvailableSourceLength) > uint.MaxValue)
                     throw new OverflowException(Localized.Subtitle_InvalidData);
                 clip.lengthInFrame = length;
                 clip.ApplySpeedRatio();

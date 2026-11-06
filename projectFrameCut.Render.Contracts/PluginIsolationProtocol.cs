@@ -809,6 +809,8 @@ public sealed class IsolationEffectInvokeRequest
     [ProtoMember(18)] public int TransformSide { get; set; }
     [ProtoMember(19)] public float ClipProgress { get; set; }
     [ProtoMember(20)] public Dictionary<string, IsolationAudioSamplesResponse> DynamicAudio { get; set; } = [];
+    [ProtoMember(21)] public uint? SpeedClipLength { get; set; }
+    [ProtoMember(22)] public uint? SpeedSourceLength { get; set; }
 }
 
 [ProtoContract]

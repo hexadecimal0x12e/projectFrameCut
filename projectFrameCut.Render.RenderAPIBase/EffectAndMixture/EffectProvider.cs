@@ -286,7 +286,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             if (fieldType.BaseType() == EffectArgumentFieldType.CustomType) return "object";
             if (fieldType.IsVector()) return nameof(projectFrameCut.Drawing.Vector.VectorPicture);
             if (fieldType.IsPicture()) return nameof(IPicture);
-            if (fieldType.BaseType() == EffectArgumentFieldType.AudioSample) return "object";
+            if (fieldType.BaseType() is EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SpeedVariance) return "object";
             return (fieldType & (EffectArgumentFieldType)0x3FF) switch
             {
                 EffectArgumentFieldType.Integer => EffectArgsHelper.ArgTypeInt32,

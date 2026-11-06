@@ -53,6 +53,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [System.Text.Json.Serialization.JsonIgnore]
         public IVideoSource? Decoder { get; set; } = null;
 
+        [JsonIgnore]
+        public uint? SourceFrameCount => Decoder is { TotalFrames: >= 0 } decoder
+            ? (uint)Math.Min(uint.MaxValue, decoder.TotalFrames) : null;
+
         internal bool HasCurrentDecoder => !RemoteRpcVideoSource.IsExternalPath(FilePath)
             || _decoderPoolKey == BuildDecoderPoolKey(FilePath!, TargetDecoder);
 
@@ -618,6 +622,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         [JsonIgnore]
         public IVirtualVideoSource? VirtualSource { get; set; }
+
+        [JsonIgnore]
+        public uint? SourceFrameCount => Duration;
 
         public ClipMode ClipType => ClipMode.VideoClip;
         public string TypeName => "VirtualSourceVideoClip";

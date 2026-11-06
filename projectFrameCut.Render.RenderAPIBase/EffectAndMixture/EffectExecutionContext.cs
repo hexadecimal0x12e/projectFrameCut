@@ -41,7 +41,7 @@ public static class EffectFieldTypes
         type.HasFlag(EffectArgumentFieldType.Any) ? EffectArgumentFieldType.Any
             : type.IsVector() ? EffectArgumentFieldType.VectorPicture
             : type.IsHwAccelPicture() ? EffectArgumentFieldType.HwAccelPicture
-            : type.IsPicture() ? EffectArgumentFieldType.IPicture : type & (EffectArgumentFieldType)0xFFFF;
+            : type.IsPicture() ? EffectArgumentFieldType.IPicture : type & (EffectArgumentFieldType)(0xFFFF | (1 << 26));
 
     public static bool AreCompatible(IEffectArgumentField source, IEffectArgumentField target) =>
         AreCompatible(source.FieldType, target.FieldType, source.TypeContract, target.TypeContract);
@@ -73,7 +73,7 @@ public static class EffectFieldTypes
         ? string.IsNullOrWhiteSpace(field.DefaultValue) ? null : contract.CreateValue(JsonSerializer.Deserialize<JsonElement>(field.DefaultValue))
         : field.FieldType.BaseType() switch
     {
-        EffectArgumentFieldType.IPicture or EffectArgumentFieldType.HwAccelPicture or EffectArgumentFieldType.VectorPicture or EffectArgumentFieldType.AudioSample => null,
+        EffectArgumentFieldType.IPicture or EffectArgumentFieldType.HwAccelPicture or EffectArgumentFieldType.VectorPicture or EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SpeedVariance => null,
         EffectArgumentFieldType.Integer => EffectParamConvert.TryConvertToInt(field.DefaultValue, out var i) ? i : 0,
         EffectArgumentFieldType.UnsignedInteger => uint.TryParse(field.DefaultValue, out var u) ? u : 0u,
         EffectArgumentFieldType.Long => long.TryParse(field.DefaultValue, out var l) ? l : 0L,
@@ -97,6 +97,7 @@ public static class EffectFieldTypes
             EffectArgumentFieldType.HwAccelPicture => value is IPicture,
             EffectArgumentFieldType.VectorPicture => value is projectFrameCut.Drawing.Vector.VectorPicture,
             EffectArgumentFieldType.AudioSample => value is projectFrameCut.Shared.IAudioSamples<float>,
+            EffectArgumentFieldType.SpeedVariance => value is ISpeedVarianceProvider,
             EffectArgumentFieldType.Integer or EffectArgumentFieldType.UnsignedInteger or EffectArgumentFieldType.Long
                 or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric => value is sbyte or byte or short or ushort or int or uint or long or ulong or Half or float or double or decimal or Int128 or UInt128,
             EffectArgumentFieldType.Boolean => value is bool,

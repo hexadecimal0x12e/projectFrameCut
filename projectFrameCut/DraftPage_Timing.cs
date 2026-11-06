@@ -1,6 +1,7 @@
 using projectFrameCut.DraftStuff;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Collections.Concurrent;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -64,6 +65,7 @@ public partial class DraftPage
 
     private void BeginHandleResize(ClipElementUI clip)
     {
+        if (clip.SpeedProvider is IDirectSpeedVarianceProvider and not ReverseSpeedVarianceProvider) return;
         clip.AttachTiming(this);
         _resizeTiming[clip.Id] = (clip.TimelineStartFrame!.Value, clip.lengthInFrame, clip.relativeStartFrame);
         clip.MovingStatus = ClipMovingStatus.Resize;
@@ -73,7 +75,7 @@ public partial class DraftPage
     private void PreviewHandleResize(ClipElementUI clip, double delta, bool left)
     {
         if (!_resizeTiming.TryGetValue(clip.Id, out var before)) return;
-        uint oldDuration = ClipTiming.EffectiveDuration(before.Length, clip.SpeedProvider);
+        uint oldDuration = ClipTiming.EffectiveDuration(before.Length, clip.SpeedProvider, clip.GetAvailableSourceLength(before.SourceStart));
         long end = (long)before.Start + oldDuration;
         double proposed = FrameToPixel(left ? before.Start : (uint)Math.Min(uint.MaxValue, end)) + delta;
         uint boundary = EditPixelToFrame(Math.Max(0, clip.CanSnapWhileResizing ? SnapPixels(proposed, clip.Id) : proposed));
@@ -89,17 +91,25 @@ public partial class DraftPage
             uint limit = (uint)neighbors.Where(r => (ulong)r.Start + r.Duration <= before.Start)
                 .Select(r => (ulong)r.Start + r.Duration).DefaultIfEmpty(0ul).Max();
             boundary = Math.Max(boundary, limit);
+            if (clip.SpeedProvider is ReverseSpeedVarianceProvider)
+            {
+                clip.lengthInFrame = (uint)Math.Clamp(end - boundary, 1L,
+                    Math.Max(1u, clip.GetAvailableSourceLength(before.SourceStart) ?? uint.MaxValue - before.SourceStart));
+                clip.SetTimelineStart((uint)Math.Max(0, end - clip.lengthInFrame));
+                if (clip.TimelineStartFrame < limit || clip.TimelineEnd > uint.MaxValue) RestoreResizeTiming(clip, before);
+                return;
+            }
             if (clip.isInfiniteLength || clip.maxFrameCount == 0)
             {
-                clip.lengthInFrame = ClipTiming.SourceDuration((uint)Math.Max(1, end - boundary), uint.MaxValue - before.SourceStart, clip.SpeedProvider);
+                clip.lengthInFrame = ClipTiming.SourceDuration((uint)Math.Max(1, end - boundary), uint.MaxValue - before.SourceStart, clip.SpeedProvider, clip.GetAvailableSourceLength(before.SourceStart));
                 clip.SetTimelineStart((uint)Math.Max(0, end - clip.TimelineDuration));
                 if (clip.TimelineStartFrame < limit || clip.TimelineEnd > uint.MaxValue) RestoreResizeTiming(clip, before);
                 return;
             }
             long offset = (long)boundary - before.Start;
             long sourceOffset = offset == 0 ? 0 : offset > 0
-                ? ClipTiming.SourceOffset((uint)Math.Min(oldDuration, offset), before.Length, clip.SpeedProvider)
-                : -(long)ClipTiming.SourceDuration((uint)Math.Min(uint.MaxValue, -offset), before.SourceStart, clip.SpeedProvider);
+                ? ClipTiming.SourceOffset((uint)Math.Min(oldDuration, offset), before.Length, clip.SpeedProvider, oldDuration, clip.GetAvailableSourceLength(before.SourceStart))
+                : -(long)ClipTiming.SourceDuration((uint)Math.Min(uint.MaxValue, -offset), before.SourceStart, clip.SpeedProvider, clip.GetAvailableSourceLength(before.SourceStart));
             long sourceStart = Math.Clamp((long)before.SourceStart + sourceOffset, 0, (long)before.SourceStart + before.Length - 1);
             clip.relativeStartFrame = (uint)sourceStart;
             clip.lengthInFrame = (uint)((long)before.SourceStart + before.Length - sourceStart);
@@ -112,8 +122,11 @@ public partial class DraftPage
             boundary = Math.Min(boundary, limit);
             uint maximum = clip.isInfiniteLength || clip.maxFrameCount == 0 || clip.ClipType == ClipMode.ProjectReferenceClip
                 ? uint.MaxValue - before.SourceStart : Math.Max(1u, clip.maxFrameCount - Math.Min(clip.maxFrameCount, before.SourceStart));
+            if (clip.SpeedProvider is ReverseSpeedVarianceProvider) maximum = checked(before.SourceStart + before.Length);
             clip.lengthInFrame = ClipTiming.SourceDuration(boundary > before.Start ? boundary - before.Start : 1,
-                maximum, clip.SpeedProvider);
+                maximum, clip.SpeedProvider, clip.GetAvailableSourceLength(before.SourceStart));
+            if (clip.SpeedProvider is ReverseSpeedVarianceProvider)
+                clip.relativeStartFrame = before.SourceStart + before.Length - clip.lengthInFrame;
             clip.SetTimelineStart(before.Start);
             if (clip.TimelineEnd > limit) RestoreResizeTiming(clip, before);
         }

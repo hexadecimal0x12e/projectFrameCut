@@ -1425,7 +1425,7 @@ public partial class DraftPage
             uint end = SubtitleData.FrameAt(subtitles.Cues.Max(c => c.EndMilliseconds), ProjectInfo.TargetFrameRate);
             if (end <= clip.relativeStartFrame) throw new ArgumentException("Subtitles end before the clip's source start.");
             uint length = end - clip.relativeStartFrame;
-            if ((ulong)GetClipFrameRange(clip).Start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider) > int.MaxValue)
+            if ((ulong)GetClipFrameRange(clip).Start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider, clip.AvailableSourceLength) > int.MaxValue)
                 throw new ArgumentException("Subtitle clip exceeds the timeline range.");
             updated.Duration = length;
         }
@@ -1439,12 +1439,18 @@ public partial class DraftPage
     #region Timeline
     private ClipElementUI SplitClipAtFrame(ClipElementUI clip, uint frame)
     {
+        if (clip.SpeedProvider is IDirectSpeedVarianceProvider and not ReverseSpeedVarianceProvider)
+            throw new NotSupportedException("Custom speed curves cannot be split by source position. Edit the clip length or its Finished binding instead.");
         var range = GetClipFrameRange(clip);
         if (clip.ClipType == ClipMode.MarkingClip || clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft") ||
             frame <= range.Start || (ulong)frame >= (ulong)range.Start + range.Duration || clip.lengthInFrame < 2)
             throw new ArgumentException("Split frame must be inside a non-group clip with at least two source frames.");
         uint length = clip.lengthInFrame;
-        uint consumed = Math.Clamp(ClipTiming.SourceOffset(frame - range.Start, length, clip.SpeedProvider), 1u, length - 1);
+        uint sourceStart = clip.relativeStartFrame;
+        bool reverse = clip.SpeedProvider is ReverseSpeedVarianceProvider;
+        uint consumed = reverse ? frame - range.Start
+            : Math.Clamp(ClipTiming.SourceOffset(frame - range.Start, length, clip.SpeedProvider, range.Duration, clip.AvailableSourceLength), 1u, length - 1);
+        if (reverse) clip.relativeStartFrame = checked(sourceStart + length - consumed);
         clip.lengthInFrame = consumed;
         clip.ProjectTiming();
         ClipElementUI right;
@@ -1452,11 +1458,12 @@ public partial class DraftPage
         {
             right = CreateAndAddClip(FrameToPixel((uint)clip.TimelineEnd), FrameToPixel(length - consumed), clip.origTrack ?? 0,
                 labelText: $"{clip.DisplayName} (2)", background: clip.Clip.Background, resolveOverlap: false,
-                maxFrames: clip.maxFrameCount, relativeStart: checked(clip.relativeStartFrame + consumed), sourceElement: clip);
+                maxFrames: clip.maxFrameCount, relativeStart: reverse ? sourceStart : checked(sourceStart + consumed), sourceElement: clip);
         }
         catch
         {
             clip.lengthInFrame = length;
+            clip.relativeStartFrame = sourceStart;
             clip.ProjectTiming();
             throw;
         }

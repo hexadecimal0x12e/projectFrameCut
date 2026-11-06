@@ -477,7 +477,10 @@ namespace projectFrameCut
 
 #if WINDOWS
                 builder.ConfigureImageSources(sources =>
-                    sources.AddService<IFileImageSource, WindowsFileImageSourceService>());
+                {
+                    sources.AddService<IFileImageSource, WindowsFileImageSourceService>();
+                    sources.AddService<FileImageSource, WindowsFileImageSourceService>();
+                });
 #endif
 
 #pragma warning restore CA1416

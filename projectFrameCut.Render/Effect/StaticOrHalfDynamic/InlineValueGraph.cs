@@ -5,7 +5,7 @@ using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.Effect;
 
-internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution? resolvedTypes = null)
+internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution? resolvedTypes = null, bool cacheFrameHashes = true)
 {
     public bool IsDeterministic => providers.Values.All(p => !p.Enabled || p.IsDeterministic) && Effects.All(e => e.IsDeterministic);
     public EffectFieldTypeResolution Types { get; } = resolvedTypes ?? new(providers);
@@ -32,7 +32,9 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         {
             var provider = providers[id];
             provider.ValidateOutputFields();
-            var effects = provider.Enabled ? EffectBindingHelper.BuildProviderEffects(provider, Types) : [];
+            var effects = !provider.Enabled ? Array.Empty<IEffect>()
+                : provider is CustomSpeedVarianceProvider ? [CustomSpeedVarianceProvider.CreateEffect(provider, this)]
+                : EffectBindingHelper.BuildProviderEffects(provider, Types);
             foreach (var effect in effects) effect.BindedEffectProvidingSystemID = provider.Id.ToString();
             try
             {
@@ -130,6 +132,14 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
     private IReadOnlyDictionary<string, object?> Compute(Node node)
     {
         if (!node.Enabled) return new Dictionary<string, object?>();
+        if (node.Provider is CustomSpeedVarianceProvider)
+            return new Dictionary<string, object?> { [node.Provider.OutField.Id] = node.Effects.Single() };
+        if (node.Provider is SpeedVarianceToCustomProvider)
+        {
+            var outputs = SpeedVarianceToCustomProvider.Evaluate(key => ReadInput(node, key));
+            ValueProviderFrameContext.NodeObserver?.Invoke(node.Effects.Single(), outputs);
+            return outputs;
+        }
         uint frame = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f);
         float progress = Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) ?? 0f);
         if (node.Provider is IClipValueEndpointProvider { IsExport: false } input)
@@ -189,9 +199,11 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                     InputTypes = inputTypes, Clip = ValueProviderFrameContext.CurrentClip,
                     CancellationToken = ValueProviderFrameContext.CancellationToken,
                 };
+                if (effect is ISpeedVarianceProvider speed)
+                    return new Dictionary<string, object?> { [node.Provider.OutField.Id] = speed };
                 if (effect is IMultipleOutputEffect multiple)
                 {
-                    var outputs = (FrameHashContext.Current is { } hashes
+                    var outputs = ((cacheFrameHashes ? FrameHashContext.Current : null) is { } hashes
                         ? hashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider, Array.IndexOf(node.Effects, effect))
                         : EffectPictureProcessing.Compute(effect, context, values)) as IReadOnlyDictionary<string, object?>
                         ?? throw new InvalidOperationException($"Provider {node.Provider.Id} returned no output map.");
@@ -200,7 +212,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                     ValueProviderFrameContext.NodeObserver?.Invoke(effect, outputs);
                     return outputs;
                 }
-                value = FrameHashContext.Current is { } frameHashes
+                value = (cacheFrameHashes ? FrameHashContext.Current : null) is { } frameHashes
                     ? frameHashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider, Array.IndexOf(node.Effects, effect))
                     : EffectPictureProcessing.Compute(effect, context, values);
                 if (value is IPicture p) pictures.Add(p);
@@ -212,6 +224,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         }
         catch (Exception ex)
         {
+            if (ex is not OperationCanceledException) EffectProviderFailure.Attach(ex, node.Provider.Id);
             Logger.Log(ex, $"Compute inline provider {node.Provider.Id}, frame {frame}", this);
             throw;
         }

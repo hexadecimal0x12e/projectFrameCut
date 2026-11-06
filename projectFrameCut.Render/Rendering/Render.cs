@@ -155,6 +155,7 @@ namespace projectFrameCut.Render.Rendering
         public ConcurrentDictionary<uint, TimeSpan> FrameRenderElapsed { get; } = new();
         public ConcurrentDictionary<uint, TimeSpan> FrameDirtyTime { get; } = new();
         public ConcurrentDictionary<uint, List<PictureProcessStack>> FrameProcessStacks { get; } = new();
+        internal ConcurrentDictionary<uint, RenderFrameDiagnosticSnapshot> FrameDiagnostics { get; } = new();
 
         private readonly object cacheGate = new();
         private readonly object workerGate = new();
@@ -1006,7 +1007,9 @@ namespace projectFrameCut.Render.Rendering
                 SetThreadWorking(frame, true);
                 ClipRequest[] requests = Composer is DeferredRenderComposer deferred && deferred.TryRestoreFrame(frame, token)
                     ? [] : GetFrameRequests(frame);
-                var diagnostic = DiagnosticRender || LogFrameTimings ? new RenderFrameDiagnostics(frame) : null;
+                var diagnostic = DiagnosticRender || LogFrameTimings || LogProcessStack
+                    ? new RenderFrameDiagnostics(frame, report => FrameDiagnostics[report.FrameIndex] = report,
+                        logTimings: DiagnosticRender || LogFrameTimings) : null;
                 var context = new FrameHashContext(HashOptions, token, nodeCache, gpuSession) { Diagnostics = diagnostic, Clips = Clips };
                 var entries = new List<CachedClipFrame>();
                 var elapsed = Stopwatch.StartNew();

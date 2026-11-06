@@ -220,6 +220,8 @@ internal sealed class FrameHashAnalysis(IReadOnlyList<IClip> clips, Cancellation
 
     private object DescribeBinding(IClip clip, string? binding, bool layout)
     {
+        if (ValueProviderFrameContext.IsSpeedSource(binding))
+            return new { BuiltIn = binding, clip.Duration, SourceLength = clip.GetAvailableSourceLength() };
         if (binding == IEffectProvider.InputAnchorGUID.ToString()) return DescribeSource(clip);
         if (binding is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId
             or ValueProviderFrameContext.BuiltInClipFrameProviderId)

@@ -518,7 +518,7 @@ public partial class DraftPage
         if (operation == GuiProjectOperation.GetEffectGroupTemplate)
         {
             return (await EffectGroupStore.LoadAsync()).Where(x => !HasParameter("Hash") || x.Hash.Equals(GetString("Hash"), StringComparison.OrdinalIgnoreCase))
-                .Select(x => new { x.Hash, x.Name, x.Error, TemplateJson = Encoding.UTF8.GetString(x.Json) }).ToArray();
+                .Select(x => new { x.Hash, x.Name, x.Error, TemplateMermaid = Encoding.UTF8.GetString(x.Content) }).ToArray();
         }
 
         var clip = batchClip ?? FindGuiEffectClip(GetGuid("ClipId"), false);
@@ -1188,7 +1188,7 @@ public partial class DraftPage
                 }
             case GuiProjectOperation.ImportClipEffectGroup:
                 {
-                    byte[] json;
+                    byte[] content;
                     if (HasParameter("Hash"))
                     {
                         var item = (await EffectGroupStore.LoadAsync()).SingleOrDefault(x => x.Hash.Equals(GetString("Hash"), StringComparison.OrdinalIgnoreCase));
@@ -1196,13 +1196,13 @@ public partial class DraftPage
                         {
                             throw new KeyNotFoundException("Effect group template not found.");
                         }
-                        json = item.Json;
+                        content = item.Content;
                     }
                     else
                     {
-                        json = Encoding.UTF8.GetBytes(GetString("TemplateJson") ?? "");
+                        content = Encoding.UTF8.GetBytes(GetString("TemplateMermaid") ?? "");
                     }
-                    var template = EffectGroupHelper.Instantiate(EffectGroupStore.Parse(json));
+                    var template = EffectGroupHelper.Instantiate(EffectGroupStore.Parse(content));
                     var restored = EffectGroupStore.Restore(template);
                     foreach (var provider in restored.Values)
                     {

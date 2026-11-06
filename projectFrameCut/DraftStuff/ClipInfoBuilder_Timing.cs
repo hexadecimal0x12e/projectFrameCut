@@ -80,6 +80,7 @@ namespace projectFrameCut.DraftStuff
             bool finite = !clip.isInfiniteLength && clip.maxFrameCount > 0 && clip.ClipType != ClipMode.ProjectReferenceClip;
             bool extendToWhole = ReadExtendToWholeDraft(clip);
             bool updating = false;
+            int applyRevision = 0;
             var stack = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(8) };
 
             string srcInfo = clip.isInfiniteLength
@@ -175,7 +176,7 @@ namespace projectFrameCut.DraftStuff
                 return uint.TryParse(startEntry.Text, out start)
                     && (clip.isInfiniteLength || uint.TryParse(sourceEntry.Text, out sourceStart))
                     && uint.TryParse(lengthEntry.Text, out length) && length > 0
-                    && (ulong)start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider) <= uint.MaxValue
+                    && (ulong)start + (clip.SpeedProvider is IDirectSpeedVarianceProvider ? length : ClipTiming.EffectiveDuration(length, clip.SpeedProvider, clip.GetAvailableSourceLength(sourceStart))) <= uint.MaxValue
                     && (ulong)sourceStart + length <= uint.MaxValue
                     && (!finite || (ulong)sourceStart + length <= clip.maxFrameCount);
             }
@@ -207,9 +208,24 @@ namespace projectFrameCut.DraftStuff
                 UpdatePreview();
             }
 
-            void ApplyFrames(object? sender, uint start, uint sourceStart, uint length)
+            async void ApplyFrames(object? sender, uint start, uint sourceStart, uint length)
             {
-                if ((ulong)start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider) > uint.MaxValue || (ulong)sourceStart + length > uint.MaxValue) return;
+                int revision = ++applyRevision;
+                var speed = clip.SpeedProvider;
+                uint effectiveLength;
+                try
+                {
+                    effectiveLength = speed is CustomSpeedVarianceEffect custom
+                        ? (await custom.GetFrameMapAsync(length, clip.GetAvailableSourceLength(sourceStart))).Length
+                        : ClipTiming.EffectiveDuration(length, speed, clip.GetAvailableSourceLength(sourceStart));
+                }
+                catch (Exception ex)
+                {
+                    errorLabel.Text = ex.Message;
+                    errorLabel.IsVisible = true;
+                    return;
+                }
+                if (revision != applyRevision || !ReferenceEquals(speed, clip.SpeedProvider) || (ulong)start + effectiveLength > uint.MaxValue || (ulong)sourceStart + length > uint.MaxValue) return;
                 var old = (ReadStartFrame(), clip.relativeStartFrame, ReadTimingLength(clip));
                 if (old == (start, sourceStart, length)) return;
                 clip.relativeStartFrame = sourceStart;
@@ -298,7 +314,8 @@ namespace projectFrameCut.DraftStuff
 
         private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, out Action refresh)
         {
-            static bool IsSpeedVarianceProvider(IEffectProvider bundle) => bundle.TypeOfEffect == EffectType.SpeedVarianceProvider && bundle.Target == EffectTarget.SpeedVariance;
+            bool IsSpeedVarianceProvider(IEffectProvider bundle) => bundle.TypeOfEffect == EffectType.SpeedVarianceProvider && bundle.Target == EffectTarget.SpeedVariance
+                && !DynamicEffectBindings.IsSpeedOutputConsumed(bundle, clip.EffectProviders!);
 
             clip.Effects ??= new Dictionary<string, IEffect>();
             clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
@@ -318,18 +335,32 @@ namespace projectFrameCut.DraftStuff
                 .ToList();
 
             var speedProviders = clip.EffectProviders
-                ?.Where(kvp => kvp.Value.Target == EffectTarget.SpeedVariance)
+                ?.Where(kvp => IsSpeedVarianceProvider(kvp.Value))
                 ?.Select(c => c.Value)
                 ?.ToList() ?? [];
 
             var ppb = new PropertyPanelBuilder();
             float fps = page.ProjectInfo.TargetFrameRate;
             var durationHintLabel = new Label { FontSize = 12, TextColor = Colors.Gray };
-            void UpdateDurationHint()
+            int durationHintRevision = 0;
+            async void UpdateDurationHint()
             {
+                int revision = ++durationHintRevision;
                 uint length = ReadTimingLength(clip);
-                uint effectiveLength = clip.Effects?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault()?.GetEffectiveLength(length) ?? length;
-                durationHintLabel.Text = fps > 0 ? PPLocalizedResources.SpeedAndRatio_Duration(length / (double)fps, effectiveLength / (double)fps) : string.Empty;
+                var speed = clip.SpeedProvider;
+                try
+                {
+                    uint effectiveLength = speed is CustomSpeedVarianceEffect custom
+                        ? (await custom.GetFrameMapAsync(length, clip.AvailableSourceLength)).Length
+                        : ClipTiming.EffectiveDuration(length, speed, clip.AvailableSourceLength);
+                    if (revision != durationHintRevision || !ReferenceEquals(speed, clip.SpeedProvider)) return;
+                    durationHintLabel.Text = fps > 0 ? PPLocalizedResources.SpeedAndRatio_Duration(length / (double)fps, effectiveLength / (double)fps) : string.Empty;
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    if (revision == durationHintRevision && ReferenceEquals(speed, clip.SpeedProvider)) durationHintLabel.Text = ex.Message;
+                }
             }
             refresh = UpdateDurationHint;
 

@@ -6,6 +6,21 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.Render.Effect
 {
+    public sealed class ReverseSpeedVarianceProviderEffectProvider : EffectProviderBase
+    {
+        public ReverseSpeedVarianceProviderEffectProvider() => Name = "Reverse";
+        public override string TypeName => "ReverseSpeedVarianceProvider";
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public override EffectType TypeOfEffect => EffectType.SpeedVarianceProvider;
+        public override EffectTarget Target => EffectTarget.SpeedVariance;
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Composition];
+        public override bool IsDeterministic => true;
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
+            => new Dictionary<string, EffectArgumentFieldDescriptor>();
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+    }
+
     /// <summary>
     /// The Render-side provider of the ClassicSpeedVarianceProvider.
     /// </summary>

@@ -268,6 +268,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         Any = 1 << 31,
 
+        /// <summary>A runtime speed mapping carried by ISpeedVarianceProvider.</summary>
+        SpeedVariance = 1 << 26,
+
         /// <summary>
         /// A custom port carrying <see cref="CustomEffectPortValue"/> under <see cref="IEffectArgumentField.TypeContract"/>.
         /// </summary>

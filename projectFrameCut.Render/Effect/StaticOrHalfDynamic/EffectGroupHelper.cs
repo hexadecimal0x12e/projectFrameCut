@@ -9,7 +9,7 @@ public static class EffectGroupHelper
 {
     public const string MetadataKey = "__EffectGroups_v1__";
 
-    public static string JsonHash(ReadOnlySpan<byte> json) => Convert.ToHexString(SHA256.HashData(json)).ToLowerInvariant();
+    public static string ContentHash(ReadOnlySpan<byte> content) => Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
 
     public static List<EffectGroup> Read(Dictionary<string, object> metadata) =>
         metadata.TryGetValue(MetadataKey, out var value)
@@ -171,7 +171,8 @@ public static class EffectGroupHelper
         }
         Visit(root);
         var template = Copy(new EffectGroupTemplate { RootGroupId = root.Id, Groups = selected,
-            Providers = members.Select(id => EffectBindingHelper.SerializeProvider(providers[id])).ToArray() });
+            Providers = members.Select(id => EffectBindingHelper.SerializeProvider(providers[id])).ToArray(),
+            DeclaredPorts = members.SelectMany(id => DeclaredPorts(providers[id])).ToList() });
         foreach (var p in template.Providers)
         {
             foreach (var key in p.AnchorsBindingState.Keys.ToArray())
@@ -186,6 +187,15 @@ public static class EffectGroupHelper
                 p.AnchorsBindingState[EffectProviderAnchorExtensions.InputKey] = IEffectProvider.NoConnectionGUID.ToString();
         }
         return template;
+    }
+
+    public static IEnumerable<EffectGroupPort> DeclaredPorts(IEffectProvider p)
+    {
+        foreach (var field in DynamicEffectBindings.InputFields(p).Keys.Order(StringComparer.Ordinal))
+            yield return new() { ProviderId = p.Id, FieldId = field, Name = field, IsInput = true };
+        if (DynamicEffectBindings.CanBindOutput(p))
+            foreach (var field in p.GetOutputFields().Keys.Order(StringComparer.Ordinal))
+                yield return new() { ProviderId = p.Id, FieldId = field, Name = field };
     }
 
     public static T Copy<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value))!;
@@ -219,12 +229,14 @@ public static class EffectGroupHelper
             foreach (var p in g.Ports) p.ProviderId = ids[p.ProviderId];
         }
         t.RootGroupId = ids[t.RootGroupId];
+        foreach (var p in t.DeclaredPorts) p.ProviderId = ids[p.ProviderId];
         return t;
     }
 
     public static void ValidateTemplate(EffectGroupTemplate t)
     {
-        if (t.Groups is null || t.Providers is null
+        if (t.Groups is null || t.Providers is null || t.DeclaredPorts is null
+            || t.DeclaredPorts.Any(p => p is null || string.IsNullOrWhiteSpace(p.FieldId))
             || t.Groups.Any(g => g is null || g.ProviderIds is null || g.ChildGroupIds is null || g.Ports is null || g.Ports.Any(p => p is null))
             || t.Providers.Any(p => p is null || string.IsNullOrWhiteSpace(p.TypeName) || p.AnchorsBindingState is null))
             throw new InvalidOperationException("Invalid effect group template data.");
@@ -236,6 +248,9 @@ public static class EffectGroupHelper
             throw new InvalidOperationException("Invalid effect group template or version.");
         var root = t.Groups.SingleOrDefault(g => g.Id == t.RootGroupId) ?? throw new InvalidOperationException("Missing root group.");
         var members = Members(root, t.Groups);
+        if (t.DeclaredPorts.Any(p => !members.Contains(p.ProviderId))
+            || t.DeclaredPorts.Select(p => (p.ProviderId, p.FieldId, p.IsInput)).Distinct().Count() != t.DeclaredPorts.Count)
+            throw new InvalidOperationException("Invalid provider port declarations.");
         var visited = new HashSet<Guid>();
         void Visit(EffectGroup g)
         {

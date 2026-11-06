@@ -81,6 +81,7 @@ namespace projectFrameCut.ApplicationPluginBase
 
         void IApplicationPluginBase.OnApplicationPluginLoaded()
         {
+            IBindableGraph.Creator = () => new projectFrameCut.Interaction.BindableGraphView();
             IInteractableEditor.creator = new(() => new InteractableEditor.InteractableEditor());
 
             ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(locateId, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;

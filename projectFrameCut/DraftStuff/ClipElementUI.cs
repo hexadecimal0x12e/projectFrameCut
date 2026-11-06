@@ -74,7 +74,43 @@ namespace projectFrameCut.DraftStuff
         private bool _projectingTiming;
         internal ISpeedVarianceProvider? SpeedProvider => ExtraData.ContainsKey(projectFrameCut.Render.RenderAPIBase.Project.ProjectReferencePart.MetadataKey)
             ? null : Effects?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
-        internal uint TimelineDuration => ClipTiming.EffectiveDuration(lengthInFrame, SpeedProvider);
+        internal uint? AvailableSourceLength => GetAvailableSourceLength(relativeStartFrame);
+        internal uint? GetAvailableSourceLength(uint start) => !isInfiniteLength && maxFrameCount > 0
+            ? ClipTiming.AvailableSourceLength(maxFrameCount, ClipType == ClipMode.VideoClip ? sourceSecondPerFrame : 0,
+                TimingPage?.ProjectInfo.TargetFrameRate ?? 0, start) : null;
+        private Task<SpeedVarianceFrameMap>? customSpeedTask;
+        internal uint TimelineDuration
+        {
+            get
+            {
+                if (SpeedProvider is not CustomSpeedVarianceEffect speed)
+                    return ClipTiming.EffectiveDuration(lengthInFrame, SpeedProvider, AvailableSourceLength);
+                var task = speed.GetFrameMapAsync(lengthInFrame, AvailableSourceLength);
+                if (task.IsCompletedSuccessfully) return task.Result.Length;
+                if (!ReferenceEquals(customSpeedTask, task))
+                {
+                    customSpeedTask = task;
+                    _ = RefreshCustomSpeedAsync(task);
+                }
+                return lengthInFrame;
+            }
+        }
+
+        private async Task RefreshCustomSpeedAsync(Task<SpeedVarianceFrameMap> task)
+        {
+            try
+            {
+                await task;
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (!ReferenceEquals(customSpeedTask, task)) return;
+                    TimingPage?.InvalidateTimelineTiming(this);
+                    ProjectTiming();
+                });
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception) { } // The speed provider logs failures; the property panel displays them.
+        }
         internal ulong TimelineEnd => (ulong)(TimelineStartFrame ?? 0) + TimelineDuration;
 
         internal void AttachTiming(DraftPage page)

@@ -56,7 +56,7 @@ public partial class DraftEffectBindingView
             UpdateGroupBounds();
             FitArrangedNodes(contentSize);
             RecordEditHistory();
-            Log($"Auto-arranged {layouts.Count} visible nodes and {_drawable.Connections.Count} bindings for clip {_clip.Id}, stage {_stage}.");
+            Log($"Auto-arranged {layouts.Count} visible nodes and {Graph.Connections.Count} bindings for clip {_clip.Id}, stage {_stage}.");
         }
         catch (Exception ex)
         {
@@ -90,8 +90,8 @@ public partial class DraftEffectBindingView
             foreach (var id in node.NodeIds) owners[id] = node;
         var incoming = nodes.ToDictionary(n => n, _ => new HashSet<AutoLayoutNode>());
         var outgoing = nodes.ToDictionary(n => n, _ => new HashSet<AutoLayoutNode>());
-        foreach (var connection in _drawable.Connections)
-            if (owners.TryGetValue(connection.From.Id, out var from) && owners.TryGetValue(connection.To.Id, out var to)
+        foreach (var connection in Graph.Connections)
+            if (owners.TryGetValue(connection.Source.NodeId, out var from) && owners.TryGetValue(connection.Target.NodeId, out var to)
                 && from != to && outgoing[from].Add(to))
                 incoming[to].Add(from);
 

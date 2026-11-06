@@ -19,7 +19,16 @@ public partial class DraftEffectBindingView
         new(new("f151dd63-6821-4f7b-a71a-9bd8a035e765"), ValueProviderFrameContext.BuiltInClipFrameProviderId, Localized.Effect_ClipCurrentFrame),
         new(new("f151dd63-6821-4f7b-a71a-9bd8a035e766"), ValueProviderFrameContext.BuiltInProjectProgressProviderId, Localized.Effect_ProjectProgress),
         new(new("f151dd63-6821-4f7b-a71a-9bd8a035e767"), ValueProviderFrameContext.BuiltInProgressProviderId, Localized.Effect_ClipProgress),
+        new(new("f151dd63-6821-4f7b-a71a-9bd8a035e768"), ValueProviderFrameContext.SpeedFrameProviderId, Localized.Effect_SpeedFrame),
+        new(new("f151dd63-6821-4f7b-a71a-9bd8a035e769"), ValueProviderFrameContext.SpeedClipLengthProviderId, Localized.Effect_SpeedClipLength),
+        new(new("f151dd63-6821-4f7b-a71a-9bd8a035e76a"), ValueProviderFrameContext.SpeedSourceLengthProviderId, Localized.Effect_SpeedSourceLength),
+        new(new("f151dd63-6821-4f7b-a71a-9bd8a035e76b"), ValueProviderFrameContext.SpeedHasSourceLengthProviderId, Localized.Effect_SpeedHasSourceLength),
+        new(new("f151dd63-6821-4f7b-a71a-9bd8a035e76c"), ValueProviderFrameContext.SpeedFinishedProviderId, Localized.Effect_SpeedFinished),
     ];
+
+    private bool IsAvailableBuiltIn(BuiltInSource source) =>
+        (!ValueProviderFrameContext.IsSpeedSource(source.Source) || _stage == EffectStage.Composition && !IsTransformPipeline)
+        && (source.Source != ValueProviderFrameContext.BuiltInAudioSampleProviderId || ValueProviderFrameContext.SupportsAudioSample(_stage));
 
     private bool HasContentStage => _clip?.ClipType != ClipMode.AudioClip && !IsTransformPipeline
         && _stage is EffectStage.Render or EffectStage.Text or EffectStage.VectorContent or EffectStage.Composition;
@@ -83,7 +92,7 @@ public partial class DraftEffectBindingView
                 yield return new(TerminalSourceOutputKey(terminal.Id), StageTerminalName(terminal, providers[terminal.ProviderId!.Value]));
             }
         foreach (var source in BuiltInSources)
-            if (source.Source != ValueProviderFrameContext.BuiltInAudioSampleProviderId || ValueProviderFrameContext.SupportsAudioSample(_stage))
+            if (IsAvailableBuiltIn(source))
                 yield return new(source.Source, source.Name);
     }
 
@@ -110,7 +119,7 @@ public partial class DraftEffectBindingView
         AddStageTerminals();
         foreach (var source in BuiltInSources)
             if (IsSourceOutputEnabled(source.Source) && !_nodes.ContainsKey(source.Id)
-                && (source.Source != ValueProviderFrameContext.BuiltInAudioSampleProviderId || ValueProviderFrameContext.SupportsAudioSample(_stage)))
+                && IsAvailableBuiltIn(source))
                 AddSourceNode(source.Id, source.Source, source.Name, source.Source, 800);
     }
 
@@ -184,28 +193,15 @@ public partial class DraftEffectBindingView
     private void RemoveSourceOutputNode(NodeViewModel node)
     {
         _nodes.Remove(node.Id);
-        if (node.View is not null) NodesContainer.Children.Remove(node.View);
+        if (node.View is not null) Graph.RemoveNode(node.Id);
         if (_selectedNode == node) _selectedNode = null;
         if (_inputNode == node) _inputNode = null;
         if (_outputNode == node) _outputNode = null;
-        if (_drawable.DragSourceNode == node)
-        {
-            _drawable.DragSourceNode = null;
-            _drawable.DragPoint = null;
-        }
-    }
-
-    private void OnCanvasTapped(object? sender, TappedEventArgs e)
-    {
-        if (_isDraggingNodeOrPort) return;
-        if (e.GetPosition(NodesContainer) is { } point
-            && _nodes.Values.Any(n => n.View?.IsVisible == true && GetNodeBounds(n, n.X, n.Y).Contains(point))) return;
-        EndPortConnection();
-        ShowSourcesAndOutputs();
     }
 
     private void ShowSourcesAndOutputs()
     {
+        if (!_groupMultiSelect) Graph.SetSelection([]);
         _selectedNode = null;
         RefreshGroupSelection();
         UpdateSourcesAndOutputsPanel();

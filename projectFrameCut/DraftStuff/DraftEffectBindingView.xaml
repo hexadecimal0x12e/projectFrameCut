@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:interaction="clr-namespace:projectFrameCut.Interaction"
              xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
@@ -16,31 +17,20 @@
         </Grid.ColumnDefinitions>
         <!-- Node Canvas -->
         <Grid Grid.Column="0" BackgroundColor="#1e1e1e">
-            <Grid.GestureRecognizers>
-                <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated" />
-                <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated" />
-                <TapGestureRecognizer Tapped="OnCanvasTapped" />
-            </Grid.GestureRecognizers>
+            <interaction:BindableGraphView x:Name="Graph"/>
 
-            <HorizontalStackLayout x:Name="TopCommandBar" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" Spacing="4" ZIndex="10">
-                <Picker x:Name="StagePicker" VerticalOptions="Center" SelectedIndexChanged="OnStageChanged" />
-                <Picker x:Name="CompositionPipelinePicker" IsVisible="False" VerticalOptions="Center" SelectedIndexChanged="OnCompositionPipelineChanged" />
-                <Button x:Name="CanvasActionsButton" Text="☰" VerticalOptions="Center" Clicked="OnCanvasActionsClicked"/>
-                <Button x:Name="StepDebugToggleButton" Text="⏱" VerticalOptions="Center" Clicked="OnStepDebugToggleClicked"/>
-                <ActivityIndicator x:Name="PreviewBusyIndicator" IsVisible="False" IsRunning="False" VerticalOptions="Center"/>
-            </HorizontalStackLayout>
-
-            <!-- Connections Layer -->
-            <GraphicsView x:Name="ConnectionsLayer" 
-                          InputTransparent="True"
-                          VerticalOptions="Fill" 
-                          HorizontalOptions="Fill"/>
-
-            <!-- Nodes Layer -->
-            <AbsoluteLayout x:Name="NodesContainer" 
-                            AnchorX="0" AnchorY="0"
-                            InputTransparent="False">
-            </AbsoluteLayout>
+            <FlexLayout x:Name="TopCommandBar" Wrap="Wrap" AlignItems="Center" VerticalOptions="Start" Margin="10" ZIndex="10">
+                <Picker x:Name="StagePicker" Margin="0,0,4,4" SelectedIndexChanged="OnStageChanged" />
+                <Picker x:Name="CompositionPipelinePicker" IsVisible="False" Margin="0,0,4,4" SelectedIndexChanged="OnCompositionPipelineChanged" />
+                <Button Text="{l:Localized Key=Effect_SourcesAndOutputs}" Margin="0,0,4,4" Clicked="OnSourcesAndOutputsClicked"/>
+                <Button Text="{l:Localized Key=Effect_AutoArrange}" Margin="0,0,4,4" Clicked="OnAutoArrangeClicked"/>
+                <Button Text="{l:Localized Key=AssetPage_ShowPreview}" Margin="0,0,4,4" Clicked="GeneratePreviewButton_Clicked"/>
+                <Button x:Name="StepDebugToggleButton" Text="{l:Localized Key=Effect_StepDebug_Title}" Margin="0,0,4,4"
+                        ToolTipProperties.Text="{l:Localized Key=Effect_StepDebug_Hint}" Clicked="OnStepDebugToggleClicked"/>
+                <Button Text="{l:Localized Key=Effect_BindingsGraph}" Margin="0,0,4,4" Clicked="ShowUiBindingsGraphButton_Clicked"/>
+                <Button x:Name="ImportMermaidButton" Text="{l:Localized Key=Effect_ImportMermaid}" Margin="0,0,4,4" Clicked="OnImportMermaidClicked"/>
+                <ActivityIndicator x:Name="PreviewBusyIndicator" IsVisible="False" IsRunning="False" Margin="0,0,4,4"/>
+            </FlexLayout>
 
             <Border x:Name="StaticInputTooltip" IsVisible="False" InputTransparent="True"
                     HorizontalOptions="Start" VerticalOptions="Start" ZIndex="20"
@@ -50,26 +40,41 @@
                        LineBreakMode="WordWrap"/>
             </Border>
 
-            <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect. Pan empty space to move view."
+            <Label Text="{l:Localized Key=Effect_ClickConnectHint}"
                    x:Name="InfoLabel" TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>
-            <HorizontalStackLayout x:Name="BottomCommandBar" HorizontalOptions="End" VerticalOptions="End" Margin="10,0,10,10">
-                <Button x:Name="ZoomInButton" Margin="4,0,4,0" Text="+"/>
-                <Button x:Name="ResetButton" Margin="4,0,4,0" Text="↺"/>
-                <Button x:Name="ZoomOutButton" Margin="4,0,4,0" Text="-"/>
-            </HorizontalStackLayout>
-
-            <!-- Single-step execution controls -->
-            <HorizontalStackLayout x:Name="StepDebugBar" IsVisible="False" ZIndex="23"
-                                   HorizontalOptions="Center" VerticalOptions="End" Margin="10,0,10,10" Spacing="6"
-                                   BackgroundColor="#CC1e1e1e" Padding="6,2">
-                <Button x:Name="StepPrevButton" Text="◀" Clicked="OnStepPrevClicked"/>
-                <Label x:Name="StepDebugCounterLabel" TextColor="#00E5FF" FontSize="13"
-                       VerticalOptions="Center" HorizontalTextAlignment="Center" MinimumWidthRequest="42"/>
-                <Button x:Name="StepNextButton" Text="▶" Clicked="OnStepNextClicked"/>
-                <Button x:Name="StepLastButton" Text="⏭" Clicked="OnStepLastClicked"/>
-                <Button x:Name="StepRunButton" Text="⟳" Clicked="OnStepRunClicked"/>
-                <Button x:Name="StepStopButton" Text="✕" Clicked="OnStepStopClicked"/>
-            </HorizontalStackLayout>
+            <Border x:Name="BindingDiagnosticsPanel" IsVisible="False" ZIndex="25"
+                    HorizontalOptions="Start" VerticalOptions="End" Margin="10,0,10,36"
+                    WidthRequest="{OnIdiom Phone=300, Default=420}"
+                    BackgroundColor="#F2181818" Stroke="OrangeRed" StrokeShape="RoundRectangle 6" Padding="8">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+                    <Button x:Name="BindingDiagnosticsButton" TextColor="OrangeRed" HorizontalOptions="Start"
+                            Clicked="OnBindingDiagnosticsClicked"/>
+                    <ScrollView x:Name="BindingDiagnosticsScroll" Grid.Row="1" HeightRequest="180">
+                        <VerticalStackLayout x:Name="BindingDiagnosticsList" Spacing="8"/>
+                    </ScrollView>
+                </Grid>
+            </Border>
+            <VerticalStackLayout x:Name="BottomCommandBar" HorizontalOptions="End" VerticalOptions="End" Margin="10,0,10,10" Spacing="6" ZIndex="23">
+                <!-- Single-step execution controls -->
+                <HorizontalStackLayout x:Name="StepDebugBar" IsVisible="False"
+                                       HorizontalOptions="End" Spacing="6"
+                                       BackgroundColor="#CC1e1e1e" Padding="6,2">
+                    <Button x:Name="StepPrevButton" Text="◀" ToolTipProperties.Text="{l:Localized Key=Effect_StepDebug_Previous}" Clicked="OnStepPrevClicked"/>
+                    <Label x:Name="StepDebugCounterLabel" TextColor="#00E5FF" FontSize="13"
+                           VerticalOptions="Center" HorizontalTextAlignment="Center" MinimumWidthRequest="42"/>
+                    <Button x:Name="StepNextButton" Text="▶" ToolTipProperties.Text="{l:Localized Key=Effect_StepDebug_Next}" Clicked="OnStepNextClicked"/>
+                    <Button x:Name="StepLastButton" Text="⏭" ToolTipProperties.Text="{l:Localized Key=Effect_StepDebug_Last}" Clicked="OnStepLastClicked"/>
+                    <Button x:Name="StepRunButton" Text="⟳" ToolTipProperties.Text="{l:Localized Key=Effect_StepDebug_Rerun}" Clicked="OnStepRunClicked"/>
+                    <Button x:Name="StepStopButton" Text="✕" ToolTipProperties.Text="{l:Localized Key=Effect_StepDebug_Stop}" Clicked="OnStepStopClicked"/>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout HorizontalOptions="End">
+                    <Button x:Name="GroupMultiSelectButton" Margin="4,0,4,0" Text="{l:Localized Key=EffectGroup_MultiSelect}" Clicked="OnGroupMultiSelectClicked"/>
+                    <Button Margin="4,0,4,0" Text="{l:Localized Key=EffectGroup_Pack}" Clicked="OnPackGroupClicked"/>
+                    <Button x:Name="ZoomInButton" Margin="4,0,4,0" Text="+" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}"/>
+                    <Button x:Name="ResetButton" Margin="4,0,4,0" Text="↺" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomReset}"/>
+                    <Button x:Name="ZoomOutButton" Margin="4,0,4,0" Text="-" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomOut}"/>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
 
             <!-- Single-step execution inspector -->
             <Border x:Name="StepDebugPanel" IsVisible="False" ZIndex="24" InputTransparent="False"
@@ -151,18 +156,65 @@
 
         </Grid>
 
-        <!-- Node Action Overlay -->
-        <Grid x:Name="NodeActionOverlay" Grid.Row="0" Grid.RowSpan="1" Grid.Column="0" Grid.ColumnSpan="3"
-              IsVisible="False">
-            <BoxView Color="#CC000000">
-                <BoxView.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnNodeActionOverlayBackgroundTapped"/>
-                </BoxView.GestureRecognizers>
-            </BoxView>
-            <Border BackgroundColor="#2d2d2d" Stroke="#555" StrokeThickness="1"
-                    StrokeShape="RoundRectangle 8" Padding="12"
-                    HorizontalOptions="Center" VerticalOptions="Center">
-                <VerticalStackLayout x:Name="NodeActionButtonContainer" Spacing="8"/>
+        <Grid x:Name="GroupGraphOverlay" Grid.ColumnSpan="3" IsVisible="False" ZIndex="90"
+              BackgroundColor="#99000000" Padding="{OnIdiom Phone=6, Default=20}">
+            <Border BackgroundColor="#252526" Stroke="#555" StrokeShape="RoundRectangle 8" Padding="12">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Label x:Name="GroupGraphTitle" TextColor="White" FontAttributes="Bold"
+                               VerticalOptions="Center" LineBreakMode="TailTruncation"/>
+                        <Button Grid.Column="1" Text="{l:Localized Key=Effect_AutoArrange}" Clicked="OnArrangeGroupGraphClicked"/>
+                        <Button Grid.Column="2" Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" Clicked="OnCloseGroupGraphClicked"/>
+                    </Grid>
+                    <interaction:BindableGraphView x:Name="GroupGraph" Grid.Row="1"/>
+                    <Label x:Name="GroupGraphHint" Grid.Row="2" Text="{l:Localized Key=Effect_ClickConnectHint}"
+                           TextColor="LightGray" FontSize="11" LineBreakMode="WordWrap"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="MermaidImportOverlay" Grid.ColumnSpan="3" IsVisible="False" ZIndex="100"
+              BackgroundColor="#99000000" Padding="20">
+            <Border BackgroundColor="#252526" Stroke="#555" StrokeShape="RoundRectangle 8" Padding="16"
+                    MaximumWidthRequest="1500" MaximumHeightRequest="900" HorizontalOptions="Fill" VerticalOptions="Fill">
+                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="10">
+                    <Label Text="{l:Localized Key=Effect_ImportMermaid}" TextColor="White" FontAttributes="Bold"/>
+                    <HorizontalStackLayout x:Name="MermaidImportToolbar" Grid.Row="1" Spacing="8">
+                        <Button Text="{l:Localized Key=TemplateCreatePage_SelectFile}" Clicked="OnBrowseMermaidClicked"/>
+                        <Button Text="{l:Localized Key=DraftPage_MenuBar_Edit_Paste}" Clicked="OnPasteMermaidClicked"/>
+                        <Button Text="{l:Localized Key=Effect_MermaidPreview}" Clicked="OnPreviewMermaidClicked"/>
+                    </HorizontalStackLayout>
+                    <Grid Grid.Row="2" ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition x:Name="MermaidRepairColumn" Width="0"/>
+                        </Grid.ColumnDefinitions>
+                        <Editor x:Name="MermaidImportEditor" FontFamily="Cascadia Mono" FontSize="12"
+                            TextColor="White" BackgroundColor="#1e1e1e" AutoSize="Disabled"
+                            Placeholder="{l:Localized Key=Effect_MermaidPlaceholder}" TextChanged="OnMermaidTextChanged"/>
+                        <Grid x:Name="MermaidRepairPanel" Grid.Column="1" IsVisible="False" RowDefinitions="Auto,*,Auto" RowSpacing="6">
+                            <Label x:Name="MermaidRepairHintLabel" Text="{l:Localized Key=Effect_MermaidRepairHint}" TextColor="LightGray" FontSize="12"/>
+                            <interaction:BindableGraphView x:Name="MermaidRepairGraph" Grid.Row="1"/>
+                            <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="4">
+                                <HorizontalStackLayout Spacing="6">
+                                    <Button Text="{l:Localized Key=Effect_MermaidSyncPorts}" Clicked="OnSyncMermaidPortsClicked"/>
+                                    <Button Text="{l:Localized Key=Effect_AutoArrange}" Clicked="OnArrangeMermaidClicked"/>
+                                </HorizontalStackLayout>
+                                <ScrollView Grid.Row="1" MaximumHeightRequest="130">
+                                    <VerticalStackLayout x:Name="MermaidRepairBindings" Spacing="4"/>
+                                </ScrollView>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                    <ScrollView x:Name="MermaidImportErrorsScroll" Grid.Row="3" IsVisible="False" MaximumHeightRequest="170">
+                        <VerticalStackLayout x:Name="MermaidImportErrors" Spacing="8"/>
+                    </ScrollView>
+                    <HorizontalStackLayout Grid.Row="4" Spacing="8" HorizontalOptions="End">
+                        <ActivityIndicator x:Name="MermaidImportBusyIndicator" IsVisible="False" IsRunning="False"/>
+                        <Button Text="{l:Localized Key=_Cancel}" Clicked="OnCancelMermaidClicked"/>
+                        <Button x:Name="MermaidImportConfirmButton" Text="{l:Localized Key=Effect_ImportMermaid}" Clicked="OnConfirmMermaidClicked"/>
+                    </HorizontalStackLayout>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

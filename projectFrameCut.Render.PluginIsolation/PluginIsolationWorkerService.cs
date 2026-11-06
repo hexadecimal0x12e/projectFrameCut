@@ -581,7 +581,12 @@ internal sealed partial class PluginIsolationWorkerService(
     {
         var request = Read<IsolationEffectInvokeRequest>(envelope);
         var effect = Require<ISpeedVarianceProvider>(request.ObjectId);
-        return Success(envelope, new IsolationEffectInvokeResponse { Value = length ? effect.GetEffectiveLength(request.Value) : effect.GetTargetFrame(request.Value) });
+        uint value;
+        if (request.SpeedClipLength is { } clipLength)
+            value = length ? effect.GetEffectiveLength(clipLength, request.SpeedSourceLength) : effect.GetTargetFrame(request.Value, clipLength, request.SpeedSourceLength);
+        else
+            value = length ? effect.GetEffectiveLength(request.Value) : effect.GetTargetFrame(request.Value);
+        return Success(envelope, new IsolationEffectInvokeResponse { Value = value });
     }
 
     private RenderResponseEnvelope GetClipPosition(RenderRequestEnvelope envelope)

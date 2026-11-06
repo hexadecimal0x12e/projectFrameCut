@@ -303,6 +303,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
 
+        [JsonIgnore]
+        public uint? SourceFrameCount => SoundTrack is NormalSoundTrack { AudioSource.DurationSeconds: { } seconds }
+            && ExtraData?.GetValueOrDefault(ClipDraftDTO.ProjectFrameRateMetaKey) is { } raw
+            && double.TryParse(raw.ToString(), out var fps) && fps > 0
+                ? (uint)Math.Clamp(Math.Ceiling(seconds * fps - 1e-9d), 0, uint.MaxValue) : null;
+
         public ISoundTrack SoundTrack { get; set; }
         public TrackMode TrackType => TrackMode.NormalTrack;
 

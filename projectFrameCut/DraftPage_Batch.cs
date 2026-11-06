@@ -1297,17 +1297,22 @@ public partial class DraftPage
         if (operation == GuiProjectOperation.SplitClip)
         {
             var left = batch.Edit(a.Guid("ClipId"));
+            if (left.EffectProviders?.Any(p => p.TypeName == CustomSpeedVarianceProvider.ProviderTypeName && p.Enabled) == true)
+                throw new NotSupportedException("Custom speed curves cannot be split by source position.");
             uint frame = a.UInt("FrameIndex"), duration = GuiBatchDuration(left);
             if (left.ClipType == ClipMode.MarkingClip || SoundTrackMetadata.ReadBool(left.MetaData, "ExtendToWholeDraft")
                 || frame <= left.StartFrame || (ulong)frame >= (ulong)left.StartFrame + duration || left.Duration < 2)
                 throw new ArgumentException("Split frame must be inside a non-group clip with at least two source frames.");
-            uint consumed = Math.Clamp(ClipTiming.SourceOffset(frame - left.StartFrame, left.Duration, GuiBatchSpeed(left)), 1u, left.Duration - 1);
+            bool reverse = GuiBatchSpeed(left) is ReverseSpeedVarianceProvider;
+            uint consumed = reverse ? frame - left.StartFrame
+                : Math.Clamp(ClipTiming.SourceOffset(frame - left.StartFrame, left.Duration, GuiBatchSpeed(left)), 1u, left.Duration - 1);
             var node = JsonSerializer.SerializeToNode(left, savingOpts)!;
             node["Id"] = Guid.NewGuid(); node["Name"] = left.Name + " (2)";
             node["StartFrame"] = checked(left.StartFrame + ClipTiming.EffectiveDuration(consumed, GuiBatchSpeed(left)));
-            node["RelativeStartFrame"] = checked(left.RelativeStartFrame + consumed); node["Duration"] = left.Duration - consumed;
+            node["RelativeStartFrame"] = reverse ? left.RelativeStartFrame : checked(left.RelativeStartFrame + consumed); node["Duration"] = left.Duration - consumed;
             node["BindedSoundTrack"] = "";
             var right = node.Deserialize<ClipDraftDTO>(savingOpts)!;
+            if (reverse) left.RelativeStartFrame = checked(left.RelativeStartFrame + left.Duration - consumed);
             left.Duration = consumed;
             right.EffectProviders = right.EffectProviders?.Where(p => p.MetaData?.ContainsKey(TransformProcessing.SideKey) != true
                 || TransformProcessing.ReadEnum<TransformSide>(p.MetaData, TransformProcessing.SideKey) == TransformSide.Right).ToArray();
@@ -1412,8 +1417,11 @@ public partial class DraftPage
                 uint first = Math.Max(child.StartFrame, parent.RelativeStartFrame);
                 uint end = checked((uint)Math.Min((ulong)child.StartFrame + GuiBatchDuration(child), (ulong)parent.RelativeStartFrame + parent.Duration));
                 if (end <= first) continue;
+                if (child.EffectProviders?.Any(p => p.TypeName == CustomSpeedVarianceProvider.ProviderTypeName && p.Enabled) == true)
+                    throw new NotSupportedException("Custom speed curves cannot be trimmed by source position when ungrouping.");
                 uint sourceStart = checked(child.RelativeStartFrame + ClipTiming.SourceOffset(first - child.StartFrame, child.Duration, GuiBatchSpeed(child)));
                 uint sourceEnd = (checked(child.RelativeStartFrame + ClipTiming.SourceOffset(end - 1 - child.StartFrame, child.Duration, GuiBatchSpeed(child)))) + 1;
+                if (GuiBatchSpeed(child) is ReverseSpeedVarianceProvider) (sourceStart, sourceEnd) = (sourceEnd - 1, checked(sourceStart + 1));
                 var node = JsonSerializer.SerializeToNode(child)!;
                 node["StartFrame"] = first - parent.RelativeStartFrame;
                 node["RelativeStartFrame"] = sourceStart;

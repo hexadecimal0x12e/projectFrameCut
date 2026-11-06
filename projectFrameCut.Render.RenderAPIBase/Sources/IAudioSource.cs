@@ -47,6 +47,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Get the total duration of this audio source.
         /// </summary>
         public uint Duration { get; }
+        public virtual double? DurationSeconds => Duration == uint.MaxValue ? null : Duration;
 
         /// <summary>
         /// How many channels this source have.

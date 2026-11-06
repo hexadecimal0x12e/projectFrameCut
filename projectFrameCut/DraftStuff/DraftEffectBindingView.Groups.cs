@@ -12,8 +12,8 @@ namespace projectFrameCut.DraftStuff;
 public partial class DraftEffectBindingView
 {
     private List<EffectGroup> _groups = [];
-    private readonly HashSet<Guid> _groupSelection = [];
-    private bool _groupMultiSelect;
+    private IReadOnlySet<Guid> _groupSelection => Graph.SelectedNodeIds;
+    private bool _groupMultiSelect { get => Graph.MultiSelect; set => Graph.MultiSelect = value; }
     private Dictionary<Guid, Dictionary<string, string>> _groupBindingSnapshot = [];
     private VerticalStackLayout? _groupLibraryPanel;
     private int _groupLibraryVersion;
@@ -31,12 +31,16 @@ public partial class DraftEffectBindingView
 
     private void OnGroupLibraryChanged() => Dispatcher.Dispatch(RefreshGroupLibrary);
 
+    private void OnGroupMultiSelectClicked(object sender, EventArgs e) => ToggleGroupMultiSelect();
+
+    private void OnPackGroupClicked(object sender, EventArgs e) => BeginGroup();
+
     private void ToggleGroupMultiSelect()
     {
         _groupMultiSelect = !_groupMultiSelect;
-        _groupSelection.Clear();
-        if (_groupMultiSelect) CanvasActionsButton.BackgroundColor = Colors.CornflowerBlue;
-        else CanvasActionsButton.ClearValue(Button.BackgroundColorProperty);
+        Graph.SetSelection([]);
+        if (_groupMultiSelect) GroupMultiSelectButton.BackgroundColor = Colors.CornflowerBlue;
+        else GroupMultiSelectButton.ClearValue(Button.BackgroundColorProperty);
         RefreshGroupSelection();
     }
 
@@ -45,10 +49,10 @@ public partial class DraftEffectBindingView
         _groups = [];
         if (resetSelection)
         {
-            _groupSelection.Clear();
+            Graph.SetSelection([]);
             _selectedNode = null;
         }
-        _drawable.GroupBounds.Clear();
+        Graph.GroupBounds.Clear();
         if (_clip?.EffectProviders is not { } providers) return;
         try
         {
@@ -107,15 +111,6 @@ public partial class DraftEffectBindingView
                 border.Stroke = _groupSelection.Contains(node.Id) || !_groupMultiSelect && node == _selectedNode ? Colors.Yellow
                     : node.BindingDiagnosticSignature.Length > 0 ? Colors.OrangeRed
                     : node.Kind == NodeKind.Group ? Colors.CornflowerBlue : node.Kind == NodeKind.Effect ? Colors.Gray : Colors.White;
-    }
-
-    private bool TrySelectGroupMember(NodeViewModel node)
-    {
-        if (!_groupMultiSelect) return false;
-        if (node.Kind is not (NodeKind.Effect or NodeKind.Group)) return true;
-        if (!_groupSelection.Add(node.Id)) _groupSelection.Remove(node.Id);
-        RefreshGroupSelection();
-        return true;
     }
 
     private void BeginGroup()
@@ -199,6 +194,8 @@ public partial class DraftEffectBindingView
             row.Add(new VerticalStackLayout { Children = { new Label { Text = $"{(port.IsInput ? Localized.EffectGroup_Input : Localized.EffectGroup_Output)} · {port.Name}", FontSize = 11 }, entry } }, 1);
             var up = new Button { Text = "↑", Padding = 4 };
             var down = new Button { Text = "↓", Padding = 4 };
+            ToolTipProperties.SetText(up, Localized.DraftPage_MenuBar_Edit_MoveUp);
+            ToolTipProperties.SetText(down, Localized.DraftPage_MenuBar_Edit_MoveDown);
             void Move(int delta)
             {
                 int i = rows.FindIndex(r => r.Row == row), target = i + delta;
@@ -230,7 +227,7 @@ public partial class DraftEffectBindingView
                 EffectGroupHelper.EnsureBoundaryPorts(candidate, providers);
                 EffectGroupHelper.Validate(candidate, providers);
                 _groups = candidate;
-                _groupSelection.Clear();
+                Graph.SetSelection([]);
                 CommitGroups();
                 Logger.Log($"Configured effect group {group.Id} ({group.Name}).", "info");
             }
@@ -274,22 +271,22 @@ public partial class DraftEffectBindingView
         PropertiesPanel.Children.Add(new Label { Text = ex.Message, TextColor = Colors.OrangeRed });
     }
 
-    private void AddGroupActions(NodeViewModel node)
+    private void AddGroupActions(NodeViewModel node, List<(string Text, Action Run)> actions)
     {
         if (node.Group is not { } group) return;
-        AddNodeActionButton(group.Collapsed ? Localized.EffectGroup_Expand : Localized.EffectGroup_Collapse, () =>
+        actions.Add((group.Collapsed ? Localized.EffectGroup_Expand : Localized.EffectGroup_Collapse, () =>
         {
             group.Collapsed = !group.Collapsed;
             CommitGroups();
-        });
-        AddNodeActionButton(Localized.EffectGroup_PublicPorts, () =>
+        }));
+        actions.Add((Localized.EffectGroup_PublicPorts, () =>
         {
             var candidate = EffectGroupHelper.Copy(_groups);
             ShowGroupEditor(candidate.Single(g => g.Id == group.Id), candidate);
-        });
-        AddNodeActionButton(Localized.EffectGroup_Save, () => SaveGroup(group));
-        AddNodeActionButton(Localized.EffectGroup_Export, () => ExportGroup(group));
-        AddNodeActionButton(Localized.EffectGroup_Ungroup, () =>
+        }));
+        actions.Add((Localized.EffectGroup_Save, () => SaveGroup(group)));
+        actions.Add((Localized.EffectGroup_Export, () => ExportGroup(group)));
+        actions.Add((Localized.EffectGroup_Ungroup, () =>
         {
             foreach (var parent in _groups.Where(g => g.ChildGroupIds.Contains(group.Id)))
             {
@@ -299,8 +296,8 @@ public partial class DraftEffectBindingView
             }
             _groups.Remove(group);
             CommitGroups();
-        });
-        AddNodeActionButton(Localized.DraftPage_ContextMenu_Delete, () => DeleteGroup(group));
+        }));
+        actions.Add((Localized.DraftPage_ContextMenu_Delete, () => DeleteGroup(group)));
     }
 
     private async void SaveGroup(EffectGroup group)
@@ -309,8 +306,8 @@ public partial class DraftEffectBindingView
         try
         {
             SaveGroupPositions();
-            var json = EffectGroupStore.Serialize(EffectGroupHelper.Export(group, _groups, providers));
-            var hash = _page is null ? await EffectGroupStore.SaveAsync(json) : await EffectGroupStore.SaveWithChoiceAsync(json, _page);
+            var content = EffectGroupStore.Serialize(EffectGroupHelper.Export(group, _groups, providers));
+            var hash = _page is null ? await EffectGroupStore.SaveAsync(content) : await EffectGroupStore.SaveWithChoiceAsync(content, _page);
             if (hash is not null) SetStatusText($"{Localized._Done} · {hash[..8]}");
         }
         catch (Exception ex) { GroupError(ex); }
@@ -323,8 +320,8 @@ public partial class DraftEffectBindingView
         {
             SaveGroupPositions();
             var template = EffectGroupHelper.Export(group, _groups, providers);
-            var json = EffectGroupStore.Serialize(template);
-            await EffectGroupStore.ExportAsync(new(EffectGroupStore.Hash(json), json, template, null));
+            var content = EffectGroupStore.Serialize(template);
+            await EffectGroupStore.ExportAsync(new(EffectGroupStore.Hash(content), content, template, null));
         }
         catch (Exception ex) { GroupError(ex); }
     }
@@ -386,7 +383,7 @@ public partial class DraftEffectBindingView
     {
         var visibleGroups = new HashSet<Guid>();
         var hiddenProviders = new HashSet<Guid>();
-        _drawable.GroupBounds.Clear();
+        Graph.GroupBounds.Clear();
         if (_clip?.EffectProviders is not { } providers) return;
         bool Hidden(EffectGroup group) => _groups.Any(g => g.Collapsed && g.Id != group.Id && ContainsGroup(g, group.Id));
         foreach (var group in _groups)
@@ -417,7 +414,7 @@ public partial class DraftEffectBindingView
         }
         foreach (var node in _nodes.Values.Where(n => n.Group is not null && !visibleGroups.Contains(n.Id)).ToArray())
         {
-            NodesContainer.Children.Remove(node.View!);
+            Graph.RemoveNode(node.Id);
             _nodes.Remove(node.Id);
             if (_selectedNode == node)
             {
@@ -436,7 +433,7 @@ public partial class DraftEffectBindingView
 
     private void UpdateGroupBounds()
     {
-        _drawable.GroupBounds.Clear();
+        Graph.GroupBounds.Clear();
         foreach (var g in _groups.Where(g => !g.Collapsed && _nodes.ContainsKey(g.Id)))
         {
             var nodes = EffectGroupHelper.Members(g, _groups).Where(_nodes.ContainsKey).Select(id => _nodes[id])
@@ -444,7 +441,7 @@ public partial class DraftEffectBindingView
                 .Where(n => n.View?.IsVisible == true).ToArray();
             if (nodes.Length == 0) continue;
             double x = nodes.Min(n => n.X) - 12, y = nodes.Min(n => n.Y) - 12;
-            _drawable.GroupBounds.Add(new RectF((float)x, (float)y, (float)(nodes.Max(n => n.X + n.Width) - x + 12),
+            Graph.GroupBounds.Add(new RectF((float)x, (float)y, (float)(nodes.Max(n => n.X + n.Width) - x + 12),
                 (float)(nodes.Max(n => n.Y + (n.View?.Height > 0 ? n.View.Height : n.BodyHeight)) - y + 12)));
         }
     }
@@ -565,39 +562,45 @@ public partial class DraftEffectBindingView
 
     private void AddGroupTemplate(EffectGroupLibraryItem item)
     {
-        if (_clip is null || item.Template is null) return;
-        try
-        {
-            var template = EffectGroupHelper.Instantiate(item.Template);
-            var providers = EffectGroupStore.Restore(template);
-            var target = _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_stage) : _clip.GetEffectSelectionTarget();
-            if (providers.Values.Any(p => !ClipInfoBuilder.CanSelectEffectProvider(p, target, hideKeyFramedProviders: true, includePipelineProviders: true)
-                || p.Stage != _stage || !CanAddToPipeline(p, _stage, _compositionPipeline)))
-                throw new InvalidOperationException(Localized.Effect_IncompatiblePipeline);
-            var combined = new Dictionary<Guid, IEffectProvider>(_clip.EffectProviders ?? []);
-            foreach (var p in providers) combined.Add(p.Key, p.Value);
-            var groups = _groups.Concat(template.Groups).ToList();
-            EffectGroupHelper.Validate(groups, combined);
-            var root = template.Groups.Single(g => g.Id == template.RootGroupId);
-            var position = FindNonOverlappingPosition(new NodeViewModel { Id = root.Id, Kind = NodeKind.Group, Provider = null }, 250, 150);
-            double dx = position.X - root.X, dy = position.Y - root.Y;
-            foreach (var g in template.Groups) { g.X += dx; g.Y += dy; }
-            foreach (var p in providers.Values)
-            {
-                double Read(string axis) => p.MetaData.TryGetValue(ProviderPositionKey(axis, ProviderPipeline(p)), out var v)
-                    && double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : 250;
-                p.MetaData[ProviderPositionKey("X")] = Read("X") + dx;
-                p.MetaData[ProviderPositionKey("Y")] = Read("Y") + dy;
-                AssignCurrentPipeline(p);
-            }
-            EffectGroupHelper.Validate(groups, combined);
-            _clip.EffectProviders = combined;
-            _groups = groups;
-            CommitGroups(rebuild: true);
-            Logger.Log($"Added effect group template {item.Hash} to clip {_clip.Id}.", "info");
-        }
+        if (item.Template is null) return;
+        try { AddGroupTemplate(item.Template); }
         catch (Exception ex) { GroupError(ex); }
+    }
+
+    private void AddGroupTemplate(EffectGroupTemplate source)
+    {
+        if (_clip is null) return;
+        var template = EffectGroupHelper.Instantiate(source);
+        var providers = EffectGroupStore.Restore(template);
+        var target = _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_stage) : _clip.GetEffectSelectionTarget();
+        if (providers.Values.Any(p => !ClipInfoBuilder.CanSelectEffectProvider(p, target, ignoreIsNotVisibleInNewEffectSelector: true,
+                hideKeyFramedProviders: true, includePipelineProviders: true)
+            || p.Stage != _stage || !CanAddToPipeline(p, _stage, _compositionPipeline)))
+            throw new InvalidOperationException(Localized.Effect_IncompatiblePipeline);
+        var combined = new Dictionary<Guid, IEffectProvider>(_clip.EffectProviders ?? []);
+        foreach (var p in providers) combined.Add(p.Key, p.Value);
+        var groups = _groups.Concat(template.Groups).ToList();
+        EffectGroupHelper.Validate(groups, combined);
+        var root = template.Groups.Single(g => g.Id == template.RootGroupId);
+        var position = FindNonOverlappingPosition(new NodeViewModel { Id = root.Id, Kind = NodeKind.Group, Provider = null }, 250, 150);
+        double dx = position.X - root.X, dy = position.Y - root.Y;
+        foreach (var g in template.Groups) { g.X += dx; g.Y += dy; }
+        foreach (var p in providers.Values)
+        {
+            double Read(string axis) => p.MetaData.TryGetValue(ProviderPositionKey(axis, ProviderPipeline(p)), out var v)
+                && double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : 250;
+            p.MetaData[ProviderPositionKey("X")] = Read("X") + dx;
+            p.MetaData[ProviderPositionKey("Y")] = Read("Y") + dy;
+            AssignCurrentPipeline(p);
+        }
+        EffectGroupHelper.Validate(groups, combined);
+        _clip.EffectProviders = combined;
+        _groups = groups;
+        CommitGroups(rebuild: true);
+        Logger.Log($"Added effect group template {source.RootGroupId} to clip {_clip.Id}.", "info");
+        if (_nodes.TryGetValue(root.Id, out var node)) SelectNode(node, force: true);
+        SetStatusText(Localized._Done);
     }
 
     private NodeViewModel? VisiblePortNode(Guid providerId)

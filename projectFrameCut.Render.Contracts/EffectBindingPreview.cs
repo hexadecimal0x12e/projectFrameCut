@@ -46,9 +46,18 @@ public sealed class EffectBindingPreviewStep
 }
 
 [ProtoContract]
+public sealed class EffectBindingPreviewDiagnostic
+{
+    [ProtoMember(1)] public Guid ProviderId { get; set; }
+    [ProtoMember(2)] public string? FieldId { get; set; }
+    [ProtoMember(3)] public string Message { get; set; } = "";
+}
+
+[ProtoContract]
 public sealed class EffectBindingPreviewResponse
 {
     [ProtoMember(1)] public List<EffectBindingPreviewStep> Steps { get; set; } = [];
     [ProtoMember(2)] public Dictionary<string, EffectBindingPreviewValue> Sources { get; set; } = [];
     [ProtoMember(3)] public string? Error { get; set; }
+    [ProtoMember(4)] public List<EffectBindingPreviewDiagnostic> Diagnostics { get; set; } = [];
 }

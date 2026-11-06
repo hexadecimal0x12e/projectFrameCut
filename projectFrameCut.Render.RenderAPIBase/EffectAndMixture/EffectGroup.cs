@@ -26,4 +26,5 @@ public sealed class EffectGroupTemplate
     public Guid RootGroupId { get; set; }
     public List<EffectGroup> Groups { get; set; } = [];
     public EffectProviderJSONStructure[] Providers { get; set; } = [];
+    public List<EffectGroupPort> DeclaredPorts { get; set; } = [];
 }

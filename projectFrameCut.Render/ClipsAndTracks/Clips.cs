@@ -201,6 +201,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public virtual uint? SourceFrameCount => null;
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get => 1; init { } }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }

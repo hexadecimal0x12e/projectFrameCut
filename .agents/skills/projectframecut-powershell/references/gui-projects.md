@@ -185,12 +185,12 @@ Effect groups and templates:
 - `Set-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-Name] [-Ports] [-Collapsed] [-X] [-Y]`
 - `Remove-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-RemoveProviders]`
 - `Export-ProjectClipEffectGroup -ClipId <id> -GroupId <id>`
-- `Import-ProjectClipEffectGroup -ClipId <id> -TemplateJson <json> [-X] [-Y]`
+- `Import-ProjectClipEffectGroup -ClipId <id> -TemplateMermaid <mermaid> [-X] [-Y]`
 - `Import-ProjectClipEffectGroup -ClipId <id> -Hash <hash> [-X] [-Y]`
 - `Get-ProjectEffectGroupTemplate [-Hash]`
 - `Save-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-ReplaceHash]`
 
-Group ports are ordered hashtables with `ProviderId`, `FieldId`, `Name`, and `IsInput`. Required boundary ports are added automatically. Group selected nodes with the same parent; Clip arguments, endpoints, and transitions cannot be grouped. Removing a group ungroups its members unless `-RemoveProviders` is used. Export returns JSON for `Set-Content`; import assigns independent IDs and omits external project bindings. Saving a group writes the application's shared group library and does not replace `Save-Project`.
+Group ports are ordered hashtables with `ProviderId`, `FieldId`, `Name`, and `IsInput`. Required boundary ports are added automatically. Group selected nodes with the same parent; Clip arguments, endpoints, and transitions cannot be grouped. Removing a group ungroups its members unless `-RemoveProviders` is used. Export returns Mermaid for `Set-Content` (use `.mmd` files); import assigns independent IDs and omits external project bindings. Saving a group writes the application's shared group library and does not replace `Save-Project`. Library queries return `TemplateMermaid`. For authoring files from scratch, read `docs/effect-group-mermaid.md` and `docs/examples/effect-group-sincos.mmd` at the repository root. Old JSON group templates are unsupported.
 
 All connected project commands accept `-TimeoutSeconds` (default 60). Write commands support `-WhatIf`, `-Confirm`, `-PassThru`, and `-ChangeReason`. By default ordinary write commands do not emit a result; batch lifecycle commands return status without `-PassThru`.
 

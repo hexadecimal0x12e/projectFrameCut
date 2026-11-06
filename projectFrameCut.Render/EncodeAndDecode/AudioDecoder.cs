@@ -24,6 +24,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public bool Disposed => _isDisposed;
 
         public uint Duration { get; private set; }
+        public double? DurationSeconds { get; private set; }
 
         public string[] PreferredExtension => new[] { ".mp3", ".wav", ".m4a", ".flac", ".aac" };
 
@@ -95,8 +96,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             int streamSampleRate = stream->codecpar->sample_rate;
             SamplePerSecond = streamSampleRate > 0 ? streamSampleRate : (_codec->sample_rate > 0 ? _codec->sample_rate : 44100);
 
-            // Calculate duration in frames (assuming 30fps for now, but should be dynamic)
-            Duration = (uint)(stream->duration * ffmpeg.av_q2d(stream->time_base)); // Placeholder
+            double seconds = stream->duration * ffmpeg.av_q2d(stream->time_base);
+            DurationSeconds = double.IsFinite(seconds) && seconds >= 0 ? seconds : null;
+            Duration = DurationSeconds.HasValue ? (uint)Math.Min(uint.MaxValue, DurationSeconds.Value) : uint.MaxValue;
         }
 
         

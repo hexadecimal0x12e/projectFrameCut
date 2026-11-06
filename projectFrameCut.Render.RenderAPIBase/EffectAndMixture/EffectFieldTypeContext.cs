@@ -83,7 +83,10 @@ public sealed class EffectFieldTypeContext
 /// <summary>A type snapshot shared by binding validation and a built render graph.</summary>
 public sealed class EffectFieldTypeResolution
 {
-    public sealed record Diagnostic(Guid ProviderId, string Code, string Message);
+    public sealed record Diagnostic(Guid ProviderId, string Code, string Message)
+    {
+        public string? FieldId { get; init; }
+    }
     private readonly Dictionary<(Guid Provider, bool Input, string Field), EffectArgumentFieldType> types = new();
     private readonly Dictionary<(Guid Provider, bool Input, string Field), EffectPortTypeContract?> contracts = new();
     private readonly Dictionary<Guid, EffectFieldTypeContext> contexts = new();
@@ -178,7 +181,7 @@ public sealed class EffectFieldTypeResolution
                 catch (Exception ex)
                 {
                     Logger.Log(ex, $"Resolve {(input ? "input" : "output")} '{key}' on provider {provider.Id}", this);
-                    diagnostics.Add(new(provider.Id, "InvalidFieldType", $"Cannot resolve field '{key}' on provider {provider.Id}: {ex.Message}"));
+                    diagnostics.Add(new(provider.Id, "InvalidFieldType", $"Cannot resolve field '{key}' on provider {provider.Id}: {ex.Message}") { FieldId = key });
                     type = EffectArgumentFieldType.Any;
                 }
             }
@@ -198,13 +201,13 @@ public sealed class EffectFieldTypeResolution
             contracts[(provider.Id, input, key)] = contract;
             if (contract is not null && type.BaseType() != EffectArgumentFieldType.CustomType
                 || !input && type.BaseType() == EffectArgumentFieldType.CustomType && contract is null)
-                diagnostics.Add(new(provider.Id, "InvalidPortTypeContract", $"Field '{key}' on provider {provider.Id} must declare CustomType with a port type contract."));
+                diagnostics.Add(new(provider.Id, "InvalidPortTypeContract", $"Field '{key}' on provider {provider.Id} must declare CustomType with a port type contract.") { FieldId = key });
             try { formats[(provider.Id, input, key)] = provider.ResolveDataFormat(key, input, context); }
             catch (Exception ex)
             {
                 Logger.Log(ex, $"Resolve data format '{key}' on provider {provider.Id}", this);
                 formats[(provider.Id, input, key)] = null;
-                diagnostics.Add(new(provider.Id, "InvalidDataFormat", $"Cannot resolve format for '{key}' on provider {provider.Id}: {ex.Message}"));
+                diagnostics.Add(new(provider.Id, "InvalidDataFormat", $"Cannot resolve format for '{key}' on provider {provider.Id}: {ex.Message}") { FieldId = key });
             }
         }
     }
@@ -412,9 +415,17 @@ public sealed class EffectFieldTypeResolution
     {
         var type = input ? GetInputType(provider, fieldId) : GetOutputType(provider, fieldId);
         if (!input && type.HasFlag(EffectArgumentFieldType.Any))
-            throw new InvalidOperationException($"Provider {provider.Id} output '{fieldId}' has an unresolved type, frame {frame}.");
+        {
+            var ex = new InvalidOperationException($"Provider {provider.Id} output '{fieldId}' has an unresolved type, frame {frame}.");
+            EffectProviderFailure.Attach(ex, provider.Id, fieldId);
+            throw ex;
+        }
         var contract = input ? GetInputContract(provider, fieldId) : GetOutputContract(provider, fieldId);
         if (value is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory) || !EffectFieldTypes.Accepts(type, value, contract))
-            throw new InvalidOperationException($"Provider {provider.Id} {(input ? "input" : "output")} '{fieldId}' expects {contract?.Id ?? type.ToString()}, received {value?.GetType().FullName ?? "null"}, frame {frame}.");
+        {
+            var ex = new InvalidOperationException($"Provider {provider.Id} {(input ? "input" : "output")} '{fieldId}' expects {contract?.Id ?? type.ToString()}, received {value?.GetType().FullName ?? "null"}, frame {frame}.");
+            EffectProviderFailure.Attach(ex, provider.Id, fieldId);
+            throw ex;
+        }
     }
 }

@@ -223,6 +223,7 @@ public partial class DraftEffectBindingView
         if (_clip?.EffectProviders is not { } providers) return [];
         var diagnostics = _fieldTypes is null ? new List<EffectBindingHelper.BindingDiagnostic>()
             : EffectBindingHelper.ValidateBindings(providers, _fieldTypes, DynamicEffectCalculation.Enabled(_clip.ExtraData)).ToList();
+        diagnostics.AddRange(_previewDiagnostics);
         foreach (var endpoint in providers.Values.OfType<IClipValueEndpointProvider>())
         {
             if (endpoint.IsExport)

@@ -165,6 +165,12 @@ internal sealed class RemoteSpeedVarianceProvider(IPluginIsolationSession sessio
 {
     public uint GetTargetFrame(uint sourceFrame) => Invoke<IsolationEffectInvokeRequest, IsolationEffectInvokeResponse>(RenderOperation.IsolationMapSpeedFrame, new() { ObjectId = ObjectId, Value = sourceFrame }).Value;
     public uint GetEffectiveLength(uint length) => Invoke<IsolationEffectInvokeRequest, IsolationEffectInvokeResponse>(RenderOperation.IsolationMapSpeedLength, new() { ObjectId = ObjectId, Value = length }).Value;
+    public uint GetTargetFrame(uint sourceFrame, uint length, uint? sourceLength)
+        => Invoke<IsolationEffectInvokeRequest, IsolationEffectInvokeResponse>(RenderOperation.IsolationMapSpeedFrame,
+            new() { ObjectId = ObjectId, Value = sourceFrame, SpeedClipLength = length, SpeedSourceLength = sourceLength }).Value;
+    public uint GetEffectiveLength(uint length, uint? sourceLength)
+        => Invoke<IsolationEffectInvokeRequest, IsolationEffectInvokeResponse>(RenderOperation.IsolationMapSpeedLength,
+            new() { ObjectId = ObjectId, Value = length, SpeedClipLength = length, SpeedSourceLength = sourceLength }).Value;
 }
 
 internal sealed class RemoteClipPositionProvider(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), IClipPositionProvider

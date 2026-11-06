@@ -31,7 +31,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 var componentId = ComponentId(provider, field.Id);
                 if (field.FieldType.IsContent() || field.FieldType.HasFlag(EffectArgumentFieldType.Any)
                     || field.TypeContract is not null
-                    || field.FieldType.BaseType() is EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SizeAndPosition)
+                    || field.FieldType.BaseType() is EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SpeedVariance or EffectArgumentFieldType.SizeAndPosition)
                 {
                     if (field.TypeContract is not null && bindingHost is ICustomEffectPortEditorHost editorHost
                         && editorHost.CanOpenExternalEditor(field.Id))

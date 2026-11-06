@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
@@ -15,12 +16,17 @@ internal sealed class RenderFrameDiagnostics : IDisposable
     private readonly ConcurrentQueue<Stage> stages = new();
     private readonly Stopwatch total = Stopwatch.StartNew();
     private readonly uint frame;
+    private readonly Action<RenderFrameDiagnosticSnapshot>? completed;
+    private readonly bool logTimings;
     private Stage? workers;
+    private int disposed;
     public bool Succeeded { get; set; }
 
-    public RenderFrameDiagnostics(uint frame)
+    public RenderFrameDiagnostics(uint frame, Action<RenderFrameDiagnosticSnapshot>? completed = null, bool logTimings = true)
     {
         this.frame = frame;
+        this.completed = completed;
+        this.logTimings = logTimings;
     }
 
     public IDisposable Enter(bool worker = false)
@@ -58,9 +64,31 @@ internal sealed class RenderFrameDiagnostics : IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref disposed, 1) != 0) return;
         total.Stop();
         var snapshot = stages.ToArray();
         var children = snapshot.ToLookup(s => s.Parent);
+        if (completed is not null)
+        {
+            var result = new List<RenderStageDiagnosticSnapshot>(snapshot.Length);
+            AddStages(null, null);
+            completed(new(frame, Succeeded, total.Elapsed, result.AsReadOnly()));
+
+            void AddStages(Stage? parent, string? parentPath)
+            {
+                int index = 0;
+                foreach (var stage in children[parent])
+                {
+                    var path = index.ToString(CultureInfo.InvariantCulture);
+                    if (parentPath is not null) path = parentPath + "/" + path;
+                    result.Add(new(path, parentPath, stage.Depth, stage.Name, stage.Category,
+                        stage.Elapsed, stage.SelfElapsed, children[stage].Count(), stage.IsWorkerSum));
+                    AddStages(stage, path);
+                    index++;
+                }
+            }
+        }
+        if (!logTimings) return;
         var log = new StringBuilder(FormattableString.Invariant(
             $"[Render diagnostic] Frame {frame}: {(Succeeded ? "completed" : "aborted")}, total={total.Elapsed.TotalMilliseconds:F3} ms"));
         foreach (var stage in children[null]) AppendStage(stage);
@@ -109,6 +137,7 @@ internal sealed class RenderFrameDiagnostics : IDisposable
         private bool disposed;
         public string Name { get; } = name;
         public string Category { get; } = category;
+        public bool IsWorkerSum { get; } = sumChildren;
         public Stage? Parent { get; } = parent;
         public int Depth { get; } = parent is null ? 0 : parent.Depth + 1;
         public TimeSpan Elapsed { get; private set; }
@@ -121,14 +150,20 @@ internal sealed class RenderFrameDiagnostics : IDisposable
             disposed = true;
             try
             {
-                if (!sumChildren) HwAccelPictureScope.Current?.Complete();
+                if (!IsWorkerSum) HwAccelPictureScope.Current?.Complete();
             }
             finally
             {
-                Elapsed = sumChildren ? TimeSpan.FromTicks(Interlocked.Read(ref ChildTicks)) : Stopwatch.GetElapsedTime(started);
+                Elapsed = IsWorkerSum ? TimeSpan.FromTicks(Interlocked.Read(ref ChildTicks)) : Stopwatch.GetElapsedTime(started);
                 if (Parent is not null) Interlocked.Add(ref Parent.ChildTicks, Elapsed.Ticks);
                 if (ReferenceEquals(current, owner) && ReferenceEquals(active, this)) active = Parent;
             }
         }
     }
 }
+
+internal sealed record RenderFrameDiagnosticSnapshot(uint FrameIndex, bool Succeeded, TimeSpan Elapsed,
+    IReadOnlyList<RenderStageDiagnosticSnapshot> Stages);
+
+internal sealed record RenderStageDiagnosticSnapshot(string Path, string? ParentPath, int Depth, string Name,
+    string Category, TimeSpan Elapsed, TimeSpan SelfElapsed, int ChildCount, bool IsWorkerSum);

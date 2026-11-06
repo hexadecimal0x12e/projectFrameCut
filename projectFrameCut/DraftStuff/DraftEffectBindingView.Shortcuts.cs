@@ -31,6 +31,7 @@ public partial class DraftEffectBindingView
             || !ReferenceEquals(window.Content, this)) return;
 
         e.Handled = true;
+        if (MermaidImportOverlay.IsVisible || GroupGraphOverlay.IsVisible) return;
         if (_isDraggingNodeOrPort || !_providerAddTask.IsCompleted) return;
 #if WINDOWS
         if (Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement element
@@ -82,7 +83,6 @@ public partial class DraftEffectBindingView
 
     private void DeleteNodes(NodeViewModel[] selection)
     {
-        HideNodeActionOverlay();
         foreach (var node in selection)
         {
             if (!_nodes.ContainsKey(node.Id)) continue;
@@ -90,7 +90,7 @@ public partial class DraftEffectBindingView
             else if (GetSourceOutputKey(node) is { } key) SetSourceOutputEnabled(key, false);
             else RemoveEffect(node);
         }
-        _groupSelection.Clear();
+        Graph.SetSelection([]);
         Reload();
     }
 
@@ -197,7 +197,6 @@ public partial class DraftEffectBindingView
         if (data.Variables.Count > 0)
             _clip.ExtraData[VariablesKey] = variables.Concat(data.Variables.Select(v => v with { Id = variableIds[v.Id] })).ToList();
         _nodePasteCount++;
-        HideNodeActionOverlay();
         LoadStage(_clip, _page, _showIsNotVisibleInEffectEditorEffect, _stage);
         OnBindingConfigurationChanged();
         var selected = data.Groups.FirstOrDefault(g => !data.Groups.Any(parent => parent.ChildGroupIds.Contains(g.Id)))?.Id
@@ -254,7 +253,6 @@ public partial class DraftEffectBindingView
         try
         {
             StopStepDebug();
-            HideNodeActionOverlay();
             _clip.EffectProviders = providers;
             _clip.ExtraData = snapshot.ExtraData;
             LoadStage(_clip, _page, _showIsNotVisibleInEffectEditorEffect);

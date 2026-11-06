@@ -241,6 +241,7 @@ internal sealed class DynamicEffectNodeEvaluator(DynamicEffectFrame frame, Guid 
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            EffectProviderFailure.Attach(ex, id);
             Logger.Log(ex, $"Compute effect provider {id} of clip {frame.Clip?.Id}, frame {frame.Frame}", this);
             throw;
         }

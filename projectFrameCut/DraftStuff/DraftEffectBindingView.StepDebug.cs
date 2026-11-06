@@ -1,7 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.Contracts;
-using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using Color = Microsoft.Maui.Graphics.Color;
@@ -33,8 +32,6 @@ public partial class DraftEffectBindingView
     private bool _stepDebugEnabled;
     private int _stepIndex = -1, _stepRunVersion;
 
-    private static string StepL(string key, string fallback) => PluginManager.GetLocalizationItem("Effect_StepDebug_" + key, fallback);
-
     private void OnStepDebugToggleClicked(object? sender, EventArgs e) => ToggleStepDebug();
 
     private void ToggleStepDebug()
@@ -55,14 +52,14 @@ public partial class DraftEffectBindingView
         _stepError = null;
         StepDebugBar.IsVisible = true;
         StepDebugPanel.IsVisible = true;
-        StepDebugToggleButton.Text = "⏹";
+        StepDebugToggleButton.BackgroundColor = Colors.CornflowerBlue;
         StepDebugDetailPanel.Children.Clear();
         StepDebugListPanel.Children.Clear();
         StepDebugDetailPanel.Children.Add(new Label
         {
-            Text = StepL("Running", "正在执行管线…"), TextColor = Colors.Gray, FontSize = 12
+            Text = Localized.Effect_StepDebug_Running, TextColor = Colors.Gray, FontSize = 12
         });
-        SetStatusText(StepL("Hint", "单步执行：用 ◀ / ▶ 逐步查看被激活的节点和各接口的值。"));
+        SetStatusText(Localized.Effect_StepDebug_Hint);
         Log($"Entered single-step execution mode for clip {_clip.Id}, stage {_stage}.");
         _ = RunStepDebugAsync();
     }
@@ -114,11 +111,11 @@ public partial class DraftEffectBindingView
             if (!active) return;
             StepDebugBar.IsVisible = false;
             StepDebugPanel.IsVisible = false;
-            StepDebugToggleButton.Text = "⏱";
+            StepDebugToggleButton.ClearValue(Button.BackgroundColorProperty);
             StepDebugListPanel.Children.Clear();
             StepDebugDetailPanel.Children.Clear();
             StepDebugCounterLabel.Text = "";
-            StepDebugTitleLabel.Text = StepL("Title", "单步执行");
+            StepDebugTitleLabel.Text = Localized.Effect_StepDebug_Title;
         }
         catch (Exception ex) { Log(ex, "Stop single-step mode", this); }
     }
@@ -135,7 +132,7 @@ public partial class DraftEffectBindingView
         : ImageSource.FromStream(() => new MemoryStream(png, writable: false));
 
     private static StepValue ReadStepValue(EffectBindingPreviewValue value) => new(
-        value.Inactive ? StepL("Inactive", "∅ 未激活") : value.IsVector ? StepL("Vector", "矢量内容") : value.Text,
+        value.Inactive ? Localized.Effect_StepDebug_Inactive : value.IsVector ? Localized.Effect_VectorContentType : value.Text,
         StepImage(value.Png), value.Inactive);
 
     private void FinishStepRecording(EffectBindingPreviewResponse response)
@@ -146,7 +143,7 @@ public partial class DraftEffectBindingView
             _steps.Add(new StepRecord
             {
                 Node = input, ProviderId = input.Provider?.Id ?? IEffectProvider.InputAnchorGUID,
-                Title = input.DisplayName, SubTitle = StepL("Source", "源画面"),
+                Title = input.DisplayName, SubTitle = ContentSourceName,
                 Outputs = new() { [EffectProviderAnchorExtensions.InputKey] = ReadStepValue(source) },
             });
         foreach (var recorded in response.Steps)
@@ -161,8 +158,8 @@ public partial class DraftEffectBindingView
                 Outputs = recorded.Outputs.ToDictionary(p => p.Key, p => ReadStepValue(p.Value)),
                 Inactive = recorded.Outputs.Count > 0 && recorded.Outputs.Values.All(v => v.Inactive),
             };
-            foreach (var (port, kind) in node.InputPorts.Select(p => (p, StepL("Input", "输入")))
-                .Concat(node.ParamPorts.Select(p => (p, StepL("Param", "参数")))))
+            foreach (var (port, kind) in node.InputPorts.Select(p => (p, Localized.EffectGroup_Input))
+                .Concat(node.ParamPorts.Select(p => (p, Localized.Transform_Parameters))))
             {
                 if (node.Group is not null && port.Id != recorded.ProviderId) continue;
                 if (!recorded.Inputs.TryGetValue(port.Key, out var value)) continue;
@@ -177,7 +174,7 @@ public partial class DraftEffectBindingView
             _steps.Add(new StepRecord
             {
                 Node = output, ProviderId = output.Provider?.Id ?? IEffectProvider.OutputAnchorGUID,
-                Title = output.DisplayName, SubTitle = StepL("Output", "最终输出"),
+                Title = output.DisplayName, SubTitle = ContentOutputName,
                 Outputs = new() { ["content"] = ReadStepValue(result) },
             });
         _stepIndex = _steps.Count > 0 ? 0 : -1;
@@ -215,15 +212,15 @@ public partial class DraftEffectBindingView
     {
         StepDebugListPanel.Children.Clear();
         StepDebugDetailPanel.Children.Clear();
-        StepDebugHintLabel.Text = StepL("Hint", "单步执行：用 ◀ / ▶ 逐步查看被激活的节点和各接口的值。");
+        StepDebugHintLabel.Text = Localized.Effect_StepDebug_Hint;
         bool has = _stepIndex >= 0 && _stepIndex < _steps.Count;
         StepDebugCounterLabel.Text = has ? $"{_stepIndex + 1}/{_steps.Count}" : $"0/{_steps.Count}";
         StepPrevButton.IsEnabled = has && _stepIndex > 0;
         StepNextButton.IsEnabled = has && _stepIndex < _steps.Count - 1;
         StepLastButton.IsEnabled = has && _stepIndex < _steps.Count - 1;
         StepDebugTitleLabel.Text = has
-            ? $"{StepL("Title", "单步执行")} · {_stepIndex + 1}/{_steps.Count} · {_steps[_stepIndex].Title}"
-            : StepL("Title", "单步执行");
+            ? $"{Localized.Effect_StepDebug_Title} · {_stepIndex + 1}/{_steps.Count} · {_steps[_stepIndex].Title}"
+            : Localized.Effect_StepDebug_Title;
         if (_stepError is { Length: > 0 } error)
             StepDebugDetailPanel.Children.Add(new Label
             {
@@ -233,7 +230,7 @@ public partial class DraftEffectBindingView
         {
             StepDebugDetailPanel.Children.Add(new Label
             {
-                Text = StepL("Empty", "没有捕获到节点执行。请点击 ⟳ 重新执行，或确认当前阶段的管线存在有效绑定。"),
+                Text = Localized.Effect_StepDebug_Empty,
                 TextColor = Colors.Gray, FontSize = 12, LineBreakMode = LineBreakMode.WordWrap
             });
             ClearStepHighlightVisuals();
@@ -308,7 +305,7 @@ public partial class DraftEffectBindingView
         if (step.Inactive)
             StepDebugDetailPanel.Children.Add(new Label
             {
-                Text = StepL("InactiveNode", "该节点在当前帧未激活（分支未选中），其接口未参与计算。"),
+                Text = Localized.Effect_StepDebug_InactiveNode,
                 TextColor = Colors.OrangeRed, FontSize = 11, LineBreakMode = LineBreakMode.WordWrap
             });
 
@@ -345,11 +342,11 @@ public partial class DraftEffectBindingView
         }
         foreach (var port in step.Ports)
             AddPortRow(port.Kind, port.Name, port.TypeName, port.Value, port.Inactive,
-                string.IsNullOrWhiteSpace(port.Source) ? null : $"{StepL("BoundTo", "来源")}: {port.Source}");
+                string.IsNullOrWhiteSpace(port.Source) ? null : $"{Localized.Effect_EndpointSource}: {port.Source}");
         var provider = _clip?.EffectProviders?.GetValueOrDefault(step.ProviderId) ?? step.Node.Provider;
         foreach (var (field, value) in step.Outputs)
-            AddPortRow(StepL("Output", "输出"),
-                provider is null ? StepL("Content", "画面") : EffectProviderUIHelper.FieldName(provider, field, false, field),
+            AddPortRow(Localized.EffectGroup_Output,
+                provider is null ? Localized.Effect_StepDebug_Content : EffectProviderUIHelper.FieldName(provider, field, false, field),
                 "", value.Text, value.Inactive, null);
         StepDebugDetailPanel.Children.Add(table);
 
@@ -388,7 +385,7 @@ public partial class DraftEffectBindingView
         HighlightStepPorts(node, node.InputPorts, node.InputPortViews, step.ProviderId, step.Inactive ? accent : Color.FromArgb("#FFD54F"));
         HighlightStepPorts(node, node.ParamPorts, node.ParamPortViews, step.ProviderId, step.Inactive ? accent : Color.FromArgb("#FFD54F"));
         HighlightStepPorts(node, node.OutputPorts, node.OutputPortViews, step.ProviderId, accent);
-        _drawable.StepFocusNode = node;
+        _stepFocusNode = node;
         ConnectionsLayer.Invalidate();
     }
 
@@ -420,9 +417,9 @@ public partial class DraftEffectBindingView
             box.Scale = scale;
         }
         _stepPortRestore.Clear();
-        if (_drawable.StepFocusNode is not null)
+        if (_stepFocusNode is not null)
         {
-            _drawable.StepFocusNode = null;
+            _stepFocusNode = null;
             ConnectionsLayer.Invalidate();
         }
     }
@@ -447,8 +444,8 @@ public partial class DraftEffectBindingView
             if (left >= leftInset + 12 && top >= 44 && left + w <= width - 12 && top + h <= height - bottomInset - 12) return;
             NodesContainer.TranslationX = leftInset + (width - leftInset) / 2 - (node.X + node.Width / 2) * scale;
             NodesContainer.TranslationY = (height - bottomInset) / 2 - (node.Y + node.BodyHeight / 2) * scale;
-            _drawable.PanX = NodesContainer.TranslationX;
-            _drawable.PanY = NodesContainer.TranslationY;
+
+
             ConnectionsLayer.Invalidate();
             SaveViewTransform();
         }

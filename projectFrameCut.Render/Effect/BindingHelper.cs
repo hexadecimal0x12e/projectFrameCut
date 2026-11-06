@@ -96,6 +96,13 @@ namespace projectFrameCut.Render.Effect
             EffectProviderJSONStructure[]? effectProviders,
             EffectBundleJSONStructure[]? effectBundles,
             out IReadOnlyList<BindingDiagnostic> diagnostics)
+            => MigrateToEffectProviders(effectProviders, effectBundles, out diagnostics, normalizeBindings: true);
+
+        public static Dictionary<Guid, IEffectProvider> MigrateToEffectProviders(
+            EffectProviderJSONStructure[]? effectProviders,
+            EffectBundleJSONStructure[]? effectBundles,
+            out IReadOnlyList<BindingDiagnostic> diagnostics,
+            bool normalizeBindings)
         {
             var result = new Dictionary<Guid, IEffectProvider>();
             var foundProblems = new List<BindingDiagnostic>();
@@ -170,7 +177,7 @@ namespace projectFrameCut.Render.Effect
                 }
 
 
-                foundProblems.AddRange(NormalizeStoredBindings(result));
+                if (normalizeBindings) foundProblems.AddRange(NormalizeStoredBindings(result));
                 MaterializeFields(result.Values);
                 diagnostics = foundProblems;
                 return result;
@@ -225,7 +232,7 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
-            foundProblems.AddRange(NormalizeStoredBindings(result));
+            if (normalizeBindings) foundProblems.AddRange(NormalizeStoredBindings(result));
             MaterializeFields(result.Values);
             diagnostics = foundProblems;
             return result;
@@ -291,7 +298,7 @@ namespace projectFrameCut.Render.Effect
 
             foreach (var consumer in (forward ? providers.Values.ToList() : SortEffectProviders(providers)))
             {
-                if (dynamicGraph && DynamicEffectBindings.IsGraphProvider(consumer)) continue;
+                if (consumer is CustomSpeedVarianceProvider or SpeedVarianceToCustomProvider || dynamicGraph && DynamicEffectBindings.IsGraphProvider(consumer)) continue;
                 if (consumer.Fields is null) continue;
                 Dictionary<string, IEffectArgumentField>? fields;
                 try
@@ -418,7 +425,8 @@ namespace projectFrameCut.Render.Effect
                     var sortedProviders = SortEffectProviders(effectProviders);
                     foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
                     {
-                        if (bundleData is ClipArgumentProvider or RenderOutputProvider) continue;
+                        if (bundleData is ClipArgumentProvider or RenderOutputProvider
+                            || SpeedVarianceBindings.IsConversion(bundleData) || SpeedVarianceBindings.IsConsumed(bundleData, effectProviders)) continue;
                         if (bundleData.Target.HasFlag(EffectTarget.ValueProvider) && !DynamicEffectBindings.IsGraphProvider(bundleData))
                         {
                             RemoveProviderEffects(newEffects, bundleData.Id);
@@ -437,7 +445,9 @@ namespace projectFrameCut.Render.Effect
                             continue;
                         }
 
-                        var effects = inlineValues?.FindEffects(provider.Id) ?? BuildProviderEffects(provider, types);
+                        var effects = provider is CustomSpeedVarianceProvider
+                            ? new IEffect[] { CustomSpeedVarianceProvider.BuildGraph(provider, effectProviders) }
+                            : inlineValues?.FindEffects(provider.Id) ?? BuildProviderEffects(provider, types);
 
                         if (!provider.Target.HasFlag(EffectTarget.ValueProvider)
                             && effects.Any(e => e.TypeOfEffect.GetStage() != provider.Stage))
@@ -646,7 +656,10 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public sealed record BindingDiagnostic(Guid? ProviderId, string Code, string Message);
+        public sealed record BindingDiagnostic(Guid? ProviderId, string Code, string Message)
+        {
+            public string? FieldId { get; init; }
+        }
 
         /// <summary>Returns provider dependencies declared by stored value-field bindings.</summary>
         public static IEnumerable<Guid> GetBoundProviderDependencyIds(IEffectProvider provider)
@@ -834,7 +847,7 @@ namespace projectFrameCut.Render.Effect
             if (forward || DynamicEffectBindings.RequiresGraph(providers)) return DynamicEffectBindings.Validate(providers, types, forward);
 
             if (providers.Values.OfType<ClipArgumentProvider>().Count() > 1)
-                diagnostics.Add(new(null, "MultipleClipArguments", "A clip can only have one argument provider."));
+                diagnostics.AddRange(providers.Values.OfType<ClipArgumentProvider>().Select(p => new BindingDiagnostic(p.Id, "MultipleClipArguments", "A clip can only have one argument provider.")));
 
             foreach (var provider in providers.Values)
             {
@@ -843,12 +856,12 @@ namespace projectFrameCut.Render.Effect
                 foreach (var binding in provider.EnumerateFieldBindings())
                     if (EffectProviderOutputExtensions.TryParseOutputSourceId(binding.Value, out var id, out _)
                         && providers.TryGetValue(id, out var source) && source.Stage != provider.Stage)
-                        diagnostics.Add(new(provider.Id, "CrossStageBinding", $"Binding '{binding.Key}' must use a stage endpoint."));
+                        diagnostics.Add(new(provider.Id, "CrossStageBinding", $"Binding '{binding.Key}' must use a stage endpoint.") { FieldId = binding.Key });
             }
 
             var finalProviders = providers.Values.Where(p => p.IsFinalOutputSource()).ToList();
             foreach (var group in finalProviders.GroupBy(p => p.Stage).Where(g => g.Count() > 1))
-                diagnostics.Add(new(null, "MultipleFinalOutputs", $"Multiple providers are connected to {group.Key} output: {string.Join(", ", group.Select(p => p.Id))}."));
+                diagnostics.AddRange(group.Select(p => new BindingDiagnostic(p.Id, "MultipleFinalOutputs", $"Multiple providers are connected to {group.Key} output.")));
 
             foreach (var provider in providers.Values)
             {
@@ -865,7 +878,7 @@ namespace projectFrameCut.Render.Effect
                     diagnostics.Add(new(provider.Id, "ClipArgumentPictureBinding", $"Clip argument provider {provider.Id} cannot join the picture chain."));
                 if (provider is ClipArgumentProvider arguments)
                     foreach (var key in arguments.StaticValues.Keys.Except(arguments.Fields.Keys))
-                        diagnostics.Add(new(provider.Id, "UnknownClipArgument", $"Clip argument '{key}' is unavailable on this clip."));
+                        diagnostics.Add(new(provider.Id, "UnknownClipArgument", $"Clip argument '{key}' is unavailable on this clip.") { FieldId = key });
 
                 var input = provider.GetMainInputSource();
                 if (input == IEffectProvider.NoConnectionGUID.ToString() || input == IEffectProvider.InputAnchorGUID.ToString())
@@ -905,18 +918,18 @@ namespace projectFrameCut.Render.Effect
                 foreach (var binding in provider.EnumerateFieldBindings())
                 {
                     if (!provider.Fields.ContainsKey(binding.Key))
-                        diagnostics.Add(new(provider.Id, "UnknownFieldBinding", $"Provider {provider.Id} does not own field '{binding.Key}'."));
+                        diagnostics.Add(new(provider.Id, "UnknownFieldBinding", $"Provider {provider.Id} does not own field '{binding.Key}'.") { FieldId = binding.Key });
                     if (binding.Value.StartsWith("builtin://", StringComparison.Ordinal)) continue;
                     if (Guid.TryParse(binding.Value, out var sourceId))
                     {
                         if (providers.TryGetValue(sourceId, out var fieldSource))
                         {
                             if (!fieldSource.Target.HasFlag(EffectTarget.ValueProvider))
-                                diagnostics.Add(new(provider.Id, "InvalidFieldSource", $"Field '{binding.Key}' references non-value provider {sourceId}."));
+                                diagnostics.Add(new(provider.Id, "InvalidFieldSource", $"Field '{binding.Key}' references non-value provider {sourceId}.") { FieldId = binding.Key });
                             continue;
                         }
                     }
-                    diagnostics.Add(new(provider.Id, "DanglingFieldBinding", $"Field '{binding.Key}' references missing source '{binding.Value}'."));
+                    diagnostics.Add(new(provider.Id, "DanglingFieldBinding", $"Field '{binding.Key}' references missing source '{binding.Value}'.") { FieldId = binding.Key });
                 }
             }
 

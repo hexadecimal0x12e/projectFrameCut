@@ -152,7 +152,7 @@ public class SubtitleClip : TextClip, IClip
         if (offset < 0 || offset >= duration) return onFail;
 
         ulong frame = (ulong)RelativeStartFrame
-            + ClipTiming.SourceOffset((uint)offset, Duration, SpeedVarianceProviderInstance, duration);
+            + ClipTiming.SourceOffset((uint)offset, Duration, SpeedVarianceProviderInstance, duration, ((IClip)this).GetAvailableSourceLength());
         return frame <= uint.MaxValue ? (uint)frame : onFail;
     }
 

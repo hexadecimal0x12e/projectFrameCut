@@ -187,12 +187,12 @@ public sealed class ExportProjectClipEffectGroupCommand : ProjectCmdlet
     [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)] public Guid GroupId { get; set; }
 }
 
-[Cmdlet("Import", "ProjectClipEffectGroup", SupportsShouldProcess = true, DefaultParameterSetName = "Json")]
+[Cmdlet("Import", "ProjectClipEffectGroup", SupportsShouldProcess = true, DefaultParameterSetName = "Mermaid")]
 public sealed class ImportProjectClipEffectGroupCommand : ProjectWriteCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.ImportClipEffectGroup;
     [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)] public Guid ClipId { get; set; }
-    [Parameter(Mandatory = true, ParameterSetName = "Json")][ValidateNotNullOrEmpty] public string TemplateJson { get; set; } = "";
+    [Parameter(Mandatory = true, ParameterSetName = "Mermaid")][ValidateNotNullOrEmpty] public string TemplateMermaid { get; set; } = "";
     [Parameter(Mandatory = true, ParameterSetName = "Library")][ValidatePattern("^[a-fA-F0-9]{64}$")] public string Hash { get; set; } = "";
     [Parameter] public double? X { get; set; }
     [Parameter] public double? Y { get; set; }

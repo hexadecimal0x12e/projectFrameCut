@@ -380,7 +380,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public uint LayerIndex { get; set; }
         public uint SubLayerIndex { get; set; }
         public uint StartFrame { get; set; }
-        public uint RelativeStartFrame { get; init; }
+        public uint RelativeStartFrame { get; set; }
         public uint Duration { get; set; }
         public float FrameTime { get; set; } // seconds per frame (1 / framerate)
         public float SecondPerFrameRatio { get; set; }

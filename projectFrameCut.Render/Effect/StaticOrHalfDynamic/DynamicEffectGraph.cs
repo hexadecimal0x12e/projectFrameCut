@@ -347,6 +347,7 @@ public sealed class DynamicEffectGraph : IRenderEffectPipeline, IDisposable
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                EffectProviderFailure.Attach(ex, id);
                 Logger.Log(ex, $"Compute effect provider {id} of clip {clip?.Id}, frame {frame}", this);
                 throw;
             }
