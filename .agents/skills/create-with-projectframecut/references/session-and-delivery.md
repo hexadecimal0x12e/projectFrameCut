@@ -2,17 +2,17 @@
 
 ## 导入模块
 
-使用 PowerShell 7.6+ Core，并导入完整发布目录中的 `.psd1`。下面从仓库根目录运行；实际发布目录不同时替换 `$modulePath`。
+使用 PowerShell 7.6+ Core。Windows 应用已经附带完整模块，优先从目标应用安装目录中的 `Public/PowerShell/projectFrameCut.PowerShell.psd1` 加载；模块说明在同目录的 `README.md`，skills 在 `Public/Skills`。安装目录可从正在运行的 `projectFrameCut` 进程路径，或 `Get-AppxPackage -Name '*projectFrameCut*'` 的 `InstallLocation` 获取；执行别名所在目录不一定是安装目录。
+
+首次使用先按[模块定位与导入](../../projectframecut-powershell/references/offline-projects.md#find-and-import-the-module)查找，将选定的完整清单路径保存为 `$modulePath`；多个版本并存时匹配目标应用。
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-$modulePath = Join-Path (Get-Location).Path 'tools/projectFrameCut.PowerShell/artifacts/projectFrameCut.PowerShell/projectFrameCut.PowerShell.psd1'
-if (!(Test-Path -LiteralPath $modulePath)) { throw '请提供已发布的 projectFrameCut.PowerShell 模块路径。' }
-Import-Module $modulePath
+Import-Module -Name $modulePath
 Get-Command -Module projectFrameCut.PowerShell
 ```
 
-源码目录中的清单不能代替包含 DLL 和依赖的发布目录。需要准备模块时，先检查 `tools/projectFrameCut.PowerShell/projectFrameCut.PowerShell.csproj` 的实际目标框架；说明文档与当前源码可能不同，不照抄过期的框架版本。查询参数使用 `Get-Command <命令> -Syntax`。
+安装目录中的模块可以直接使用，保留清单旁的 DLL 和依赖；源码清单本身不够。开发模块、旧版应用未附带模块或其他平台需要单独准备时，再检查已有发布目录或 `tools/projectFrameCut.PowerShell/projectFrameCut.PowerShell.csproj` 的实际目标框架，不因仓库 artifacts 目录缺失就要求用户提供路径或自行发布。查询参数使用 `Get-Command <命令> -Syntax`。
 
 ## 选择或创建项目
 

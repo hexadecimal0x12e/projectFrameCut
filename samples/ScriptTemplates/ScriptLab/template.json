@@ -1,0 +1,77 @@
+{
+  "TemplateVersion": 2,
+  "TemplateType": 2,
+  "TemplateName": "ScriptLab · 四幕动态图文实验室",
+  "TemplateID": "8dfc9ff7-8e40-4a53-b5de-06fd831f0cd7",
+  "CreatedInAPIVersion": 8,
+  "Scope": -1,
+  "HaveAsset": false,
+  "ScriptHash": "e5da4038bdace0aae1b331eed9cea379ec99454f5a9417d1529037f2e67a91c4",
+  "Project": {
+    "ProjectName": "ScriptLab",
+    "RelativeWidth": 1920,
+    "RelativeHeight": 1080,
+    "TargetFrameRate": 30
+  },
+  "Draft": {
+    "Clips": [],
+    "SoundTracks": []
+  },
+  "Variables": {
+    "Title": "SCRIPT LAB / 脚本实验室",
+    "Subtitle": "由隔离 PowerShell 自动生成\n每个片段、图形和关键帧都可继续编辑",
+    "Accent": "#5AE0C2",
+    "SceneSeconds": "4.5",
+    "ParticleCount": "18",
+    "Seed": "20261107",
+    "UseBatch": "true",
+    "FailAfterScene": "0",
+    "Bars": "[{\"Label\":\"渲染\",\"Value\":86},{\"Label\":\"剪辑\",\"Value\":72},{\"Label\":\"动画\",\"Value\":94},{\"Label\":\"字幕\",\"Value\":64},{\"Label\":\"脚本\",\"Value\":98}]"
+  },
+  "VariableDefinitions": {
+    "Title": {
+      "Type": 1,
+      "UserFriendlyName": "主标题",
+      "Description": "可输入中文、引号或换行，验证字符串参数。"
+    },
+    "Subtitle": {
+      "Type": 1,
+      "UserFriendlyName": "副标题"
+    },
+    "Accent": {
+      "Type": 1,
+      "UserFriendlyName": "主题色",
+      "Description": "#RRGGBB 格式。"
+    },
+    "SceneSeconds": {
+      "Type": 2,
+      "UserFriendlyName": "每幕秒数",
+      "Description": "2～12，支持小数；四幕总时长默认 18 秒。"
+    },
+    "ParticleCount": {
+      "Type": 3,
+      "UserFriendlyName": "片头粒子数",
+      "Description": "0～80，增大可测试大量组件 RPC 写入。"
+    },
+    "Seed": {
+      "Type": 3,
+      "UserFriendlyName": "随机种子",
+      "Description": "相同参数和种子生成相同的粒子布局。"
+    },
+    "UseBatch": {
+      "Type": 4,
+      "UserFriendlyName": "使用 Batch",
+      "Description": "true：一次提交保存；false：逐条应用，最后保存。"
+    },
+    "FailAfterScene": {
+      "Type": 3,
+      "UserFriendlyName": "在哪一幕后故意报错",
+      "Description": "0：正常完成；1～4：对应幕配置完成后抛出测试异常。"
+    },
+    "Bars": {
+      "Type": 6,
+      "UserFriendlyName": "图表数据 JSON",
+      "Description": "2～8 项，每项包含 Label 字符串与 1～100 的 Value。"
+    }
+  }
+}

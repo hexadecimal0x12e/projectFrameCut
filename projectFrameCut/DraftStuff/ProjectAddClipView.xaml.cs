@@ -25,7 +25,6 @@ public partial class ProjectAddClipView : ContentView
         Unloaded += (_, _) => Services.TextStyleStore.Changed -= RefreshTextStyles;
         _rpcSourcesTabIndex = MainTabView.TabItems.IndexOf(RpcSourcesTab);
         UpdateExternalSourceAvailability();
-        _viewModel.SetDrawingView(DrawingCanvas);
         MainTabView.OnTabSwitched += MainTabView_OnTabSwitched;
         var orderOpt = SettingsManager.GetSetting("Edit_AddView_DefaultOrderOption", "date");
         OrderOptionPicker.SelectedIndex = orderOpt switch

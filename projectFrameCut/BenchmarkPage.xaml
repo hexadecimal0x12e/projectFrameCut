@@ -51,7 +51,7 @@
             <VerticalStackLayout x:Name="ResultsPanel" IsVisible="False">
                 <Label Text="{l:Localized Key=BenchmarkPage_Results}"
                        FontSize="18" FontAttributes="Bold"/>
-                <Label x:Name="ResultsLabel" FontFamily="Consolas"/>
+                <Label x:Name="ResultsLabel" FontFamily="Font_CodeBlock"/>
             </VerticalStackLayout>
 
             <!-- 日志面板 -->

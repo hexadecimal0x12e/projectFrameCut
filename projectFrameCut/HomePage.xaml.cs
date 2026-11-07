@@ -1087,12 +1087,15 @@ public partial class HomePage : ContentPage
     private async Task GoDraft(ProjectsViewModel pvm, bool isReadonly = false, bool throwOnException = false)
         => await GoDraft(pvm._projectPath, pvm.Name, isReadonly, throwOnException);
 
-    private async Task GoDraft(string draftSourcePath, string title, bool isReadonly = false, bool throwOnException = false, bool? skipAskForRecover = null, bool? overrideLayoutOption = null)
+    internal Task OpenTemplateProjectAsync(string path, string title, Func<DraftPage, Task> configure) =>
+        GoDraft(path, title, throwOnException: true, configure: configure);
+
+    private async Task GoDraft(string draftSourcePath, string title, bool isReadonly = false, bool throwOnException = false, bool? skipAskForRecover = null, bool? overrideLayoutOption = null, Func<DraftPage, Task>? configure = null)
     {
         await Dispatcher.DispatchAsync(() => ImportButton.IsEnabled = false);
         try
         {
-            await LoadDraftAsync(draftSourcePath, title, isReadonly, throwOnException, skipAskForRecover, overrideLayoutOption);
+            await LoadDraftAsync(draftSourcePath, title, isReadonly, throwOnException, skipAskForRecover, overrideLayoutOption, configure);
         }
         finally
         {
@@ -1100,7 +1103,7 @@ public partial class HomePage : ContentPage
         }
     }
 
-    private async Task LoadDraftAsync(string draftSourcePath, string title, bool isReadonly, bool throwOnException, bool? skipAskForRecover, bool? overrideLayoutOption)
+    private async Task LoadDraftAsync(string draftSourcePath, string title, bool isReadonly, bool throwOnException, bool? skipAskForRecover, bool? overrideLayoutOption, Func<DraftPage, Task>? configure = null)
     {
         LogDiagnostic($"Loading draft {draftSourcePath}, {title}, \r\n{Environment.StackTrace}");
         Stopwatch initTimer = Stopwatch.StartNew();
@@ -1697,6 +1700,7 @@ public partial class HomePage : ContentPage
                         lastPage = page;
                         App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
                         await Navigation.PushAsync(page);
+                        if (configure is not null) await configure(page);
 #if WINDOWS
                         if (!string.IsNullOrWhiteSpace(_pendingIntegratedMcpAddress))
                         {

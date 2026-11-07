@@ -29,7 +29,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans
         {
             BackgroundColor = KbdBackgroundColor;
             TextColor = KbdTextColor;
-            FontFamily = "MarkdownCodeBlock";
+            FontFamily = "Font_CodeBlock";
         }
     }
 }

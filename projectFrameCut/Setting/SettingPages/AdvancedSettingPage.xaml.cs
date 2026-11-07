@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -195,6 +196,30 @@ public partial class AdvancedSettingPage : ContentPage
         {
             var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
             await FileSystemService.OpenFileAsync(jsonPath);
+        })
+        .AddButton(SettingLocalizedResources.Advanced_RebuildAssetThumbnails, async (s, e) =>
+        {
+            if (s is not Button button || !button.IsEnabled) return;
+            button.IsEnabled = false;
+            try
+            {
+                var progress = new Progress<(int Completed, int Total)>(p =>
+                    button.Text = $"{SettingLocalizedResources.Advanced_RebuildAssetThumbnails} ({p.Completed}/{p.Total})");
+                var result = await Task.Run(() => AssetDatabase.RegenerateThumbnails(progress));
+                AssetsLibraryPage.RefreshAssets();
+                await DisplayAlertAsync(Localized._Info,
+                    SettingLocalizedResources.Advanced_RebuildAssetThumbnails_Result(result.Success, result.Failed), Localized._OK);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Regenerate all asset thumbnails", this);
+                await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+            finally
+            {
+                button.Text = SettingLocalizedResources.Advanced_RebuildAssetThumbnails;
+                button.IsEnabled = true;
+            }
         })
         .AddSeparator()
         .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 20))

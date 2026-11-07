@@ -312,7 +312,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 TemplateId = kv.Key,
                 Name = string.IsNullOrWhiteSpace(template.TemplateName) ? kv.Key.ToString() : template.TemplateName,
-                TemplateType = template is ScriptBasedTemplateStructure ? "Script (unsupported)" : template.TemplateType.ToString(),
+                TemplateType = template.TemplateType.ToString(),
                 Scope = template.Scope.ToString(),
                 Template = template
             };
@@ -582,20 +582,72 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task AddTemplate(TemplateItemViewModel? templateViewModel)
     {
+        if (templateViewModel?.Template is null) return;
+        if (ScriptTemplateRunner.IsRunning(_draftPage)) return;
+        string? temp = null;
+        ScriptTemplateRunner? runner = null;
+        try
+        {
+            _draftPage.CancelPendingClipPlacement();
+            var template = templateViewModel.Template;
+            var package = Path.Combine(MauiProgram.DataPath, "My Templates", $"{template.TemplateID:N}.pjfcTemplate");
+            if (File.Exists(package))
+                (template, temp) = await TemplatePackageIO.ExtractStoredTemplateAsync(template.TemplateID, DraftPage.DraftJSONOption);
+            if (template is ScriptBasedTemplateStructure && (_draftPage.IsReadonly || _draftPage.IsRemoteProject || _draftPage.IsClosed))
+                throw new InvalidOperationException("Script templates require an open, writable local project.");
+            var values = await PromptTemplateValuesWithViewAsync(template, templateViewModel.Name);
+            if (values is null) return;
+            if (template is ScriptBasedTemplateStructure script)
+            {
+                runner = await ScriptTemplateRunner.PrepareWithUiAsync(_draftPage, script, values);
+                if (runner is null) return;
+                template = new JSONBasedTemplateStructure
+                {
+                    Project = script.Project, Draft = script.Draft, Variables = script.Variables,
+                    VariableDefinitions = script.VariableDefinitions, AssetHashTable = script.AssetHashTable,
+                    HaveAsset = script.HaveAsset
+                };
+            }
+            if (_draftPage.IsClosed) return;
+            if (template is JSONBasedTemplateStructure json)
+                await AddTemplateCoreAsync(templateViewModel, json, values, runner);
+        }
+        catch (OperationCanceledException) when (_draftPage.ScriptTemplateLifetime.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            Log(ex, "Prepare template", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            TemplatePackageIO.TryCleanupExtractDir(temp);
+            if (runner is not null && !ReferenceEquals(_draftPage.PendingScriptTemplate, runner)) await runner.DisposeAsync();
+        }
+    }
+
+    private async Task RunTemplateScriptAsync(ScriptTemplateRunner runner, Task? grouping)
+    {
+        _draftPage.PendingScriptTemplate = null;
+        await using (runner)
+        {
+            try
+            {
+                if (grouping is not null) await grouping;
+                await runner.RunWithUiAsync(_draftPage);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Apply template script after placement", this);
+                if (!_draftPage.IsClosed) await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+        }
+    }
+
+    private async Task AddTemplateCoreAsync(TemplateItemViewModel templateViewModel, JSONBasedTemplateStructure jsonTemplate,
+        Dictionary<string, string?> inputValues, ScriptTemplateRunner? runner)
+    {
         if (templateViewModel?.Template is null)
         {
-            return;
-        }
-
-        if (templateViewModel.Template is ScriptBasedTemplateStructure)
-        {
-            await _draftPage.DisplayAlertAsync(Localized._Error, "Script templates are no longer supported.", Localized._OK);
-            return;
-        }
-
-        if (templateViewModel.Template is not JSONBasedTemplateStructure jsonTemplate)
-        {
-            await _draftPage.DisplayAlertAsync(Localized._Info, "This template does not support timeline insertion.", Localized._OK);
             return;
         }
 
@@ -615,12 +667,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             var templateDefaults = jsonTemplate.Variables ?? new Dictionary<string, string?>();
             var templateDefinitions = jsonTemplate.VariableDefinitions ?? new Dictionary<string, TemplateVariableDefinition>();
 
-            var inputValues = await PromptTemplateValuesWithViewAsync(jsonTemplate, templateViewModel.Name);
-            if (inputValues is null)
-            {
-                return;
-            }
-
             ReplaceTemplatePlaceholders(draftNode, inputValues, templateDefaults, templateDefinitions);
             RemapAllTemplateIds(draftNode);
             if (!await EnsurePackagedTemplateAssetsInProjectAsync(draftNode, jsonTemplate)) return;
@@ -638,6 +684,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             if (clipDtos.Count == 0 && soundtrackDtos.Count == 0)
             {
+                if (runner is not null)
+                {
+                    await runner.RunWithUiAsync(_draftPage);
+                    return;
+                }
                 await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no clip/track data.", Localized._OK);
                 return;
             }
@@ -728,6 +779,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
 
             bool hasPlacedTemplate = false;
+            Task? grouping = null;
+            _draftPage.PendingScriptTemplate = runner;
             _draftPage.BeginClipPlacement((targetTrack, targetStartX) =>
             {
                 if (hasPlacedTemplate)
@@ -819,12 +872,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
                 if (!NotAddTemplateAsGroup && placedTemplateClips.Count > 1)
                 {
-                    _ = _draftPage.CombineClipsAsGroupAsync(placedTemplateClips);
+                    grouping = _draftPage.CombineClipsAsGroupAsync(placedTemplateClips);
                 }
 
                 _ = _draftPage.UpdateAdjacencyForTrack();
                 return firstClip ?? throw new InvalidOperationException("No clip could be placed from template.");
-            }, trackFilter, templateViewModel.Name);
+            }, trackFilter, templateViewModel.Name, runner is null ? null : () => _ = RunTemplateScriptAsync(runner, grouping));
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
@@ -841,7 +894,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         var inputView = new TemplateCreatePage();
         var originPopupClosable = _draftPage.IsPopupClosableByTapBackground;
-        EventHandler closeRequestedHandler = async (_, _) => await _draftPage.HidePopup(true);
+        Func<Task> closeRequestedHandler = async () => await _draftPage.HidePopup(true);
         inputView.CloseRequested += closeRequestedHandler;
 
         try

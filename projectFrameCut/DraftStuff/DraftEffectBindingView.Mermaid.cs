@@ -128,7 +128,7 @@ public partial class DraftEffectBindingView
             var location = new Button
             {
                 Text = $"Mermaid · {line + 1}: {lines[line].Trim()}", TextColor = Colors.OrangeRed,
-                FontFamily = "Cascadia Mono", FontSize = 12, HorizontalOptions = LayoutOptions.Start,
+                FontFamily = "Font_CodeBlock", FontSize = 12, HorizontalOptions = LayoutOptions.Start,
             };
             location.Clicked += (_, _) =>
             {

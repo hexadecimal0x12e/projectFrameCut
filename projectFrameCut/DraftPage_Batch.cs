@@ -122,6 +122,7 @@ public partial class DraftPage
         {
             foreach (var window in MainMultiWindowView.StandaloneWindows.Select(w => w.Window).Prepend(Window).OfType<Window>().Distinct().ToArray())
             {
+                if (ReferenceEquals(window, Window) && HasScriptTemplateOutput) continue;
                 var navigation = ReferenceEquals(window, Window) ? Navigation : window.Page!.Navigation;
                 var page = new GuiBatchPage(CancelGuiBatchFromUiAsync);
                 Microsoft.Maui.ITitleBar? titleBar = null;
@@ -387,13 +388,25 @@ public partial class DraftPage
                 ct.ThrowIfCancellationRequested();
                 try
                 {
+                    batch.BeginRequest(GuiProjectOperation.JoinClip);
+                    using var parameters = JsonDocument.Parse(request.ParametersJson);
+                    if (new GuiEditArgs(parameters.RootElement).Bool("AsClipGroup"))
+                    {
+                        var originalIds = batch.Draft.Clips.Select(c => c.Id).ToHashSet();
+                        var ids = batch.Clips.Values.Where(c => c.ShouldDisplayInUI && !originalIds.Contains(c.Id)).Select(c => c.Id).ToArray();
+                        if (ids.Length >= 2)
+                            ExecuteGuiBatchTimeline(GuiProjectOperation.JoinClip,
+                                new GuiEditArgs(JsonSerializer.SerializeToElement(new { ClipIds = ids })), batch);
+                    }
                     var draft = CloneGuiData(batch.Draft);
                     draft.Clips = batch.Clips.Values.ToArray();
                     batch.Applied = true;
                     await ApplyGuiBatchDataToUiAsync(draft, batch.Project, batch.Assets, batch.Tracks);
+                    batch.FinishRequest(false);
                 }
                 catch
                 {
+                    batch.FinishRequest(true);
                     await ApplyGuiBatchDataToUiAsync(batch.Draft, batch.OriginalProject, batch.OriginalAssets, batch.OriginalTracks);
                     batch.Applied = false;
                     throw;

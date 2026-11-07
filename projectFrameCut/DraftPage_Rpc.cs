@@ -34,6 +34,9 @@ public partial class DraftPage
     private IRenderClient? _guiClient;
     internal bool IsGuiRpcRequest => _guiRpcRequest.Value;
     internal bool IsClosed => AlreadyDisappeared;
+    internal ScriptTemplateRunner? PendingScriptTemplate { get; set; }
+    internal bool HasScriptTemplateOutput { get; set; }
+    internal CancellationTokenSource ScriptTemplateLifetime { get; } = new();
 
     #region external RPC
     private bool? externalRpcUiAllowed;
@@ -121,7 +124,9 @@ public partial class DraftPage
         finally { _guiRegistrationGate.Release(); }
     }
 
-    internal async Task<string> CreateCustomEffectEditorPipeAsync(string clientName)
+    internal Task<string> CreateCustomEffectEditorPipeAsync(string clientName) => CreateProjectClientPipeAsync(clientName);
+
+    internal async Task<string> CreateProjectClientPipeAsync(string clientName, bool isolated = false)
     {
         ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
         if (AlreadyDisappeared) throw new InvalidOperationException("Project is closed.");
@@ -132,6 +137,7 @@ public partial class DraftPage
         {
             SessionId = sessionId,
             ClientName = clientName,
+            Isolated = isolated,
             SuppressConnectionNotification = true,
         }, timeout.Token);
         if (AlreadyDisappeared) throw new InvalidOperationException("Project is closed.");
@@ -204,6 +210,7 @@ public partial class DraftPage
         finally
         {
             CustomEffectPortEditorService.Reset(this);
+            ScriptTemplateRunner.Cancel(this);
             await MainThread.InvokeOnMainThreadAsync(CloseGuiBatchAsync);
             if (_guiClient is not null && _guiSessionId != Guid.Empty)
             {

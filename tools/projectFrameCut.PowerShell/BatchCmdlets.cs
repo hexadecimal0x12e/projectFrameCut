@@ -15,6 +15,7 @@ public sealed class StartProjectBatchCommand : ProjectWriteCmdlet
 public sealed class CompleteProjectBatchCommand : ProjectWriteCmdlet
 {
     [Parameter(Mandatory = true)][ValidateLength(1, 512)] public override string? ChangeReason { get; set; }
+    [Parameter] public SwitchParameter AsClipGroup { get; set; }
     protected override GuiProjectOperation Operation => GuiProjectOperation.CompleteBatch;
     protected override bool ReturnResult => true;
 }

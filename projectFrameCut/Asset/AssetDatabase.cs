@@ -236,8 +236,7 @@ namespace projectFrameCut.Asset
             asset.Path = sourcePath;
             asset.SecondPerFrame = -1;
             asset.Duration = 0;
-            var thumbnailPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", asset.AssetId + ".png");
-            asset.ThumbnailPath = thumbnailPath;
+            asset.ThumbnailPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", asset.AssetId + ".png");
             bool fail = false;
             switch (asset.AssetType)
             {
@@ -266,10 +265,7 @@ namespace projectFrameCut.Asset
                     {
                         try
                         {
-                            var vid = PluginManager.CreateVideoSource(sourcePath);
-                            asset.Duration = vid.TotalFrames;
-                            asset.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U).SaveToPng(thumbnailPath);
+                            GenerateThumbnail(asset);
                         }
                         catch (Exception ex)
                         {
@@ -285,7 +281,7 @@ namespace projectFrameCut.Asset
                     {
                         try
                         {
-                            var aud = PluginManager.CreateAudioSource(sourcePath);
+                            using var aud = PluginManager.CreateAudioSource(sourcePath);
                             asset.Duration = aud.Duration;
                             asset.SecondPerFrame = (float)(1f);
                         }
@@ -298,32 +294,26 @@ namespace projectFrameCut.Asset
                         }
                         try
                         {
-                            PluginManager.CreateVideoSource(sourcePath).GetFrame(0U).SaveToPng(thumbnailPath);
+                            GenerateThumbnail(asset);
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            Log(ex, $"Read cover for asset '{sourcePath}'");
                             try
                             {
-                                asset.ThumbnailPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", ".unknown_music.png");
-
-                                if (!File.Exists(asset.ThumbnailPath))
-                                {
-#if !HEADLESS
-                                    var path = FileSystemService.GetAppPackageFileSync("Images","unknown_music.png");
-                                    File.Copy(path, asset.ThumbnailPath, true);
-#endif
-                                }
+                                asset.ThumbnailPath = GetDefaultAudioThumbnail();
                             }
-                            catch { }
-
-
+                            catch (Exception fallbackError)
+                            {
+                                Log(fallbackError, "Load default audio asset thumbnail");
+                            }
                         }
                         break;
                     }
                 case AssetType.Font:
                     {
 #if !HEADLESS
-                        TextServices.GenerateFontThumbnail(sourcePath).SaveToPng(thumbnailPath);
+                        GenerateThumbnail(asset);
 #endif
 
                         break;
@@ -348,6 +338,115 @@ namespace projectFrameCut.Asset
 #endif
         }
 
+        public static void GenerateThumbnail(AssetItem asset)
+        {
+            if (asset.AssetType == AssetType.Image)
+            {
+                if (!File.Exists(asset.Path)) throw new FileNotFoundException("Asset image was not found.", asset.Path);
+                asset.ThumbnailPath = asset.Path;
+                return;
+            }
+            if (asset.AssetType is not (AssetType.Video or AssetType.Audio or AssetType.Font))
+            {
+                asset.ThumbnailPath = null;
+                return;
+            }
+            if (!File.Exists(asset.Path)) throw new FileNotFoundException("Asset source was not found.", asset.Path);
+            ArgumentException.ThrowIfNullOrWhiteSpace(asset.AssetId);
+            var directory = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails");
+            Directory.CreateDirectory(directory);
+            // 更换文件名，避免图片控件继续使用旧的缩略图缓存。
+            var thumbnailPath = Path.Combine(directory, $"{asset.AssetId}.{Guid.NewGuid():N}.png");
+            var previousPath = asset.ThumbnailPath;
+            try
+            {
+                switch (asset.AssetType)
+                {
+                    case AssetType.Video:
+                        using (var video = PluginManager.CreateVideoSource(asset.Path))
+                        using (var frame = video.GetFrame(0U))
+                        {
+                            frame.SaveToPng(thumbnailPath);
+                            asset.Duration = video.TotalFrames;
+                            asset.SecondPerFrame = (float)(1 / video.Fps);
+                        }
+                        break;
+                    case AssetType.Audio:
+                        using (var cover = MediaCoverReader.Read(asset.Path))
+                        {
+                            if (cover is not null) cover.SaveToPng(thumbnailPath);
+                            else thumbnailPath = GetDefaultAudioThumbnail();
+                        }
+                        break;
+                    case AssetType.Font:
+#if HEADLESS
+                        throw new NotSupportedException("Font thumbnails require the application frontend.");
+#else
+                        using (var picture = TextServices.GenerateFontThumbnail(asset.Path))
+                            picture.SaveToPng(thumbnailPath);
+                        break;
+#endif
+                }
+                asset.ThumbnailPath = thumbnailPath;
+            }
+            catch
+            {
+                try
+                {
+                    if (IsAssetThumbnail(asset.AssetId, thumbnailPath) && File.Exists(thumbnailPath))
+                        File.Delete(thumbnailPath);
+                }
+                catch (Exception ex) { Log(ex, $"Remove incomplete thumbnail for asset '{asset.Name}'"); }
+                throw;
+            }
+            if (previousPath != asset.ThumbnailPath && IsAssetThumbnail(asset.AssetId, previousPath))
+            {
+                try { File.Delete(previousPath!); }
+                catch (Exception ex) { Log(ex, $"Remove old thumbnail for asset '{asset.Name}'"); }
+            }
+        }
+
+        public static (int Success, int Failed) RegenerateThumbnails(IProgress<(int Completed, int Total)>? progress = null)
+        {
+            var assets = Assets.Values.ToArray();
+            int success = 0, failed = 0;
+            foreach (var asset in assets)
+            {
+                try
+                {
+                    GenerateThumbnail(asset);
+                    success++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    Log(ex, $"Regenerate thumbnail for asset '{asset.Name}' ({asset.Path})");
+                }
+                progress?.Report((success + failed, assets.Length));
+            }
+            File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"),
+                JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
+            Log($"Regenerated asset thumbnails: {success} succeeded, {failed} failed.");
+            return (success, failed);
+        }
+
+        private static string GetDefaultAudioThumbnail()
+        {
+            var path = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", ".unknown_music.png");
+#if !HEADLESS
+            if (!File.Exists(path))
+                File.Copy(FileSystemService.GetAppPackageFileSync("Images", "unknown_music.png"), path, true);
+#endif
+            return path;
+        }
+
+        private static bool IsAssetThumbnail(string? assetId, string? path) =>
+            !string.IsNullOrWhiteSpace(assetId) && !string.IsNullOrWhiteSpace(path)
+            && string.Equals(Path.GetDirectoryName(path), Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails"),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+            && Path.GetFileName(path).StartsWith(assetId + ".", StringComparison.OrdinalIgnoreCase)
+            && Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase);
+
         public static bool Remove(string assetId)
         {
             if (string.IsNullOrEmpty(assetId)) return false;
@@ -360,9 +459,7 @@ namespace projectFrameCut.Asset
                     {
                         File.Delete(asset.Path);
                     }
-                    if (File.Exists(asset.ThumbnailPath) && string.Equals(asset.ThumbnailPath,
-                        Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", $"{asset.AssetId}.png"),
-                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                    if (File.Exists(asset.ThumbnailPath) && IsAssetThumbnail(asset.AssetId, asset.ThumbnailPath))
                     {
                         File.Delete(asset.ThumbnailPath);
                     }

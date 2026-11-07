@@ -5,7 +5,7 @@ description: Use the projectFrameCut.PowerShell binary module to discover, creat
 
 # projectFrameCut PowerShell
 
-Use this Skill when the requested work should be performed through `tools/projectFrameCut.PowerShell/`. It covers two intentionally separate modes:
+Use this Skill when the requested work should be performed through the `projectFrameCut.PowerShell` binary module. Windows installations bundle it at `<application install directory>/Public/PowerShell/projectFrameCut.PowerShell.psd1`; prefer the copy belonging to the target application. Shared assets are under `Public`: module files and their README in `Public/PowerShell`, and skills in `Public/Skills`. The source project is `tools/projectFrameCut.PowerShell/`. It covers two intentionally separate modes:
 
 - Offline mode manages `.pjfc` project directories without opening the GUI.
 - Connected GUI mode operates the project currently open in an authorized projectFrameCut window through RPC.
@@ -14,6 +14,7 @@ Do not treat the module as an in-process page API. It returns serialized snapsho
 
 ## Route the task
 
+- Before first use, follow [module discovery and import](references/offline-projects.md#find-and-import-the-module). An installed application already supplies the module; a source checkout or separate publish is not required.
 - For packaging, importing, offline project CRUD, templates, or starting an app, read [references/offline-projects.md](references/offline-projects.md).
 - For authorization, named-pipe connection, timeline/assets/text/effects/history operations, read [references/gui-projects.md](references/gui-projects.md).
 - For many related GUI edits saved as one history entry, read [references/batch-operations.md](references/batch-operations.md).

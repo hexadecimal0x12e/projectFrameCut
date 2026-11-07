@@ -2,13 +2,15 @@
 
 ## Module discovery
 
+First follow [module discovery and import](offline-projects.md#find-and-import-the-module). Windows installations bundle `Public/PowerShell/projectFrameCut.PowerShell.psd1` under the application install directory. An absent repository artifacts directory does not mean the installed module is missing.
+
 ```powershell
 Get-Command -Module projectFrameCut.PowerShell
 Get-Module projectFrameCut.PowerShell
-Test-Path .\artifacts\projectFrameCut.PowerShell\projectFrameCut.PowerShell.psd1
+(Get-Module projectFrameCut.PowerShell).Path
 ```
 
-Import the `.psd1` from the publish directory, not only the DLL. Distribute the whole publish directory so the Contracts, RPC protocol, protobuf, and platform dependencies remain beside the module.
+Import the `.psd1` from the installed `Public/PowerShell` directory or a complete publish directory, not only the DLL. Keep dependencies beside the manifest. If commands are missing, check that the imported module belongs to the target application/version before considering a separate publish.
 
 ## `pjfc` and request failures
 

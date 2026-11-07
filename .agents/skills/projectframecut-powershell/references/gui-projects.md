@@ -1,5 +1,7 @@
 # Connected GUI project operations
 
+Before connecting, [locate and import the module](offline-projects.md#find-and-import-the-module). On Windows, prefer `<target application install directory>/Public/PowerShell/projectFrameCut.PowerShell.psd1`.
+
 ## Connect
 
 The target project must already be open in the projectFrameCut GUI. The ordinary flow asks the user to approve an external RPC request:

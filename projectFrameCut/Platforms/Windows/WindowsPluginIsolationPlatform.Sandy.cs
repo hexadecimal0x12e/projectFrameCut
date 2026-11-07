@@ -171,10 +171,15 @@ internal sealed partial class WindowsPluginIsolationPlatform
         return (process.ExitCode, output.GetAwaiter().GetResult() + error.GetAwaiter().GetResult());
     }
 
-    private static Process StartSandyWorker(string familyName, string sessionRoot, string executable, List<string> args, bool showConsole)
+    private static Process StartSandyWorker(string familyName, string sessionRoot, string executable, List<string> args, bool showConsole, bool forwardOutput = true)
     {
         if (!File.Exists(executable)) throw new FileNotFoundException("The isolated worker executable was not found.", executable);
         var info = CliProcessLauncher.CreateStartInfo(SandyExecutable, !showConsole);
+        if (!showConsole && !forwardOutput)
+        {
+            info.StandardOutputEncoding = Encoding.UTF8;
+            info.StandardErrorEncoding = Encoding.UTF8;
+        }
         info.WorkingDirectory = sessionRoot;
         var temp = Directory.CreateDirectory(Path.Combine(sessionRoot, "temp")).FullName;
         info.Environment["TEMP"] = temp;
@@ -184,7 +189,7 @@ internal sealed partial class WindowsPluginIsolationPlatform
             info.ArgumentList.Add(arg);
         foreach (var arg in args) info.ArgumentList.Add(arg);
         var process = Process.Start(info) ?? throw new InvalidOperationException("Unable to start the Sandy worker launcher.");
-        if (!showConsole && MyLoggerExtensions.LoggingDiagnosticInfo)
+        if (!showConsole && forwardOutput && MyLoggerExtensions.LoggingDiagnosticInfo)
         {
             // Sandy's own log contains the launch command; only forward child output here.
             process.OutputDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Log(e.Data, "IsolatedWorker Stdout"); };

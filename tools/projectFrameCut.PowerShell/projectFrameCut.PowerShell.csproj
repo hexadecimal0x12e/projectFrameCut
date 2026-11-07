@@ -19,6 +19,11 @@
 		<Using Remove="projectFrameCut.Drawing.Base.PictureExtensions"/>
 		<Using Remove="projectFrameCut.Shared.Logger"/>
   </ItemGroup>
+  <Target Name="GetScriptTemplateModuleFiles" DependsOnTargets="Build" Returns="@(_ScriptTemplateModuleFiles)">
+    <ItemGroup>
+      <_ScriptTemplateModuleFiles Include="$(TargetDir)*.dll;$(TargetDir)projectFrameCut.PowerShell.psd1;$(TargetDir)README.md" />
+    </ItemGroup>
+  </Target>
   <Target Name="FilterModulePublish" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.PowerShell' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.Contracts' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.RPCProtocol' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net.Core' and '%(ResolvedFileToPublish.Filename)' != 'Microsoft.Windows.SDK.NET' and '%(ResolvedFileToPublish.Filename)' != 'WinRT.Runtime' and '%(ResolvedFileToPublish.Filename)' != 'README'" />

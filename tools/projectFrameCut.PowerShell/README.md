@@ -4,6 +4,14 @@ PowerShell 7.6.0+（Core）/ .NET 11 模块。既可以离线管理本地项目�
 
 ## 打包和导入
 
+Windows 应用附带的公共资产位于 `<应用程序目录>/Public`：模块及其依赖在 `Public/PowerShell`，Agent skills 在 `Public/Skills`。已定位应用安装目录 `$installDir` 后可以直接导入：
+
+```powershell
+Import-Module -Name (Join-Path $installDir 'Public/PowerShell/projectFrameCut.PowerShell.psd1')
+```
+
+需要单独发布模块时：
+
 ```powershell
 dotnet publish projectFrameCut.PowerShell.csproj -f net11.0-windows10.0.19041.0 -c Release -o ./artifacts/projectFrameCut.PowerShell
 Import-Module ./artifacts/projectFrameCut.PowerShell/projectFrameCut.PowerShell.psd1
@@ -100,6 +108,23 @@ Disconnect-ProjectFrameCut
 ```
 
 时间参数均为项目帧，字幕条目的 `StartMilliseconds/EndMilliseconds/OffsetMilliseconds` 使用源内容内的毫秒。尺寸和位置分别用 `WidthPixels/HeightPixels/XPixels/YPixels`。查询名称按不区分大小写的子串匹配。动态字段用 `-Fields @{ FieldId = Value }`，先用 `Get-ProjectEffectProviderField -TypeName ...` 或 `Get-ProjectTextStyleField -StyleId ...` 查询字段。
+
+### 脚本模板
+
+Windows 应用中的脚本模板使用 Sandy/AppContainer 启动本机安装的 PowerShell Core 7.6+，自动导入随应用分发的模块并连接目标项目。模板脚本无需自行连接或断开 RPC。
+
+在模板库中可以制作纯脚本模板；从项目导出模板时也可以附加脚本。模板包使用 `script.ps1`，执行前先应用模板基础数据。在已有项目中，脚本在基础片段放置完成后执行。
+
+通过 `$TemplateParameters['参数名']` 读取配置。数字、整数、布尔和 JSON 保留类型，文件参数解析为文件路径。例如，定义一个名为 `Video` 的文件参数：
+
+```powershell
+$track = Add-ProjectTrack -PassThru
+Add-ProjectClip -TrackId $track.TrackId -FilePath $TemplateParameters['Video'] -StartFrame 0 -DurationFrames 120
+```
+
+脚本可以自行使用 `Start-ProjectBatch`、`Complete-ProjectBatch` 和 `Stop-ProjectBatch`。出错或取消会保留已经完成的修改，未提交的 Batch 随连接断开丢弃。是否调用 `Save-Project` 由脚本决定。
+
+执行对话框实时显示 stdout/stderr，支持复制日志，完成、失败或取消后由用户手动关闭。界面保留最近 131072 个字符，截断时在开头显示省略号；控制台内容不会逐条写入应用日志。
 
 `Add-ProjectClip` 必须指定已有 `TrackId`，并在 `-FilePath` 与 `-AssetId` 中二选一，素材参数不接受空值或纯空白；默认起点 0。文件路径相对 PowerShell 当前文件系统位置解析；素材导入复制到项目 assets 目录，移除素材记录不会删除源文件。复制片段默认放到源片段末尾，使用独立的效果实例。
 
@@ -435,6 +460,8 @@ catch {
 ```
 
 `Complete-ProjectBatch` 等待统一保存和界面刷新，整批生成一条历史；空批量不产生历史。返回 `BatchId`、`OperationCount` 和 `CurrentSnapshotId`。普通编辑失败只撤销该条请求，之前成功的操作仍在批量中；需要保留它们时，可在错误处理分支调用 `Complete-ProjectBatch`。
+
+使用 `Complete-ProjectBatch -AsClipGroup -ChangeReason '创建片段组'` 可在提交时将本批量中新建且仍存在的可见 Clip 组合，原有 Clip 即使被修改也不会加入。组合规则与 `Join-ProjectClip` 相同；不足两个可组合片段时不创建组合。组合随本批量一起保存并计入同一条历史。
 
 `Stop-ProjectBatch` 丢弃未提交数据。断开连接、移除模块或关闭 Runspace 也会取消未提交批量。批量不允许嵌套，命令仍支持 `-WhatIf`；批量状态只属于发起它的连接，重新连接不能接管。
 

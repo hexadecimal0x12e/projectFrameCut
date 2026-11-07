@@ -189,7 +189,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition x:Name="MermaidRepairColumn" Width="0"/>
                         </Grid.ColumnDefinitions>
-                        <Editor x:Name="MermaidImportEditor" FontFamily="Cascadia Mono" FontSize="12"
+                        <Editor x:Name="MermaidImportEditor" FontFamily="Font_CodeBlock" FontSize="12"
                             TextColor="White" BackgroundColor="#1e1e1e" AutoSize="Disabled"
                             Placeholder="{l:Localized Key=Effect_MermaidPlaceholder}" TextChanged="OnMermaidTextChanged"/>
                         <Grid x:Name="MermaidRepairPanel" Grid.Column="1" IsVisible="False" RowDefinitions="Auto,*,Auto" RowSpacing="6">

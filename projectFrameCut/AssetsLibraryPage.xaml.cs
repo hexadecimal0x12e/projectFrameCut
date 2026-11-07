@@ -62,6 +62,15 @@ public partial class AssetsLibraryPage : ContentPage
         };
     }
 
+    internal static void RefreshAssets()
+    {
+        if (instance?.BindingContext is not AssetViewModel vm) return;
+        var selected = vm.SelectedAsset;
+        vm.SelectedAsset = null;
+        vm.LoadAssets();
+        vm.SelectedAsset = selected;
+    }
+
     private void OnCollectionViewSizeChanged(object sender, EventArgs e)
     {
         if (sender is CollectionView collectionView && collectionView.ItemsLayout is GridItemsLayout gridLayout)

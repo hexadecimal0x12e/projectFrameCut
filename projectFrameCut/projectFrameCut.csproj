@@ -147,6 +147,9 @@
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Resources\Styles\**" LogicalName="Styles\%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="..\License.txt" LogicalName="Licenses\License.txt" />
+		<MauiAsset Include="..\license.md" LogicalName="Licenses\projectFrameCut_license.md" />
+		<MauiAsset Include="..\.agents\skills\*projectframecut*\**\*" LogicalName="Public\Skills\%(RecursiveDir)%(Filename)%(Extension)" />
 
 		<!-- Plugin trusting Root CA -->
 		<EmbeddedResource Include="Resources\PluginTrust\builtin-root-ca.cer" LogicalName="projectFrameCut.PluginTrust.builtin-root-ca.cer" Condition="Exists('Resources\PluginTrust\builtin-root-ca.cer')" />
@@ -205,8 +208,8 @@
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\Sandy\win-$(SandyArchitecture)\sandy.exe" LogicalName="sandy.exe" />
-		<MauiAsset Include="Platforms\Windows\Sandy\LICENSE.txt" LogicalName="AboutApplication\Sandy\LICENSE.txt" />
-		<MauiAsset Include="Platforms\Windows\Sandy\toml11-LICENSE.txt" LogicalName="AboutApplication\Sandy\toml11.LICENSE.txt" />
+		<MauiAsset Include="Platforms\Windows\Sandy\LICENSE.txt" LogicalName="Licenses\Sandy\LICENSE.txt" />
+		<MauiAsset Include="Platforms\Windows\Sandy\toml11-LICENSE.txt" LogicalName="Licenses\Sandy\toml11.LICENSE.txt" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
@@ -234,6 +237,18 @@
 
 	<Target Name="ValidateSandyRuntime" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(DesignTimeBuild)' != 'true'">
 		<Error Condition="!Exists('Platforms\Windows\Sandy\win-$(SandyArchitecture)\sandy.exe')" Text="Missing Sandy $(SandyArchitecture) runtime. Run tools/Prepare-Sandy.ps1 before packaging." />
+	</Target>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<ProjectReference Include="..\tools\projectFrameCut.PowerShell\projectFrameCut.PowerShell.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" SetTargetFramework="TargetFramework=net10.0" />
+	</ItemGroup>
+	<Target Name="BundleScriptTemplateModule" BeforeTargets="AssignTargetPaths" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(DesignTimeBuild)' != 'true'">
+		<MSBuild Projects="..\tools\projectFrameCut.PowerShell\projectFrameCut.PowerShell.csproj" Targets="GetScriptTemplateModuleFiles" Properties="Configuration=$(Configuration);TargetFramework=net10.0" RemoveProperties="RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishSelfContained;TargetFrameworks">
+			<Output TaskParameter="TargetOutputs" ItemName="_BundledScriptModuleFiles" />
+		</MSBuild>
+		<ItemGroup>
+			<Content Include="@(_BundledScriptModuleFiles)" Link="Public\PowerShell\%(Filename)%(Extension)" TargetPath="Public\PowerShell\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		</ItemGroup>
 	</Target>
 
 

@@ -5,14 +5,14 @@ description: 使用 tools/projectFrameCut.PowerShell 操作 projectFrameCut 会�
 
 # 使用 projectFrameCut 创作视频
 
-通过 `tools/projectFrameCut.PowerShell` 完成实际的素材导入、时间线编辑、文字字幕、转场、效果和动画。用户要求制作视频时，完成编辑、预览和保存；需要成片时使用 GUI 渲染流程，支持参数预填、手动启动或指定输出文件后的自动渲染与退出。
+通过 `projectFrameCut.PowerShell` 模块完成实际的素材导入、时间线编辑、文字字幕、转场、效果和动画。Windows 优先加载目标应用安装目录下的 `Public/PowerShell/projectFrameCut.PowerShell.psd1`，无需先取得源码或单独发布模块；查找方式见[会话与交付](references/session-and-delivery.md#导入模块)。随应用分发的 skills 位于 `Public/Skills`。用户要求制作视频时，完成编辑、预览和保存；需要成片时使用 GUI 渲染流程，支持参数预填、手动启动或指定输出文件后的自动渲染与退出。
 
 ## 按任务读取
 
 - 开始操作、创建项目、连接会话、保存或导出：阅读 [会话与交付](references/session-and-delivery.md)。
 - 剪口播、字幕重排、多素材合成、产品宣传：阅读 [剪辑配方](references/editing-recipes.md) 中对应部分。
 - 矢量图形、Logo 动画、动态图文、关键帧：阅读 [动画创作](references/animation.md)。
-- 需要其他命令或排查连接问题时，查阅 [模块说明](../../../tools/projectFrameCut.PowerShell/README.md) 和 [PowerShell 接口 skill](../projectframecut-powershell/SKILL.md)，再以当前命令元数据和源码核实参数。
+- 需要其他命令或排查连接问题时，查阅安装目录中的 `Public/PowerShell/README.md`（源码环境见[模块说明](../../../tools/projectFrameCut.PowerShell/README.md)）和 [PowerShell 接口 skill](../projectframecut-powershell/SKILL.md)，再以当前命令元数据和源码核实参数。
 
 ## 从要求到时间线
 

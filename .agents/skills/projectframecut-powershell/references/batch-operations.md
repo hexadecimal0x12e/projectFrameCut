@@ -36,6 +36,8 @@ Each edit is sent immediately and changes independent in-memory data. Owner quer
 
 `Complete-ProjectBatch` waits for one save/history entry and the unified UI/subsystem refresh. Empty batches add no history. Completion already saves: preview or render after it succeeds, and do not immediately call `Save-Project` solely to persist the same edits. Further corrections can form another batch. Lifecycle commands return status without `-PassThru`; use `$null =` when their output should not enter another command's pipeline.
 
+Add `-AsClipGroup` to group the surviving visible clips created during this batch before saving. Existing clips are excluded even if edited. Grouping follows `Join-ProjectClip` rules and shares the batch's history entry; fewer than two eligible clips create no group. Retain the option when retrying completion.
+
 ## Restricted operations
 
 Before completing or cancelling, do not call:

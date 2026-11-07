@@ -187,22 +187,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
-            // Guard against unreasonable render dimensions
-            if (targetWidth > 0 && targetHeight > 0)
-            {
-                const int maxRatio = 10;
-                if (targetWidth / targetHeight > maxRatio)
-                {
-                    Log($"TextClip {Name}: targetWidth {targetWidth} is {targetWidth / (float)targetHeight:F1}x targetHeight {targetHeight}. Clamping width to {targetHeight * maxRatio}.", "warn");
-                    targetWidth = targetHeight * maxRatio;
-                }
-                else if (targetHeight / targetWidth > maxRatio)
-                {
-                    Log($"TextClip {Name}: targetHeight {targetHeight} is {targetHeight / (float)targetWidth:F1}x targetWidth {targetWidth}. Clamping height to {targetWidth * maxRatio}.", "warn");
-                    targetHeight = targetWidth * maxRatio;
-                }
-            }
-
             using var context = ValueProviderFrameContext.PushFrame(ClipValueFrameContext.Current?.FrameIndex ?? (ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) is float current ? (uint)current : StartFrame + frameIndex),
                 Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
             var rawEntries = ResolveTextEntriesForRender(frameIndex);

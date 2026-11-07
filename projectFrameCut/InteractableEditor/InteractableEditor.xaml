@@ -87,7 +87,7 @@
                 <Label x:Name="DebugInfoLabel"
                     TextColor="White"
                     FontSize="11"
-                    FontFamily="MarkdownCodeBlock"
+                    FontFamily="Font_CodeBlock"
                     LineBreakMode="WordWrap"
                     MaxLines="20" />
             </Border>

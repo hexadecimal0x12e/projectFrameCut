@@ -361,7 +361,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 if (run.Style.HasFlag(projectFrameCut.Shared.Text.MarkdownTextStyle.Underline)) flags |= FormatFlags.Underline;
                 if (run.Style.HasFlag(projectFrameCut.Shared.Text.MarkdownTextStyle.Strikethrough)) flags |= FormatFlags.Strikethrough;
                 var span = BuildFormattedSpan(run.Text, flags, context);
-                if (run.Style.HasFlag(projectFrameCut.Shared.Text.MarkdownTextStyle.Code)) span.FontFamily = "MarkdownCodeBlock";
+                if (run.Style.HasFlag(projectFrameCut.Shared.Text.MarkdownTextStyle.Code)) span.FontFamily = "Font_CodeBlock";
                 return span;
             }).ToList();
             return BuildInlineSpansContainer(spans, context?.BodyFontSize ?? BodyFontSize, GetTextColor(context));
@@ -385,7 +385,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 return new Label
                 {
                     Text = input,
-                    FontFamily = "MarkdownCodeBlock",
+                    FontFamily = "Font_CodeBlock",
                     StyleId = "SelectableLabel",
                 };
 
@@ -604,7 +604,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 var label = new Label
                 {
                     Text = code,
-                    FontFamily = "MarkdownCodeBlock",
+                    FontFamily = "Font_CodeBlock",
                     FontSize = 13,
                     TextColor = context?.CodeBlockTextColor ?? CodeBlockTextColor,
                     Opacity = 0.7,
@@ -636,7 +636,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     return [new Label
                     {
                         Text = chunk,
-                        FontFamily = "MarkdownCodeBlock",
+                        FontFamily = "Font_CodeBlock",
                         StyleId = "SelectableLabel",
                     }];
 
@@ -669,7 +669,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     return [new Label
                     {
                         Text = _buffer,
-                        FontFamily = "MarkdownCodeBlock",
+                        FontFamily = "Font_CodeBlock",
                         StyleId = "SelectableLabel",
                     }];
 
@@ -2473,7 +2473,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                     Text = language,
                     FontSize = 11,
                     TextColor = codeText.WithAlpha(0.6f),
-                    FontFamily = "MarkdownCodeBlock",
+                    FontFamily = "Font_CodeBlock",
                     Margin = new Thickness(0, 0, 0, 4),
                     StyleId = "SelectableLabel",
                 });
@@ -2483,7 +2483,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             children.Children.Add(new Label
             {
                 Text = code,
-                FontFamily = "MarkdownCodeBlock",
+                FontFamily = "Font_CodeBlock",
                 FontSize = 13,
                 TextColor = codeText,
                 StyleId = "SelectableLabel",

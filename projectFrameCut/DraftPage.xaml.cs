@@ -3024,6 +3024,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public void CancelPendingClipPlacement(string? statusText = null, bool restoreKeyboardPreview = true)
     {
+        _pendingClipPlacementAfterPlacement = null;
+        if (PendingScriptTemplate is { } runner)
+        {
+            PendingScriptTemplate = null;
+            _ = runner.DisposeAsync();
+        }
         if (IsClipMoving)
         {
             if (restoreKeyboardPreview)
@@ -3105,7 +3111,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                     $"Placed at track {trackId}, x={Math.Round(startX, 2)}")
             });
 
-            _pendingClipPlacementAfterPlacement?.Invoke();
+            var afterPlacement = _pendingClipPlacementAfterPlacement;
+            _pendingClipPlacementAfterPlacement = null;
+            afterPlacement?.Invoke();
 
             SetStateOK();
             SetStatusText(Localized.DraftPage_AddClipView_ClickToPlace_Done(clip.DisplayName));
@@ -5314,10 +5322,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 if (createProxy)
                 {
-                    var proxiedPath = Path.Combine(ProjectCachePaths.GetRoot(WorkingPath), "proxy", $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
+                    var proxiedPath = Path.Combine(ProjectCachePaths.GetRoot(WorkingPath), "proxy", $"{Path.GetFileNameWithoutExtension(item.Path)}.proxy.mp4");
                     // Encode to a temporary file and publish atomically: the render backend uses a proxy
                     // as soon as it exists, so a partially written file would fail with "moov atom not found".
-                    var temporaryProxy = proxiedPath + ".tmp";
+                    var temporaryProxy = proxiedPath + ".tmp.mp4";
                     Directory.CreateDirectory(Path.GetDirectoryName(proxiedPath)!);
                     try
                     {
@@ -5385,6 +5393,59 @@ public partial class DraftPage : ContentPage, IDraftPage
             await ShowAPopup(settings.Content, mode: "dialog", disableScrollWrapping: true);
         }
         catch (Exception ex) { Log(ex, "Show missing project asset files", this); }
+    }
+
+    internal async Task UpdateAssetProxyAsync(AssetItem asset, bool remove)
+    {
+        if (IsReadonly) throw new InvalidOperationException(Localized.DraftPage_CannotSave_Readonly);
+        if (IsRemoteProject || asset.GetClipMode() != ClipMode.VideoClip) return;
+        if (RunningTasks.TryGetValue(asset.AssetId ?? "", out var pending) && !pending.InnerTask.IsCompleted) await pending.InnerTask;
+        string source = ProjectAssetFile.ResolvePath(asset.Path ?? "", WorkingPath);
+        string proxy = Path.Combine(ProjectCachePaths.GetRoot(WorkingPath), "proxy", $"{Path.GetFileNameWithoutExtension(source)}.proxy.mp4");
+        string temporary = proxy + $".{Guid.NewGuid():N}.tmp.mp4";
+        SetStateBusy(Localized.DraftPage_ApplyingChanges);
+        try
+        {
+            if (!remove)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(proxy)!);
+                await Task.Run(() => VideoResizer.ReencodeToResolution(source, temporary, 1280, 720, "libx264"));
+            }
+            await _guiEditGate.WaitAsync();
+            try
+            {
+                CancelGeneratedSoundTrackSync();
+                if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview(refreshPreview: false);
+                CancelDynamicPreview();
+                DynamicPreviewProvider.CancelClipWarmups();
+                await previewer.StopDynamicPreviewAsync(clearCache: true);
+                // Release decoders before replacing or deleting a proxy they may have open.
+                await RenderRpcBootstrap.Client.CloseProjectAsync(previewer.RenderSessionId);
+                try
+                {
+                    File.Delete(proxy + ".ready");
+                    if (remove) File.Delete(proxy);
+                    else
+                    {
+                        File.Move(temporary, proxy, true);
+                        await File.WriteAllTextAsync(proxy + ".ready", "");
+                    }
+                }
+                finally
+                {
+                    await previewer.UpdateDraft(DraftImportAndExportHelper.ExportFromDraftPage(this, rebuildEffects: false));
+                    DynamicPreviewProvider.SetClips(previewer.Clips);
+                    await RefreshPreviewFromCurrentProviderAsync(CancellationToken.None, throwOnFailure: true);
+                }
+            }
+            finally { _guiEditGate.Release(); }
+            Log($"{(remove ? "Removed" : "Created")} proxy for project asset '{asset.Name}': '{proxy}'.");
+            SetStateOK();
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 
     internal async Task RelinkAssetFileAsync(ProjectAssetFile file, AssetItem replacement)
@@ -8933,6 +8994,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             //the window maybe closed; just ignore any exception here
         }
         AlreadyDisappeared = true;
+        ScriptTemplateRunner.Cancel(this);
+        if (PendingScriptTemplate is { } pendingScript) await pendingScript.DisposeAsync();
         StopAdaptiveFormMonitoring();
         await CloseGuiBatchAsync();
         StopRenderBackendWatchdog();

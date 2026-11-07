@@ -628,7 +628,7 @@ namespace projectFrameCut
 
                     Microsoft.Maui.Handlers.LabelHandler.Mapper.AppendToMapping("EnableTextSelection", (handler, view) =>
                     {
-                        if (view is Label l && (l.FontFamily == "MarkdownCodeBlock" || l.StyleId == "SelectableLabel"))
+                        if (view is Label l && (l.FontFamily == "Font_CodeBlock" || l.StyleId == "SelectableLabel"))
                         {
 #if WINDOWS
                             if (handler.PlatformView is Microsoft.UI.Xaml.Controls.TextBlock tb)
@@ -658,7 +658,7 @@ namespace projectFrameCut
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
-                        fonts.AddFont("SourceCodePro-Regular.ttf", "MarkdownCodeBlock");
+                        fonts.AddFont("SourceCodePro-Regular.ttf", "Font_CodeBlock");
                     });
                 }
 

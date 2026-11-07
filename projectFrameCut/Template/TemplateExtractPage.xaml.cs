@@ -762,13 +762,13 @@ public partial class TemplateExtractPage : ContentPage
     {
         if (_currentStep == 1)
         {
-            if (_clips.Count > 0 && _clips.All(c => !c.IsSelected))
+            if (!ScriptTemplateSwitch.IsToggled && _clips.Count > 0 && _clips.All(c => !c.IsSelected))
             {
                 await DisplayAlertAsync(Localized._Info, Localized.DraftPage_SelectOneOrManyToContinue, Localized._OK);
                 return;
             }
 
-            if (_allFields.All(f => !f.IsSelected))
+            if (!ScriptTemplateSwitch.IsToggled && _allFields.All(f => !f.IsSelected))
             {
                 await DisplayAlertAsync(Localized._Info, Localized.TemplateExtractPage_SelectBlankToContinue, Localized._OK);
                 return;
@@ -848,14 +848,14 @@ public partial class TemplateExtractPage : ContentPage
         }
 
         var selectedClipCount = _clips.Count(c => c.IsSelected);
-        if (_clips.Count > 0 && selectedClipCount <= 0)
+        if (!ScriptTemplateSwitch.IsToggled && _clips.Count > 0 && selectedClipCount <= 0)
         {
             await DisplayAlertAsync(Localized._Info, Localized.DraftPage_SelectOneOrManyToContinue, Localized._OK);
             return;
         }
 
         var selected = _allFields.Where(f => f.IsSelected).ToList();
-        if (selected.Count == 0)
+        if (selected.Count == 0 && !ScriptTemplateSwitch.IsToggled)
         {
             await DisplayAlertAsync(Localized._Info, Localized.TemplateExtractPage_SelectBlankToContinue, Localized._OK);
             return;
@@ -935,7 +935,14 @@ public partial class TemplateExtractPage : ContentPage
                 return;
             }
 
-            ITemplateStructure template = new JSONBasedTemplateStructure
+            if (ScriptTemplateSwitch.IsToggled && string.IsNullOrWhiteSpace(TemplateScriptEditor.Script))
+                throw new InvalidDataException(Localized.ScriptTemplateCreatePage_NoScript);
+            ITemplateStructure template = ScriptTemplateSwitch.IsToggled ? new ScriptBasedTemplateStructure
+            {
+                TemplateName = projectName, TemplateVersion = 2, Scope = GetSelectedScope(),
+                Project = project, Draft = draft, Variables = vars, VariableDefinitions = variableDefinitions,
+                CreatedInAPIVersion = IPluginBase.CurrentPluginAPIVersion
+            } : new JSONBasedTemplateStructure
             {
                 TemplateName = projectName, TemplateVersion = 2, Scope = GetSelectedScope(),
                 Project = project, Draft = draft, Variables = vars, VariableDefinitions = variableDefinitions,
@@ -995,7 +1002,8 @@ public partial class TemplateExtractPage : ContentPage
                     selectedAssets,
                     mtd,
                     _projectVm._projectPath,
-                    DraftPage.DraftJSONOption);
+                    DraftPage.DraftJSONOption,
+                    ScriptTemplateSwitch.IsToggled ? TemplateScriptEditor.Script : null);
 
                 await using var packageZipStream = File.OpenRead(packageZipPath);
                 var savePath = await FileSystemService.SaveAFile($"{safeName}_{template.TemplateID}.pjfcTemplate", packageZipStream);
@@ -1113,6 +1121,8 @@ public partial class TemplateExtractPage : ContentPage
         TagInputEntry.IsEnabled = !isBusy;
         AddTagButton.IsEnabled = !isBusy;
         ReadmeEditor.IsEnabled = !isBusy;
+        ScriptTemplateSwitch.IsEnabled = !isBusy;
+        TemplateScriptEditor.IsEnabled = !isBusy;
     }
 
     private void OnAddManualVariableClicked(object? sender, EventArgs e)

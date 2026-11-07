@@ -182,6 +182,8 @@ namespace projectFrameCut
                     return RunPluginWorker(args.Skip(1).ToArray(), externalSource: true);
                 case "plugin_network_policy":
                     return RunPluginNetworkPolicy(args.Skip(1).ToArray());
+                case "repair_public_resource_access":
+                    return RunPublicResourceAccessRepair();
                 case "user_data_root":
                     {
                         using Stream output = Console.OpenStandardError();
@@ -243,6 +245,12 @@ namespace projectFrameCut
             if (command.Equals("plugin_network_policy", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("Usage: pjfc plugin_network_policy --target=loopback --enabled=true|false --packageFamilyName=<PFN>\nConfigures the isolated-plugin loopback exemption. Windows administrator privileges are required.");
+                return SuccessExitCode;
+            }
+
+            if (command.Equals("repair_public_resource_access", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Usage: pjfc repair_public_resource_access\nRepairs read and execute permissions for the current MSIX package's Public directory. Windows administrator privileges are required.");
                 return SuccessExitCode;
             }
 
@@ -2050,6 +2058,26 @@ namespace projectFrameCut
                 Environment.Exit(InvalidCommandExitCode);
             }
             return value;
+        }
+
+        private static int RunPublicResourceAccessRepair()
+        {
+#if WINDOWS
+            try
+            {
+                Platforms.Windows.WindowsPublicResourcePermissions.Repair();
+                return SuccessExitCode;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "repair public resource access permissions", typeof(CLIProgram));
+                Console.Error.WriteLine($"ERROR: {ex.Message}");
+                return 1;
+            }
+#else
+            Console.Error.WriteLine("ERROR: repair_public_resource_access is only available on Windows.");
+            return InvalidCommandExitCode;
+#endif
         }
 
         private static int RunPluginNetworkPolicy(string[] args)

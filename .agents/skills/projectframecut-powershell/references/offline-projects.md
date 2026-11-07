@@ -1,8 +1,37 @@
 # Offline project management
 
-## Package and import
+## Find and import the module
 
-The module targets PowerShell 7.6+ Core and .NET 10. Publish the whole output directory; its Contracts, RPC protocol, protobuf, and Windows SDK dependencies are required.
+Use PowerShell 7.6+ Core. Windows application packages include the complete module at `<application install directory>/Public/PowerShell/projectFrameCut.PowerShell.psd1`. Prefer that module for the target application; do not publish from source merely because a repository artifacts directory is absent. The module README is beside the manifest; bundled skills are under `<application install directory>/Public/Skills`.
+
+If the install directory is already known, set `$modulePath` to that manifest. Otherwise, look beside the running application first, then query installed MSIX/AppX packages:
+
+```powershell
+$modulePaths = @(Get-Process -Name projectFrameCut -ErrorAction SilentlyContinue |
+  ForEach-Object {
+    if ($_.Path) { Join-Path (Split-Path $_.Path -Parent) 'Public/PowerShell/projectFrameCut.PowerShell.psd1' }
+  } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -Unique)
+if ($modulePaths.Count -eq 0) {
+  $modulePaths = @(Get-AppxPackage -Name '*projectFrameCut*' |
+    Where-Object InstallLocation |
+    ForEach-Object { Join-Path $_.InstallLocation 'Public/PowerShell/projectFrameCut.PowerShell.psd1' } |
+    Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -Unique)
+}
+$modulePaths
+```
+
+If there is one candidate, use `$modulePath = $modulePaths[0]`. If there are several, match the target application's process path or package identity before importing; do not arbitrarily choose a different installed version. Windows execution aliases such as `pjfc.exe` may live outside the application directory; use the actual process path or package `InstallLocation`.
+
+```powershell
+Import-Module -Name $modulePath
+Get-Command -Module projectFrameCut.PowerShell
+```
+
+Import the `.psd1` in place with its DLL and dependencies beside it; the source manifest alone is insufficient. Loading the module does not establish or authorize an RPC connection. The module does not install itself or modify the PowerShell profile.
+
+## Publish from source when needed
+
+For module development, an older application without the bundled module, or Linux/macOS, an existing complete publish directory is also usable. If a publish is needed, inspect the actual project target frameworks first. The current module targets .NET 10; on Windows:
 
 ```powershell
 dotnet publish tools/projectFrameCut.PowerShell/projectFrameCut.PowerShell.csproj `
@@ -12,7 +41,7 @@ Import-Module ./artifacts/projectFrameCut.PowerShell/projectFrameCut.PowerShell.
 Get-Command -Module projectFrameCut.PowerShell
 ```
 
-On Linux or macOS publish `net10.0`. The module does not install itself or modify the PowerShell profile.
+On Linux or macOS publish `net10.0`. Keep the whole publish directory, including Contracts, RPC protocol, protobuf, and any platform dependencies.
 
 ## Project root and CRUD
 

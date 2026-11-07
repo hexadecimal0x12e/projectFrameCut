@@ -62,6 +62,9 @@ namespace projectFrameCut.Setting.SettingPages
 #endif
                 .AddSeparator()
 #if WINDOWS
+                .AppendWhen(WinUI.App.IsPackaged(), ppb => ppb
+                    .AddButton(SettingLocalizedResources.Security_RepairPublicResourceAccess, RepairPublicResourceAccess)
+                    .AddSeparator())
                 .AddText(new SingleLineLabel(SettingLocalizedResources.Security_IsolatedPlugins, 25))
                 .AddCheckbox(PluginInternetSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowInternet, IsBoolSettingTrueOrDefault(PluginInternetSetting, true))
                 .AddCheckbox(PluginServerSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowServer, IsBoolSettingTrueOrDefault(PluginInternetSetting, true) && IsBoolSettingTrueOrDefault(PluginServerSetting, true))
@@ -204,6 +207,39 @@ namespace projectFrameCut.Setting.SettingPages
         }
 
 #if WINDOWS
+        private async void RepairPublicResourceAccess(object? sender, EventArgs e)
+        {
+            if (sender is not Button button || !button.IsEnabled) return;
+            button.IsEnabled = false;
+            try
+            {
+                var executable = CliProcessLauncher.GetExecutableCandidates().FirstOrDefault(File.Exists)
+                    ?? throw new FileNotFoundException("The projectFrameCut CLI entry point was not found.");
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = executable,
+                    Verb = "runas",
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    WorkingDirectory = AppContext.BaseDirectory,
+                    ArgumentList = { "repair_public_resource_access", "--forceRouteToCLI" },
+                }) ?? throw new InvalidOperationException("Failed to start the elevated projectFrameCut CLI.");
+                await process.WaitForExitAsync();
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException($"Public resource access repair failed with exit code {process.ExitCode}.");
+                await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "repair public resource access permissions", this);
+                await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+            finally
+            {
+                button.IsEnabled = true;
+            }
+        }
+
         private View BuildExternalRpcPipePermissions()
         {
             var accounts = new VerticalStackLayout();

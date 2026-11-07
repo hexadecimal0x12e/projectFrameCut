@@ -490,7 +490,7 @@
                     BackgroundColor="Green"
                     WidthRequest="50"
                     HeightRequest="50"/>
-        </tv:TabbedViewItem> -->
+        </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddSketch}" Tag="Sketch" x:Name="AddSketchTab" x:FieldModifier="public">
             <Grid RowDefinitions="Auto,*">
                 <Border Grid.Row="0"
@@ -526,15 +526,14 @@
                     IsMultiLineModeEnabled="true"
                     ShouldClearOnFinish="false" />
             </Grid>
-        </tv:TabbedViewItem>
+        </tv:TabbedViewItem> -->
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddMore}" Tag="More" x:Name="AddMoreTab" x:FieldModifier="public">
             <ScrollView Orientation="Horizontal">
                 <VerticalStackLayout Spacing="10" Padding="10">
-                    <Button Text="{l:Localized Key=DraftPage_AddClipView_AddSolidColorClip}" Command="{Binding AddSolidColorClipCommand}"/>
                     <Button Text="{l:Localized Key=DraftPage_AddClipView_EmptyVideoSource}" Command="{Binding AddEmptyVideoClipCommand}"/>
-                    <Button Text="{l:Localized Key=DraftPage_AddClipView_PassthroughMaskSource}" Command="{Binding AddPassthroughMaskClipCommand}"/>
-                    <Button Text="{l:Localized Key=DraftPage_AddClipView_AddFromAlternativeSrc}" Command="{Binding AddAlternativeSourceClipCommand}"/>
+                    <Button Text="{l:Localized Key=DraftPage_AddClipView_AddSolidColorClip}" Command="{Binding AddSolidColorClipCommand}"/>
                     <Button Text="{l:Localized Key=ProjectReference_Import}" Command="{Binding ImportProjectReferenceCommand}"/>
+                    <Button Text="{l:Localized Key=DraftPage_AddClipView_AddFromAlternativeSrc}" Command="{Binding AddAlternativeSourceClipCommand}"/>
                 </VerticalStackLayout>
             </ScrollView>
         </tv:TabbedViewItem>

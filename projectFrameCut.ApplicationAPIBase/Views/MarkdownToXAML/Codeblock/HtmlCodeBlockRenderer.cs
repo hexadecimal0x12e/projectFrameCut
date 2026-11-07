@@ -238,7 +238,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock
                 Text = Language,
                 FontSize = 11,
                 TextColor = Markdown2XAML.CodeBlockTextColor.WithAlpha(0.6f),
-                FontFamily = "MarkdownCodeBlock",
+                FontFamily = "Font_CodeBlock",
                 VerticalOptions = LayoutOptions.Center,
             };
             Grid.SetColumn(langLabel, 0);
@@ -342,7 +342,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock
                 Content = new Label
                 {
                     Text = code,
-                    FontFamily = "MarkdownCodeBlock",
+                    FontFamily = "Font_CodeBlock",
                     FontSize = 13,
                     TextColor = Markdown2XAML.CodeBlockTextColor,
                 },
