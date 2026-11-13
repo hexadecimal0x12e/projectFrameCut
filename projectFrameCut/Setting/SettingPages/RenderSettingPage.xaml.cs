@@ -301,7 +301,7 @@ public partial class RenderSettingPage : ContentPage
                     await DraftPage.RefreshCalculationSettingsAsync();
                     return;
                 case DynamicEffectCalculation.StepsSetting:
-                    if (!int.TryParse(args.Value?.ToString(), out int steps) || steps <= 0)
+                    if (!int.TryParse(args.Value?.ToString(), out int steps) || steps < 0)
                     {
                         BuildPPB();
                         return;

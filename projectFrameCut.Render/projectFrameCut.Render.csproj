@@ -19,6 +19,7 @@
 		<Title>projectFrameCut's CRL</Title>
 		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
+		<Features>runtime-async=on</Features>
 	</PropertyGroup>
 
 	<ItemGroup>

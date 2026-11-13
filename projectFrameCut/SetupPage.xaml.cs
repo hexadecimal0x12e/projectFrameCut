@@ -13,6 +13,7 @@ public partial class SetupPage : ContentPage
         SettingsManager.WriteSetting("ui_ShowWelcomePage", "false");
         InitializeComponent();
         AppLogoIcon.Source = ImageHelper.LoadFromAsset("projectframecut");
+        CreateShortcutLayout.IsVisible = false;
     }
 
     private async void Button_Clicked(object sender, EventArgs e)

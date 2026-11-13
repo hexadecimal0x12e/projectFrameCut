@@ -33,7 +33,7 @@
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-		<ApplicationVersion>10</ApplicationVersion>
+		<ApplicationVersion>11</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">13.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
@@ -47,6 +47,7 @@
 		<WindowsPackageType>MSIX</WindowsPackageType>
 		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+		<Features>runtime-async=on</Features>
 
 		<AssemblyVersion>1.8.0.0</AssemblyVersion>
 		<FileVersion>1.8.0.0</FileVersion>
@@ -73,7 +74,7 @@
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
 		<AndroidPackageFormat>apk</AndroidPackageFormat>
-		<RunAOTCompilation>False</RunAOTCompilation>
+		<PublishReadyToRun>False</PublishReadyToRun>
 		<PublishTrimmed>False</PublishTrimmed>
 		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
 		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
@@ -89,6 +90,7 @@
 		<SandyArchitecture>x64</SandyArchitecture>
 		<SandyArchitecture Condition="'$(RuntimeIdentifier)' == 'win-arm64' or '$(Platform)' == 'ARM64'">arm64</SandyArchitecture>
 		<SelectedPackageManifest>Platforms\Windows\Package.$(PackageFlavor).appxmanifest</SelectedPackageManifest>
+		<IntermediateOutputPath Condition="'$(PackageFlavor)' != ''">$(BaseIntermediateOutputPath)$(PackageFlavor)\$(Platform)\$(Configuration)\</IntermediateOutputPath>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
@@ -169,8 +171,8 @@
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="$(ExtensionsVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.1" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="17.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="12.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
 	</ItemGroup>
@@ -226,6 +228,7 @@
 	<PropertyGroup Condition="'$(PackageFlavor)' == 'MSStore' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
 		<PublishReadyToRun>true</PublishReadyToRun>
 		<PublishSelfContained>true</PublishSelfContained>
+		<ApplicationId>0xeeeeeeeeeeee.projectframecut</ApplicationId>
 	</PropertyGroup>
 
 	<Target Name="SelectWindowsPackageManifest" BeforeTargets="MauiGeneratePackageAppxManifest" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
@@ -233,6 +236,8 @@
 			<AppxManifest Remove="@(AppxManifest)" />
 			<AppxManifest Include="$(SelectedPackageManifest)" />
 		</ItemGroup>
+
+		<Message Text="Selected Windows Package Manifest: $(SelectedPackageManifest)" Importance="High" />
 	</Target>
 
 	<Target Name="ValidateSandyRuntime" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(DesignTimeBuild)' != 'true'">
@@ -306,11 +311,12 @@
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
 		<Compile Remove="**\*.xaml.cs;MauiProgram.cs;DraftPage*.cs;ProjectPluginPage.cs" />
-		<Compile Remove="ApplicationPluginBase\**\*.cs;Controls\**\*.cs;Converters\**\*.cs;InteractableEditor\**\*.cs;ViewModels\**\*.cs;Platforms\**\*.cs;Setting\SettingPages\**\*.cs" />
+		<Compile Remove="ApplicationPluginBase\**\*.cs;Controls\**\*.cs;Converters\**\*.cs;InteractableEditor\**\*.cs;Interaction\**\*.cs;ViewModels\**\*.cs;Platforms\**\*.cs;Setting\SettingPages\**\*.cs" />
 		<Compile Remove="DraftStuff\**\*.cs" />
 		<Compile Include="DraftStuff\DraftImportAndExportHelper.cs" />
 		<Compile Remove="Localize\MAUILocalizedHelper.cs;Template\TemplateVariableItem.cs" />
 		<Compile Remove="Services\EffectServices.cs;Services\TextServices.cs;Services\TextStyleServices.cs;Services\UIServices.cs;Services\UIThreadWatchdogService*.cs;Services\ScreenReaderService.cs;Services\IntegratedApiBackend.cs;Services\TimelineMcpLiveService.cs;Services\RemoteProjectSession.cs;Services\VectorComponentHandlerServices.cs;Services\VectorClipServices*.cs;Services\TransformServices.cs;Services\FileSystemService.cs" />
+		<Compile Remove="Services\SubtitleServices.cs" />
 		<MauiXaml Remove="**\*.xaml" />
 		<MauiIcon Remove="@(MauiIcon)" />
 		<MauiSplashScreen Remove="@(MauiSplashScreen)" />

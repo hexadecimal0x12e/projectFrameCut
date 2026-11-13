@@ -61,7 +61,12 @@ public partial class AboutSettingPage : ContentPage
 #if WINDOWS
             try
             {
-                platformSpecific = $"AppContainer SID: {Platforms.Windows.WindowsPluginIsolationPlatform.AppContainerSid}";
+                platformSpecific = 
+                    $"""
+                    Main App SID: {Platforms.Windows.WindowsPluginIsolationPlatform.DeriveAppContainerSid(WinUI.App.GetPackageFamilyName())}
+                    Worker AppContainer SID: {Platforms.Windows.WindowsPluginIsolationPlatform.AppContainerSid}
+                    """;
+                    
             }
             catch { }
 #endif
@@ -70,12 +75,27 @@ public partial class AboutSettingPage : ContentPage
                 $"""
                 Instance ID: {AppInfo.PackageName}
                 RPC Protocol: v{RenderProtocol.CurrentVersion} ({RenderProtocol.PipeProtocolVersion}, {RenderProtocol.MinimumSupportedVersion})
-                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
-                Full package Name: {fullName} | Channel: {channel} | Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
+                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion}
+                IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+                Channel: {channel} 
+                Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
                 {platformSpecific}
                 """;
-            AppBuildInfoLabel.Text = $"{MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit} {programDate}";
-            AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;
+            AppBuildInfoLabel.Text = $"{MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}";
+            AppDetailVersionLabel_Narrow.Text = 
+                $"""
+                {MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}
+                Runtime: {RuntimeInformation.FrameworkDescription}
+                MAUI: Microsoft.Maui.Controls {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "11.0.?"}
+                
+                Instance ID: {AppInfo.PackageName}
+                RPC Protocol: v{RenderProtocol.CurrentVersion} ({RenderProtocol.PipeProtocolVersion}, {RenderProtocol.MinimumSupportedVersion})
+                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion}
+                IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+                Channel: {channel}
+                Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
+                {platformSpecific}
+                """;
             AppDetailVersionLabel.StyleId = "SelectableLabel";
             AppDetailVersionLabel_Narrow.StyleId = "SelectableLabel";
         }

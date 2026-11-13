@@ -1154,21 +1154,23 @@ public partial class TemplateCreatePage : ContentView
             var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
             string[] map = lang switch
             {
-                "zh" => ["字符串", "数字", "整数", "布尔", "文件", "JSON"],
-                "ja" => ["文字列", "数値", "整数", "真偽値", "ファイル", "JSON"],
-                "ko" => ["문자열", "숫자", "정수", "불리언", "파일", "JSON"],
-                "fr" => ["Chaine", "Nombre", "Entier", "Booleen", "Fichier", "JSON"],
-                "de" => ["Zeichenfolge", "Zahl", "Ganzzahl", "Boolesch", "Datei", "JSON"],
-                "es" => ["Cadena", "Numero", "Entero", "Booleano", "Archivo", "JSON"],
-                "it" => ["Stringa", "Numero", "Intero", "Booleano", "File", "JSON"],
-                "pl" => ["Lancuch", "Liczba", "Calkowita", "Logiczna", "Plik", "JSON"],
-                "pt" => ["Texto", "Numero", "Inteiro", "Booleano", "Arquivo", "JSON"],
-                "ru" => ["Stroka", "Chislo", "Tseloe", "Bulovo", "Fail", "JSON"],
-                "tr" => ["Metin", "Sayi", "Tam sayi", "Mantiksal", "Dosya", "JSON"],
-                "ar" => ["نص", "رقم", "عدد صحيح", "منطقي", "ملف", "JSON"],
-                _ => ["String", "Number", "Integer", "Boolean", "File", "JSON"]
+                "zh" => ["自动", "字符串", "数字", "整数", "布尔", "文件", "JSON"],
+                "ja" => ["自動", "文字列", "数値", "整数", "真偽値", "ファイル", "JSON"],
+                "ko" => ["자동", "문자열", "숫자", "정수", "불리언", "파일", "JSON"],
+                "fr" => ["Automatique", "Chaine", "Nombre", "Entier", "Booleen", "Fichier", "JSON"],
+                "de" => ["Automatisch", "Zeichenfolge", "Zahl", "Ganzzahl", "Boolesch", "Datei", "JSON"],
+                "es" => ["Automático", "Cadena", "Numero", "Entero", "Booleano", "Archivo", "JSON"],
+                "it" => ["Automatico", "Stringa", "Numero", "Intero", "Booleano", "File", "JSON"],
+                "pl" => ["Automatyczny", "Lancuch", "Liczba", "Calkowita", "Logiczna", "Plik", "JSON"],
+                "pt" => ["Automático", "Texto", "Numero", "Inteiro", "Booleano", "Arquivo", "JSON"],
+                "ru" => ["Авто", "Stroka", "Chislo", "Tseloe", "Bulovo", "Fail", "JSON"],
+                "tr" => ["Otomatik", "Metin", "Sayi", "Tam sayi", "Mantiksal", "Dosya", "JSON"],
+                "ar" => ["تلقائي", "نص", "رقم", "عدد صحيح", "منطقي", "ملف", "JSON"],
+                _ => ["Auto", "String", "Number", "Integer", "Boolean", "File", "JSON"]
             };
-            return map[(int)variableType];
+            return (int)variableType >= 0 && (int)variableType < map.Length
+                ? map[(int)variableType]
+                : variableType.ToString();
         }
 
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

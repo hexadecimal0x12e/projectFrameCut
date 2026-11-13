@@ -13,7 +13,7 @@
             <CheckBox x:Name="AgreeEULACheckbox" VerticalOptions="Center"  />
             <Label Text="{l:Localized Key=WelocmePage_AgreeEULA}" VerticalOptions="Center" Margin="-8,0,0,0" />
         </HorizontalStackLayout>
-        <HorizontalStackLayout HorizontalOptions="Center" IsVisible="{OnIdiom Desktop=true, Default=false}">
+        <HorizontalStackLayout x:Name="CreateShortcutLayout" HorizontalOptions="Center" IsVisible="{OnIdiom Desktop=true, Default=false}">
             <CheckBox x:Name="CreateDesktopShortcutCheckbox" VerticalOptions="Center"  />
             <Label Text="{l:Localized Key=WelocmePage_CreateShortcutToDesktop}" VerticalOptions="Center" Margin="-8,0,0,0" />
         </HorizontalStackLayout>

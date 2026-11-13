@@ -5,72 +5,73 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:local="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans;assembly=projectFrameCut.ApplicationAPIBase"
              Title="{l:Localized Key=MainSettingsPage_Tab_About}">
-    <Grid RowDefinitions="Auto,*" Padding="8">
-        <!--  Wide layout -->
-        <Grid x:Name="WideLayout" Grid.Row="0" Padding="8" RowDefinitions="*,*,Auto" >
+    <ScrollView Orientation="Vertical">
+        <Grid RowDefinitions="Auto,*" Padding="8">
+            <!--  Wide layout -->
+            <Grid x:Name="WideLayout" Grid.Row="0" Padding="8" RowDefinitions="*,*,Auto" >
 
-            <!-- Row 0: Logo card + Title/Version -->
-            <HorizontalStackLayout Grid.Row="0" VerticalOptions="Fill">
-                <Grid Margin="0,0,16,0">
-                    <Image Background="Black" x:Name="AppLogoIcon" WidthRequest="250" Source="projectframecut.png" />
-                </Grid>
+                <!-- Row 0: Logo card + Title/Version -->
+                <HorizontalStackLayout Grid.Row="0" VerticalOptions="Fill">
+                    <Grid Margin="0,0,16,0">
+                        <Image Background="Black" x:Name="AppLogoIcon" WidthRequest="250" Source="projectframecut.png" />
+                    </Grid>
 
-                <VerticalStackLayout VerticalOptions="Start" Padding="0,0,0,16">
-                    <Label FontSize="72" Text="{l:Localized Key=AppBrand}" />
-                    <Label x:Name="AppVersionLabel" FontSize="32"
-                           Margin="0,0,0,8" Text="@Version" />
-                    <Label x:Name="AppCopyrightLabel" FontSize="20"
-                           Margin="0,0,0,4">
-                        <Label.FormattedText>
-                            <FormattedString>
-                                <Span Text="{l:Localized Key=AboutPage_Copyrignt}" />
-                                <local:HyperlinkSpan Url="https://github.com/hexadecimal0x12e" Text="hexadecimal0x12e" />
-                                <Span Text=" 2025-2026. " />
-                                <local:HyperlinkSpan Url="https://github.com/hexadecimal0x12e/projectFrameCut" Text="{l:Localized Key=AboutPage_HomePage}" />
-                            </FormattedString>
-                        </Label.FormattedText>
-                    </Label>
-                    <Label x:Name="AppBuildInfoLabel" FontSize="18"
-                           TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
-                           Text="unknown@unknown unknown" />
-                </VerticalStackLayout>
-            </HorizontalStackLayout>
+                    <VerticalStackLayout VerticalOptions="Start" Padding="0,0,0,16">
+                        <Label FontSize="72" Text="{l:Localized Key=AppBrand}" />
+                        <Label x:Name="AppVersionLabel" FontSize="32"
+                               Margin="0,0,0,8" Text="@Version" />
+                        <Label x:Name="AppCopyrightLabel" FontSize="20"
+                               Margin="0,0,0,4">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="{l:Localized Key=AboutPage_Copyrignt}" />
+                                    <local:HyperlinkSpan Url="https://github.com/hexadecimal0x12e" Text="hexadecimal0x12e" />
+                                    <Span Text=" 2025-2026. " />
+                                    <local:HyperlinkSpan Url="https://github.com/hexadecimal0x12e/projectFrameCut" Text="{l:Localized Key=AboutPage_HomePage}" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                        <Label x:Name="AppBuildInfoLabel" FontSize="18"
+                               TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                               Text="unknown@unknown unknown" />
+                    </VerticalStackLayout>
+                </HorizontalStackLayout>
 
-            <!-- Row 1: .NET bot + Runtime info -->
-            <HorizontalStackLayout Grid.Row="1" VerticalOptions="Fill"  >
-                <Image Source="dotnet_bot.png" Aspect="AspectFit"
-                       WidthRequest="250" Margin="0,0,16,0" />
+                <!-- Row 1: .NET bot + Runtime info -->
+                <HorizontalStackLayout Grid.Row="1" VerticalOptions="Fill"  >
+                    <Image Source="dotnet_bot.png" Aspect="AspectFit"
+                           WidthRequest="250" Margin="0,0,16,0" />
 
-                <VerticalStackLayout Grid.Row="1" Grid.Column="1"
-                                     VerticalOptions="Center">
-                    <Label FontSize="36" Text="{l:Localized Key=AboutPage_PoweredBy}"
-                           Margin="0,0,0,4" />
-                    <Label x:Name="AppRuntimeVersionLabel" FontSize="22"
-                           TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
-                           Text="Runtime: .NET 11.0.?" />
-                    <Label x:Name="AppMauiVersionLabel" FontSize="22"
-                           TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
-                           Text="MAUI: Microsoft.Maui.Controls 11.0.?" />
-                </VerticalStackLayout>
-            </HorizontalStackLayout>
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="1"
+                                         VerticalOptions="Center">
+                        <Label FontSize="36" Text="{l:Localized Key=AboutPage_PoweredBy}"
+                               Margin="0,0,0,4" />
+                        <Label x:Name="AppRuntimeVersionLabel" FontSize="22"
+                               TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                               Text="Runtime: .NET 11.0.?" />
+                        <Label x:Name="AppMauiVersionLabel" FontSize="22"
+                               TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                               Text="MAUI: Microsoft.Maui.Controls 11.0.?" />
+                    </VerticalStackLayout>
+                </HorizontalStackLayout>
 
-            <!-- Row 2: Build details -->
-            <Label x:Name="AppDetailVersionLabel" Grid.Row="2"
-                   VerticalOptions="End"
-                   FontSize="14"
-                   TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
-                   Margin="0,16,0,0" Text="@Detail" />
+                <!-- Row 2: Build details -->
+                <Label x:Name="AppDetailVersionLabel" Grid.Row="2"
+                       VerticalOptions="End"
+                       FontSize="14"
+                       TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                       Margin="0,16,0,0" Text="@Detail" />
+            </Grid>
+
+            <!-- Narrow layout: logo centered top, details below -->
+            <VerticalStackLayout x:Name="NarrowLayout" Grid.Row="0" Padding="8" IsVisible="False" HorizontalOptions="Center" Spacing="2">
+                <Image Background="Black" x:Name="AppLogoIcon_Narrow" WidthRequest="120" HeightRequest="120" Source="appicon.png" HorizontalOptions="Center" />
+                <Label FontSize="48" Text="{l:Localized Key=AppBrand}" HorizontalOptions="Center" />
+                <Label x:Name="AppVersionLabel_Narrow" FontSize="24" Margin="0,1,0,8" Text="@Version" HorizontalOptions="Center" />
+                <Label FontSize="14" Margin="0,1,0,8" Text="{l:Localized Key=AboutPage_PoweredBy}" HorizontalOptions="Center" />
+                <Label x:Name="AppDetailVersionLabel_Narrow" FontSize="14" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}" Text="@Detail" HorizontalOptions="Center" LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+
         </Grid>
-
-        <!-- Narrow layout: logo centered top, details below -->
-        <VerticalStackLayout x:Name="NarrowLayout" Grid.Row="0" Padding="8" IsVisible="False" HorizontalOptions="Center" Spacing="2">
-            <Image Background="Black" x:Name="AppLogoIcon_Narrow" WidthRequest="120" HeightRequest="120" Source="appicon.png" HorizontalOptions="Center" />
-            <Label FontSize="48" Text="{l:Localized Key=AppBrand}" HorizontalOptions="Center" />
-            <Label x:Name="AppVersionLabel_Narrow" FontSize="24" Margin="0,1,0,8" Text="@Version" HorizontalOptions="Center" />
-            <ScrollView Orientation="Vertical" HeightRequest="90">
-                <Label x:Name="AppDetailVersionLabel_Narrow" FontSize="14" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}" Text="@Detail" HorizontalOptions="Center" />
-            </ScrollView>
-        </VerticalStackLayout>
-
-    </Grid>
+    </ScrollView>
 </ContentPage>

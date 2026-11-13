@@ -2,10 +2,10 @@
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-		<MauiVersion>11.0.0-rc.2.26505.5</MauiVersion>
-		<ExtensionsVersion>11.0.0-rc.2.26504.105</ExtensionsVersion>
-		<ExtensionsConfigurationVersion>11.0.0-rc.2.26504.105</ExtensionsConfigurationVersion>
-		<MAUIGTK4Version>0.1.0-preview.12.26421.1</MAUIGTK4Version>
+		<MauiVersion>11.0.10</MauiVersion>
+		<ExtensionsVersion>11.0.0</ExtensionsVersion>
+		<ExtensionsConfigurationVersion>11.0.0</ExtensionsConfigurationVersion>
+		<MAUIGTK4Version>0.1.0-preview.14.26555.2</MAUIGTK4Version>
   </PropertyGroup>
 
 	<ItemGroup>

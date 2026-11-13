@@ -180,6 +180,7 @@ public static class EffectGroupStore
     public static byte[] Serialize(EffectGroupTemplate template) =>
         Encoding.UTF8.GetBytes(EffectGroupMermaid.Serialize(template));
 
+#if !HEADLESS
     public static async Task<string?> SaveWithChoiceAsync(byte[] content, Page page)
     {
         var template = await Task.Run(() => Parse(content));
@@ -216,4 +217,5 @@ public static class EffectGroupStore
         using var stream = new MemoryStream(content, writable: false);
         await FileSystemService.SaveAFile(Hash(content) + ".pjfcEBG", stream);
     }
+#endif
 }

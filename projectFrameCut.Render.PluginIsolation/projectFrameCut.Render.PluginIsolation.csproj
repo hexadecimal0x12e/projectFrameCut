@@ -4,8 +4,8 @@
     <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
     <Description>projectFrameCut shared plugin isolation transport runtime</Description>
     <Title>projectFrameCut shared plugin isolation transport runtime</Title>
   </PropertyGroup>
