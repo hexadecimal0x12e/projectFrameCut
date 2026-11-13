@@ -20,16 +20,18 @@ namespace projectFrameCut.Render.Benchmark
             var render = renderer.FrameRenderElapsed.ToArray();
             var dirty = renderer.FrameDirtyTime.ToArray();
             var stacks = renderer.FrameProcessStacks.ToArray();
+            var diagnostics = renderer.FrameDiagnostics.ToArray();
 
             var prepareByFrame = prepare.ToDictionary(k => k.Key, v => v.Value);
             var renderByFrame = render.ToDictionary(k => k.Key, v => v.Value);
             var dirtyByFrame = dirty.ToDictionary(k => k.Key, v => v.Value);
             var stackByFrame = stacks.ToDictionary(k => k.Key, v => v.Value);
+            var diagnosticsByFrame = diagnostics.ToDictionary(k => k.Key, v => v.Value);
 
             using var fs = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(fs, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
-            // Single CSV with two row kinds: frame + step.
+            // Keep ProcessStack columns first; pipeline diagnostics use frame + stage rows.
             writer.WriteLine(string.Join(',', new[]
             {
                 "RowType",
@@ -43,16 +45,27 @@ namespace projectFrameCut.Render.Benchmark
                 "OperationDisplayName",
                 "StepName",
                 "Operator",
-                "PropertiesJson"
+                "PropertiesJson",
+                "FrameTotalMs",
+                "FrameSucceeded",
+                "StagePath",
+                "StageParentPath",
+                "StageDepth",
+                "StageName",
+                "StageCategory",
+                "StageElapsedMs",
+                "StageSelfMs",
+                "StageChildCount",
+                "StageIsWorkerSum"
             }));
 
-            var start = renderer.StartFrame;
-            var endExclusive = renderer.StartFrame + renderer.Duration;
-            for (uint frame = start; frame < endExclusive; frame++)
+            for (ulong i = renderer.StartFrame, end = (ulong)renderer.StartFrame + renderer.Duration; i < end; i++)
             {
+                uint frame = (uint)i;
                 double? prepMs = prepareByFrame.TryGetValue(frame, out var prepTs) ? prepTs.TotalMilliseconds : null;
                 double? renderMs = renderByFrame.TryGetValue(frame, out var renderTs) ? renderTs.TotalMilliseconds : null;
                 double? frameDirtyMs = dirtyByFrame.TryGetValue(frame, out var dirtyTs) ? dirtyTs.TotalMilliseconds : null;
+                diagnosticsByFrame.TryGetValue(frame, out var diagnostic);
 
                 WriteRow(writer,
                     rowType: "frame",
@@ -60,13 +73,13 @@ namespace projectFrameCut.Render.Benchmark
                     prepareMs: prepMs,
                     renderMs: renderMs,
                     frameDirtyMs: frameDirtyMs,
-                    stepPath: null,
-                    stepKey: null,
-                    stepElapsedMs: null,
-                    operationDisplayName: null,
-                    stepName: null,
-                    op: null,
-                    propertiesJson: null);
+                    diagnostic: diagnostic);
+
+                if (diagnostic is not null)
+                {
+                    foreach (var stage in diagnostic.Stages)
+                        WriteRow(writer, rowType: "stage", frameIndex: frame, stage: stage);
+                }
 
                 if (!stackByFrame.TryGetValue(frame, out var frameStack) || frameStack is null) continue;
 
@@ -80,9 +93,6 @@ namespace projectFrameCut.Render.Benchmark
                     WriteRow(writer,
                         rowType: "step",
                         frameIndex: frame,
-                        prepareMs: null,
-                        renderMs: null,
-                        frameDirtyMs: null,
                         stepPath: path,
                         stepKey: stepKey,
                         stepElapsedMs: elapsed.TotalMilliseconds,
@@ -151,41 +161,45 @@ namespace projectFrameCut.Render.Benchmark
             StreamWriter writer,
             string rowType,
             uint frameIndex,
-            double? prepareMs,
-            double? renderMs,
-            double? frameDirtyMs,
-            string? stepPath,
-            string? stepKey,
-            double? stepElapsedMs,
-            string? operationDisplayName,
-            string? stepName,
-            string? op,
-            string? propertiesJson)
+            double? prepareMs = null,
+            double? renderMs = null,
+            double? frameDirtyMs = null,
+            string? stepPath = null,
+            string? stepKey = null,
+            double? stepElapsedMs = null,
+            string? operationDisplayName = null,
+            string? stepName = null,
+            string? op = null,
+            string? propertiesJson = null,
+            RenderFrameDiagnosticSnapshot? diagnostic = null,
+            RenderStageDiagnosticSnapshot? stage = null)
         {
-            writer.Write(Csv(rowType));
-            writer.Write(',');
-            writer.Write(frameIndex.ToString(CultureInfo.InvariantCulture));
-            writer.Write(',');
-            writer.Write(CsvNumber(prepareMs));
-            writer.Write(',');
-            writer.Write(CsvNumber(renderMs));
-            writer.Write(',');
-            writer.Write(CsvNumber(frameDirtyMs));
-            writer.Write(',');
-            writer.Write(Csv(stepPath));
-            writer.Write(',');
-            writer.Write(Csv(stepKey));
-            writer.Write(',');
-            writer.Write(CsvNumber(stepElapsedMs));
-            writer.Write(',');
-            writer.Write(Csv(operationDisplayName));
-            writer.Write(',');
-            writer.Write(Csv(stepName));
-            writer.Write(',');
-            writer.Write(Csv(op));
-            writer.Write(',');
-            writer.Write(Csv(propertiesJson));
-            writer.WriteLine();
+            writer.WriteLine(string.Join(',', new[]
+            {
+                Csv(rowType),
+                frameIndex.ToString(CultureInfo.InvariantCulture),
+                CsvNumber(prepareMs),
+                CsvNumber(renderMs),
+                CsvNumber(frameDirtyMs),
+                Csv(stepPath),
+                Csv(stepKey),
+                CsvNumber(stepElapsedMs),
+                Csv(operationDisplayName),
+                Csv(stepName),
+                Csv(op),
+                Csv(propertiesJson),
+                CsvNumber(diagnostic?.Elapsed.TotalMilliseconds),
+                CsvBoolean(diagnostic?.Succeeded),
+                Csv(stage?.Path),
+                Csv(stage?.ParentPath),
+                stage?.Depth.ToString(CultureInfo.InvariantCulture),
+                Csv(stage?.Name),
+                Csv(stage?.Category),
+                CsvNumber(stage?.Elapsed.TotalMilliseconds),
+                CsvNumber(stage?.SelfElapsed.TotalMilliseconds),
+                stage?.ChildCount.ToString(CultureInfo.InvariantCulture),
+                CsvBoolean(stage?.IsWorkerSum)
+            }));
         }
 
         private static string Csv(string? s)
@@ -199,6 +213,12 @@ namespace projectFrameCut.Render.Benchmark
         {
             if (v is null) return "";
             return v.Value.ToString("0.###", CultureInfo.InvariantCulture);
+        }
+
+        private static string CsvBoolean(bool? v)
+        {
+            if (v is null) return "";
+            return v.Value ? "true" : "false";
         }
     }
 }

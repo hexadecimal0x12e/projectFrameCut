@@ -1,19 +1,25 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using LocalizedResources;
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Plugins;
+#endif
+
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.IntegratedAPIServer.MCP;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -32,13 +38,16 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 
 
-#if WINDOWS
+
+#if WINDOWS || HEADLESS
 using projectFrameCut.Render.WindowsRender;
 using ILGPU;
+#if WINDOWS
+using System.Security.Principal;
+#endif
 
 #elif ANDROID
 
@@ -79,6 +88,11 @@ namespace projectFrameCut
             FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false; //avoid ready check exploding FFmpeg.AutoGen library before we set the root path
 
             args ??= Array.Empty<string>();
+
+            if (args.Contains("--logDiagnostic"))
+            {
+                Log($"Command line args: {Environment.NewLine}{string.Join(Environment.NewLine, args.Select(c => c.StartsWith("--token=", StringComparison.OrdinalIgnoreCase) ? "- --token=<redacted>" : $"- {c}"))}");
+            }
 
             if (args.Length == 0 || IsHelpOption(args[0]))
             {
@@ -164,6 +178,12 @@ namespace projectFrameCut
                     return RunRender(args.Skip(1).ToArray());
                 case "plugin_worker":
                     return RunPluginWorker(args.Skip(1).ToArray());
+                case "external_source_worker":
+                    return RunPluginWorker(args.Skip(1).ToArray(), externalSource: true);
+                case "plugin_network_policy":
+                    return RunPluginNetworkPolicy(args.Skip(1).ToArray());
+                case "repair_public_resource_access":
+                    return RunPublicResourceAccessRepair();
                 case "user_data_root":
                     {
                         using Stream output = Console.OpenStandardError();
@@ -181,7 +201,7 @@ namespace projectFrameCut
             return InvalidCommandExitCode;
         }
 
-        private static void StartLog(string mode)
+        private static void StartLog(string mode, string? root = null)
         {
             try
             {
@@ -189,7 +209,7 @@ namespace projectFrameCut
                 {
                     return;
                 }
-                var logPath = Path.Combine(AppDataPath, "logging", $"log-{mode}-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log");
+                var logPath = Path.Combine(root ?? AppDataPath, "logging", $"log-{mode}-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log");
                 var logDir = Path.GetDirectoryName(logPath);
                 if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
                 {
@@ -222,15 +242,21 @@ namespace projectFrameCut
                 return SuccessExitCode;
             }
 
-            if (command.Equals("rpc_request", StringComparison.OrdinalIgnoreCase))
+            if (command.Equals("plugin_network_policy", StringComparison.OrdinalIgnoreCase))
             {
-                WriteRpcRequestHelp();
+                Console.WriteLine("Usage: pjfc plugin_network_policy --target=loopback --enabled=true|false --packageFamilyName=<PFN>\nConfigures the isolated-plugin loopback exemption. Windows administrator privileges are required.");
                 return SuccessExitCode;
             }
 
-            if (command.Equals("render", StringComparison.OrdinalIgnoreCase))
+            if (command.Equals("repair_public_resource_access", StringComparison.OrdinalIgnoreCase))
             {
-                WriteRenderHelp();
+                Console.WriteLine("Usage: pjfc repair_public_resource_access\nRepairs read and execute permissions for the current MSIX package's Public directory. Windows administrator privileges are required.");
+                return SuccessExitCode;
+            }
+
+            if (command.Equals("rpc_request", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteRpcRequestHelp();
                 return SuccessExitCode;
             }
 
@@ -252,7 +278,7 @@ namespace projectFrameCut
                 return SuccessExitCode;
             }
 
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
             if (command.Equals("accels", StringComparison.OrdinalIgnoreCase))
             {
                 Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
@@ -284,8 +310,10 @@ namespace projectFrameCut
         {
             Localized = SimpleLocalizer.Init(args.FirstOrDefault(c => c.StartsWith("--locale="))?.Substring("--locale=".Length));
             SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+#if !HEADLESS
             SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
             projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+#endif
 #if WINDOWS
             SimpleLocalizerBaseGeneratedHelper.Localized = ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(Localized._LocaleId_, out var hloc) ? hloc : ISimpleLocalizerBase_Helper.GetMapping().First().Value;
 #endif
@@ -345,7 +373,7 @@ namespace projectFrameCut
             }
             else if (transportValue.Equals("raw_pipe", StringComparison.OrdinalIgnoreCase))
             {
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
                 var origColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.Error.WriteLine("WARNNING: 'raw_pipe' transport is used internally ONLY. The behave of this transport is not guaranteed to be stable and may change with time.");
@@ -420,8 +448,12 @@ namespace projectFrameCut
             string? rpcToken = GetOption(args, "rpcToken", required: false)
                 ?? GetOption(args, "projectServerToken", required: false);
             string globalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json");
-            bool startClient = !args.Any(static argument =>
-                argument.Equals("--headless", StringComparison.OrdinalIgnoreCase));
+            bool startClient =
+#if HEADLESS
+                false;
+#else
+                !args.Any(static argument => argument.Equals("--headless", StringComparison.OrdinalIgnoreCase));
+#endif
             string? rpcListen = GetOption(args, "rpcListen", required: false)
                 ?? GetOption(args, "projectServer", required: false);
             if (!string.IsNullOrWhiteSpace(rpcListen))
@@ -451,7 +483,7 @@ namespace projectFrameCut
             }
 
             using var cancellation = new CancellationTokenSource();
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
             Console.CancelKeyPress += (_, eventArgs) =>
             {
                 eventArgs.Cancel = true;
@@ -547,14 +579,14 @@ namespace projectFrameCut
                     throw new ArgumentException("backend requires an absolute --listen=<http[s]://host:port> address.");
 
                 using var cancellation = new CancellationTokenSource();
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
                 Console.CancelKeyPress += (_, e) =>
                 {
                     e.Cancel = true;
                     cancellation.Cancel();
                 };
 #endif
-                return RunBackendAsync(listenUri, token, projectRoot, dataRoot, cancellation.Token).GetAwaiter().GetResult();
+                return RunBackendAsync(listenUri, token, projectRoot, dataRoot, cancellation.Token, GetOption(args, "allowExternalSources", required: false)).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException)
             {
@@ -572,7 +604,7 @@ namespace projectFrameCut
             string token,
             string projectRoot,
             string dataRoot,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, string? allowExternalSources = null)
         {
             InitializeRenderRuntime(dataRoot);
             await using var server = new IntegratedApiServer();
@@ -585,6 +617,7 @@ namespace projectFrameCut
                     ListenUri = listenUri,
                     RpcToken = token,
                     ProjectRoot = projectRoot,
+                    AllowExternalSources = allowExternalSources,
                     GlobalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json"),
                     EnableMcp = false,
                     WarningSink = warning => Console.Error.WriteLine($"Warning: {warning}"),
@@ -603,13 +636,27 @@ namespace projectFrameCut
         {
             try
             {
-                var pipe = GetOption(args, "pipe") ?? string.Empty;
                 var token = GetOption(args, "token") ?? string.Empty;
+#if HEADLESS
+                var pipe = RenderProtocol.AdditionalPipePrefix + token;
+                if (token.Length != 64 || !token.All(Uri.IsHexDigit))
+                {
+                    Console.Error.WriteLine("rpc_server requires --token=<64 hexadecimal characters>.");
+                    return InvalidCommandExitCode;
+                }
+#else
+                var pipe = GetOption(args, "pipe") ?? string.Empty;
+#endif
                 var parentPid = GetOption(args, "parentPid", required: false);
+                var previewAcceleratorDeviceName = GetOption(args, "previewAcceleratorDeviceName", required: false);
                 var dataRoot = GetOption(args, "dataRoot");
                 if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(dataRoot))
                 {
+#if HEADLESS
+                    Console.Error.WriteLine("rpc_server requires --token=<64 hexadecimal characters> and --dataRoot=<path>.");
+#else
                     Console.Error.WriteLine("rpc_server requires --pipe=<pipe-name> and --token=<token> and --dataRoot=<path>.");
+#endif
                     return InvalidCommandExitCode;
                 }
 
@@ -643,14 +690,15 @@ namespace projectFrameCut
                 }
 
                 using var cancellation = new CancellationTokenSource();
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
                 Console.CancelKeyPress += (_, e) =>
                 {
                     e.Cancel = true;
                     cancellation.Cancel();
                 };
 #endif
-                return RunRpcServerAsync(pipe, token, parentPid, dataRoot, httpListenUri, httpToken, httpProjectRoot, cancellation.Token).GetAwaiter().GetResult();
+                return RunRpcServerAsync(pipe, token, parentPid, dataRoot, httpListenUri, httpToken, httpProjectRoot,
+                    previewAcceleratorDeviceName, cancellation.Token).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException)
             {
@@ -671,21 +719,65 @@ namespace projectFrameCut
             Uri? httpListenUri,
             string? httpToken,
             string? httpProjectRoot,
+            string? previewAcceleratorDeviceName,
             CancellationToken cancellationToken)
         {
+#if HEADLESS
+            ExternalRpcPipeSettings.EnsureAllowed(dataRoot);
+#endif
             InitializeRenderRuntime(dataRoot);
+#if WINDOWS || LINUX || HEADLESS
+            if (!string.IsNullOrWhiteSpace(previewAcceleratorDeviceName))
+            {
+                var accelerators = AcceleratorsManager.GetConfiguration();
+                AcceleratorsManager.ConfigureDevices(previewAcceleratorDeviceName, accelerators.RenderingAcceleratorNames, accelerators.EnableMultiAccel);
+            }
+            AcceleratorsManager.IsRendering = false;
+#endif
             // The named-pipe server and the optional HTTP RPC endpoint share this
             // render backend, so sessions opened through either channel are
             // visible to clients of the other one.
             await using var service = new RenderBackendService(
                 stateRoot: dataRoot,
                 completionSink: RenderCompletionNotifier.Notify,
-                progressSink: RenderCompletionNotifier.NotifyProgress);
+                progressSink: RenderCompletionNotifier.NotifyProgress,
+                previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
+#if HEADLESS
+            await using var headlessService = new HeadlessProjectService(service,
+                Path.Combine(dataRoot, "My Assets", ".database", "database.json"));
+            if (!string.IsNullOrWhiteSpace(httpProjectRoot))
+                await headlessService.InitializeAsync(httpProjectRoot, cancellationToken).ConfigureAwait(false);
+            await using var httpHost = httpListenUri is null
+                ? null
+                : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken, headlessService).ConfigureAwait(false);
+            Console.WriteLine($"projectFrameCut external RPC server listening on {pipe}");
+            await new NamedPipeRenderServer(headlessService,
+                additionalPipeFactory: OperatingSystem.IsWindows()
+                    ? (name, _) => ExternalRpcPipePermissions.CreatePipe(name, dataRoot, maxInstances: System.IO.Pipes.NamedPipeServerStream.MaxAllowedServerInstances)
+                    : null,
+                externalPipeSingleConnection: OperatingSystem.IsWindows()
+                    ? () => ExternalRpcPipePermissions.LoadSingleConnection(dataRoot)
+                    : null,
+                externalRpcAllowed: () => ExternalRpcPipeSettings.Load(dataRoot).AllowExternalRPC,
+                externalSourcesAllowed: () => ExternalSourceSettings.Load(dataRoot).AllowRpcSources)
+                .RunExternalAsync(token, parentPid, cancellationToken).ConfigureAwait(false);
+#else
             await using var httpHost = httpListenUri is null
                 ? null
                 : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken).ConfigureAwait(false);
-            await new NamedPipeRenderServer(service, allowAdditionalPipes: true, requestDirectory: Path.Combine(AppDataPath, "RpcRequest"))
+            await new NamedPipeRenderServer(service, allowAdditionalPipes: true, requestDirectory: Path.Combine(AppDataPath, "RpcRequest"),
+                externalRpcAllowed: () => ExternalRpcPipeSettings.Load(dataRoot).AllowExternalRPC,
+                externalSourcesAllowed: () => ExternalSourceSettings.Load(dataRoot).AllowRpcSources,
+#if WINDOWS
+                additionalPipeFactory: (name, isolated) => Platforms.Windows.WindowsPluginIsolationPlatform.CreateRpcPipe(name, isolated, dataRoot),
+                externalRequestPipeFactory: (name, sids) => ExternalRpcPipePermissions.CreatePipe(name, dataRoot, additionalSids: sids),
+                externalPipeSingleConnection: () => ExternalRpcPipePermissions.LoadSingleConnection(dataRoot))
+#else
+                additionalPipeFactory: null)
+#endif
+            { AllowTestingBackendCrash = !string.IsNullOrWhiteSpace(parentPid) }
                 .RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
+#endif
             return SuccessExitCode;
         }
 
@@ -695,9 +787,10 @@ namespace projectFrameCut
             string token,
             string? projectRoot,
             string dataRoot,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            HeadlessProjectService? sharedHeadlessService = null)
         {
-            var headlessService = new HeadlessProjectService(
+            var headlessService = sharedHeadlessService ?? new HeadlessProjectService(
                 renderService,
                 Path.Combine(dataRoot, "My Assets", ".database", "database.json"));
             var server = new IntegratedApiServer();
@@ -735,14 +828,14 @@ namespace projectFrameCut
             }
         }
 
-        private static int RunPluginWorker(string[] args)
+        private static int RunPluginWorker(string[] args, bool externalSource = false)
         {
             try
             {
 #if WINDOWS
-                if(args.Contains("--appContainer"))
+                if (args.Contains("--appContainer"))
                 {
-                    Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess();
+                    Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess(GetOption(args, "instancePackageName", true)!);
                 }
 #endif
                 var pluginIdParam = args.FirstOrDefault(arg => arg.StartsWith("--pluginId="));
@@ -754,9 +847,12 @@ namespace projectFrameCut
                         Console.Error.WriteLine("Invalid --pluginId parameter: cannot be empty.");
                         return InvalidCommandExitCode;
                     }
-                    StartLog($"plugin_worker_{pluginId}");
+                    StartLog($"plugin_worker_{pluginId}", args.Contains("--appContainer") ? GetOption(args, "sessionRoot", true) : null);
                 }
-                projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
+                if (externalSource)
+                    projectFrameCut.Render.PluginIsolation.ProjectExternalSourceWorker.RunAsync(args).GetAwaiter().GetResult();
+                else
+                    projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
                 return SuccessExitCode;
             }
             catch (Exception ex)
@@ -774,12 +870,6 @@ namespace projectFrameCut
         {
             try
             {
-                if (args.Length == 0 || args.Any(IsHelpOption))
-                {
-                    WriteRenderHelp();
-                    return SuccessExitCode;
-                }
-
                 var switches = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var arg in args)
                 {
@@ -787,17 +877,22 @@ namespace projectFrameCut
                     if (pair.Length == 2) switches[pair[0].TrimStart('-', '/')] = pair[1];
                 }
 
+                if (switches.TryGetValue("projectCacheRoot", out var projectCacheRoot)) ProjectCachePaths.Configure(projectCacheRoot);
+
                 var dataRoot = switches.TryGetValue("dataRoot", out var specifiedDataRoot)
                     ? Path.GetFullPath(specifiedDataRoot)
                     : switches.TryGetValue("assetDbFile", out var db)
                     ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(db) ?? Environment.CurrentDirectory, "..", ".."))
                     : AppDataPath;
-                if (TryGetRenderRpcOptions(switches, out var rpcOptions))
-                    return RunRpcRenderAsync(switches, dataRoot, rpcOptions).GetAwaiter().GetResult();
+                if (!TryGetRenderRpcOptions(switches, out var rpcOptions))
+                {
+                    Console.Error.WriteLine("Error: 'render' mode was designed for internal use only.");
+                    Console.Error.WriteLine("For per-frame previews, use projectFrameCut.PowerShell preview cmdlets; for automatic video delivery, use 'pjfc gui --render <project> --output=<file>'.");
 
-                ConfigureHardwareAcceleration(switches);
-                InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
-                return RunRenderPipelineAsync(switches, cancellationToken: default).GetAwaiter().GetResult();
+                    return InvalidCommandExitCode;
+                }
+                return RunRpcRenderAsync(switches, dataRoot, rpcOptions).GetAwaiter().GetResult();
+
             }
             catch (OperationCanceledException) { return 255; }
             catch (Exception ex)
@@ -807,10 +902,25 @@ namespace projectFrameCut
             }
         }
 
-        private static void InitializeCliRenderRuntime(string dataRoot, string ffmpegRoot = "")
+        private static void InitializeCliRenderRuntime(string dataRoot, ConcurrentDictionary<string, string> switches)
         {
-            InitializeRenderRuntime(dataRoot, ffmpegRoot);
-#if WINDOWS || LINUX
+            InitializeRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
+#if WINDOWS || LINUX || HEADLESS
+            if (switches.ContainsKey("acceleratorDeviceName") || switches.ContainsKey("acceleratorDeviceNames") || switches.ContainsKey("multiAccelerator"))
+            {
+                var accelerators = AcceleratorsManager.GetConfiguration();
+                if (switches.TryGetValue("acceleratorDeviceName", out var main))
+                    accelerators.MainAcceleratorName = main;
+                if (switches.TryGetValue("acceleratorDeviceNames", out var names))
+                    accelerators.RenderingAcceleratorNames = names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (switches.TryGetValue("multiAccelerator", out var multi))
+                {
+                    if (!bool.TryParse(multi, out var enabled))
+                        throw new ArgumentException("-multiAccelerator must be true or false.");
+                    accelerators.EnableMultiAccel = enabled;
+                }
+                AcceleratorsManager.ConfigureDevices(accelerators.MainAcceleratorName, accelerators.RenderingAcceleratorNames, accelerators.EnableMultiAccel);
+            }
             AcceleratorsManager.IsRendering = true;
             if (!AcceleratorsManager.Accelerators.Any())
                 throw new InvalidOperationException("No valid rendering accelerator is available.");
@@ -820,11 +930,14 @@ namespace projectFrameCut
         private static async Task<int> RunRenderPipelineAsync(
             ConcurrentDictionary<string, string> switches,
             CancellationToken cancellationToken,
-            Action<double, TimeSpan, double>? progress = null,
-            Action<string>? stageChanged = null)
+            Action<double, TimeSpan, double, long, long>? progress = null,
+            Action<string>? stageChanged = null,
+            Action<long, long>? hashPreparationProgress = null)
         {
+            using var sleepRequest = RenderSleepRequest.Acquire();
             if (!switches.TryGetValue("project", out var projectRoot) || !Directory.Exists(projectRoot))
                 throw new DirectoryNotFoundException("-project must point to a project directory.");
+            projectRoot = Path.GetFullPath(projectRoot);
             if (!switches.TryGetValue("output", out var outputPath) || string.IsNullOrWhiteSpace(outputPath))
                 throw new ArgumentException("-output is required.");
             if (!switches.TryGetValue("output_options", out var outputSpec))
@@ -847,22 +960,44 @@ namespace projectFrameCut
             var jsonOptions = new JsonSerializerOptions { NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
             var projectFile = File.Exists(Path.Combine(projectRoot, "project.pjfc")) ? "project.pjfc" : "project.json";
             var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(projectRoot, projectFile)), jsonOptions) ?? new();
+            if (switches.TryGetValue("projectCacheDirectory", out var cacheDirectory)) ProjectCachePaths.Bind(projectRoot, cacheDirectory, project.ProjectName);
+            else ProjectCachePaths.Initialize(projectRoot, project.ProjectName);
+            if (!switches.ContainsKey("temp_path")) tempPath = ProjectCachePaths.GetTemporaryRoot(projectRoot, tempPath);
+            Directory.CreateDirectory(tempPath);
+            bool useHdr = project.Properties.TryGetValue("EnableHDR", out var enableHdrText)
+                && bool.TryParse(enableHdrText, out var enableHdr)
+                && enableHdr;
+            bool preferHdrHardware = bool.TryParse(
+                switches.GetValueOrDefault("preferHwAccelEncoder", "false"),
+                out var preferHdrHardwareValue) && preferHdrHardwareValue;
+            int maximumHdrBrightness = project.Properties.TryGetValue("HdrMaximumBrightness", out var maximumHdrBrightnessText)
+                && int.TryParse(maximumHdrBrightnessText, out var parsedMaximumHdrBrightness)
+                    ? parsedMaximumHdrBrightness
+                    : 1000;
+            int sdrBrightnessInHdr = project.Properties.TryGetValue("SdrClipBrightness", out var sdrBrightnessText)
+                && int.TryParse(sdrBrightnessText, out var parsedSdrBrightness)
+                    ? parsedSdrBrightness
+                    : project.Properties.TryGetValue("sdrClipBrightness", out var legacySdrBrightnessText)
+                        && int.TryParse(legacySdrBrightnessText, out var parsedLegacySdrBrightness)
+                            ? parsedLegacySdrBrightness
+                            : 203;
             if (project.ProjectPlugins?.Any(x => x.Enabled) == true)
             {
                 var projectPluginLoad = await ProjectPluginService.LoadProjectPluginsAsync(projectRoot, project, _ => Task.FromResult(false), cancellationToken);
                 if (projectPluginLoad.Failed.Count > 0)
                     throw new InvalidOperationException("Project plugins failed to load: " + string.Join("; ", projectPluginLoad.Failed.Select(x => $"{x.Key}: {x.Value}")));
             }
-            var timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(projectRoot, "timeline.json")), jsonOptions) ?? new();
+            var (timeline, projectAssets) = ProjectSnapshotStore.ReadForRender(projectRoot, project, jsonOptions,
+                switches.GetValueOrDefault("timelineSource", "timeline"));
+            await using var externalSources = await ProjectExternalSourceRuntime.OpenAsync(projectRoot,
+                switches.TryGetValue("externalSourceApprovals", out var sourceApprovals)
+                    ? RenderRpcSerializer.Deserialize<SetProjectExternalSourcesRequest>(Convert.FromBase64String(sourceApprovals)).AllowedSources
+                    : projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.ParseApprovals(projectRoot, switches.GetValueOrDefault("allowExternalSources")), cancellationToken);
 
             var assets = new ConcurrentDictionary<string, AssetItem>();
             if (switches.TryGetValue("assetDbFile", out var assetDb) && File.Exists(assetDb))
                 assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(File.ReadAllText(assetDb), jsonOptions) ?? assets;
-            if (File.Exists(Path.Combine(projectRoot, "assets.json")))
-            {
-                var localAssets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(projectRoot, "assets.json")), jsonOptions) ?? [];
-                foreach (var asset in localAssets.Where(a => !string.IsNullOrWhiteSpace(a.AssetId))) assets[asset.AssetId!] = asset;
-            }
+            foreach (var asset in projectAssets.Where(a => !string.IsNullOrWhiteSpace(a.AssetId))) assets[asset.AssetId!] = asset;
             AssetDatabase.Assets = assets;
             DecoderContextPJFCProject.GlobalAssetGetter = new(() => assets);
             Environment.CurrentDirectory = projectRoot;
@@ -870,24 +1005,40 @@ namespace projectFrameCut
             var target = switches.GetValueOrDefault("target", "all").ToLowerInvariant();
             var gcOption = int.TryParse(switches.GetValueOrDefault("GCOptions", "0"), out var gc) ? Math.Clamp(gc, 0, 2) : 0;
             if (gcOption == 2) GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-            var serial = bool.TryParse(switches.GetValueOrDefault("oneByOneRender", "false"), out var one) && one;
-            var renderByLayers = bool.TryParse(switches.GetValueOrDefault("renderByLayer", "false"), out var layers) && layers;
-            var prepareInWorkers = bool.TryParse(switches.GetValueOrDefault("prepareInWorker", "false"), out var prepare) && prepare;
+            var reuseDynamicPreviewCache = bool.TryParse(switches.GetValueOrDefault("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
+            var deferredComposition = bool.TryParse(switches.GetValueOrDefault("incrementalRendering",
+                switches.GetValueOrDefault("deferredComposition", "false")), out var deferred) && deferred;
+
+            var renderResumeSignature = deferredComposition ? FrameHashHelper.CreateRenderResumeSignature(project, timeline, assets.Values) : null;
+            if (!bool.TryParse(switches.GetValueOrDefault("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
             var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
+            progress?.Invoke(0, TimeSpan.Zero, 0, 0, duration);
             var chunkOptions = ParseChunkRenderOptions(switches, fps);
+            if (deferredComposition && chunkOptions.Enabled)
+            {
+                Log("Deferred composition and chunk rendering cannot be enabled together.", "error");
+                return 1;
+            }
             long? requestedBitRate = switches.TryGetValue("bitRate", out var bitRateText)
                 && long.TryParse(bitRateText, out var parsedBitRate) && parsedBitRate > 0
                     ? parsedBitRate
                     : null;
+            long? finalVideoBitRate = switches.TryGetValue("finalVideoBitRate", out var finalBitRateText)
+                && long.TryParse(finalBitRateText, out var parsedFinalBitRate) && parsedFinalBitRate > 0
+                    ? parsedFinalBitRate
+                    : null;
             using var consoleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-#if WINDOWS || LINUX
+            var completedChunkCleanup = new ConcurrentDictionary<int, Action>();
+#if WINDOWS || LINUX || HEADLESS
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; consoleCancellation.Cancel(); };
 #endif
             IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
             {
-                IVideoWriter writer = PluginManager.CreateVideoWriter(output[4]);
+                IVideoWriter writer = useHdr
+                    ? new HDRVideoWriterFP16 { PreferHardwareAcceleration = preferHdrHardware }
+                    : PluginManager.CreateVideoWriter(output[4]);
                 writer.Width = width;
                 writer.Height = height;
                 writer.FramePerSecond = fps;
@@ -895,21 +1046,8 @@ namespace projectFrameCut
                 writer.OutputPath = path;
                 if (string.IsNullOrWhiteSpace(writer.CodecName)) writer.CodecName = output[4];
                 if (requestedBitRate.HasValue) writer.BitRate = requestedBitRate.Value;
-                if (intermediateChunk)
-                {
-                    writer.BitRate = Math.Max(writer.BitRate, CalculateIntermediateBitRate(width, height, fps, bpp));
-                    writer.PreferToSpeed = true;
-                }
+                if (intermediateChunk && finalVideoBitRate.HasValue) writer.BitRate = finalVideoBitRate.Value;
                 return writer;
-            }
-
-            IVideoSource CreateChunkVideoSource(string path)
-            {
-                if (AlphaBrightnessDecoderContext.IsAlphaBrightnessVideo(path)) return new AlphaBrightnessDecoderContext(path);
-                if (HDRDecoderContext.IsHdrVideo(path)) return new HDRDecoderContext(path);
-                return bpp == IPicture.PicturePixelMode.UShortPicture
-                    ? new DecoderContext16Bit(path)
-                    : new DecoderContext8Bit(path);
             }
 
             async Task RenderVideoRange(
@@ -917,36 +1055,48 @@ namespace projectFrameCut
                 uint startFrame,
                 uint frameCount,
                 int renderThreads,
-                Action<double, TimeSpan, double>? rangeProgress = null,
+                Action<double, TimeSpan, double, long, long>? rangeProgress = null,
                 bool writeToVoid = false,
                 int chunkIndex = 0,
                 int chunkCount = 1,
-                bool intermediateChunk = false)
+                bool intermediateChunk = false,
+                RenderClipSession? clipSession = null,
+                AudioSampleSource? audioSamples = null)
             {
-                var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+                var clips = clipSession?.Clips ?? DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+                var audioTracks = clipSession is null ? DraftImportAndExportHelper.JSONToISoundTracks(timeline, false).ToList() : new List<ISoundTrack>();
+                if (clipSession is null)
+                    SoundTrackMetadata.AddMissingLegacyTracks(clips, audioTracks, message => Log(message, "warn"), initialize: false);
                 if (clips.Length == 0) throw new InvalidOperationException("No video clips in the project.");
-                foreach (var clip in clips) clip.ReInit(bpp);
+                if (clipSession is null)
+                    foreach (var clip in clips) clip.ReInit(bpp);
                 if (!writeToVoid)
                     Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Environment.CurrentDirectory);
                 var builder = writeToVoid
                     ? null
                     : new VideoBuilder(CreateConfiguredWriter(path, intermediateChunk))
                     {
-                        EnablePreview = !chunkOptions.Enabled || chunkOptions.Parallelism == 1,
+                        EnablePreview = true,
                         minFrameCountToGeneratePreview = 60,
                         PreviewPath = switches.GetValueOrDefault("preview_path"),
                         StartFrame = startFrame,
                         Duration = frameCount,
-                        BlockWrite = serial,
+                        BlockWrite = true,
                         DoGCAfterEachWrite = gcOption > 0,
                         DisposeFrameAfterEachWrite = true
                     };
+                if (builder is not null)
+                    builder.DiskCacheDirectory = Path.Combine(ProjectCachePaths.GetTemporaryRoot(projectRoot, MauiProgram.CachePath), "RenderingCache");
                 var renderer = new Renderer
                 {
                     builder = builder,
                     Clips = clips,
+                    ClipSession = clipSession,
+                    AudioSamples = audioSamples ?? new AudioSampleSource(clips, audioTracks.ToArray(), fps, 96000),
                     TargetWidth = width,
                     TargetHeight = height,
+                    ProjectRelativeWidth = project.RelativeWidth,
+                    ProjectRelativeHeight = project.RelativeHeight,
                     StartFrame = startFrame,
                     Duration = frameCount,
                     ChunkIndex = chunkIndex,
@@ -954,35 +1104,51 @@ namespace projectFrameCut
                     CompletedFramesBeforeChunk = startFrame,
                     TotalProjectFrames = duration,
                     Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
+                    UseHDR = useHdr,
+                    MaximumHDRBrightness = maximumHdrBrightness,
+                    SDRClipsBrightnessInHDRMode = sdrBrightnessInHdr,
                     GCOption = gcOption,
                     MaxThreads = Math.Max(1, renderThreads),
-                    OneByOneRender = serial,
-                    RenderByLayers = renderByLayers,
-                    PrepareInWorkerThreads = prepareInWorkers,
+                    AllowWorkerOversubscription = allowWorkerOversubscription,
+                    RenderAheadFrames = int.TryParse(switches.GetValueOrDefault("renderAheadFrames"), out var ahead) ? Math.Max(0, ahead) : 0,
+                    EnableMemoryBudget = bool.TryParse(switches.GetValueOrDefault("enableMemoryBudget"), out var budget) && budget,
+                    EnableGpuBufferPoolLimit = !bool.TryParse(switches.GetValueOrDefault("enableGpuBufferPoolLimit",
+                        RenderSchedulingSettings.EnableGpuBufferPoolLimit.ToString()), out var poolLimit) || poolLimit,
+                    GpuBufferPoolMaxBytes = long.TryParse(switches.GetValueOrDefault("gpuBufferPoolMaxBytes"), out var poolBytes)
+                        && poolBytes > 0 ? poolBytes : RenderSchedulingSettings.GpuBufferPoolMaxBytes,
+                    MaxBufferedBytes = long.TryParse(switches.GetValueOrDefault("maxBufferedBytes"), out var bytes) ? Math.Max(0, bytes) : 0,
+                    ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
+                    EnableDeferredComposition = deferredComposition,
+                    ResumeInterruptedRender = chunkOptions.Resume,
+                    RenderResumeSignature = renderResumeSignature,
+                    DynamicPreviewCacheProjectRoot = projectRoot,
+                    DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
+                    DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
                     EnableThreadAffinity = affinity,
-                    MinSchedulePreparedFrames = 1
+                    WorkerCPUCoreIndexs = switches.GetValueOrDefault("coreAffinityOverride", "")
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Where(c => int.TryParse(c, out var index) && index >= 0).Select(int.Parse).Distinct().ToArray(),
                 };
                 renderer.OnProgressChanged += (value, eta) =>
                 {
-                    rangeProgress?.Invoke(value, eta, renderer.CurrentFps);
+                    rangeProgress?.Invoke(value, eta, renderer.CurrentFps,
+                        Math.Clamp((long)renderer.CurrentFinished, 0, frameCount), frameCount);
                 };
+                if (hashPreparationProgress is not null)
+                    renderer.OnHashPreparationProgressChanged += hashPreparationProgress;
                 try
                 {
-                    builder?.Build()?.Start();
                     renderer.PrepareRender(consoleCancellation.Token);
                     await renderer.GoRender(consoleCancellation.Token).ConfigureAwait(false);
+                    if (renderer.Composer is DeferredRenderComposer deferred)
+                        await deferred.WriteVideoAsync(builder, consoleCancellation.Token).ConfigureAwait(false);
                     consoleCancellation.Token.ThrowIfCancellationRequested();
                     if (builder is not null)
                     {
-                        if (serial)
-                        {
-                            builder.Writer?.Finish();
-                            builder.Dispose();
-                        }
-                        else builder.Finish(
-                            i => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height),
-                            checked(startFrame + frameCount),
-                            (_, _) => { });
+                        builder.Writer.Finish();
+                        builder.Dispose();
+                        if (intermediateChunk && renderer.EnableDeferredComposition)
+                            completedChunkCleanup[chunkIndex] = renderer.CleanupCreatedDeferredCache;
                     }
                 }
                 catch
@@ -992,18 +1158,22 @@ namespace projectFrameCut
                 }
                 finally
                 {
-                    foreach (var clip in clips) clip.Dispose();
+                    if (clipSession is null)
+                        foreach (var clip in clips) clip.Dispose();
+                    renderer.Composer?.Dispose();
                     renderer.builder = null;
+                    foreach (var track in audioTracks) track.Dispose();
                     Console.WriteLine();
                 }
             }
 
-            async Task<ChunkRenderCoordinator?> RenderVideo(string path, bool publishChunkedResult = true, bool writeToVoid = false)
+            async Task<ChunkRenderCoordinator?> RenderVideo(string path, bool writeToVoid = false)
             {
                 if (!chunkOptions.Enabled || writeToVoid)
                 {
                     await RenderVideoRange(path, 0, duration, maxThreads,
-                        (value, eta, currentFps) => progress?.Invoke(target == "all" ? value * 0.9 : value, eta, currentFps),
+                        (value, eta, currentFps, completedFrames, totalFrames) => progress?.Invoke(
+                            target == "all" ? value * 0.9 : value, eta, currentFps, completedFrames, totalFrames),
                         writeToVoid).ConfigureAwait(false);
                     return null;
                 }
@@ -1013,47 +1183,92 @@ namespace projectFrameCut
                     duration,
                     fps,
                     Path.GetExtension(path),
-                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|serial={serial}|layers={renderByLayers}|prepare={prepareInWorkers}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
+                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|merge=streamcopy|finalBitrate={finalVideoBitRate}|render=clip-cache|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(consoleCancellation.Token).ConfigureAwait(false);
-                await coordinator.RenderPendingChunksAsync(
-                    (segment, chunkPath, chunkThreads, report, token) =>
-                        RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, report, chunkIndex: segment.Index, chunkCount: coordinator.ChunkCount, intermediateChunk: true),
-                    state =>
-                    {
-                        double value = state.GlobalProgress * (target == "all" ? 0.8 : 0.85);
-                        progress?.Invoke(value, state.EstimatedRemaining, state.FramesPerSecond);
-                        if (lastChunkCount != state.ChunkCount)
+                coordinator.OnChunkCompleted += segment =>
+                {
+                    if (completedChunkCleanup.TryRemove(segment.Index, out var cleanup)) cleanup();
+                };
+                RenderClipSession? clipSession = null;
+                List<ISoundTrack> chunkAudioTracks = [];
+                AudioSampleSource? chunkAudioSamples = null;
+                try
+                {
+                    await coordinator.RenderPendingChunksAsync(
+                        async (segment, chunkPath, chunkThreads, report, token) =>
                         {
-                            lastChunkCount = state.ChunkCount;
-                            Console.WriteLine($"Rendering finished {state.ChunkCount} chunk(s).");
-                        }
-                    },
-                    consoleCancellation.Token).ConfigureAwait(false);
+                            if (clipSession is null)
+                            {
+                                var allClips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp);
+                                clipSession = new RenderClipSession(allClips.Where(c => c.ClipType != ClipMode.AudioClip).ToArray());
+                                foreach (var clip in allClips.Where(c => c.ClipType == ClipMode.AudioClip)) clip.Dispose();
+                                chunkAudioTracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline, false).ToList();
+                                SoundTrackMetadata.AddMissingLegacyTracks(clipSession.Clips, chunkAudioTracks, message => Log(message, "warn"), initialize: false);
+                                chunkAudioSamples = new AudioSampleSource(clipSession.Clips, chunkAudioTracks.ToArray(), fps, 96000);
+                            }
+                            await RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads,
+                                (value, eta, currentFps, _, _) => report(value, eta, currentFps),
+                                chunkIndex: segment.Index, chunkCount: coordinator.ChunkCount, intermediateChunk: true,
+                                clipSession: clipSession, audioSamples: chunkAudioSamples).ConfigureAwait(false);
+                        },
+                        state =>
+                        {
+                            double value = state.GlobalProgress * (target == "all" ? 0.8 : 0.85);
+                            progress?.Invoke(value, state.EstimatedRemaining, state.FramesPerSecond, state.CompletedFrames, duration);
+                            if (lastChunkCount != state.ChunkCount)
+                            {
+                                lastChunkCount = state.ChunkCount;
+                                Console.WriteLine($"Rendering finished {state.ChunkCount} chunk(s).");
+                            }
+                        },
+                        consoleCancellation.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    clipSession?.Dispose();
+                    foreach (var track in chunkAudioTracks) track.Dispose();
+                }
                 stageChanged?.Invoke("MergeChunks");
-                string merged = await coordinator.MergeAsync(
-                    path => CreateConfiguredWriter(path, intermediateChunk: false),
-                    CreateChunkVideoSource,
-                    (mergeProgress, mergeEta) => progress?.Invoke(
-                        (target == "all" ? 0.8 : 0.85) + mergeProgress * (target == "all" ? 0.1 : 0.15),
-                        mergeEta,
-                        0),
-                    consoleCancellation.Token).ConfigureAwait(false);
-                if (publishChunkedResult)
+                IClip[] audioClips = [];
+                List<ISoundTrack> tracks = [];
+                try
+                {
+                    if (target == "all")
+                    {
+                        audioClips = DraftImportAndExportHelper.JSONToIClips(timeline, false, IPicture.PicturePixelMode.BytePicture);
+                        tracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline).ToList();
+                        SoundTrackMetadata.AddMissingLegacyTracks(audioClips.Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip).ToArray(),
+                            tracks, message => Log(message, "warn"));
+                    }
+                    string merged = await coordinator.MergeAsync(
+                        (mergeProgress, mergeEta) => progress?.Invoke(
+                            (target == "all" ? 0.8 : 0.85) + mergeProgress * (target == "all" ? 0.2 : 0.15), mergeEta, 0, duration, duration),
+                        consoleCancellation.Token,
+                        tracks.Count > 0 ? new AudioComposer<float> { Clips = [], SoundTracks = tracks.ToArray() } : null).ConfigureAwait(false);
                     await ChunkRenderCoordinator.PublishAsync(merged, path, consoleCancellation.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    foreach (var clip in audioClips) clip.Dispose();
+                    foreach (var track in tracks) track.Dispose();
+                }
                 return coordinator;
             }
 
             void RenderAudio(string path)
             {
                 var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, IPicture.PicturePixelMode.BytePicture).Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip).ToArray();
-                var tracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline).ToArray();
-                if (clips.Length == 0 && tracks.Length == 0) return;
-                foreach (var clip in clips) clip.ReInit(IPicture.PicturePixelMode.BytePicture);
-                foreach (var track in tracks) track.ReInit();
+                var tracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline).ToList();
+                SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log(message, "warn"));
+                if (tracks.Count == 0)
+                {
+                    foreach (var clip in clips) clip.Dispose();
+                    return;
+                }
                 using var writer = new AudioWriter(path, 96000, 2, "pcm_s16le");
-                new AudioComposer<float> { Clips = clips, SoundTracks = tracks, Writer = writer }.Compose(fps, 96000, 2, 4096, consoleCancellation.Token);
+                new AudioComposer<float> { Clips = [], SoundTracks = tracks.ToArray(), Writer = writer }.Compose(fps, 96000, 2, 4096, consoleCancellation.Token);
                 writer.Finish();
                 foreach (var clip in clips) clip.Dispose();
                 foreach (var track in tracks) track.Dispose();
@@ -1064,47 +1279,35 @@ namespace projectFrameCut
                 case "video":
                     {
                         var chunkJob = await RenderVideo(outputPath);
+                        if (chunkJob is null && finalVideoBitRate is long bitRate)
+                            VideoResizer.ReencodeToBitRate(outputPath, outputPath, output[4], bitRate, consoleCancellation.Token);
                         if (chunkJob is not null && !chunkOptions.KeepChunkFiles) chunkJob.Cleanup();
                         break;
                     }
                 case "void": await RenderVideo(outputPath, writeToVoid: true); break;
                 case "audio": RenderAudio(outputPath); break;
                 case "all":
+                    if (chunkOptions.Enabled)
+                    {
+                        var job = await RenderVideo(outputPath);
+                        if (job is not null && !chunkOptions.KeepChunkFiles) job.Cleanup();
+                        break;
+                    }
                     var video = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(outputPath)}");
                     var audio = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-                    var allChunkJob = await RenderVideo(video, publishChunkedResult: !chunkOptions.Enabled);
-                    if (allChunkJob is not null) video = allChunkJob.MergedPath;
-                    progress?.Invoke(0.92, TimeSpan.Zero, 0);
+                    await RenderVideo(video);
+                    progress?.Invoke(0.92, TimeSpan.Zero, 0, duration, duration);
                     stageChanged?.Invoke("ComposeAudio");
                     RenderAudio(audio);
-                    progress?.Invoke(0.97, TimeSpan.Zero, 0);
+                    progress?.Invoke(0.97, TimeSpan.Zero, 0, duration, duration);
                     stageChanged?.Invoke("FinalEncoding");
-                    if (File.Exists(audio))
-                    {
-                        if (allChunkJob is null)
-                        {
-                            VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true);
-                        }
-                        else
-                        {
-                            string outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
-                            string atomicOutput = Path.Combine(outputDirectory, $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}{Path.GetExtension(outputPath)}");
-                            try
-                            {
-                                VideoAudioMuxer.MuxFromFiles(video, audio, atomicOutput, true);
-                                File.Move(atomicOutput, outputPath, overwrite: true);
-                            }
-                            finally
-                            {
-                                if (File.Exists(atomicOutput)) File.Delete(atomicOutput);
-                            }
-                        }
-                    }
+                    if (File.Exists(audio) || finalVideoBitRate.HasValue)
+                        VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true,
+                            finalVideoBitRate: finalVideoBitRate, videoEncoder: output[4], cancellationToken: consoleCancellation.Token);
                     else
                         await ChunkRenderCoordinator.PublishAsync(video, outputPath, consoleCancellation.Token).ConfigureAwait(false);
-                    if (allChunkJob is null) File.Delete(video);
+                    File.Delete(video);
                     File.Delete(audio);
-                    if (allChunkJob is not null && !chunkOptions.KeepChunkFiles) allChunkJob.Cleanup();
                     break;
                 default: throw new ArgumentException($"Unknown target '{target}'.");
             }
@@ -1118,9 +1321,6 @@ namespace projectFrameCut
             bool enabled = bool.TryParse(switches.GetValueOrDefault("chunkRender", "false"), out var chunkRender) && chunkRender;
             bool resume = !bool.TryParse(switches.GetValueOrDefault("chunkResume", "true"), out var chunkResume) || chunkResume;
             bool keepFiles = bool.TryParse(switches.GetValueOrDefault("chunkKeepFiles", "false"), out var chunkKeepFiles) && chunkKeepFiles;
-            int parallelism = int.TryParse(switches.GetValueOrDefault("chunkParallelism", "1"), out var parsedParallelism)
-                ? Math.Max(1, parsedParallelism)
-                : 1;
             uint? frames = null;
             double? seconds = null;
             if (switches.TryGetValue("chunkFrames", out var chunkFramesText))
@@ -1145,21 +1345,9 @@ namespace projectFrameCut
                 Enabled = enabled,
                 ChunkFrames = frames,
                 ChunkSeconds = seconds,
-                Parallelism = parallelism,
                 Resume = resume,
                 KeepChunkFiles = keepFiles
             };
-        }
-
-        private static long CalculateIntermediateBitRate(
-            int width,
-            int height,
-            int frameRate,
-            IPicture.PicturePixelMode pixelMode)
-        {
-            double bitsPerPixel = pixelMode == IPicture.PicturePixelMode.UShortPicture ? 0.5 : 0.3;
-            double estimate = (double)width * height * frameRate * bitsPerPixel;
-            return (long)Math.Clamp(estimate, 12_000_000d, 300_000_000d);
         }
 
         private static string GetFileFingerprintPart(string? path)
@@ -1221,10 +1409,10 @@ namespace projectFrameCut
                 ? new UnixSocketRenderServer(service).RunAsync(options.Endpoint, options.Token, serverCancellation.Token)
                 : new NamedPipeRenderServer(service).RunAsync(options.Endpoint, options.Token, cancellationToken: serverCancellation.Token);
 
-            var exitCode = await service.RunAsync(async (progress, stageChanged, cancellationToken) =>
+            var exitCode = await service.RunAsync(async (progress, stageChanged, hashPreparationProgress, cancellationToken) =>
             {
-                InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
-                return await RunRenderPipelineAsync(switches, cancellationToken, progress, stageChanged).ConfigureAwait(false);
+                InitializeCliRenderRuntime(dataRoot, switches);
+                return await RunRenderPipelineAsync(switches, cancellationToken, progress, stageChanged, hashPreparationProgress).ConfigureAwait(false);
             }).ConfigureAwait(false);
 
             // Give the GUI enough time to observe the terminal state. A foreground
@@ -1277,23 +1465,24 @@ namespace projectFrameCut
                 Persist(CaptureForPersistence());
             }
 
-            public async Task<int> RunAsync(Func<Action<double, TimeSpan, double>, Action<string>, CancellationToken, Task<int>> render)
+            public async Task<int> RunAsync(Func<Action<double, TimeSpan, double, long, long>, Action<string>, Action<long, long>, CancellationToken, Task<int>> render)
             {
                 Update(job => job.State = RenderJobState.Running);
                 PublishProgress(force: true);
                 try
                 {
-                    var result = await render((progress, eta, fps) =>
+                    var result = await render((progress, eta, fps, completedFrames, totalFrames) =>
                     {
+                        if (!UpdateProgress(progress, eta, fps, completedFrames, totalFrames)) return;
                         if (!TryReserveProgressPublish()) return;
-                        if (!UpdateProgress(progress, eta, fps)) return;
                         QueueProgressPublish();
-                    }, UpdateStage, _renderCancellation.Token).ConfigureAwait(false);
+                    }, UpdateStage, UpdateHashPreparationProgress, _renderCancellation.Token).ConfigureAwait(false);
                     if (result != 0) throw new InvalidOperationException($"CLI renderer exited with code {result}.");
                     Update(job =>
                     {
                         job.State = RenderJobState.Completed;
                         job.Progress = 1;
+                        job.CompletedFrames = job.TotalFrames;
                         job.EstimatedRemainingTicks = 0;
                     });
                     PublishCompletion();
@@ -1386,7 +1575,7 @@ namespace projectFrameCut
                 }
             }
 
-            private bool UpdateProgress(double progress, TimeSpan eta, double fps)
+            private bool UpdateProgress(double progress, TimeSpan eta, double fps, long completedFrames, long totalFrames)
             {
                 lock (_gate)
                 {
@@ -1394,10 +1583,25 @@ namespace projectFrameCut
                     _job.Progress = Math.Clamp(progress, 0, 1);
                     _job.EstimatedRemainingTicks = Math.Max(0, eta.Ticks);
                     _job.CurrentFps = Math.Max(0, fps);
+                    _job.TotalFrames = Math.Max(0, totalFrames);
+                    _job.CompletedFrames = Math.Clamp(completedFrames, 0, _job.TotalFrames);
                     _job.UpdatedAtUtc = DateTime.UtcNow;
                     _jobRevision++;
                     return true;
                 }
+            }
+
+            private void UpdateHashPreparationProgress(long completed, long total)
+            {
+                Update(job =>
+                {
+                    job.HashPreparationCompleted = completed;
+                    job.HashPreparationTotal = total;
+                });
+                if (completed == 0 || completed >= total)
+                    PublishProgress(force: true);
+                else if (TryReserveProgressPublish())
+                    QueueProgressPublish();
             }
 
             private void UpdateStage(string stage)
@@ -1500,14 +1704,35 @@ namespace projectFrameCut
         private static async Task<int> RunRpcRequestAsync(string[] args)
         {
             if (args.Any(IsHelpOption)) { WriteRpcRequestHelp(); return 0; }
-            using var rsa = RSA.Create();
             using var cancellation = new CancellationTokenSource();
             ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
             Console.CancelKeyPress += cancel;
             string? path = null;
+            ExternalRpcRequest? request = null;
+            Exception? readError = null;
+            var stage = "load_key";
             var wait = args.Any(a => a.Equals("--wait", StringComparison.OrdinalIgnoreCase));
+
+            int WriteFailure(string status, int exitCode, RemoteError error)
+            {
+                Console.Error.WriteLine(JsonSerializer.Serialize(new
+                {
+                    status,
+                    stage,
+                    requestId = request?.RequestId,
+                    clientId = request?.ClientId,
+                    serviceId = request?.ServiceId,
+                    requestPath = path,
+                    expiresAt = request?.ExpiresAt,
+                    error,
+                    responseReadError = readError is null ? null : new RemoteError(readError),
+                }, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }));
+                return exitCode;
+            }
+
             try
             {
+                using var rsa = RSA.Create();
                 var publicKeyPath = GetOption(args, "publicKey", false);
                 var privateKeyPath = GetOption(args, "privateKey", false);
                 var clientIdText = GetOption(args, "clientId", false);
@@ -1527,9 +1752,10 @@ namespace projectFrameCut
                     if (publicKeyPath is null) rsa.KeySize = 3072;
                     else rsa.ImportFromPem(File.ReadAllText(publicKeyPath));
                 }
+                stage = "validate_request";
                 var seconds = int.Parse(GetOption(args, "timeout", false) ?? "300");
                 if (seconds < 5 || seconds > 3600) throw new ArgumentException("--timeout must be 5-3600 seconds.");
-                var request = new ExternalRpcRequest
+                request = new ExternalRpcRequest
                 {
                     Version = persistent ? 2 : 1,
                     Mode = persistent ? "persistent" : "one-time",
@@ -1540,13 +1766,32 @@ namespace projectFrameCut
                     Author = GetOption(args, "author", false) ?? "",
                     Purpose = GetOption(args, "purpose", false) ?? "",
                     PublicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo()),
+                    AdditionalSids = args.Where(a => a.StartsWith("--addSID=", StringComparison.OrdinalIgnoreCase)).Select(a => a[9..]).ToArray(),
                     ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(seconds),
                 };
                 if (persistent) request.Sign(rsa);
                 request.Validate();
+                stage = "check_project";
                 var directory = Path.GetFullPath(GetOption(args, "requestDir", false) ?? Path.Combine(AppDataPath, "RpcRequest"));
-                Directory.CreateDirectory(directory);
                 path = Path.Combine(directory, $"{request.RequestId:N}.json");
+                var dataRoot = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(directory))!;
+                ExternalRpcPipeSettings.EnsureAllowed(dataRoot);
+#if WINDOWS
+                if (WinUI.App.IsPackaged())
+                {
+                    var currentProjectPath = Platforms.Windows.WindowsPluginIsolationPlatform.CurrentProjectDirectory;
+                    if (!Directory.Exists(currentProjectPath))
+                        return WriteFailure("failed", 1, new RemoteError
+                        {
+                            Code = RenderErrorCode.ProjectNotFound,
+                            Message = "No local project is open in projectFrameCut. Open a local project before requesting external RPC authorization.",
+                            Details = $"Current project directory does not exist: {currentProjectPath}",
+                            Retryable = true,
+                        });
+                }
+#endif
+                stage = "submit_request";
+                Directory.CreateDirectory(directory);
                 var temporary = path + ".tmp";
                 try
                 {
@@ -1559,19 +1804,24 @@ namespace projectFrameCut
                     Console.WriteLine(JsonSerializer.Serialize(new { request.RequestId, Path = path }));
                     return 0;
                 }
+                stage = "wait_for_response";
                 while (DateTimeOffset.UtcNow < request.ExpiresAt)
                 {
                     cancellation.Token.ThrowIfCancellationRequested();
                     ExternalRpcRequest? response = null;
-                    try { response = ExternalRpcRequest.ReadFile(path); }
-                    catch (IOException) { }
-                    catch (JsonException) { }
+                    try
+                    {
+                        response = ExternalRpcRequest.ReadFile(path, maxLength: 1024 * 1024);
+                        readError = null;
+                    }
+                    catch (Exception ex) when (ex is IOException or JsonException) { readError = ex; }
                     if (response is not null)
                     {
                         if (response.RequestId != request.RequestId || response.PublicKey != request.PublicKey)
                             throw new ArgumentException("RPC response does not match the request.");
                         if (response.Status == "approved")
                         {
+                            stage = "decrypt_response";
                             var connection = JsonSerializer.Deserialize<ExternalRpcConnection>(rsa.Decrypt(
                                 Convert.FromBase64String(response.EncryptedConnection), RSAEncryptionPadding.OaepSHA256))
                                 ?? throw new ArgumentException("Empty RPC connection.");
@@ -1586,20 +1836,31 @@ namespace projectFrameCut
                         }
                         if (response.Status != "pending")
                         {
-                            Console.Error.WriteLine(JsonSerializer.Serialize(new { status = response.Status }));
-                            return response.Status == "denied" ? 3 : response.Status == "expired" ? 4 : 1;
+                            return WriteFailure(response.Status, response.Status == "denied" ? 3 : response.Status == "expired" ? 4 : 1,
+                                response.Error ?? new RemoteError
+                                {
+                                    Code = response.Status is "denied" or "disabled" ? RenderErrorCode.Unauthorized
+                                        : response.Status == "expired" ? RenderErrorCode.Canceled : RenderErrorCode.BackendFailure,
+                                    Message = $"RPC request ended with status '{response.Status}', but the server did not provide error details.",
+                                });
                         }
                     }
                     await Task.Delay(250, cancellation.Token).ConfigureAwait(false);
                 }
-                Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "timeout" }));
-                return 4;
+                return WriteFailure("timeout", 4, new RemoteError
+                {
+                    Code = RenderErrorCode.Canceled,
+                    Message = "Timed out waiting for RPC authorization. Open a local project in projectFrameCut and ensure it uses the same request directory.",
+                    Retryable = true,
+                });
             }
-            catch (OperationCanceledException) { return 130; }
+            catch (OperationCanceledException ex) { return WriteFailure("canceled", 130, new RemoteError(ex, RenderErrorCode.Canceled)); }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"RPC request failed: {ex.Message}");
-                return ex is ArgumentException or FormatException ? 2 : 1;
+                Log(ex, $"External RPC request failed at {stage}");
+                return WriteFailure("failed", ex is ArgumentException or FormatException ? 2 : 1,
+                    new RemoteError(ex, ex is ArgumentException or FormatException ? RenderErrorCode.InvalidRequest
+                        : ex is UnauthorizedAccessException ? RenderErrorCode.Unauthorized : RenderErrorCode.BackendFailure));
             }
             finally
             {
@@ -1617,6 +1878,9 @@ namespace projectFrameCut
 
         internal static void InitializeRenderRuntime(string dataRoot, string ffmpegRoot = "")
         {
+            projectFrameCut.Render.Text.TextStylePronunciation.DictionaryDirectory = Path.Combine(dataRoot, "JapaneseDictionary");
+            SettingsManager.InitializeReadOnly(dataRoot);
+            ProjectExternalSourceService.InitializeRuntime(dataRoot);
             PluginManager.ProjectPluginLoader = async (projectRoot, project, cancellationToken) =>
             {
                 var result = await ProjectPluginService.LoadProjectPluginsAsync(projectRoot, project, _ => Task.FromResult(false), cancellationToken);
@@ -1624,16 +1888,58 @@ namespace projectFrameCut
                     throw new InvalidOperationException("Project plugins failed to load: " + string.Join("; ", result.Failed.Select(x => $"{x.Key}: {x.Value}")));
             };
             PluginManager.ProjectPluginUnloader = ProjectPluginService.UnloadProjectPluginsAsync;
-            if (!PluginManager.Inited)
+            bool initializePlugins = !PluginManager.Inited;
+            if (initializePlugins)
             {
-                try { GlobalPluginHelper.PluginsDataRootPath = dataRoot; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
-                try { GlobalPluginHelper.CacheRootPath = AppCachePath; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
+                MauiProgram.SetRenderDataRoot(dataRoot);
+                if (GlobalPluginHelper.PluginsDataRootPath is null)
+                    GlobalPluginHelper.PluginsDataRootPath = Path.Combine(dataRoot, "Plugins");
+                if (GlobalPluginHelper.CacheRootPath is null)
+                    GlobalPluginHelper.CacheRootPath = AppCachePath;
+                if (GlobalPluginHelper.PluginGetter is null)
+                    PluginManager.InitGlobalGetter();
+                Log($"[Render] Plugin data directory: '{GlobalPluginHelper.PluginsDataRootPath}'.");
                 PluginManager.Init(
                 [
                     new InternalPluginBase(),
+#if HEADLESS
+                    new Platforms.Headless.ILGPUPlugin(),
+#else
                     new projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin(),
+#endif
                 ]);
             }
+            EffectHelper.ForcePreferToType = SettingsManager.IsBoolSettingTrue("render_forceImpType_ForceHwAccel")
+                ? EffectImplementType.HwAcceleration
+                : SettingsManager.IsBoolSettingTrue("render_forceImpType_ForceIPicture") ? EffectImplementType.IPicture : null;
+            EffectHelper.DefaultImplementsType = new();
+            try
+            {
+                var path = Path.Combine(dataRoot, "EffectImplement.json");
+                if (File.Exists(path))
+                    EffectHelper.DefaultImplementsType = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(File.ReadAllText(path)) ?? new();
+            }
+            catch (Exception ex) { Log(ex, "Load render effect implementation preferences"); }
+            var resizeType = EffectHelper.ForcePreferToType
+                ?? (SettingsManager.IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true)
+                    ? EffectImplementType.HwAcceleration : EffectImplementType.IPicture);
+            Drawing.Processing.Resizing.PictureResizer.Default = new EffectPictureResizer(resizeType);
+            IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
+            ClassicOverlayMixture.EnableApproximatePath = SettingsManager.IsBoolSettingTrue("render_preferApproximateMixture");
+            HwAccelPictureSession.DefaultEnableBufferPoolLimit = RenderSchedulingSettings.EnableGpuBufferPoolLimit;
+            HwAccelPictureSession.DefaultBufferPoolMaxBytes = RenderSchedulingSettings.GpuBufferPoolMaxBytes;
+            IVectorContentClip.GlobalDefaultAntiAliasMode = SettingsManager.GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch
+            {
+                "ssaa8x" => AntiAliasMode.SSAA8x,
+                "ssaa4x" => AntiAliasMode.SSAA4x,
+                "ssaa2x" => AntiAliasMode.SSAA2x,
+                _ => AntiAliasMode.None,
+            };
+            IVectorContentClip.GlobalDefaultRasterizer = SettingsManager.IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true)
+                ? new Render.HwAccelEngine.VectorRasterizer.VectorToPictureHwAccel()
+                : new Render.RenderAPIBase.VectorContent.CpuVectorPictureRasterizer();
+            EffectHelper.InvalidateImplementations();
+            Log($"[Render] Effect preference: {EffectHelper.ForcePreferToType?.ToString() ?? "per effect"}, configured defaults: {EffectHelper.DefaultImplementsType.Count}, resize: {resizeType}, vector rasterizer: {IVectorContentClip.GlobalDefaultRasterizer.GetType().Name}.");
             if (!ffmpeg.Ready)
             {
                 try
@@ -1727,6 +2033,7 @@ namespace projectFrameCut
                 }
 
             }
+            if (initializePlugins) PluginService.LoadRenderPlugins();
         }
 
         private static string ResolveDataRoot(string? dataRoot)
@@ -1753,11 +2060,85 @@ namespace projectFrameCut
             return value;
         }
 
+        private static int RunPublicResourceAccessRepair()
+        {
+#if WINDOWS
+            try
+            {
+                Platforms.Windows.WindowsPublicResourcePermissions.Repair();
+                return SuccessExitCode;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "repair public resource access permissions", typeof(CLIProgram));
+                Console.Error.WriteLine($"ERROR: {ex.Message}");
+                return 1;
+            }
+#else
+            Console.Error.WriteLine("ERROR: repair_public_resource_access is only available on Windows.");
+            return InvalidCommandExitCode;
+#endif
+        }
+
+        private static int RunPluginNetworkPolicy(string[] args)
+        {
+#if WINDOWS
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
+                {
+                    Console.Error.WriteLine("ERROR: plugin_network_policy requires administrator privileges.");
+                    return 1;
+                }
+
+                var target = GetOption(args, "target", false);
+                var enabledText = GetOption(args, "enabled", false);
+                var packageFamilyName = GetOption(args, "packageFamilyName", false);
+                if (!string.Equals(target, "loopback", StringComparison.OrdinalIgnoreCase)
+                    || string.IsNullOrWhiteSpace(packageFamilyName)
+                    || !bool.TryParse(enabledText, out var enabled))
+                {
+                    Console.Error.WriteLine("ERROR: Required options are --target=loopback, --enabled=true|false, and --packageFamilyName=<PFN>.");
+                    return InvalidCommandExitCode;
+                }
+
+                Setting.SettingPages.SecuritySettingPage.ConfigureIsolatedPluginNetworkPolicy(target, enabled, packageFamilyName);
+                Console.WriteLine($"Configured isolated plugin loopback exemption to '{enabled}'.");
+                return SuccessExitCode;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "configure the isolated plugin loopback exemption", typeof(CLIProgram));
+                Console.Error.WriteLine($"ERROR: {ex.Message}");
+                return 1;
+            }
+#else
+            Console.Error.WriteLine("ERROR: plugin_network_policy is only available on Windows.");
+            return InvalidCommandExitCode;
+#endif
+        }
+
+        private static string GetUiVersionInfo() =>
+#if HEADLESS
+            "Headless client (ILGPU)";
+#else
+    $".NET MAUI version:    {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "10.0.?"}";
+#endif
+
+        private static string GetApplicationPluginVersionInfo() =>
+#if HEADLESS
+            "Application-level plugins: unavailable";
+#else
+            $"IApplicationPluginBase API:   v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}";
+#endif
+
         #endregion
 
         #region help
         private static void WriteGeneralHelp()
         {
+#if !HEADLESS
             Console.WriteLine(
 @"projectFrameCut command-line interface
 
@@ -1767,7 +2148,6 @@ Usage:
 
 Commands:
   gui         Launch the projectFrameCut graphical interface.
-  render      Run the built-in renderer.
   headless    Start the headless backend for remote access and automation.
   rpc_request Request a one-time or persistent-client external RPC pipe.
   mcp         Serve the user library or one project over MCP in HTTP/stdio.
@@ -1811,6 +2191,50 @@ Global options:
 Help options:
   -h, --help, /?    Show this help text.
 ");
+#else
+            Console.WriteLine(
+@"projectFrameCut headless server
+Warning: Headless client was mainly desgined for providing client backward compatibility ability via RPC. 
+It is not designed as a full-featured CLI tool. Consider use GUI or CLI tool for normal usage.
+
+Usage:
+  pjfc <command> [arguments] [options]
+  pjfc help [command]
+
+Commands:
+  rpc_server  Start the headless backend as same as projectFrameCut client. Advanced usage, not recommended for normal usage.
+  headless    Start the headless backend for remote access and automation.
+  mcp         Serve the user library or one project over MCP in HTTP/stdio.
+  help        Show general help or detailed help for a command.
+  about       Show version and build information.
+
+Global options:
+  --quiet             Suppress all console outputs, include logs, version/copyright banner, and diagnostic messages.
+
+  --consoleLog        Write application logs to the console. Mutually exclusive with with --quiet flag. 
+
+  --logDiagnostic     Include diagnostic-level log messages to be announced in logger system.
+                      Not applicable to gui mode because of user configuration.
+                      Note that this option only affects the logger system and does not change the console output behavior.
+
+  --noLog             Disable logging file writing. This does not affect 'gui' mode or console logging.
+                      Set environment variable PJFC_NO_LOG to achieve the same effect.
+
+  --loadPlugins       Load all enabled User-level plugin(s) which has been enabled.
+                      Not applicable to gui mode because GUI will handle plugin by itself.
+
+  --ffmpegRoot=...    Sets the root path for FFmpeg binaries. 
+                      If not specified, defaults to the internal FFmpeg path, or the user configured 
+                      path/plugin in the GUI settings when in gui mode.
+
+  --dataRoot=...      Optional user-data directory used for assets and rendering.
+                      If not specified, defaults to the path defined in <App Data>\OverrideUserDataPath.txt 
+                      or %USERPROFILE%\Documents\projectFrameCut by default.
+
+Help options:
+  -h, --help, /?    Show this help text.
+");
+#endif
         }
 
         private static void WriteMcpHelp()
@@ -1871,6 +2295,8 @@ Options:
   --token       Bearer token used by RPC clients. It must contain at least 32
                 non-whitespace characters.
   --projectRoot Project directory to load before the RPC server starts.
+  --allowExternalSources=all|<ImportId,ImportId,...>
+                Load the listed project external sources for this run. Default: none.
   --dataRoot    projectFrameCut's User Data directory. If not specified, default to the path defined in
                 <App Data>\OverrideUserDataPath.txt's path or %USERPROFILE%\Documents\projectFrameCut by default.
 
@@ -1883,7 +2309,7 @@ The backend loads the project before accepting RPC requests and keeps running un
             Console.WriteLine(
 """
 Usage:
-    pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --wait
+    pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --wait [--addSID=<SID>]...
     pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --publicKey=<public.pem>
     pjfc rpc_request --clientId=<id> --service=<service> --privateKey=<private.pem> [--wait]
 
@@ -1893,12 +2319,15 @@ Usage:
 --service       Request one authorized service (default: rpc).
 --privateKey    Persistent client's RSA private PEM key, used to sign and decrypt the request.
 --launch        Start the authorized client executable after the request is accepted.
+--addSID        Grant an extra SID read/write access to this one-time pipe (Windows; repeatable).
 --timeout       Request lifetime in seconds (5-3600; default 300).
 --requestDir    Override the default AppData/RpcRequest directory (must match the target app).
 
-Open a local project in projectFrameCut to authorize. No callback command is executed.
+Open a local project in projectFrameCut to authorize. Packaged Windows clients fail immediately if CurrentProject is missing.
+No callback command is executed.
 Responses replace the request file; EncryptedConnection uses RSA-OAEP-SHA256.
 --wait prints the encrypted connection information for the calling program only.
+Failures on stderr include status, stage, request context, and error details (including exception type and stack trace when available).
 Exit codes: 0 success/submitted, 1 failure, 2 invalid arguments, 3 denied, 4 expired, 130 canceled.
 """);
         }
@@ -1939,7 +2368,8 @@ Target:
                                    or --continue is used. When --continue is used, the last
                                    project will be opened and directly open the render page.
 
-                                   To implement automatic rendering, please use 'render' mode. 
+                                   Render parameters below override preferences for this launch.
+                                   Without --output, rendering is started manually in the UI.
 
   --remote                         Enter remote access mode. The GUI will connect to the specified 
                                    RPC server and open the project remotely. 
@@ -2005,6 +2435,29 @@ Persistent external RPC authorization:
   --rpcArguments=<arguments>      Optional fixed executable arguments.
   --rpcResponse=<path>            Optional new response file inside AppData/RpcRequest.
 
+Render options (with --render):
+  --width=<pixels>                 Positive integer output width.
+  --height=<pixels>                Positive integer output height.
+  --fps=<fps>                      Positive integer output frame rate.
+  --encoder=<name>                 auto, a codec family (h264/hevc/av1), or an FFmpeg
+                                   encoder name such as libx264 or hevc_nvenc.
+  --bitDepth=<bits>                8, 10, or 12. HDR projects require 10.
+  --bitRate=<Mbps|auto>            Final video bitrate in Mbps; auto uses encoder defaults.
+  --maxParallelThreads=<count>     Number of parallel render workers, from 1 to 64.
+  --incrementalRendering=<bool>    true or false. Enable or disable incremental rendering.
+
+  --output=<file>                  Write to this file without a save dialog, automatically
+                                   start the full-project render after the page loads, and
+                                   exit the app after successful completion. Failed or canceled
+                                   renders keep the app open. Relative paths resolve from the
+                                   launch working directory. Parent directories are created.
+                                   Status changes write progress, FPS, completed/total frames,
+                                   stage, and ETA to stderr as [RenderStatus] lines.
+  --overwrite=<bool>               Allow replacing an existing --output file. Default: false.
+
+  Omitted render parameters retain the current defaults. Overrides do not update
+  saved preferences.
+
 Protocol URI:
   pjfc:file:///C:/path/to/project.pjfc[?option[&option...]]
 
@@ -2017,6 +2470,8 @@ Examples:
   pjfc gui
   pjfc gui ""D:\Video Projects\demo.pjfc""
   pjfc gui --render ""D:\Video Projects\demo.pjfc""
+  pjfc gui --render ""D:\Video Projects\demo.pjfc"" --width=1920 --height=1080 --fps=30 --encoder=libx264 --bitRate=20
+  pjfc gui --render --continue --width=1920 --height=1080 --fps=30 --encoder=libx264 --output=""D:\Exports\demo.mp4""
   pjfc gui --continue --noSplash
   pjfc gui ""D:\Video Projects\demo.pjfc"" --consoleLog --logDiagnostic
   pjfc gui --overrideCulture=en-US --userData=""D:\pjfc-data""
@@ -2055,45 +2510,19 @@ $"""
 https://github.com/hexadecimal0x12e/projectFrameCut
 
 .NET CoreCLR version: {Environment.Version}
-.NET MAUI version:    {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "10.0.?"}
+{GetUiVersionInfo()}
 IPluginBase API:      v{IPluginBase.CurrentPluginAPIVersion} 
-IApplicationPluginBase API:   v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+{GetApplicationPluginVersionInfo()}
 {renderType.GetName().Name}:  v{renderType.GetName().Version} {renderHash}
-{drawingType.GetName().Name}: v{drawingType.GetName().Version} ({drawingCommit})
+{drawingType.GetName().Name}: v{drawingType.GetName().Version} {drawingHash}
 
 This project is licensed under the Apache License, Version 2.0 for personal/educational and non-commercial use ONLY.
 See the LICENSE and license.md file in the project root for more information.
 """);
         }
 
-        private static void WriteRenderHelp()
-        {
-            Console.WriteLine(
-@"Render a project
-
-Usage:
-  pjfc render -project=<project directory> -output=<file>
-              -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
-                [-target=video|audio|all|void] [-assetDbFile=<database.json>]
-                [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
-                [-renderByLayer=true|false] [-prepareInWorker=true|false]
-                [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
-                [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
-                [-chunkParallelism=<number>] [-chunkResume=true|false]
-                [-chunkKeepFiles=true|false]
-
-This command is usually used internally, not intended for direct use by end users. 
-It is provided for detached rendering of a project for the UI, and for integration with other tools.
-
-This command provide a simple way to render a project in the command line.
-For full functionality of out-of-process rendering, use StandaloneRender.
-
-The render command is executed in-process and uses the same Renderer,
-VideoBuilder, audio composer, plugin manager, and accelerator manager as the GUI.
-For the usage of params, refer to the StandaloneRender's documentation.
-");
-        }
 
         #endregion
     }
+
 }

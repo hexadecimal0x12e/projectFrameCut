@@ -17,6 +17,11 @@ internal static class RenderRpcBootstrap
     private static RenderServerProcessManager? _manager;
 
     public static bool SupportsCliRenderProcess => RenderServerProcessManager.SupportsCliRenderProcess;
+    public static Task? WorkerExitTask
+    {
+        get { lock (Gate) return _manager?.WorkerExitTask; }
+    }
+
     public static Guid? ActiveCliRenderJobId
     {
         get
@@ -35,7 +40,7 @@ internal static class RenderRpcBootstrap
 
     /// <summary>
     /// The render RPC client of the backend currently bound to an open project.
-    /// Call <see cref="Initialize(string?)"/> first so the backend is bound to
+    /// Call <see cref="Initialize"/> first so the backend is bound to
     /// the project root you operate on.
     /// </summary>
     public static IRenderClient Client
@@ -59,10 +64,11 @@ internal static class RenderRpcBootstrap
     /// project owns a dedicated render process that is stopped when the project
     /// closes (see <see cref="DisposeAsync"/>).
     /// </summary>
-    public static void Initialize(string? projectRoot = null, bool independentWorker = false, string? projectName = null)
+    public static void Initialize(string? projectRoot = null, bool independentWorker = false, string? projectName = null, CancellationToken cancellationToken = default)
     {
         lock (Gate)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (_manager is not null)
             {
                 if (SameProjectRoot(_manager.ProjectRoot, projectRoot)
@@ -79,8 +85,18 @@ internal static class RenderRpcBootstrap
                     Log(ex, "Dispose the previous render RPC backend");
                 }
             }
-            _manager = new RenderServerProcessManager("projectFrameCut-integrated-editor");
-            _manager.Start(projectRoot, independentWorker, projectName);
+            var manager = new RenderServerProcessManager("projectFrameCut-integrated-editor");
+            try
+            {
+                manager.Start(projectRoot, independentWorker, projectName, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                _manager = manager;
+            }
+            catch
+            {
+                try { manager.ForceStopAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+                throw;
+            }
         }
     }
 
@@ -89,10 +105,15 @@ internal static class RenderRpcBootstrap
     /// one for the same project. The caller must reopen its project session after
     /// this method returns.
     /// </summary>
-    public static void Restart(string? projectRoot = null, string? projectName = null)
+    public static bool Restart(string? projectRoot, string? projectName, IRenderClient? expectedClient, CancellationToken cancellationToken)
     {
         lock (Gate)
         {
+            if (cancellationToken.IsCancellationRequested) return false;
+            TryGetClient(out var currentClient);
+            if (!ReferenceEquals(currentClient, expectedClient)
+                || (_manager is not null && (_manager.IsIndependentWorker || !SameProjectRoot(_manager.ProjectRoot, projectRoot))))
+                return false;
             var old = _manager;
             _manager = null;
             if (old is not null)
@@ -110,8 +131,10 @@ internal static class RenderRpcBootstrap
             var manager = new RenderServerProcessManager("projectFrameCut-integrated-editor");
             try
             {
-                manager.Start(projectRoot, projectName: projectName);
+                manager.Start(projectRoot, projectName: projectName, cancellationToken: cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
                 _manager = manager;
+                return true;
             }
             catch
             {
@@ -120,6 +143,14 @@ internal static class RenderRpcBootstrap
             }
         }
     }
+
+#if WINDOWS && DEBUG
+    internal static void CaptureThreadStacksBeforeRestart()
+    {
+        lock (Gate)
+            _manager?.CaptureThreadStacksBeforeRestart();
+    }
+#endif
 
     public static bool TryGetClient(out IRenderClient? client)
     {
@@ -135,6 +166,16 @@ internal static class RenderRpcBootstrap
                 client = null;
                 return false;
             }
+        }
+    }
+
+    internal static bool TryGetEditorWorker(out IRenderClient? client, out Task? exited)
+    {
+        lock (Gate)
+        {
+            exited = _manager?.WorkerExitTask;
+            client = exited is null ? null : _manager!.Client;
+            return client is not null;
         }
     }
 
@@ -171,11 +212,11 @@ internal static class RenderRpcBootstrap
         }
     }
 
-    public static bool TryReconnectCliRender(string projectRoot, out Guid jobId)
+    public static bool TryReconnectCliRender(string? projectRoot, out Guid jobId)
     {
         lock (Gate)
         {
-            if (_manager?.JobId is Guid active && SameProjectRoot(_manager.ProjectRoot, projectRoot))
+            if (_manager?.JobId is Guid active && (projectRoot is null || SameProjectRoot(_manager.ProjectRoot, projectRoot)))
             {
                 jobId = active;
                 return true;
@@ -262,17 +303,5 @@ internal static class RenderRpcBootstrap
     }
 
     public static string ResolveArtifactPath(string projectRoot, RenderArtifact artifact)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
-        var canonicalRoot = Path.GetFullPath(projectRoot)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        var relative = artifact.ProjectRelativePath.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(relative)) throw new InvalidDataException("Render service returned an absolute artifact path.");
-        var fullPath = Path.GetFullPath(Path.Combine(canonicalRoot, relative));
-        var pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (!fullPath.StartsWith(canonicalRoot, pathComparison))
-            throw new InvalidDataException("Render service returned an artifact outside the project root.");
-        return fullPath;
-    }
+        => ProjectCachePaths.ResolvePath(projectRoot, artifact.ProjectRelativePath);
 }

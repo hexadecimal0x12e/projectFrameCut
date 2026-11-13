@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 
@@ -15,12 +16,12 @@ public sealed class ExampleFrameWriter : IVideoWriter
     public string OutputPath { get; set; }
     public int FramePerSecond { get; set; } = 30;
     public string CodecName { get; set; } = "ExampleFrameStream";
-    public string PixelFormat { get; set; } = "rgb24";
+    public string PixelFormat { get; set; } = "gbrpf16le";
     public long BitRate { get; set; }
     public bool PreferToSpeed { get; set; } = true;
     public Dictionary<string, string>? Metadata { get; set; }
     public uint DurationWritten => _duration;
-    public IPicture.PicturePixelMode? TargetPPB => IPicture.PicturePixelMode.BytePicture;
+    public IPicture.PicturePixelMode? TargetPPB => IPicture.PicturePixelMode.Float16Picture;
 
     public void Initialize()
     {
@@ -28,7 +29,7 @@ public sealed class ExampleFrameWriter : IVideoWriter
         string? directory = Path.GetDirectoryName(Path.GetFullPath(OutputPath));
         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
         _writer = new System.IO.BinaryWriter(File.Create(OutputPath));
-        _writer.Write("PJFC-EXAMPLE-FRAMES"u8.ToArray());
+        _writer.Write("PJFC-EXAMPLE-FP16"u8.ToArray());
         _writer.Write(Width);
         _writer.Write(Height);
         _writer.Write(FramePerSecond);
@@ -36,25 +37,16 @@ public sealed class ExampleFrameWriter : IVideoWriter
 
     public bool SupportCodec(string codecName) => string.Equals(codecName, "ExampleFrameStream", StringComparison.OrdinalIgnoreCase);
 
-    public void Append(IPicture<byte> picture)
+    public void Append(IPicture<Half> picture)
     {
         EnsureInitialized();
+        if (picture.Width != Width || picture.Height != Height) throw new ArgumentException("Frame dimensions do not match the writer.");
+        var channels = new PictureReadChannels<Half>(picture);
         _writer!.Write(picture.Width);
         _writer.Write(picture.Height);
-        _writer.Write(picture.r);
-        _writer.Write(picture.g);
-        _writer.Write(picture.b);
-        _duration++;
-    }
-
-    public void Append(IPicture<ushort> picture)
-    {
-        EnsureInitialized();
-        _writer!.Write(picture.Width);
-        _writer.Write(picture.Height);
-        for (int i = 0; i < picture.Pixels; i++) _writer.Write((byte)(picture.r[i] >> 8));
-        for (int i = 0; i < picture.Pixels; i++) _writer.Write((byte)(picture.g[i] >> 8));
-        for (int i = 0; i < picture.Pixels; i++) _writer.Write((byte)(picture.b[i] >> 8));
+        _writer.Write(MemoryMarshal.AsBytes(channels.Red));
+        _writer.Write(MemoryMarshal.AsBytes(channels.Green));
+        _writer.Write(MemoryMarshal.AsBytes(channels.Blue));
         _duration++;
     }
 

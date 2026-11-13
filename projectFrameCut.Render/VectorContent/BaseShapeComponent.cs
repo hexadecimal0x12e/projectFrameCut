@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using System.Text.Json;
 
 namespace projectFrameCut.Render.VectorContent;
 
@@ -12,26 +13,28 @@ public abstract class BaseShapeComponent : IVectorComponent
     public Guid Id { get; set; } = Guid.NewGuid();
     public Dictionary<string, object> Parameters { get; set; } = new();
     public int Index { get; set; }
-    public List<VectorAnimationKeyFrame> AnimationFrames { get; set; } = new();
-    public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
-    protected abstract string[] ShapeFieldIds { get; }
+    public List<Point> GetPoints()
+    {
+        EnsureDefaultParameters();
+        if (!Parameters.TryGetValue("Points", out var value)) return [];
+        if (value is List<Point> points) return points;
+        var restored = value switch
+        {
+            JsonElement e when e.ValueKind == JsonValueKind.Array => e.Deserialize<List<Point>>(),
+            Point[] array => array.ToList(),
+            _ => null
+        } ?? [];
+        Parameters["Points"] = restored;
+        return restored;
+    }
+
     protected abstract Dictionary<string, object> GetDefaultParameters();
     protected abstract ShapeCanvasElement BuildBaseShape();
 
     protected BaseShapeComponent()
     {
         EnsureDefaultParameters();
-
-        var map = new Dictionary<string, AnimatableField>(AnimatableFieldMap.CommonFields);
-        foreach (var fieldId in ShapeFieldIds)
-        {
-            if (AnimatableFieldMap.ShapeFields.TryGetValue(fieldId, out var field))
-            {
-                map[fieldId] = field;
-            }
-        }
-        AnimatableFields = map;
     }
 
     private void EnsureDefaultParameters()
@@ -57,16 +60,15 @@ public abstract class BaseShapeComponent : IVectorComponent
         Parameters.TryAdd("FillG", 0f);
         Parameters.TryAdd("FillB", 0f);
         Parameters.TryAdd("FillA", 1f);
-        Parameters.TryAdd("Thickness", 0.01f);
+        Parameters.TryAdd("Thickness", 2f);
     }
 
-    public VectorCanvasElement Compute(float normalizedProgress)
+    public VectorCanvasElement Compute()
     {
         EnsureDefaultParameters();
 
         var shape = BuildBaseShape();
         shape = ApplyVisualProperties(shape);
-        shape = ApplyAnimation(shape, normalizedProgress);
         return shape;
     }
 
@@ -76,14 +78,14 @@ public abstract class BaseShapeComponent : IVectorComponent
             Parameters.GetUShort("StrokeR", ushort.MaxValue),
             Parameters.GetUShort("StrokeG", ushort.MaxValue),
             Parameters.GetUShort("StrokeB", ushort.MaxValue),
-            Parameters.GetFloat("StrokeA", 1f),
-            Parameters.GetFloat("Thickness", 0.01f));
+            (Half)Parameters.GetFloat("StrokeA", 1f),
+            Parameters.GetFloat("Thickness", 2f));
 
         shape = shape.WithFill(
             Parameters.GetUShort("FillR", 0),
             Parameters.GetUShort("FillG", 0),
             Parameters.GetUShort("FillB", 0),
-            Parameters.GetFloat("FillA", 1f));
+            (Half)Parameters.GetFloat("FillA", 1f));
 
         shape.RelativeX = Parameters.GetFloat("RelativeX", 0.5f);
         shape.RelativeY = Parameters.GetFloat("RelativeY", 0.5f);
@@ -94,25 +96,5 @@ public abstract class BaseShapeComponent : IVectorComponent
         return shape;
     }
 
-    protected ShapeCanvasElement ApplyAnimation(ShapeCanvasElement shape, float progress)
-    {
-        if (AnimationFrames.Count == 0)
-        {
-            return shape;
-        }
 
-        var cloned = shape.Clone();
-        var groups = AnimationFrames
-            .Where(k => !string.IsNullOrWhiteSpace(k.TargetFieldId))
-            .GroupBy(k => k.TargetFieldId);
-
-        foreach (var group in groups)
-        {
-            var fieldId = group.Key;
-            var value = AnimationFrames.EvaluateField(fieldId, progress, 0f);
-            AnimationApplier.ApplyFieldValue(cloned, fieldId, value);
-        }
-
-        return cloned;
-    }
 }

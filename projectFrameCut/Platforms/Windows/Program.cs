@@ -4,6 +4,7 @@
 #nullable enable
 
 using Microsoft.Win32;
+using Microsoft.Windows.ApplicationModel.DynamicDependency;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -11,6 +12,7 @@ using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -51,9 +53,66 @@ namespace projectFrameCut.WinUI
                         Console.WriteLine($"[{level}] {msg}");
                     };
                 }
+                string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant().Trim();
 
-                Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
+                Console.WriteLine($"{MauiProgram.AssemblyName} {Assembly.GetExecutingAssembly().GetName().Version} {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}");
                 Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
+
+                try
+                {
+                    string AC = "unknown";
+                    try
+                    {
+                        AC = WindowsPluginIsolationPlatform.IsInAppContainer().ToString();
+                    }
+                    catch { }
+                    // Manually initialize Windows App SDK if running in packaged mode,
+                    // to avoid isolated worker blows up as it maybe run without MSIX Identity
+                    if (!args.Contains("--workerMode") && WinUI.App.IsPackaged())
+                    {
+                        try
+                        {
+                            var options = new Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentInitializeOptions()
+                            {
+                                OnErrorShowUI = true
+                            };
+                            var deploymentResult = Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentManager.Initialize(options);
+                            if (deploymentResult.Status != Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentStatus.Ok)
+                            {
+                                int hr = deploymentResult.ExtendedError.HResult;
+                                Log($"Running under MSIX Identity without Windows App SDK, PFN: {WinUI.App.GetPackageFullName()}, In app container: {AC}.{Environment.NewLine}Windows App SDK fail because:{new Win32Exception(hr).Message}");
+                            }
+                            else
+                            {
+                                Log($"Running under MSIX Identity with Windows App SDK, PFN: {WinUI.App.GetPackageFullName()}, In app container: {AC}.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Running without MSIX Identity and without Windows App SDK, In app container: {AC}.{Environment.NewLine}Windows App SDK fail because:{ex.Message}");
+                        }
+                    }
+                    else if (!args.Contains("--workerMode") && (processName.StartsWith("projectframecut") || args.Contains("--loadWinAppSDK") || args.FirstOrDefault() == "gui"))
+                    {
+                        try
+                        {
+                            Microsoft.Windows.ApplicationModel.DynamicDependency.Bootstrap.Initialize(0x00020005);
+                            Log($"Running without MSIX Identity and (unpackaged) Windows App SDK, In app container: {AC}");
+                        }
+                        catch (Exception ex)    
+                        {
+                            Log($"Running without MSIX Identity and without (unpackaged) Windows App SDK, In app container: {AC}.{Environment.NewLine}Windows App SDK fail because:{ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        Log($"Running in headless mode, In app container: {AC}, PFN: {WinUI.App.GetPackageFullName()}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Initialize Windows App SDK");
+                }
 
                 if (args.Contains("--log"))
                 {
@@ -88,7 +147,7 @@ namespace projectFrameCut.WinUI
                     System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
                     MauiProgram.NoOverrideCulture = true;
                 }
-                string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant().Trim();
+
                 if (!processName.StartsWith("projectframecut") || args.Contains("--forceRouteToCLI") || Environment.GetEnvironmentVariables().Contains("PJFC_FORCE_CLI"))
                 {
                     if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
@@ -117,13 +176,17 @@ namespace projectFrameCut.WinUI
 
                 if (Platforms.Windows.WindowsPluginIsolationPlatform.IsInAppContainer())
                 {
+#if !DEBUG
                     _ = MessageBox(IntPtr.Zero,
-                        $"projectFrameCut cannot run in AppContainer. Launch app from start menu, 'pjfc gui' or file/project directly. \r\n" +
-                        $"If you have installed any plugin and get this message, please feedback this bug to us. \r\n" +
+                        $"projectFrameCut has been launched under wrong mode.\r\n"
+                      + $"Please take a screenshot of this message, and feedback this bug to us. \r\n" +
                         $"Command line: {string.Join(", ", Environment.GetCommandLineArgs())}",
                         "projectFrameCut",
                         0x10 | 0x4);
                         return 255;
+#else
+                    Log("App is running AppContainer, some function may not work.", "warn");
+#endif
                 }
 
                 try
@@ -160,7 +223,8 @@ namespace projectFrameCut.WinUI
 
                 projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
                 PackageFamilyName = WinUI.App.GetPackageFamilyName();
-                projectFrameCut.Helper.HelperProgram.AppChannel = "OSS";
+                projectFrameCut.Helper.HelperProgram.AppChannel = PackageFamilyName.StartsWith("0xeeeeeeeeeeee") ? "Store" : "OSS";
+                IsStoreModeEnabled = projectFrameCut.Helper.HelperProgram.AppChannel == "Store";
 
                 if (args.Length > 0 && args[0].StartsWith("pjfc:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -219,6 +283,7 @@ namespace projectFrameCut.WinUI
                 catch { }
                 Log("Application exited.");
                 MauiProgram.LogWriter.Flush();
+                if (!WinUI.App.IsPackaged()) Bootstrap.Shutdown();
                 Environment.Exit(0);
                 return 0;
             }

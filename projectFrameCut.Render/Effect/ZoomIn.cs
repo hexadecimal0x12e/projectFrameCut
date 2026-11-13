@@ -9,15 +9,20 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ZoomInContinuousEffect : IContinuousEffect
+    public class ZoomInContinuousEffect : ZoomInContinuousEffect<IPicture> { }
+
+    public class ZoomInContinuousEffect<TPicture> : IContinuousEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new ZoomInContinuousEffect<T>();
+
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
-        public string? NeedComputer => null;
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool IsReorderable => true;
         public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; }
@@ -33,7 +38,7 @@ namespace projectFrameCut.Render.Effect
         public Dictionary<string, object> Parameters { get; set; } = new();
 
 
-        public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, float progress, int targetWidth, int targetHeight)
         {
             double clampedProgress = Math.Clamp(progress, 0.0, 1.0);
 
@@ -49,19 +54,18 @@ namespace projectFrameCut.Render.Effect
 
             int startX = Math.Max(0, (source.Width - currentWidth) / 2);
             int startY = Math.Max(0, (source.Height - currentHeight) / 2);
-            var cropped = CropEffect.Process(source, startX, startY, currentWidth, currentHeight);
-            var result = cropped.Resize(targetWidth, targetHeight, preserveAspect: false);
-            return result;
+            using var cropped = CropEffectShared.CropAndProcess(source, startX, startY, currentWidth, currentHeight, 0);
+            return PictureCalculation<TPicture>.Resize((TPicture)cropped, targetWidth, targetHeight, false);
         }
 
 
         public IEffect WithParameters(Dictionary<string, object> parameters)
         {
-            return new ZoomInContinuousEffect
+            return new ZoomInContinuousEffect<TPicture>
             {
+                Parameters = parameters,
                 TargetX = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetX")),
                 TargetY = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetY")),
-                ImplementType = this.ImplementType,
                 RelativeWidth = this.RelativeWidth,
                 RelativeHeight = this.RelativeHeight,
                 Name = this.Name,
@@ -83,6 +87,10 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ZoomInEffectProvider : EffectProviderBase
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
+
+        public override bool IsDeterministic => true;
+
         public ZoomInEffectProvider()
         {
             Name = "ZoomIn";
@@ -109,20 +117,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (!parameters.ContainsKey("TargetX")) parameters["TargetX"] = 1;
-            if (!parameters.ContainsKey("TargetY")) parameters["TargetY"] = 1;
 
-            return
-            [
-                new ZoomInContinuousEffect
-                {
-                    TargetX = Convert.ToInt32(parameters["TargetX"]),
-                    TargetY = Convert.ToInt32(parameters["TargetY"]),
-                    ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType,
-                }
-            ];
-        }
     }
 }

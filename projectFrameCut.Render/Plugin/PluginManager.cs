@@ -61,6 +61,7 @@ namespace projectFrameCut.Render.Plugin
             {
                 if (plugin.Properties.TryGetValue("IsInternalPlugin", out var value) && bool.TryParse(value, out var result) && result) plugin.OnLoaded(out _);
                 loadedPlugins.Add(plugin.PluginID, plugin);
+                IPluginBase.EffectImplementations.Register(plugin.PluginID, plugin.EffectImplementationProvider);
                 Logger.Log($"Plugin {plugin.PluginID} loaded.");
             }
 
@@ -77,6 +78,7 @@ namespace projectFrameCut.Render.Plugin
                 }
                 catch { }
                 loadedPlugins.Remove(id);
+                IPluginBase.EffectImplementations.Unregister(id);
                 projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
@@ -92,6 +94,7 @@ namespace projectFrameCut.Render.Plugin
                     item.Value.OnClosing();
                 }
                 catch { }
+                IPluginBase.EffectImplementations.Unregister(item.Key);
             }
             loadedPlugins.Clear();
             projectPluginIds.Clear();
@@ -106,7 +109,14 @@ namespace projectFrameCut.Render.Plugin
                 {
                     if (!loadedPlugins.TryAdd(pluginInstance.PluginID, pluginInstance))
                     {
+                        var old = loadedPlugins[pluginInstance.PluginID];
                         loadedPlugins[pluginInstance.PluginID] = pluginInstance;
+                        IPluginBase.EffectImplementations.Register(pluginInstance.PluginID, pluginInstance.EffectImplementationProvider);
+                        try { old.OnClosing(); } catch { }
+                    }
+                    else
+                    {
+                        IPluginBase.EffectImplementations.Register(pluginInstance.PluginID, pluginInstance.EffectImplementationProvider);
                     }
                 }
                 else
@@ -117,6 +127,7 @@ namespace projectFrameCut.Render.Plugin
             catch (Exception ex)
             {
                 Logger.Log(ex, "load plugins from assembly", "PluginManager");
+                return;
             }
 
             Logger.Log($"Plugin {pluginInstance.PluginID} loaded.");
@@ -131,6 +142,7 @@ namespace projectFrameCut.Render.Plugin
             if (loadedPlugins.ContainsKey(pluginInstance.PluginID))
                 throw new InvalidOperationException($"Plugin id '{pluginInstance.PluginID}' is already loaded.");
             loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
+            IPluginBase.EffectImplementations.Register(pluginInstance.PluginID, pluginInstance.EffectImplementationProvider);
             projectPluginIds.Add(pluginInstance.PluginID);
             Logger.Log($"Project plugin {pluginInstance.PluginID} loaded.");
         }
@@ -148,6 +160,7 @@ namespace projectFrameCut.Render.Plugin
             {
                 value.OnClosing();
                 loadedPlugins.Remove(id);
+                IPluginBase.EffectImplementations.Unregister(id);
                 projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
@@ -185,6 +198,19 @@ namespace projectFrameCut.Render.Plugin
 
         public static IClip CreateClip(JsonElement source)
         {
+            var dto = source.Deserialize<ClipDraftDTO>();
+            if (dto?.MetaData is { } metadata)
+            {
+                int count = metadata.Count;
+                ClipInitializationFailure.Clear(metadata);
+                if (metadata.Count != count)
+                {
+                    source = JsonSerializer.SerializeToElement(dto);
+                    Log($"Cleared saved initialization failure for clip {dto.Name} ({dto.Id}).");
+                }
+            }
+            if (dto is not null && ProjectReferencePart.Read(dto.MetaData) is { } part)
+                return new ReferencePartClip(dto, part);
             var type = source.GetProperty("FromPlugin").GetString();
             var name = source.GetProperty("Name").GetString();
 
@@ -195,8 +221,11 @@ namespace projectFrameCut.Render.Plugin
 
             if (PluginManager.LoadedPlugins.TryGetValue(type, out var plugin))
             {
+                if (dto is not null && VideoClipRotation.Migrate(dto)) source = JsonSerializer.SerializeToElement(dto);
                 var clip = plugin.ClipCreator(source);
-                clip.ExtraData = source.Deserialize<ClipDraftDTO>()?.MetaData ?? new();
+                clip.ExtraData = dto?.MetaData ?? new();
+                clip.Rotation = VideoClipRotation.Normalize(dto?.Rotation ?? 0);
+                clip.Opacity = dto?.Opacity ?? 1;
                 if (clip is IVectorContentClip vectorClip)
                 {
                     vectorClip.ClipAntiAliasMode = source.TryGetProperty("VectorAntiAliasMode", out var aaModeProp) && aaModeProp.ValueKind == JsonValueKind.String
@@ -211,24 +240,17 @@ namespace projectFrameCut.Render.Plugin
             }
         }
 
-        public static ITransform CreateTransform(JsonElement source)
-        {
-            var plug = source.GetProperty("FromPlugin").GetString();
-            var type = source.GetProperty("TypeName").GetString();
-            if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(plug))
-            {
-                throw new ArgumentException("Invalid transform data.");
-            }
-
-            if (PluginManager.LoadedPlugins.TryGetValue(plug, out var plugin))
-            {
-                return plugin.TransformCreator(source);
-            }
-            throw new ArgumentException($"Plugin not found: {type}");
-        }
-
         public static ISoundTrack CreateSoundTrack(JsonElement source)
         {
+            var referenceDto = source.Deserialize<SoundtrackDTO>();
+            if (referenceDto?.MetaData is { } metadata)
+            {
+                int count = metadata.Count;
+                ClipInitializationFailure.Clear(metadata);
+                if (metadata.Count != count) source = JsonSerializer.SerializeToElement(referenceDto);
+            }
+            if (referenceDto is not null && ProjectReferencePart.Read(referenceDto.MetaData) is { } part)
+                return ProjectReferenceRuntime.CreateDetachedTrack(referenceDto, part);
             var type = source.GetProperty("FromPlugin").GetString();
             var name = source.GetProperty("Name").GetString();
 
@@ -276,22 +298,12 @@ namespace projectFrameCut.Render.Plugin
                 if (replaced) stru.Parameters = stripped;
                 try
                 {
-                    try
-                    {
-                        effect = plugin.EffectCreator(stru, type);
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            effect = plugin.EffectCreator(stru, EffectImplementType.NotSpecified);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
-                            throw;
-                        }
-                    }
+                    effect = plugin.EffectCreator(stru, type);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
+                    throw;
                 }
                 finally
                 {
@@ -307,6 +319,7 @@ namespace projectFrameCut.Render.Plugin
                 catch (Exception ex)
                 {
                     Log(ex, $"Init effect {effect?.Name}/{stru.TypeName}", effect);
+                    if (effect is IDisposable disposable) disposable.Dispose();
                     throw;
                 }
                 return effect;
@@ -321,49 +334,26 @@ namespace projectFrameCut.Render.Plugin
             // Only use the provided resolution as fallback when the effect doesn't have its own
             if (stru.RelativeWidth <= 0) stru.RelativeWidth = relativeWidth;
             if (stru.RelativeHeight <= 0) stru.RelativeHeight = relativeHeight;
-            if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
-            {
-                var originalParameters = stru.Parameters;
-                var stripped = StripBindings(originalParameters ?? new Dictionary<string, object>());
-                bool replaced = !ReferenceEquals(stripped, originalParameters);
-                if (replaced) stru.Parameters = stripped;
-                IEffect effect;
-                try
-                {
-                    effect = plugin.EffectCreator(stru);
-                }
-                finally
-                {
-                    if (replaced) stru.Parameters = originalParameters;
-                }
-                effect.Index = stru.Index;
-                effect.Enabled = stru.Enabled;
-                effect.BindedEffectProvidingSystemID = stru.BindedEffectGroupID;
-                try
-                {
-                    effect.Initialize();
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, $"Init effect {effect.Name}", effect);
-                    throw;
-                }
-                return effect;
-            }
-            else
-            {
-                throw new ArgumentException($"Plugin not found: {stru.FromPlugin}");
-            }
+            return CreateEffect(stru, stru.ImplementType);
         }
+
+        public static string NormalizeVideoDecoderName(string? name) => name switch
+        {
+            "DecoderContext8Bit" or "DecoderContext16Bit" => nameof(DecoderContextFP16),
+            "DecoderContextHW" => nameof(DecoderContextHWFP16),
+            "HDRDecoderContext" => nameof(HDRDecoderContextFP16),
+            _ => name ?? string.Empty,
+        };
 
         public static IVideoSource CreateVideoSource(string filePath, IPicture.PicturePixelMode? PreferredTargetPPB = null)
         {
+            if (ProjectExternalVideoSource.IsPath(filePath)) return ProjectExternalVideoSource.Open(filePath);
             if (RemoteRpcVideoSource.IsPath(filePath)) return RemoteRpcVideoSource.Open(filePath);
             if (filePath.StartsWith("#"))
             {
                 var part = filePath.Substring(1).Split(',', 2);
                 if (part.Length != 2) throw new ArgumentException($"Invalid specified video decoder path '{filePath}'.", nameof(filePath));
-                var decoder = part[0];
+                var decoder = NormalizeVideoDecoderName(part[0]);
                 var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
                 if (supportedPlugin is null) throw new NotSupportedException($"The specificed video decoder '{decoder}' was not found for the file '{filePath}'.");
                 return supportedPlugin.VideoSourceProvider[decoder].CreateNew(part[1]);
@@ -395,6 +385,12 @@ namespace projectFrameCut.Render.Plugin
 
         public static IAudioSource CreateAudioSource(string filePath)
         {
+            if (ProjectExternalAudioSource.IsPath(filePath) || RemoteRpcAudioSource.IsPath(filePath))
+            {
+                var source = ProjectExternalAudioSource.IsPath(filePath) ? ProjectExternalAudioSource.Open(filePath) : RemoteRpcAudioSource.Open(filePath);
+                try { source.Initialize(); return source; }
+                catch { source.Dispose(); throw; }
+            }
             if (!File.Exists(filePath) && !filePath.StartsWith("#"))
             {
                 throw new FileNotFoundException("The specified video file was not found.", filePath);
@@ -420,6 +416,13 @@ namespace projectFrameCut.Render.Plugin
         public static IVideoWriter CreateVideoWriter(string codec)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(codec);
+            codec = codec switch
+            {
+                "VideoWriter" => nameof(VideoWriterFP16),
+                "VideoWriterHWAccel" => nameof(VideoWriterHWAccelFP16),
+                "HDRVideoWriter" => nameof(HDRVideoWriterFP16),
+                _ => codec,
+            };
             var codecCandidates = GetVideoWriterCodecCandidates(codec);
 
             foreach (var plugin in LoadedPlugins.Values)
@@ -572,46 +575,6 @@ namespace projectFrameCut.Render.Plugin
             }
 
             return candidates;
-        }
-
-        private static readonly ConcurrentDictionary<string, IComputer> ComputerCache = new();
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static IComputer? CreateComputer(string? computerType, bool forceCreate = false)
-        {
-            if (computerType is null) return null;
-            if (!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
-                return cachedComputer;
-
-            return GetComputerInternal(computerType, forceCreate);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
-        private static IComputer GetComputerInternal(string computerType, bool forceCreate)
-        {
-            foreach (var plugin in LoadedPlugins.Values)
-            {
-                try
-                {
-                    if (plugin.ComputerProvider.TryGetValue(computerType, out var creator))
-                    {
-                        var computer = creator();
-                        if (computer != null)
-                        {
-                            if (forceCreate)
-                            {
-                                return computer;
-                            }
-                            return ComputerCache.GetOrAdd(computerType, computer);
-                        }
-                    }
-                }
-                catch
-                {
-                    // Ignore and try next plugin
-                }
-            }
-            throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
         }
 
         /// <summary>

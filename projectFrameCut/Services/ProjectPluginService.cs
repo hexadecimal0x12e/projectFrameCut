@@ -112,6 +112,9 @@ public static class ProjectPluginService
     private static readonly SemaphoreSlim IdentityGate = new(1, 1);
     private static string? activeStageRoot;
 
+    internal static string? GetLoadedPluginRoot(string pluginId) =>
+        activeStageRoot is { } root && PluginManager.ProjectPluginIds.Contains(pluginId) ? Path.Combine(root, pluginId) : null;
+
     public static async Task<ProjectPluginReference> CreatePackageFromStagingAsync(
         string projectRoot,
         ProjectJSONStructure project,
@@ -281,6 +284,7 @@ public static class ProjectPluginService
 #else
         var loaded = new List<string>();
         var failed = new Dictionary<string, string>(StringComparer.Ordinal);
+        var trustDisabled = PluginService.IsPluginTrustDisabled;
         activeStageRoot = Path.Combine(Platforms.Windows.WindowsPluginIsolationPlatform.ProjectPluginDirectory, project.ProjectUniqueId.ToString("N"));
         Directory.CreateDirectory(activeStageRoot);
         foreach (var reference in project.ProjectPlugins.Where(x => x.Enabled))
@@ -289,13 +293,18 @@ public static class ProjectPluginService
             {
                 ValidateReference(projectRoot, reference);
                 var packagePath = Path.GetFullPath(Path.Combine(projectRoot, reference.PackagePath.Replace('/', Path.DirectorySeparatorChar)));
-                if (!string.Equals(await ComputeFileHashAsync(packagePath, cancellationToken), reference.PackageSha256, StringComparison.OrdinalIgnoreCase))
-                    throw new CryptographicException("The project plugin package hash does not match project metadata.");
-                var publisherDer = Convert.FromBase64String(reference.PublisherCertificateDer);
-                using var publisher = X509CertificateLoader.LoadCertificate(publisherDer);
-                var publisherFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(publisher);
-                if (!string.Equals(publisherFingerprint, reference.PublisherCertificateFingerprint, StringComparison.OrdinalIgnoreCase))
-                    throw new CryptographicException("The project plugin publisher certificate fingerprint does not match project metadata.");
+                byte[] publisherDer = [];
+                var publisherFingerprint = reference.PublisherCertificateFingerprint;
+                if (!trustDisabled)
+                {
+                    if (!string.Equals(await ComputeFileHashAsync(packagePath, cancellationToken), reference.PackageSha256, StringComparison.OrdinalIgnoreCase))
+                        throw new CryptographicException("The project plugin package hash does not match project metadata.");
+                    publisherDer = Convert.FromBase64String(reference.PublisherCertificateDer);
+                    using var publisher = X509CertificateLoader.LoadCertificate(publisherDer);
+                    publisherFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(publisher);
+                    if (!string.Equals(publisherFingerprint, reference.PublisherCertificateFingerprint, StringComparison.OrdinalIgnoreCase))
+                        throw new CryptographicException("The project plugin publisher certificate fingerprint does not match project metadata.");
+                }
 
                 var pluginRoot = Path.Combine(activeStageRoot, reference.PluginId);
                 if (Directory.Exists(pluginRoot)) Directory.Delete(pluginRoot, true);
@@ -310,7 +319,7 @@ public static class ProjectPluginService
                     throw new InvalidDataException("The signed project plugin declaration does not match project metadata.");
                 ValidateDeclaration(declaration);
 
-                if (!await IsTrustedAsync(project.ProjectUniqueId, reference.PluginId, publisherFingerprint))
+                if (!trustDisabled && !await IsTrustedAsync(project.ProjectUniqueId, reference.PluginId, publisherFingerprint))
                 {
                     var accepted = await confirmTrust(new(
                         project.ProjectUniqueId,
@@ -361,7 +370,9 @@ public static class ProjectPluginService
         var packagePath = ResolvePackagePath(projectRoot, reference);
         if (File.Exists(packagePath)) File.Delete(packagePath);
         project.ProjectPlugins.Remove(reference);
+#if !HEADLESS
         SecureStorage.Default.Remove(TrustKey(project.ProjectUniqueId, pluginId));
+#endif
         Logger.Log($"Removed project plugin '{pluginId}' from project '{project.ProjectUniqueId}'.");
         return Task.CompletedTask;
     }
@@ -378,6 +389,9 @@ public static class ProjectPluginService
 
     private static async Task<(byte[] Certificate, byte[] PrivateKey)> GetOrCreateIdentityAsync(CancellationToken cancellationToken)
     {
+#if HEADLESS
+        throw new PlatformNotSupportedException("Project plugin signing requires the GUI secure storage.");
+#else
         await IdentityGate.WaitAsync(cancellationToken);
         try
         {
@@ -404,16 +418,25 @@ public static class ProjectPluginService
         {
             IdentityGate.Release();
         }
+#endif
     }
 
     private static string TrustKey(Guid projectId, string pluginId) =>
         $"project_plugin_trust_v1_{projectId:N}_{PluginTrustValidator.ComputeSha256Hex(Encoding.UTF8.GetBytes(pluginId))}";
 
     private static async Task<bool> IsTrustedAsync(Guid projectId, string pluginId, string publisherFingerprint) =>
+#if HEADLESS
+        false;
+#else
         string.Equals(await SecureStorage.Default.GetAsync(TrustKey(projectId, pluginId)), publisherFingerprint, StringComparison.OrdinalIgnoreCase);
+#endif
 
     private static Task TrustAsync(Guid projectId, string pluginId, string publisherFingerprint) =>
+#if HEADLESS
+        throw new PlatformNotSupportedException("Project plugin trust cannot be changed by the headless client.");
+#else
         SecureStorage.Default.SetAsync(TrustKey(projectId, pluginId), publisherFingerprint);
+#endif
 
     private static void ValidateReference(string projectRoot, ProjectPluginReference reference)
     {

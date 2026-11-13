@@ -1,4 +1,4 @@
-﻿using Android.Content;
+using Android.Content;
 using Android.Opengl;
 using Android.Util;
 using Android.Views;
@@ -71,8 +71,27 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             }
             catch (Exception ex)
             {
+                initialized = false;
                 _readyTcs.TrySetException(ex);
-                throw;
+            }
+        }
+
+        public void Shutdown()
+        {
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            try
+            {
+                QueueEvent(() =>
+                {
+                    try { DeleteGlResources(); }
+                    finally { initialized = false; completion.TrySetResult(); }
+                });
+                if (!completion.Task.Wait(TimeSpan.FromSeconds(5))) Logger.Log("OpenGL view cleanup timed out.", "warn");
+            }
+            catch (Exception ex)
+            {
+                initialized = false;
+                Logger.Log(ex, "Release OpenGL compute view", this);
             }
         }
 
@@ -82,19 +101,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         {
             initialized = false;
             _readyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _tcs?.TrySetException(new OperationCanceledException("OpenGL surface was destroyed."));
 
             try
             {
                 QueueEvent(DeleteGlResources);
             }
-            catch
+            catch (Exception ex)
             {
-
+                Logger.Log(ex, "Release OpenGL surface resources", this);
             }
-
-            program = 0;
-            for (int i = 0; i < inputBuffers.Length; i++) inputBuffers[i] = 0;
-            outputBuffer = 0;
 
             base.SurfaceDestroyed(holder);
         }
@@ -262,7 +278,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             }
             catch (Exception ex)
             {
-                //Log.Warn(TAG, $"DeleteGlResources warning: {ex.Message}");
+                Logger.Log(ex, "Release OpenGL compute resources", this);
                 Logger.Log(ex, $"[{TAG}] initializing compute shader", this);
             }
         }
@@ -379,9 +395,16 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                     return;
                 }
 
-                DeleteGlResources();
-
-                InitCompute();
+                try
+                {
+                    DeleteGlResources();
+                    InitCompute();
+                }
+                catch (Exception ex)
+                {
+                    initialized = false;
+                    _tcs?.TrySetException(ex);
+                }
             });
         }
     }
@@ -471,6 +494,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
         protected override void DisconnectHandler(GLComputeView platformView)
         {
+            platformView.Shutdown();
             base.DisconnectHandler(platformView);
         }
     }

@@ -6,6 +6,7 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              Title="{l:Localized Key=TemplateViewPage_Title}">
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{l:Localized Key=ScriptTemplateCreatePage_Title}" Clicked="CreateScriptTemplate_Clicked" />
         <ToolbarItem Text="{l:Localized Key=TemplateViewPage_ImportTemplate}" Clicked="ImportTemplateButton_Clicked" />
     </ContentPage.ToolbarItems>
     <Grid RowDefinitions="Auto,*,Auto" Padding="8">

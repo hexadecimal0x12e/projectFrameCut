@@ -1,5 +1,6 @@
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using System.Text.Json;
+using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.ApplicationAPIBase.Workspace;
 
@@ -78,9 +79,14 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
     private readonly Dictionary<string, MultiWindowItem> _windows = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WorkspaceExperienceDefinition> _definitions = new(StringComparer.Ordinal);
     private bool _composed;
+    private WorkspaceLayoutState? _pendingLayout;
+    private bool _layoutFrozen;
 
     public WorkspaceWindowHost(IWorkspace workspace, MultiWindowView view, WorkspaceViewContext context, IWorkspaceLayoutStore? layoutStore = null)
-        => (_workspace, _view, _context, _layoutStore) = (workspace, view, context, layoutStore);
+    {
+        (_workspace, _view, _context, _layoutStore) = (workspace, view, context, layoutStore);
+        _view.SizeChanged += OnViewSizeChanged;
+    }
 
     public IReadOnlyDictionary<string, MultiWindowItem> Windows => _windows;
     public bool WasLayoutRestored { get; private set; }
@@ -131,27 +137,42 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
         }
     }
 
-    public void SaveLayout()
+    public void SaveLayout() => SaveLayout(false);
+
+    public void SaveLayout(bool freeze)
     {
-        if (_layoutStore is null || !_composed) return;
+        if (_layoutStore is null || !_composed || _layoutFrozen) return;
+        if (freeze) _layoutFrozen = true;
+        if (_pendingLayout is not null || !_view.IsVisible || _view.Width <= 0 || _view.Height <= 0) return;
         var state = new WorkspaceLayoutState
         {
-            Version = 1,
+            Version = 2,
+            AreaWidth = _view.GetMdiArea().Width,
+            AreaHeight = _view.GetMdiArea().Height,
             ActiveWindowKey = _view.ActiveWindow is { } active ? _windows.FirstOrDefault(x => ReferenceEquals(x.Value, active)).Key : null,
-            Windows = _windows.Select(pair => new WorkspaceWindowState
+            Windows = _windows.Select(pair =>
             {
-                WindowKey = pair.Key,
-                IsOpen = _view.Children.Contains(pair.Value),
-                IsVisible = pair.Value.IsVisible,
-                IsMinimized = pair.Value.IsMinimized,
-                TranslationX = pair.Value.TranslationX,
-                TranslationY = pair.Value.TranslationY,
-                Width = pair.Value.WidthRequest,
-                Height = pair.Value.HeightRequest,
-                ZIndex = pair.Value.ZIndex
+                var bounds = pair.Value.GetRestoreBounds();
+                return new WorkspaceWindowState
+                {
+                    WindowKey = pair.Key,
+                    IsOpen = _view.Children.Contains(pair.Value) || pair.Value.IsInStandaloneWindowMode,
+                    IsVisible = pair.Value.IsVisible || pair.Value.IsMinimized,
+                    IsMinimized = pair.Value.IsMinimized,
+                    IsMaximized = pair.Value.IsMaximized,
+                    TranslationX = bounds.X,
+                    TranslationY = bounds.Y,
+                    Width = bounds.Width > 0 ? bounds.Width : pair.Value.MinimumWindowWidth,
+                    Height = bounds.Height > 0 ? bounds.Height : pair.Value.MinimumWindowHeight,
+                    SnapZone = _view.GetSnapZone(pair.Value),
+                    RelativeBounds = _view.GetRelativeSnapBounds(pair.Value),
+                    PreSnapBounds = pair.Value.PreSnapBounds,
+                    ZIndex = pair.Value.ZIndex
+                };
             }).ToList()
         };
         _layoutStore.Write(LayoutStateKey, JsonSerializer.Serialize(state));
+        LogDiagnostic($"Saved workspace layout: {state.Windows.Count} windows, area {state.AreaWidth:F0} x {state.AreaHeight:F0}.");
     }
 
     public bool TryRestoreLayout()
@@ -161,45 +182,91 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
         WorkspaceLayoutState? state = null;
         if (!string.IsNullOrWhiteSpace(raw))
         {
-            try { state = JsonSerializer.Deserialize<WorkspaceLayoutState>(raw); } catch { }
+            try { state = JsonSerializer.Deserialize<WorkspaceLayoutState>(raw); }
+            catch (JsonException ex) { LogDiagnostic($"Invalid workspace layout: {ex.Message}"); }
         }
-        if (state is null) return false;
+        if (state is null || state.Version is < 1 or > 2 || state.Windows is null
+            || !state.Windows.Any(item => item is not null && !string.IsNullOrWhiteSpace(item.WindowKey) && _windows.ContainsKey(item.WindowKey))) return false;
         var restoredKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in state.Windows)
         {
+            if (item is null || string.IsNullOrWhiteSpace(item.WindowKey)) continue;
             var windowKey = item.WindowKey;
             if (!_windows.TryGetValue(windowKey, out var window)) continue;
             restoredKeys.Add(windowKey);
-            if (!item.IsOpen)
+            if (!item.IsOpen && _definitions[windowKey].IsClosable)
             {
                 if (_view.Children.Contains(window)) _view.CloseWindow(window, force: true);
                 continue;
             }
             if (!_view.Children.Contains(window)) _view.AddWindow(window);
-            window.HorizontalOptions = LayoutOptions.Start;
-            window.VerticalOptions = LayoutOptions.Start;
-            window.TranslationX = Math.Max(0, item.TranslationX);
-            window.TranslationY = Math.Max(0, item.TranslationY);
-            window.WidthRequest = item.Width;
-            window.HeightRequest = item.Height;
             window.ZIndex = item.ZIndex;
-            window.IsVisible = item.IsVisible;
-            if (item.IsMinimized && !window.IsMinimized) window.Minimize();
+            window.IsVisible = item.IsVisible || !_definitions[windowKey].IsClosable;
         }
-        if (state.ActiveWindowKey is string activeWindowKey && !string.IsNullOrWhiteSpace(activeWindowKey) && _windows.TryGetValue(activeWindowKey, out var active) && _view.Children.Contains(active))
-            _view.BringToFront(active);
         foreach (var key in _windows.Keys.Where(key => !restoredKeys.Contains(key)))
             ApplyDefaultPlacement(key);
+        _pendingLayout = state;
+        RestorePendingLayout();
         return true;
     }
 
+    private void OnViewSizeChanged(object? sender, EventArgs e) => RestorePendingLayout();
+
+    private void RestorePendingLayout()
+    {
+        if (_pendingLayout is not { } state || !_view.IsVisible || _view.Width <= 0 || _view.Height <= 0) return;
+        _pendingLayout = null;
+        var area = _view.GetMdiArea();
+        foreach (var item in state.Windows)
+        {
+            if (item is null || string.IsNullOrWhiteSpace(item.WindowKey)
+                || !_windows.TryGetValue(item.WindowKey, out var window) || !_view.Children.Contains(window)) continue;
+            if (window.IsMinimized) window.Minimize();
+            if (window.IsMaximized) window.Maximize();
+            var width = double.IsFinite(item.Width) && item.Width > 0 ? item.Width : window.MinimumWindowWidth;
+            var height = double.IsFinite(item.Height) && item.Height > 0 ? item.Height : window.MinimumWindowHeight;
+            var x = double.IsFinite(item.TranslationX) ? Math.Max(0, item.TranslationX) : 0;
+            var y = double.IsFinite(item.TranslationY) ? Math.Max(0, item.TranslationY) : 0;
+            if (state.AreaWidth > 0 && state.AreaHeight > 0)
+            {
+                x *= area.Width / state.AreaWidth;
+                y *= area.Height / state.AreaHeight;
+                width *= area.Width / state.AreaWidth;
+                height *= area.Height / state.AreaHeight;
+            }
+            _view.RestoreFloatingBounds(window, new Rect(x, y, width, height));
+            if (item.RelativeBounds is { } bounds && IsValidRelativeBounds(bounds))
+                _view.SnapWindowToRelativeBounds(window, bounds, bringToFront: false);
+            else if (Enum.IsDefined(item.SnapZone) && item.SnapZone is not (WindowSnapZone.None or WindowSnapZone.TopCenter))
+                _view.SnapWindow(window, item.SnapZone, bringToFront: false);
+            if (item.PreSnapBounds is { } preSnap && double.IsFinite(preSnap.X) && double.IsFinite(preSnap.Y)
+                && double.IsFinite(preSnap.Width) && double.IsFinite(preSnap.Height) && preSnap.Width > 0 && preSnap.Height > 0)
+                window.PreSnapBounds = preSnap;
+            if (item.IsMaximized || (state.Version == 1 && item.Width == -1 && item.Height == -1)) window.Maximize();
+        }
+        // Minimize after restoring all bounds: taskbar visibility changes the available area.
+        foreach (var item in state.Windows)
+            if (item is not null && item.IsMinimized && _windows.TryGetValue(item.WindowKey, out var window)
+                && _view.Children.Contains(window) && !window.IsMinimized) window.Minimize();
+        if (state.ActiveWindowKey is { } key && _windows.TryGetValue(key, out var active)
+            && _view.Children.Contains(active) && !active.IsMinimized && active.IsVisible) _view.BringToFront(active);
+        LogDiagnostic($"Restored workspace layout v{state.Version}: {state.Windows.Count} windows, area {area.Width:F0} x {area.Height:F0}.");
+    }
+
+    private static bool IsValidRelativeBounds(Rect bounds)
+        => double.IsFinite(bounds.X) && double.IsFinite(bounds.Y) && double.IsFinite(bounds.Width) && double.IsFinite(bounds.Height)
+            && bounds.X >= 0 && bounds.Y >= 0 && bounds.Width > 0 && bounds.Height > 0 && bounds.Right <= 1 && bounds.Bottom <= 1;
+
     public void ApplyDefaultLayout()
     {
+        _pendingLayout = null;
         foreach (var key in _windows.Keys) ApplyDefaultPlacement(key);
+        LogDiagnostic("Applied default workspace layout.");
     }
 
     public ValueTask DisposeAsync()
     {
+        _view.SizeChanged -= OnViewSizeChanged;
         try
         {
             SaveLayout();
@@ -236,6 +303,12 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
     {
         var placement = _definitions[key].DefaultPlacement;
         var window = _windows[key];
+        if (window.IsMinimized) window.Minimize();
+        if (window.IsMaximized) window.Maximize();
+        _view.ReleaseSnapState(window);
+        window.HorizontalOptions = LayoutOptions.Start;
+        window.VerticalOptions = LayoutOptions.Start;
+        window.Margin = new Thickness(0);
         if (placement.Width > 0) window.WidthRequest = placement.Width;
         if (placement.Height > 0) window.HeightRequest = placement.Height;
         window.TranslationX = placement.X;
@@ -273,6 +346,8 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
     private sealed class WorkspaceLayoutState
     {
         public int Version { get; set; } = 1;
+        public double AreaWidth { get; set; }
+        public double AreaHeight { get; set; }
         public string? ActiveWindowKey { get; set; }
         public List<WorkspaceWindowState> Windows { get; set; } = [];
     }
@@ -282,6 +357,10 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
         public bool IsOpen { get; set; } = true;
         public bool IsVisible { get; set; } = true;
         public bool IsMinimized { get; set; }
+        public bool IsMaximized { get; set; }
+        public WindowSnapZone SnapZone { get; set; }
+        public Rect? RelativeBounds { get; set; }
+        public Rect? PreSnapBounds { get; set; }
         public double TranslationX { get; set; }
         public double TranslationY { get; set; }
         public double Width { get; set; } = -1;

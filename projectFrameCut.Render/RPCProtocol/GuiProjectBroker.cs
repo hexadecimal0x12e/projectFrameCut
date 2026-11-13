@@ -10,9 +10,11 @@ public sealed class GuiProjectBroker : IDisposable
     private sealed class Session(string owner)
     {
         public string Owner { get; } = owner;
-        public Channel<GuiProjectRequest> Queue { get; } = Channel.CreateBounded<GuiProjectRequest>(128);
+        public Channel<GuiProjectWork> Queue { get; } = Channel.CreateBounded<GuiProjectWork>(128);
         public ConcurrentDictionary<Guid, TaskCompletionSource<GuiProjectResult>> Pending { get; } = new();
         public CancellationTokenSource Lifetime { get; } = new();
+        public ConcurrentDictionary<Guid, (Guid ConnectionId, GuiProjectResult Result)> Progress { get; } = new();
+        public int ActiveConnectionCount;
     }
 
     private readonly ConcurrentDictionary<Guid, Session> _sessions = new();
@@ -46,27 +48,43 @@ public sealed class GuiProjectBroker : IDisposable
         foreach (var completion in session.Pending.Values)
             completion.TrySetException(new InvalidOperationException("The GUI project session was closed."));
         session.Pending.Clear();
+        session.Progress.Clear();
     }
 
-    public async Task<GuiProjectResult> InvokeAsync(Guid id, GuiProjectRequest request, CancellationToken ct)
+    public async Task<GuiProjectResult> InvokeAsync(Guid id, GuiProjectRequest request, CancellationToken ct, Guid connectionId = default)
     {
         var session = Get(id);
         if (!Enum.IsDefined(request.Operation) || request.RequestId == Guid.Empty || request.TimeoutSeconds is < 1 or > 3600
             || request.ParametersJson is null || request.ParametersJson.Length > 1024 * 1024
             || request.ChangeReason is null || request.ChangeReason.Length > 512 || request.ClientName is null || request.ClientName.Length > 128)
             throw new ArgumentException("Invalid GUI project request.");
+        if (request.Operation == GuiProjectOperation.GetRequestProgress)
+        {
+            using var json = JsonDocument.Parse(request.ParametersJson);
+            var target = json.RootElement.GetProperty("RequestId").GetGuid();
+            if (session.Progress.TryGetValue(target, out var progress) && progress.ConnectionId == connectionId)
+                return new() { SessionId = id, RequestId = request.RequestId, IsProgress = true,
+                    PercentComplete = progress.Result.PercentComplete, SecondsRemaining = progress.Result.SecondsRemaining };
+            return new() { SessionId = id, RequestId = request.RequestId };
+        }
         var completion = new TaskCompletionSource<GuiProjectResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         if (!session.Pending.TryAdd(request.RequestId, completion)) throw new ArgumentException("Duplicate GUI request.");
+        if (request.Operation == GuiProjectOperation.ExportFrameSequence)
+            session.Progress[request.RequestId] = (connectionId, new() { IsProgress = true });
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct, session.Lifetime.Token);
         timeout.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
         try
         {
-            await session.Queue.Writer.WriteAsync(request, timeout.Token).ConfigureAwait(false);
+            await session.Queue.Writer.WriteAsync(new() { SessionId = id, Request = request, ConnectionId = connectionId }, timeout.Token).ConfigureAwait(false);
             return await completion.Task.WaitAsync(timeout.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (session.Lifetime.IsCancellationRequested)
         { throw new InvalidOperationException("The GUI project session was closed."); }
-        finally { session.Pending.TryRemove(request.RequestId, out _); }
+        finally
+        {
+            session.Pending.TryRemove(request.RequestId, out _);
+            session.Progress.TryRemove(request.RequestId, out _);
+        }
     }
 
     public async Task<GuiProjectWork> TakeAsync(Guid id, string owner, CancellationToken ct)
@@ -79,24 +97,59 @@ public sealed class GuiProjectBroker : IDisposable
         {
             while (true)
             {
-                var request = await session.Queue.Reader.ReadAsync(timeout.Token).ConfigureAwait(false);
-                if (session.Pending.ContainsKey(request.RequestId)) return new() { SessionId = id, Request = request };
+                var work = await session.Queue.Reader.ReadAsync(timeout.Token).ConfigureAwait(false);
+                if (work.Request is null || session.Pending.ContainsKey(work.Request.RequestId))
+                {
+                    work.ActiveConnectionCount = Volatile.Read(ref session.ActiveConnectionCount);
+                    return work;
+                }
             }
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested && !session.Lifetime.IsCancellationRequested)
-        { return new() { SessionId = id }; }
+        { return new() { SessionId = id, ActiveConnectionCount = Volatile.Read(ref session.ActiveConnectionCount) }; }
     }
 
     public void Complete(GuiProjectResult result, string owner)
     {
         CheckOwner(result.SessionId, owner);
-        if (Get(result.SessionId).Pending.TryGetValue(result.RequestId, out var completion)) completion.TrySetResult(result);
+        var session = Get(result.SessionId);
+        if (result.IsProgress)
+        {
+            if (session.Progress.TryGetValue(result.RequestId, out var progress))
+                session.Progress.TryUpdate(result.RequestId, (progress.ConnectionId, result), progress);
+            return;
+        }
+        if (session.Pending.TryGetValue(result.RequestId, out var completion)) completion.TrySetResult(result);
     }
 
-    public IRenderService Bind(Guid id) => new BoundService(this, id);
-
-    private sealed class BoundService(GuiProjectBroker broker, Guid id) : IRenderService
+    public void NotifyConnected(Guid id, string clientName, string pipeToken = "")
     {
+        var session = Get(id);
+        Interlocked.Increment(ref session.ActiveConnectionCount);
+        session.Queue.Writer.TryWrite(new() { SessionId = id, ConnectedClientName = clientName, ConnectionPipeToken = pipeToken });
+    }
+
+    public IRenderService Bind(Guid id) => Bind(id, false);
+
+    public IRenderService Bind(Guid id, bool suppressConnectionNotification) => new BoundService(this, id, suppressConnectionNotification);
+
+    public IRenderService Bind(Guid id, bool suppressConnectionNotification, string pipeToken) => new BoundService(this, id, suppressConnectionNotification, pipeToken);
+
+    private sealed class BoundService(GuiProjectBroker broker, Guid id, bool suppressConnectionNotification, string pipeToken = "") : IRenderService, IRenderConnectionObserver
+    {
+        public void Connected(string clientId) => broker.NotifyConnected(id, suppressConnectionNotification ? string.Empty : clientId, pipeToken);
+        public async ValueTask DisconnectedAsync(Guid connectionId)
+        {
+            if (!broker._sessions.TryGetValue(id, out var session)) return;
+            Interlocked.Decrement(ref session.ActiveConnectionCount);
+            try
+            {
+                await session.Queue.Writer.WriteAsync(new() { SessionId = id, DisconnectedConnectionId = connectionId, ConnectionPipeToken = pipeToken }, session.Lifetime.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (session.Lifetime.IsCancellationRequested) { }
+            catch (ChannelClosedException) { }
+        }
+
         public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
         {
             broker.Get(id);
@@ -114,9 +167,9 @@ public sealed class GuiProjectBroker : IDisposable
                         nameof(RenderOperation.GetProjectHistory), nameof(RenderOperation.UndoProjectHistory),
                         nameof(RenderOperation.RedoProjectHistory), nameof(RenderOperation.RestoreProjectHistory)],
                 }),
-                RenderOperation.GetGuiProjectSession => RenderRpcSerializer.Serialize(new GuiProjectSession { SessionId = id }),
+                RenderOperation.GetGuiProjectSession => RenderRpcSerializer.Serialize(new GuiProjectSession { SessionId = id, SupportsBatch = true }),
                 RenderOperation.InvokeGuiProject => RenderRpcSerializer.Serialize(await broker.InvokeAsync(id,
-                    RenderRpcSerializer.Deserialize<GuiProjectRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderRpcSerializer.Deserialize<GuiProjectRequest>(request.Payload), cancellationToken, request.ConnectionId).ConfigureAwait(false)),
                 _ => throw new UnauthorizedAccessException("Operation is unavailable on a GUI project connection."),
             };
             return new() { RequestId = request.RequestId, Payload = payload };
@@ -142,7 +195,7 @@ public sealed class GuiProjectBroker : IDisposable
                 },
                 ParametersJson = restore is null ? "{}" : JsonSerializer.Serialize(new { restore.SnapshotId }),
                 TimeoutSeconds = timeoutSeconds,
-            }, cancellationToken).ConfigureAwait(false);
+            }, cancellationToken, request.ConnectionId).ConfigureAwait(false);
             if (result.Error is not null) return new() { RequestId = request.RequestId, Error = result.Error };
 
             var payload = request.Operation == RenderOperation.GetProjectHistory

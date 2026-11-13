@@ -14,7 +14,7 @@ public sealed class ExternalVideoSourceContractTests
             SourceId = "camera/main",
             DecoderName = "CameraDecoder",
             Metadata = new() { ["device"] = "front" },
-            Descriptor = new() { Name = "Front camera", Width = 1920, Height = 1080, SupportsHdr = true },
+            Descriptor = new() { Name = "Front camera", Width = 1920, Height = 1080, SupportsHdr = true, AllowCachingResult = false },
         };
 
         var encoded = source.Encode();
@@ -26,7 +26,24 @@ public sealed class ExternalVideoSourceContractTests
         Assert.AreEqual("front", decoded.Metadata["device"]);
         Assert.AreEqual(1920, decoded.Descriptor.Width);
         Assert.IsTrue(decoded.Descriptor.SupportsHdr);
+        Assert.IsFalse(decoded.Descriptor.AllowCachingResult);
         Assert.IsFalse(encoded.Contains("token", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void CacheCapabilityRoundTripsForExternalAndIsolatedSources(bool allowCaching)
+    {
+        Assert.AreEqual(allowCaching, RenderRpcSerializer.Clone(new ExternalVideoSourceDescriptor { AllowCachingResult = allowCaching }).AllowCachingResult);
+        Assert.AreEqual(allowCaching, RenderRpcSerializer.Clone(new IsolationVideoSourceDescriptor { AllowCachingResult = allowCaching }).AllowCachingResult);
+    }
+
+    [TestMethod]
+    public void LegacyDescriptorsAllowCachingWhenFieldIsMissing()
+    {
+        Assert.IsTrue(RenderRpcSerializer.Deserialize<ExternalVideoSourceDescriptor>([]).AllowCachingResult);
+        Assert.IsTrue(RenderRpcSerializer.Deserialize<IsolationVideoSourceDescriptor>([]).AllowCachingResult);
     }
 
     [TestMethod]
@@ -40,7 +57,7 @@ public sealed class ExternalVideoSourceContractTests
             Red = new byte[4],
             Green = new byte[4],
             Blue = new byte[4],
-            Alpha = new byte[16],
+            Alpha = new byte[8],
         }.Validate();
 
         new ExternalVideoFrame
@@ -51,9 +68,9 @@ public sealed class ExternalVideoSourceContractTests
             Red = new byte[8],
             Green = new byte[8],
             Blue = new byte[8],
-            Alpha = new byte[16],
-            Brightness = new byte[16],
-            MaximumBrightness = 1000,
+            Alpha = new byte[8],
+            Brightness = new byte[8],
+            MaximumBrightness = (Half)1000,
         }.Validate();
     }
 

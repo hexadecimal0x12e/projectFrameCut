@@ -1,31 +1,39 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.PluginIsolation;
 
-public sealed class RemoteEffectProvider : IEffectProvider
+public class RemoteEffectProvider : IEffectProvider
 {
+    public bool IsDeterministic { get; }
+
     private readonly IPluginIsolationSession _session;
     private readonly long _objectId;
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<EffectFieldTypeContext, IsolationResolvedFieldTypes> _fieldTypes = new();
 
     public RemoteEffectProvider(IPluginIsolationSession session, IsolationProviderDescriptor descriptor)
     {
         _session = session;
         _objectId = descriptor.ObjectId;
         TypeName = descriptor.TypeName;
+        IsDeterministic = descriptor.IsDeterministic;
         FromPlugin = descriptor.FromPlugin;
         TypeOfEffect = (EffectType)descriptor.EffectType;
         Target = (EffectTarget)descriptor.Target;
+        SupportedStages = descriptor.SupportedStages.Select(s => (EffectStage)s).ToArray();
+        Stage = (EffectStage)descriptor.Stage;
+        EffectStages.Validate(this);
         Enabled = descriptor.Enabled;
         Id = Guid.TryParse(descriptor.InstanceId, out var id) ? id : Guid.NewGuid();
         Name = descriptor.Name;
         InFields = descriptor.InputFields.ToDictionary(x => x.Id, ToDescriptor);
         OutField = ToDescriptor(descriptor.OutputField);
-        Fields = descriptor.InputFields
-            .Where(x => !((EffectArgumentFieldType)x.FieldType).HasFlag(EffectArgumentFieldType.IPicture))
+        Fields = (descriptor.Fields.Count > 0 ? descriptor.Fields : descriptor.InputFields)
+            .Where(x => x.Id != EffectProviderAnchorExtensions.InputKey)
             .ToDictionary(x => x.Id, ToField);
-        SupportsImplementTypes = descriptor.SupportedImplementTypes.Select(x => (EffectImplementType)x).ToArray();
         DefaultImplementType = (EffectImplementType)descriptor.DefaultImplementType;
     }
 
@@ -33,6 +41,8 @@ public sealed class RemoteEffectProvider : IEffectProvider
     public string FromPlugin { get; }
     public EffectType TypeOfEffect { get; }
     public EffectTarget Target { get; }
+    public IReadOnlyList<EffectStage> SupportedStages { get; }
+    public EffectStage Stage { get; set; }
     public bool Enabled { get; set; }
     public Guid Id { get; set; }
     public string Name { get; set; }
@@ -41,38 +51,101 @@ public sealed class RemoteEffectProvider : IEffectProvider
     public Dictionary<string, string> AnchorsBindingState { get; set; } = [];
     public Dictionary<string, IEffectArgumentField> Fields { get; set; }
     public Dictionary<string, object> MetaData { get; set; } = [];
-    public EffectImplementType[] SupportsImplementTypes { get; }
+    public EffectImplementType[] SupportsImplementTypes => IPluginBase.EffectImplementations.GetImplementTypes(TypeName);
     public EffectImplementType DefaultImplementType { get; }
 
-    public IEffect[] Build()
+    public EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context)
     {
-        var leases = new List<IsolationPayloadLease>();
-        try
-        {
-            var response = Invoke<IsolationBuildProviderRequest, IsolationEffectList>(RenderOperation.IsolationBuildProvider, new() { Provider = CreateState(leases) });
-            return response.Effects.Select(x => RemoteEffectFactory.Create(_session, x)).ToArray();
-        }
-        finally
-        {
-            foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
+        var declared = (isInput ? context.State.Fields : context.State.Outputs).GetValueOrDefault(fieldId)?.FieldType ?? EffectArgumentFieldType.Any;
+        if (!_session.Capabilities.SupportsFieldTypeResolution) return declared;
+        var result = ResolveTypes(context);
+        return (isInput ? result.Inputs : result.Outputs).TryGetValue(fieldId, out var type)
+            ? (EffectArgumentFieldType)type : declared;
     }
+
+    public object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context)
+    {
+        if (!_session.Capabilities.SupportsFieldTypeResolution) return null;
+        var result = ResolveTypes(context);
+        return (isInput ? result.InputDataFormats : result.OutputDataFormats).TryGetValue(fieldId, out var format) && format != 0
+            ? (PictureDataFormat)format : null;
+    }
+
+    private IsolationResolvedFieldTypes ResolveTypes(EffectFieldTypeContext context)
+    {
+        return _fieldTypes.GetValue(context, c =>
+        {
+            var leases = new List<IsolationPayloadLease>();
+            try
+            {
+                return Invoke<IsolationResolveFieldTypesRequest, IsolationResolvedFieldTypes>(RenderOperation.IsolationResolveFieldTypes, new()
+                {
+                    ObjectId = _objectId, State = IsolationFieldTypeCodec.Write(c.State, _session, leases),
+                    BoundProviders = c.BoundProviders.ToDictionary(p => p.Key, p => IsolationFieldTypeCodec.Write(p.Value, _session, leases)),
+                    InputTypes = c.InputTypes.ToDictionary(p => p.Key, p => (ulong)p.Value),
+                    InputDataFormats = c.InputDataFormats.Where(p => p.Value is PictureDataFormat).ToDictionary(p => p.Key, p => (int)(PictureDataFormat)p.Value!),
+                });
+            }
+            finally
+            {
+                foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        });
+    }
+
+    public IEffect[] Build<TPicture>() where TPicture : IPicture => BuildCore<TPicture>(PictureDataFormats.FromType<TPicture>());
+
+    public IEffect[] Build() => BuildCore<IPicture>(PictureDataFormat.Unknown);
+
+    private IEffect[] BuildCore<TPicture>(PictureDataFormat format) where TPicture : IPicture
+    {
+        this.ValidateOutputFields();
+        if (this is IMultipleOutputEffectProvider)
+        {
+            List<IsolationPayloadLease> leases = [];
+            try
+            {
+                return Invoke<IsolationBuildProviderRequest, IsolationEffectList>(RenderOperation.IsolationBuildProvider,
+                    new() { Provider = CreateState(leases), PictureDataFormat = (int)format }).Effects
+                    .Select(e => format == PictureDataFormat.Unknown ? RemoteEffectFactory.Create(_session, e)
+                        : TypedPictureEffect.CreateTransport<TPicture>(RemoteEffectFactory.Create(_session, e))).ToArray();
+            }
+            finally
+            {
+                foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        }
+        var requested = DefaultImplementType;
+        if (MetaData.TryGetValue(EffectProviderBase.ImplementTypeParameterKey, out var raw))
+        {
+            if (raw is EffectImplementType value) requested = value;
+            else if (Enum.TryParse(raw?.ToString(), true, out EffectImplementType parsed)) requested = parsed;
+        }
+        var parameters = Fields
+            .Where(x => x.Key != EffectProviderAnchorExtensions.InputKey)
+            .ToDictionary(x => x.Key, x => x.Value.IsDynamicAtRenderTime ? (object)x.Value.GetGetter() : x.Value.GetGetter()());
+        var typeName = TypeName == "Crop" && MetaData.ContainsKey(IEffectProvider.IsContinuousEffectParameterKey)
+            ? "ProgressCrop"
+            : TypeName;
+        return [format == PictureDataFormat.Unknown ? IPluginBase.EffectImplementations.Create(typeName, requested, DefaultImplementType, parameters)
+            : IPluginBase.EffectImplementations.Create<TPicture>(typeName, requested, DefaultImplementType, parameters)];
+    }
+
+    public IEffect[] Build(EffectImplementType implementation, Dictionary<string, object> parameters, object? dataFormat = null) =>
+        [IPluginBase.EffectImplementations.CreateForDataFormat(TypeName, implementation, DefaultImplementType, parameters, dataFormat)];
 
     public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
     {
-        MetaData[EffectProviderBase.ImplementTypeParameterKey] = implementType;
-        if (parameters is not null)
-            foreach (var item in parameters)
-                if (Fields.TryGetValue(item.Key, out var field)) Fields[item.Key] = new StaticEffectArgumentField(item.Value, field.FieldType);
-        return Build().First();
+        return IPluginBase.EffectImplementations.Create(TypeName, implementType, DefaultImplementType, parameters ?? new());
     }
 
-    private IsolationProviderState CreateState(List<IsolationPayloadLease> leases)
+    protected IsolationProviderState CreateState(List<IsolationPayloadLease> leases)
     {
         var fields = new List<IsolationFieldDescriptor>();
         foreach (var item in Fields)
         {
-            if (item.Value.FieldType.HasFlag(EffectArgumentFieldType.CustomType)) throw new NotSupportedException($"Custom effect field '{item.Key}' cannot run in isolation.");
+            if (item.Value.FieldType.HasFlag(EffectArgumentFieldType.CustomType) && item.Value.TypeContract is null)
+                throw new NotSupportedException($"Custom effect field '{item.Key}' requires a port type contract to run in isolation.");
             var dynamic = item.Value as DynamicEffectParamField;
             var value = dynamic?.StaticFallbackValue ?? item.Value.GetGetter()();
             var descriptor = new IsolationFieldDescriptor
@@ -81,6 +154,9 @@ public sealed class RemoteEffectProvider : IEffectProvider
                 TypeName = item.Value.TypeName,
                 FromPlugin = item.Value.FromPlugin,
                 FieldType = (ulong)item.Value.FieldType,
+                TypeContract = IsolationFieldTypeCodec.WriteContract(item.Value.TypeContract),
+                DataFormat = item.Value.DataFormat is PictureDataFormat f ? (int)f : 0,
+                EditorConfiguration = IsolationFieldTypeCodec.WriteEditor(item.Value.DataFormat),
                 DefaultValue = item.Value.DefaultValue,
                 MinimumValue = item.Value.MinValue,
                 MaximumValue = item.Value.MaxValue,
@@ -95,6 +171,8 @@ public sealed class RemoteEffectProvider : IEffectProvider
                 leases.Add(lease);
                 descriptor.PictureValue = lease.Reference;
             }
+            else if (value is projectFrameCut.Shared.IAudioSamples samples)
+                descriptor.AudioValue = AudioPayloadCodec.WriteAsync(samples, _session.Payloads, _session.PreferredPayloadKind, leases).AsTask().GetAwaiter().GetResult();
             else descriptor.Value = IsolationValueConverter.FromObject(value);
             fields.Add(descriptor);
         }
@@ -102,6 +180,7 @@ public sealed class RemoteEffectProvider : IEffectProvider
         return new()
         {
             ObjectId = _objectId,
+            Stage = (int)Stage,
             Enabled = Enabled,
             InstanceId = Id.ToString(),
             Name = Name,
@@ -111,15 +190,17 @@ public sealed class RemoteEffectProvider : IEffectProvider
         };
     }
 
-    private TResponse Invoke<TRequest, TResponse>(RenderOperation operation, TRequest request)
+    protected TResponse Invoke<TRequest, TResponse>(RenderOperation operation, TRequest request)
         => _session.InvokeAsync<TRequest, TResponse>(operation, request).AsTask().GetAwaiter().GetResult();
 
-    private static EffectArgumentFieldDescriptor ToDescriptor(IsolationFieldDescriptor value) => new()
+    internal static EffectArgumentFieldDescriptor ToDescriptor(IsolationFieldDescriptor value) => new()
     {
         Id = value.Id,
         TypeName = value.TypeName,
         FromPlugin = value.FromPlugin,
         FieldType = (EffectArgumentFieldType)value.FieldType,
+        TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
+        DataFormat = IsolationFieldTypeCodec.ReadDataFormat(value),
         DefaultValue = value.DefaultValue,
         MinValue = value.MinimumValue,
         MaxValue = value.MaximumValue,
@@ -128,15 +209,22 @@ public sealed class RemoteEffectProvider : IEffectProvider
         IsDynamic = value.IsDynamic,
     };
 
-    private static IEffectArgumentField ToField(IsolationFieldDescriptor value)
+    internal static IEffectArgumentField ToField(IsolationFieldDescriptor value)
     {
         var type = (EffectArgumentFieldType)value.FieldType;
-        var fieldValue = IsolationValueConverter.ToObject(value.Value) ?? value.DefaultValue;
+        var fieldValue = IsolationValueConverter.ToObject(value.Value) ?? (value.TypeContract is null ? value.DefaultValue : null);
         return value.IsDynamic
-            ? new DynamicEffectParamField(value.Id, type, value.BoundProviderId, fieldValue) { FieldType = type }
-            : new StaticEffectArgumentField(fieldValue, type)
+            ? new DynamicEffectParamField(value.Id, type, value.BoundProviderId, fieldValue)
+            {
+                FieldType = type,
+                TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
+                DataFormat = IsolationFieldTypeCodec.ReadDataFormat(value),
+            }
+            : new StaticEffectArgumentField(fieldValue!, type)
             {
                 Id = value.Id,
+                TypeContract = IsolationFieldTypeCodec.ReadContract(value.TypeContract),
+                DataFormat = IsolationFieldTypeCodec.ReadDataFormat(value),
                 DefaultValue = value.DefaultValue,
                 MinValue = value.MinimumValue,
                 MaxValue = value.MaximumValue,
@@ -144,4 +232,12 @@ public sealed class RemoteEffectProvider : IEffectProvider
                 Remarks = string.IsNullOrEmpty(value.Remarks) ? null : value.Remarks,
             };
     }
+}
+
+public class RemoteMultipleOutputEffectProvider : RemoteEffectProvider, IMultipleOutputEffectProvider
+{
+    public RemoteMultipleOutputEffectProvider(IPluginIsolationSession session, IsolationProviderDescriptor descriptor) : base(session, descriptor)
+        => OutFields = descriptor.OutputFields.ToDictionary(x => x.Id, ToDescriptor);
+
+    public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields { get; }
 }

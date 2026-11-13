@@ -5,7 +5,6 @@ namespace projectFrameCut.Render.VectorContent.Components;
 public class CubicBezierComponent : BaseShapeComponent
 {
     public override string TypeName => "CubicBezier";
-    protected override string[] ShapeFieldIds => ["X1", "Y1", "X2", "Y2", "X3", "Y3", "X4", "Y4"];
 
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()

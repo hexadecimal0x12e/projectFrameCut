@@ -1,3 +1,6 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Project;
@@ -5,6 +8,8 @@ using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationPluginBase.Effect;
+#endif
+
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -15,7 +20,6 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
 using projectFrameCut.Shared;
 using System.Text.Json;
-using RenderTransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 
 namespace projectFrameCut.Services;
 
@@ -32,11 +36,12 @@ internal class IsolatedPluginProxy : IPluginBase
             .Where(x => !IsPictureEffect(x.Value().TypeOfEffect))
             .ToDictionary();
         foreach (var item in client.CreateEffectProviders()) EffectProviderProvider[item.Key] = item.Value;
+        var implementations = inner.EffectImplementationProvider.ToDictionary();
+        foreach (var item in client.CreateEffectImplementations()) implementations[item.Key] = item.Value;
+        EffectImplementationProvider = implementations;
         VideoSourceProvider = client.CreateVideoSources();
         AudioSourceProvider = client.CreateAudioSources();
         VideoWriterProvider = client.CreateVideoWriters();
-        TransformProvider = client.CreateTransforms();
-        ComputerProvider = client.CreateComputers();
         SoundTrackProvider = client.CreateSoundTracks();
     }
 
@@ -52,9 +57,9 @@ internal class IsolatedPluginProxy : IPluginBase
     public IReadOnlyDictionary<string, string> Properties => Inner.Properties;
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => Inner.LocalizationProvider;
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => Inner.TextClipStyleProvider;
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider { get; }
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
-    public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; }
-    public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
@@ -64,7 +69,6 @@ internal class IsolatedPluginProxy : IPluginBase
     public string? ReadLocalizationItem(string key, string locate) => Inner.ReadLocalizationItem(key, locate);
     public IClip ClipCreator(JsonElement element) => _client.CreateClip(element);
     public ISoundTrack SoundTrackCreator(JsonElement element) => _client.RestoreSoundTrack(element);
-    public RenderTransform TransformCreator(JsonElement element) => _client.RestoreTransform(element);
     public IVectorComponent VectComponentCreator(JsonElement element) => _client.CreateVectorComponent(element);
     public IEffect EffectCreator(EffectAndMixtureJSONStructure structure, EffectImplementType implementType = EffectImplementType.NotSpecified)
     {
@@ -99,7 +103,7 @@ internal class IsolatedPluginProxy : IPluginBase
         finally { Inner.OnClosing(); }
     }
 
-    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement;
+    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.VectorPictureEffect or EffectType.Transform;
 
     private IVideoSource CreateVideoSource(string path, string? decoder)
     {
@@ -147,8 +151,6 @@ internal sealed class ExternalPluginProxy : IPluginBase
         if (descriptor.VideoSources.Count > 0) capabilities |= ExternalPluginCapabilities.VideoSources;
         if (descriptor.AudioSources.Count > 0) capabilities |= ExternalPluginCapabilities.AudioSources;
         if (descriptor.SoundTracks.Count > 0) capabilities |= ExternalPluginCapabilities.SoundTracks;
-        if (descriptor.Transforms.Count > 0) capabilities |= ExternalPluginCapabilities.Transforms;
-        if (descriptor.Computers.Count > 0) capabilities |= ExternalPluginCapabilities.Computers;
         if (descriptor.VideoWriters.Count > 0) capabilities |= ExternalPluginCapabilities.VideoWriters;
         if (descriptor.ProvidesClips) capabilities |= ExternalPluginCapabilities.Clips;
         if (descriptor.ProvidesVectorComponents) capabilities |= ExternalPluginCapabilities.VectorComponents;
@@ -159,11 +161,10 @@ internal sealed class ExternalPluginProxy : IPluginBase
         ConfigurationDisplayString = descriptor.ConfigurationDisplayStrings.ToDictionary(x => x.Key, x => x.Value.Values);
         _configuration = descriptor.Configuration;
         EffectProviderProvider = client.CreateEffectProviders();
+        EffectImplementationProvider = client.CreateEffectImplementations();
         VideoSourceProvider = client.CreateVideoSources();
         AudioSourceProvider = client.CreateAudioSources();
         VideoWriterProvider = client.CreateVideoWriters();
-        TransformProvider = client.CreateTransforms();
-        ComputerProvider = client.CreateComputers();
         SoundTrackProvider = client.CreateSoundTracks();
     }
 
@@ -179,9 +180,8 @@ internal sealed class ExternalPluginProxy : IPluginBase
     public IReadOnlyDictionary<string, string> Properties { get; }
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider { get; }
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
-    public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; }
-    public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
@@ -202,7 +202,6 @@ internal sealed class ExternalPluginProxy : IPluginBase
     public void OnClosing() => _client.DisposeAsync().AsTask().GetAwaiter().GetResult();
     public IClip ClipCreator(JsonElement element) => _client.CreateClip(element);
     public ISoundTrack SoundTrackCreator(JsonElement element) => _client.RestoreSoundTrack(element);
-    public RenderTransform TransformCreator(JsonElement element) => _client.RestoreTransform(element);
     public IVectorComponent VectComponentCreator(JsonElement element) => _client.CreateVectorComponent(element);
 
     private ProjectJSONStructure? InvokeProject(RenderOperation operation, ProjectJSONStructure project)
@@ -212,6 +211,7 @@ internal sealed class ExternalPluginProxy : IPluginBase
     }
 }
 
+#if !HEADLESS
 internal sealed class IsolatedApplicationPluginProxy : IsolatedPluginProxy, IApplicationPluginBase
 {
     private readonly IApplicationPluginBase _app;
@@ -220,7 +220,8 @@ internal sealed class IsolatedApplicationPluginProxy : IsolatedPluginProxy, IApp
 
     public int AppLevelPluginAPIVersion => _app.AppLevelPluginAPIVersion;
     public Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>> EffectProviderUIProvider => _app.EffectProviderUIProvider;
-    public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => _app.TextClipStyleProvider;
+    public Dictionary<string, Func<ITextClipStyleProvider, ITextClipStyleUIProvider>> TextClipStyleUIProvider => _app.TextClipStyleUIProvider;
+    public ITextClipStyleUIProvider? GetDefaultTextClipStyleUIProvider(ITextClipStyleProvider source) => _app.GetDefaultTextClipStyleUIProvider(source);
     public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider => _app.VectorComponentHandlerProvider;
     public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source) => _app.GetDefaultEffectProviderUIProvider(source);
     public View? SettingPageProvider(ref IApplicationPluginBase instance)
@@ -256,6 +257,7 @@ internal sealed class RemoteProjectPluginProxy : IApplicationPluginBase, IRemote
         if (client.ProjectTools.Count > 0 && !declaration.Capabilities.HasFlag(ProjectPluginCapability.Tools))
             throw new InvalidDataException("The plugin exposes tools without declaring the Tools capability.");
         EffectProviderProvider = client.CreateEffectProviders();
+        EffectImplementationProvider = client.CreateEffectImplementations();
         VideoSourceProvider = client.CreateVideoSources();
         if (EffectProviderProvider.Count > 0 && !declaration.Capabilities.HasFlag(ProjectPluginCapability.Effects))
             throw new InvalidDataException("The plugin exposes effects without declaring the Effects capability.");
@@ -279,9 +281,8 @@ internal sealed class RemoteProjectPluginProxy : IApplicationPluginBase, IRemote
     };
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; } = [];
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider { get; }
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; } = [];
-    public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; } = [];
-    public Dictionary<string, Func<IComputer>> ComputerProvider { get; } = [];
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; } = [];
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; } = [];
@@ -444,7 +445,6 @@ internal sealed class RemoteProjectPluginProxy : IApplicationPluginBase, IRemote
     }
     public IClip ClipCreator(JsonElement element) => throw new NotSupportedException("Project plugins cannot create clips in the host process.");
     public ISoundTrack SoundTrackCreator(JsonElement element) => throw new NotSupportedException("Project plugins cannot create sound tracks in the host process.");
-    public RenderTransform TransformCreator(JsonElement element) => throw new NotSupportedException("Project plugins cannot create transforms in the host process.");
     public IVectorComponent VectComponentCreator(JsonElement element) => throw new NotSupportedException("Project plugins cannot create vector components in the host process.");
     public IAudioSource AudioSourceCreator(string filePath) => throw new NotSupportedException("Project plugins cannot create audio sources in the host process.");
     public IAudioSource AudioSourceCreator(string filePath, string decoderName) => throw new NotSupportedException("Project plugins cannot create audio sources in the host process.");
@@ -454,3 +454,5 @@ internal sealed class RemoteProjectPluginProxy : IApplicationPluginBase, IRemote
     public bool OnLoaded(out string failedReason) { failedReason = string.Empty; return true; }
     public void OnClosing() => _client.DisposeAsync().AsTask().GetAwaiter().GetResult();
 }
+
+#endif

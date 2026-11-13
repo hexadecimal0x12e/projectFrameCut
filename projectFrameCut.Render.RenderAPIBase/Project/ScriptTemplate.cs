@@ -6,8 +6,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// <summary>
     /// 表示一个带 PowerShell 脚本的模板。
     /// 在现有的 JSON+填空模板基础上，附加一个 PowerShell 脚本。
-    /// 应用模板时，占位符替换完成后，脚本通过 <c>ScriptCore</c> 执行，
-    /// 利用用户填入的变量值和内置 Cmdlet 完成动态项目配置。
+    /// 应用基础数据后，在隔离 PowerShell 进程中通过项目 RPC 配置项目。
     /// </summary>
     public class ScriptBasedTemplateStructure : ITemplateStructure
     {
@@ -34,6 +33,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public Dictionary<string, string>? AssetHashTable { get; set; }
 
         public string ScriptHash { get; set; } = "";
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string? ScriptPath { get; set; }
 
         /// <summary>
         /// 片段数量。用于列表展示；从 .pjfcTemplate 加载完整数据时

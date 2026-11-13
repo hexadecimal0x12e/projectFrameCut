@@ -1,10 +1,10 @@
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Drawing.Base;
@@ -23,6 +23,7 @@ using static projectFrameCut.Setting.SettingManager.SettingsManager;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 using System.ComponentModel;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 namespace projectFrameCut
 {
@@ -42,12 +43,12 @@ namespace projectFrameCut
 #endif
             VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
-            if (MauiProgram.IsStoreMode) ExtensibilitySettingButton.IsVisible = false; //plugin could broke store review
             if (IsBoolSettingTrue("DeveloperMode"))
             {
                 TestPageButton.IsVisible = true;
                 AdvancedSettingButton.IsVisible = true;
             }
+
         }
 
         private async void OnGeneralSettingClicked(object sender, EventArgs e)
@@ -57,10 +58,6 @@ namespace projectFrameCut
         private async void OnEditSettingClicked(object sender, EventArgs e)
         {
             await NavigateAsync(new EditSettingPage());
-        }
-        private async void OnAISettingClicked(object sender, EventArgs e)
-        {
-            await NavigateAsync(new AISettingPage());
         }
         private async void OnSecuritySettingClicked(object sender, EventArgs e)
         {
@@ -175,7 +172,7 @@ namespace projectFrameCut
                 {
                     MyLoggerExtensions.SaveDiagResult = false;
                 }
-                if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel"))
+                if (IsBoolSettingTrueOrDefault("render_forceImpType_ForceHwAccel", true))
                 {
                     EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
                 }
@@ -216,34 +213,22 @@ namespace projectFrameCut
                 }
                 IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
 
-                try
-                {
-                    var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(MauiProgram.CachePath, "VideoFrameCache"));
-                    Directory.CreateDirectory(vfdCahceDir);
-                    VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
-                    VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
-                    VideoFrameDiskCache.MaximumCacheSizeBytes = GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
-                    IVideoSource.EnableDiskCache = IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
-                }
-                catch // iOS/Non-MAUI SDK fallback
-                {
-                    IVideoSource.EnableDiskCache = false;
-                }
-               
                 ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
+                HwAccelPictureSession.DefaultEnableBufferPoolLimit = RenderSchedulingSettings.EnableGpuBufferPoolLimit;
+                HwAccelPictureSession.DefaultBufferPoolMaxBytes = RenderSchedulingSettings.GpuBufferPoolMaxBytes;
                 IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
-                IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new CPUVectorPictureRasterizer();
+                IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new projectFrameCut.Render.RenderAPIBase.VectorContent.CpuVectorPictureRasterizer();
                 NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
                 TextClip.DiagMode = IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
                 DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
                 DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
 
-                DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)));
+                DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)));
+                DynamicPreview.IgnorePreviewWindowSize = IsBoolSettingTrue("Edit_IgnorePreviewWindowSize");
+                DynamicPreview.TargetResolutionPixels = Math.Max(0, GetSettingAs<long>(DynamicPreviewSettings.TargetPixelsSettingKey, 0, 0));
                 LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
+                IColorAdjustEffect.AllowColorAdjustAppearInEffectEditor = IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor");
 
-                // ===== 安全设置同步 =====
-
-                // RichText 安全设置（通过 Markdown2XAML 静态属性，跨程序集通信）
                 Markdown2XAML.ApplySecuritySettings(
                     enableRendering: IsBoolSettingTrueOrDefault("Security_RichText_EnableRendering", true),
                     enableDisplayingImage: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingImage", true),
@@ -252,21 +237,21 @@ namespace projectFrameCut
                     enableXAMLExternalSource: IsBoolSettingTrueOrDefault("Security_RichText_EnableXAMLExternalSource", false)
                 );
 
-
-                // 远程内容：HTTP 解码器
                 HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);
+
+                if (!IsSettingExists("Edit_UseDynamicPreview")) WriteSetting("Edit_UseDynamicPreview", "True");
             }
             catch (Exception ex)
             {
                 Log(ex, "Setup modules");
+            }
+
+            static NativePreviewOutputMode ParsePreviewOutputMode(string value)
+                => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode) && mode == NativePreviewOutputMode.Disabled
+                    ? NativePreviewOutputMode.Disabled
+                    : NativePreviewOutputMode.Required;
+
         }
-
-        static NativePreviewOutputMode ParsePreviewOutputMode(string value)
-            => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode)
-                ? mode
-                : NativePreviewOutputMode.Automatic;
-
-    }
         int count = 0;
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {

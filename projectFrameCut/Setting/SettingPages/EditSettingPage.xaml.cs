@@ -12,7 +12,11 @@ using static SettingManager.SettingsManager;
 using projectFrameCut.Shared;
 using projectFrameCut.Services;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.LivePreview;
+using projectFrameCut.InteractableEditor;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using RoundRectangle = Microsoft.Maui.Controls.Shapes.RoundRectangle;
 
 public partial class EditSettingPage : ContentPage
 {
@@ -28,7 +32,6 @@ public partial class EditSettingPage : ContentPage
     public readonly Dictionary<string, string> PreviewOutputModeStringMapping = new Dictionary<string, string>
     {
         { SettingLocalizedResources.Edit_NativePreviewOutputMode_Disabled, nameof(NativePreviewOutputMode.Disabled) },
-        { SettingLocalizedResources.Edit_NativePreviewOutputMode_Automatic, nameof(NativePreviewOutputMode.Automatic) },
         { SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required) },
     };
     public readonly Dictionary<string, string> OrderOptionStringMapping = new Dictionary<string, string>
@@ -39,8 +42,14 @@ public partial class EditSettingPage : ContentPage
     };
 
     Dictionary<string, TextClipEntry> TextTemplates = new();
+    public readonly Dictionary<string, string> TransformOrderStringMapping = new()
+    {
+        [Localized.Transform_AfterEffects] = nameof(TransformRenderOrder.AfterEffects),
+        [Localized.Transform_BeforeEffects] = nameof(TransformRenderOrder.BeforeEffects)
+    };
 
     static string[] resolutions = ["1280x720", "1920x1080", "2560x1440", "3840x2160"];
+    readonly Dictionary<string, long> DynamicPreviewResolutionOptions = DynamicPreviewSettings.TargetResolutionOptions;
     static bool LoadTextPreview = false;
 
     public EditSettingPage()
@@ -57,28 +66,34 @@ public partial class EditSettingPage : ContentPage
             .AppendWhen(IsBoolSettingTrueOrDefault("Edit_EnableMultiWindow", true), c => c.AddCheckbox("Edit_RememberWindowLayout", SettingLocalizedResources.Edit_RememberWindowLayout, IsBoolSettingTrueOrDefault("Edit_RememberWindowLayout", true)))
             .AddCheckbox("Edit_EnableQuickCommandShortcuts", SettingLocalizedResources.Edit_EnableQuickCommandShortcuts, IsBoolSettingTrue("Edit_EnableQuickCommandShortcuts"))
             .AddEntry("Edit_DefaultInfLengthClipLength", SettingLocalizedResources.Edit_DefaultInfLengthClipLength, GetSettingAs("Edit_DefaultInfLengthClipLength", 300, 300).ToString(), "300")
+            .AddPicker("Edit_DefaultTransformRenderOrder", SettingLocalizedResources.Edit_DefaultTransformRenderOrder,
+                TransformOrderStringMapping.Keys.ToArray(), TransformOrderStringMapping.First(p => p.Value == TransformServices.DefaultRenderOrder.ToString()).Key)
+            .AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(Localized.EffectGroup_Library, Localized.EffectGroup_LibraryDescription))
+            .AddButton(Localized.EffectGroup_Manage, ManageEffectGroups)
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_ClipInfoTabOrder, SettingLocalizedResources.Edit_ClipInfoTabOrder_Subtitle))
+            .AddCustomChild(BuildClipInfoTabOrder())
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
-            .AddCheckbox("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"))
-            .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Automatic, "")).Key, null)
-            .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
-                c => c.AddEntry("Edit_DynamicPreviewResolutionDivisor", SettingLocalizedResources.Edit_DynamicPreviewResolutionDivisor, GetSetting("Edit_DynamicPreviewResolutionDivisor", "1"), "1")
-                      .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
-            )
-            .AppendWhen(!IsBoolSettingTrue("Edit_UseDynamicPreview"),
-                c => c.AddPicker("Edit_LiveVideoPreviewDefaultResolution", SettingLocalizedResources.Edit_LiveVideoPreviewDefaultResolution, resolutions, GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720"))
-                      .AddEntry("Edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), "240")
-                      .AddEntry("Edit_LiveVideoPreviewZoomFactor", SettingLocalizedResources.Edit_LiveVideoPreviewZoomFactor, GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), "8")
-            )
+            .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required))).Key, null)
+            .AddPicker(DynamicPreviewSettings.DiskCacheSettingKey, SettingLocalizedResources.Edit_CacheDecodedPreviewFrames, DynamicPreviewSettings.DiskCacheOptions.Keys.ToArray(), DynamicPreviewSettings.DiskCacheOptions.First(p => p.Value == DynamicPreviewSettings.DiskCacheMode).Key)
+            .AppendWhen(!DynamicPreviewSettings.MemoryOnly, c => c.AddEntry(DynamicPreviewSettings.BufferSecondsSettingKey, SettingLocalizedResources.Edit_DynamicPreviewBufferSeconds, DynamicPreviewSettings.BufferSeconds.ToString(CultureInfo.InvariantCulture), "5"))
+            .AddEntry("Edit_DynamicPreviewClipPoolMiB", SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB, GetSetting("Edit_DynamicPreviewClipPoolMiB", "64"), "64")
+            .AddCheckbox("Edit_IgnorePreviewWindowSize", SettingLocalizedResources.Edit_IgnorePreviewWindowSize, IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"))
+            .AppendWhen(IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"), c => c.AddPicker(DynamicPreviewSettings.TargetPixelsSettingKey, SettingLocalizedResources.Edit_DynamicPreviewTargetResolution, DynamicPreviewResolutionOptions.Keys.ToArray(), DynamicPreviewResolutionOptions.FirstOrDefault(p => p.Value == DynamicPreview.TargetResolutionPixels).Key ?? DynamicPreviewResolutionOptions.Keys.First()))
+            .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
+            .AddCheckbox("Edit_PreviewWarmupEnabled", SettingLocalizedResources.Edit_PreviewWarmupEnabled, IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true))
+            .AppendWhen(IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true), c => c.AddEntry("Edit_PreviewWarmupSeconds", SettingLocalizedResources.Edit_PreviewWarmupSeconds, GetSetting("Edit_PreviewWarmupSeconds", "5"), "5"))
             .AddSeparator()
             .AddText(new SingleLineLabel(SettingLocalizedResources.Edit_MiscOption, 25, FontAttributes.Bold))
-            .AddPicker("Edit_ProxyOption", SettingLocalizedResources.Edit_ProxyOption, ProxyStringMapping.Keys.ToArray(), ProxyStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_ProxyOption", "ask"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_ProxyOption_Ask, "ask")).Key)
+            .AddCheckbox("Edit_AccelerateControlUpdates", SettingLocalizedResources.Edit_AccelerateControlUpdates, IsBoolSettingTrue("Edit_AccelerateControlUpdates"))
+            .AddCheckbox("Edit_UseLightweightDynamicPreviewHost", SettingLocalizedResources.Edit_UseLightweightDynamicPreviewHost, IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true))
             .AddCheckbox("Edit_Denoise", SettingLocalizedResources.Edit_Denoise, IsBoolSettingTrue("Edit_Denoise"))
             .AddCheckbox("Edit_LockScrollViewAfterSelection", SettingLocalizedResources.Edit_LockScrollViewAfterSelection, IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true))
-#if WINDOWS || MACCATALYST
-            .AddCheckbox("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"))
-#endif
+            .AddCheckbox("Edit_AllowColorAdjustAppearInEffectEditor", SettingLocalizedResources.Edit_AllowColorAdjustAppearInEffectEditor, IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor"))
+            .AddPicker("Edit_ProxyOption", SettingLocalizedResources.Edit_ProxyOption, ProxyStringMapping.Keys.ToArray(), ProxyStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_ProxyOption", "ask"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_ProxyOption_Ask, "ask")).Key)
             .AddButton(SettingLocalizedResources.Edit_ResetQuickCommands, ResetQuickCommands)
+            .AddSeparator()
             ;
 
 
@@ -87,6 +102,105 @@ public partial class EditSettingPage : ContentPage
             Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
 
         });
+    }
+
+    private View BuildClipInfoTabOrder()
+    {
+        var order = ClipInfoBuilder.GetTabOrder().ToList();
+        var titles = ClipInfoBuilder.GetTabOrderOptions().ToDictionary(t => t.Tag, t => t.Header);
+        var list = new HorizontalStackLayout { Spacing = 2, Padding = new Thickness(5, 5, 5, 0) };
+        var rows = new Dictionary<string, Border>();
+        foreach (var tag in order)
+        {
+            var row = new Border
+            {
+                Stroke = Colors.Gray,
+                StrokeThickness = 0.5,
+                StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(6, 6, 0, 0) },
+                BackgroundColor = Colors.Gray,
+                Margin = new Thickness(0, 2, 2, 0),
+                Padding = new Thickness(10, 6),
+                Content = new Label
+                {
+                    Text = titles[tag],
+                    VerticalOptions = LayoutOptions.Center,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(8, 4),
+                    TextColor = Colors.Black
+                }
+            };
+            var drag = new DragGestureRecognizer { CanDrag = true };
+            drag.DragStarting += (_, e) =>
+            {
+                e.Data.Properties[ClipInfoBuilder.TabOrderSettingKey] = tag;
+                e.Data.Text = titles[tag];
+            };
+            row.GestureRecognizers.Add(drag);
+
+            var drop = new DropGestureRecognizer { AllowDrop = true };
+            drop.DragOver += (_, e) =>
+            {
+                var allowed = e.Data.Properties.TryGetValue(ClipInfoBuilder.TabOrderSettingKey, out var source)
+                    && source is string t && t != tag && rows.ContainsKey(t);
+                e.AcceptedOperation = allowed ? DataPackageOperation.Copy : DataPackageOperation.None;
+                row.Stroke = allowed ? Colors.CornflowerBlue : Colors.Gray;
+                row.StrokeThickness = allowed ? 2 : 0.5;
+            };
+            drop.DragLeave += (_, _) =>
+            {
+                row.Stroke = Colors.Gray;
+                row.StrokeThickness = 0.5;
+            };
+            drop.Drop += (_, e) =>
+            {
+                row.Stroke = Colors.Gray;
+                row.StrokeThickness = 0.5;
+                if (!e.Data.Properties.TryGetValue(ClipInfoBuilder.TabOrderSettingKey, out var source)
+                    || source is not string t || t == tag || !rows.ContainsKey(t)) return;
+                e.Handled = true;
+                var from = order.IndexOf(t);
+                var to = order.IndexOf(tag);
+                if (e.GetPosition(row) is { } p && p.X >= row.Width / 2) to++;
+                if (from < to) to--;
+                if (from == to) return;
+                order.RemoveAt(from);
+                order.Insert(to, t);
+                WriteSetting(ClipInfoBuilder.TabOrderSettingKey, string.Join(",", order));
+                list.Children.Remove(rows[t]);
+                list.Children.Insert(to, rows[t]);
+                LogDiagnostic($"Clip info tab order changed to {string.Join(",", order)}.");
+            };
+            row.GestureRecognizers.Add(drop);
+            rows.Add(tag, row);
+            list.Children.Add(row);
+        }
+        var reset = new Button { Text = SettingLocalizedResources.Edit_ClipInfoTabOrder_Reset, HorizontalOptions = LayoutOptions.End };
+        reset.Clicked += (_, _) =>
+        {
+            WriteSetting(ClipInfoBuilder.TabOrderSettingKey, "");
+            LogDiagnostic("Clip info tab order reset to default.");
+            BuildPPB();
+        };
+        return new VerticalStackLayout
+        {
+            Spacing = 8,
+            Margin = new Thickness(12, 0),
+            Children =
+            {
+                new Border
+                {
+                    StrokeThickness = 0,
+                    BackgroundColor = Color.FromArgb("#80404040"),
+                    Content = new ScrollView
+                    {
+                        Orientation = ScrollOrientation.Horizontal,
+                        HorizontalScrollBarVisibility = ScrollBarVisibility.Default,
+                        Content = list
+                    }
+                },
+                reset
+            }
+        };
     }
 
     private async void ResetQuickCommands(object? sender, EventArgs e)
@@ -104,6 +218,17 @@ public partial class EditSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "Edit_AllowColorAdjustAppearInEffectEditor":
+                    if (args.Value is bool enabled)
+                    {
+                        WriteSetting(args.Id, enabled.ToString());
+                        MainSettingsPage.SyncSettingToModules();
+                    }
+                    return;
+                case "Edit_DefaultTransformRenderOrder":
+                    var order = TransformOrderStringMapping.GetValueOrDefault(args.Value?.ToString() ?? "", nameof(TransformRenderOrder.AfterEffects));
+                    WriteSetting(args.Id, order);
+                    return;
                 case "Edit_ProxyOption":
                     {
                         var mode = ProxyStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
@@ -115,10 +240,56 @@ public partial class EditSettingPage : ContentPage
                 case "Edit_PreviewOutputMode":
                     {
                         var mode = PreviewOutputModeStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
-                            new KeyValuePair<string, string>(nameof(NativePreviewOutputMode.Automatic), nameof(NativePreviewOutputMode.Automatic))).Value;
+                            new KeyValuePair<string, string>(nameof(NativePreviewOutputMode.Required), nameof(NativePreviewOutputMode.Required))).Value;
                         WriteSetting(args.Id, mode);
+                        LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode = mode == nameof(NativePreviewOutputMode.Disabled)
+                            ? NativePreviewOutputMode.Disabled
+                            : NativePreviewOutputMode.Required;
+                        LogDiagnostic($"Preview output mode changed to {mode}.");
                         return;
                     }
+                case "Edit_IgnorePreviewWindowSize":
+                    if (args.Value is bool ignoreWindowSize)
+                    {
+                        WriteSetting(args.Id, ignoreWindowSize.ToString());
+                        DynamicPreview.IgnorePreviewWindowSize = ignoreWindowSize;
+                        LogDiagnostic($"Ignore preview window size changed to {ignoreWindowSize}.");
+                        BuildPPB();
+                    }
+                    return;
+                case DynamicPreviewSettings.TargetPixelsSettingKey:
+                    if (args.Value is string resolution && DynamicPreviewResolutionOptions.TryGetValue(resolution, out var pixels))
+                        DynamicPreviewSettings.SetTargetResolution(pixels);
+                    return;
+                case DynamicPreviewSettings.DiskCacheSettingKey:
+                    if (args.Value is string selection && DynamicPreviewSettings.DiskCacheOptions.TryGetValue(selection, out var cacheMode))
+                    {
+                        WriteSetting(args.Id, cacheMode);
+                        LogDiagnostic($"Preview disk cache: {cacheMode}.");
+                        BuildPPB();
+                    }
+                    return;
+                case DynamicPreviewSettings.BufferSecondsSettingKey:
+                    if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var bufferSeconds)
+                        && bufferSeconds > 0)
+                    {
+                        WriteSetting(args.Id, bufferSeconds.ToString(CultureInfo.InvariantCulture));
+                        LogDiagnostic($"Dynamic preview buffer duration changed to {bufferSeconds} seconds.");
+                    }
+                    return;
+                case "Edit_DynamicPreviewClipPoolMiB":
+                    if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var poolMiB)
+                        && poolMiB is >= 1 and <= 4096)
+                    {
+                        WriteSetting(args.Id, poolMiB.ToString(CultureInfo.InvariantCulture));
+                        LogDiagnostic($"Dynamic preview clip pool limit changed to {poolMiB} MiB.");
+                    }
+                    return;
+                case "Edit_PreviewWarmupSeconds":
+                    if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+                        && seconds is >= 1 and <= 60)
+                        WriteSetting(args.Id, seconds.ToString(CultureInfo.InvariantCulture));
+                    return;
                 case "TextTemplates":
                     {
                         File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "TextTemplates.json"), System.Text.Json.JsonSerializer.Serialize(TextTemplates));
@@ -127,6 +298,7 @@ public partial class EditSettingPage : ContentPage
                     }
                 case "Edit_UpperContentHeight_AutoSave":
                 case "Edit_UseDynamicPreview":
+                case "Edit_PreviewWarmupEnabled":
                 case "Edit_EnableMultiWindow":
                     if (args.Value != null)
                     {

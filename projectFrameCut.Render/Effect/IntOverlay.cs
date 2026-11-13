@@ -17,8 +17,14 @@ namespace projectFrameCut.Render.Effect
     /// value-provider effect (e.g. <see cref="IntArithmeticValueProviderEffect"/>); the text
     /// is re-rendered every frame so a changing value is reflected immediately.
     /// </summary>
-    public class IntOverlayEffect : INormalEffect
+    public class IntOverlayEffect : IntOverlayEffect<IPicture> { }
+
+    public class IntOverlayEffect<TPicture> : INormalEffect<TPicture> where TPicture : IPicture
     {
+        public IEffect WithPictureType<T>() where T : IPicture => new IntOverlayEffect<T>();
+
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Int Overlay";
@@ -28,7 +34,6 @@ namespace projectFrameCut.Render.Effect
 
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public bool IsReorderable => true;
@@ -38,7 +43,7 @@ namespace projectFrameCut.Render.Effect
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
-            return new IntOverlayEffect
+            return new IntOverlayEffect<TPicture>
             {
                 Parameters = parameters ?? new Dictionary<string, object>(),
             };
@@ -48,14 +53,14 @@ namespace projectFrameCut.Render.Effect
 
         public void Initialize() { }
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(TPicture source, int targetWidth, int targetHeight)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
             if (targetWidth <= 0 || targetHeight <= 0)
                 throw new ArgumentException("targetWidth and targetHeight must be positive.");
 
             int value = DynamicParam.Resolve(Parameters.GetValueOrDefault("Value"), 0);
-            Log($"IntOverlayEffect {Id}/{Name}'s value: {value} ({Parameters.GetValueOrDefault("B")?.GetType()?.Name ?? "<null>"})");
+            Log($"IntOverlayEffect {Id}/{Name}'s value: {value} ({Parameters.GetValueOrDefault("Value")?.GetType()?.Name ?? "<null>"})");
             string text = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
             // Layout the number as text on a canvas matching the target size, rasterize it
@@ -83,6 +88,8 @@ namespace projectFrameCut.Render.Effect
             }
 
             // Dispatch to the strongly-typed overload matching the unified bit depth.
+            if (sourceForCompose is IPicture<Half> fb && overlayForCompose is IPicture<Half> ft)
+                return PictureComposer.Default.Compose(fb, ft, BlendMode.Overlay, 0, 0, targetWidth, targetHeight);
             if (sourceForCompose is IPicture<ushort> uBase && overlayForCompose is IPicture<ushort> uTop)
                 return PictureComposer.Default.Compose(uBase, uTop, BlendMode.Overlay, 0, 0, targetWidth, targetHeight);
             if (sourceForCompose is IPicture<byte> bBase && overlayForCompose is IPicture<byte> bTop)
@@ -112,11 +119,11 @@ namespace projectFrameCut.Render.Effect
                 FillR = ToUShort(Parameters.GetValueOrDefault("FillR"), ushort.MaxValue),
                 FillG = ToUShort(Parameters.GetValueOrDefault("FillG"), ushort.MaxValue),
                 FillB = ToUShort(Parameters.GetValueOrDefault("FillB"), ushort.MaxValue),
-                FillA = ToFloat(Parameters.GetValueOrDefault("FillA"), 1f),
+                FillA = (Half)ToFloat(Parameters.GetValueOrDefault("FillA"), 1f),
                 StrokeR = ToUShort(Parameters.GetValueOrDefault("StrokeR"), 0),
                 StrokeG = ToUShort(Parameters.GetValueOrDefault("StrokeG"), 0),
                 StrokeB = ToUShort(Parameters.GetValueOrDefault("StrokeB"), 0),
-                StrokeA = ToFloat(Parameters.GetValueOrDefault("StrokeA"), 0f),
+                StrokeA = (Half)ToFloat(Parameters.GetValueOrDefault("StrokeA"), 0f),
                 StrokeThickness = DynamicParam.Resolve(Parameters.GetValueOrDefault("StrokeThickness"), 2f),
                 CharacterSpacing = DynamicParam.Resolve(Parameters.GetValueOrDefault("CharacterSpacing"), 0f),
                 LineSpacing = DynamicParam.Resolve(Parameters.GetValueOrDefault("LineSpacing"), 0.3f),
@@ -142,6 +149,10 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntOverlayEffectProvider : EffectProviderBase
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
+
+        public override bool IsDeterministic => true;
+
         public IntOverlayEffectProvider()
         {
             Name = "Int Overlay";
@@ -163,11 +174,23 @@ namespace projectFrameCut.Render.Effect
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>(base.DefineInFields())
+            {
+                ["Value"] = Field("Value", EffectArgumentFieldType.Integer, "0"),
+            };
+
+        public override object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context)
+        {
+            if (isInput) return base.ResolveDataFormat(fieldId, true, context);
+            var input = base.ResolveDataFormat(PrimaryInputAnchorKey, true, context);
+            return input is PictureDataFormat f && f.HasFlag(PictureDataFormat.Bit16) ? PictureDataFormats.WithLocation(f, false) : null;
+        }
+
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
             return
             [
-                Field("Value", EffectArgumentFieldType.Integer, "0", remarks: "The integer to overlay as text. Can be bound to a value provider."),
                 Field("FontSize", EffectArgumentFieldType.Numeric, "96"),
                 Field("X", EffectArgumentFieldType.Numeric, "40"),
                 Field("Y", EffectArgumentFieldType.Numeric, "40"),
@@ -180,9 +203,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            return [IntOverlayEffect.FromParametersDictionary(parameters)];
-        }
+
     }
 }

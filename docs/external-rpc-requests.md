@@ -74,11 +74,32 @@ CLI 使用私钥对 `Version`、`Mode`、`RequestId`、`ClientId`、`ServiceId`�
 
 使用对应私钥解密，校验 RequestId 和 ClientId，再以 PipeName、Token 和该 ClientId 完成 Render RPC 握手。管道在后端关闭时失效；请求过期时间不是已授权管道的失效时间。一次性授权管道不会接受外部视频源注册。
 
-## RPC 外部视频源
+## RPC 外部媒体源
 
 持久授权客户端可以给 `RenderClient` 传入 `IExternalVideoSourceProvider`，连接后调用 `RegisterExternalVideoSourcesAsync` 注册源目录。服务端在需要帧时，通过同一 named pipe 调用 provider 的创建、初始化、读取和释放方法；`ExternalVideoFrameCodec.Encode` 可将 8/16 位、Alpha 或 HDR `IPicture` 编码为协议帧。HTTP transport 不支持这类双工回调。
 
 源被添加到项目后保存为 `#RemoteRpcVideoSource:<Base64UrlReference>`，其中只包含 ClientId、SourceId、解码器名、provider 元数据和用于离线展示的源描述快照，不包含 token、实例 ID 或私钥。客户端断开或授权被撤销时，源保留在项目中并显示读取失败；同一 ClientId 重新连接并重新注册相同 SourceId 后会创建新实例并恢复读取。
+
+音频使用 `IExternalAudioSourceProvider`，通过 `RegisterExternalAudioSourcesAsync`、`UnregisterExternalAudioSourcesAsync` 和 `ListExternalAudioSourcesAsync` 注册、注销和查询目录。创建客户端时可单独传入音频 Provider：
+
+```csharp
+await using var client = new RenderClient(transport, clientId,
+    externalVideoSourceProvider: null, externalAudioSourceProvider: audioProvider);
+await client.RegisterExternalAudioSourcesAsync(new() { Sources = audioProvider.AudioSources.ToList() });
+```
+
+同时实现两个 Provider 接口的对象可继续使用原来的三参数构造函数，客户端会识别其音频能力，之后仍需分别注册两个目录。音频引用保存为 `#RemoteRpcAudioSource:<Base64UrlReference>`，生命周期和授权规则与视频一致。`ReadSamplesAsync` 按每声道的 StartIndex、Count 读取，返回逐声道排列的小端 float32 PCM，格式见 [项目随附外置媒体源](project-external-sources.md)。
+
+蒙版使用 `IExternalMaskSourceProvider`，通过 `RegisterExternalMaskSourcesAsync`、`UnregisterExternalMaskSourcesAsync` 和 `ListExternalMaskSourcesAsync` 管理目录。仅提供蒙版时使用五参数构造函数：
+
+```csharp
+await using var client = new RenderClient(transport, clientId,
+    externalVideoSourceProvider: null, externalAudioSourceProvider: null,
+    externalMaskSourceProvider: maskProvider);
+await client.RegisterExternalMaskSourcesAsync(new() { Sources = maskProvider.MaskSources.ToList() });
+```
+
+视频或音频 Provider 同时实现蒙版接口时，现有构造函数会自动识别，但仍需单独注册蒙版目录。`ProcessMaskAsync` 接收下层合成帧、已求值的参数和缩放比例，返回相同尺寸的处理结果；参数、Alpha/HDR 格式与 [Assembly 蒙版 Provider](project-external-sources.md#蒙版-provider) 相同。源显示在蒙版列表中，引用 `#RemoteRpcMaskSource:<Base64UrlReference>` 保存到 `ExtraData["MaskSourceType"]`。应用可通过 `ProcessExternalMaskAsync` 生成缩略图，渲染后端直接使用双工回调；卸载、移除和授权撤销同时作用于蒙版源。
 
 授权弹框期间文件保持打开，禁止其他写入及替换。读取方使用 `FileAccess.Read, FileShare.ReadWrite`，遇到暂时的 IO/JSON 错误重试；结果在同一文件句柄上更新，因此读取方需要容忍短暂的不完整内容。处理完的状态不会重复弹框；重新申请应提交新的请求 ID 和文件。后端异常退出后尚为 pending 的请求可被重新领取，必须重新授权。
 

@@ -25,10 +25,16 @@ namespace projectFrameCut.Render.Rendering
 {
     public static class Timeline
     {
-        //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
-        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
+        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => PictureFP16.GenerateSolidColor(w, h, Half.Zero, Half.Zero, Half.Zero, null);
         public static bool ProcessEffectFromCanvas { get; set; } = true;
-        private static readonly ConcurrentDictionary<Guid, object> FrameHashLocks = new();
+
+        internal static IPicture CreateTransparentFrame(int width, int height, IPicture.PicturePixelMode pixelMode) => pixelMode.Value switch
+        {
+            116 => PictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero),
+            8 => Picture8bpp.GenerateSolidColor(width, height, 0, 0, 0, Half.Zero),
+            16 => HDRPictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero, Half.Zero),
+            _ => throw new NotSupportedException($"Unsupported target pixel mode {pixelMode}."),
+        };
 
         public static IEnumerable<OneFrame> GetFramesInOneFrame(
             IClip[] video,
@@ -37,25 +43,56 @@ namespace projectFrameCut.Render.Rendering
             int targetHeight,
             IPicture.PicturePixelMode? targetPPB = null,
             int projectRelativeWidth = 0,
-            int projectRelativeHeight = 0)
+            int projectRelativeHeight = 0,
+            bool applyTransforms = true,
+            bool initializeClips = true,
+            ClipArgumentFrameCache? argumentFrames = null)
         {
-            var ppb = targetPPB ?? 8;
-            List<OneFrame> result = new List<OneFrame>();
-            foreach (var clip in video)
+            IEnumerable<OneFrame> Read() => ReadFramesInOneFrame(video, targetFrame, targetWidth, targetHeight,
+                targetPPB, projectRelativeWidth, projectRelativeHeight, applyTransforms, initializeClips, argumentFrames);
+            return new FrameSequence(video, Read, () => ClipValuePassThrough.Open(video, targetFrame, targetWidth,
+                targetHeight, projectRelativeWidth, projectRelativeHeight, targetPPB ?? IPicture.PicturePixelMode.Float16Picture, CancellationToken.None));
+        }
+
+        private sealed class FrameSequence(IClip[] clips, Func<IEnumerable<OneFrame>> read, Func<IDisposable?> open) : IEnumerable<OneFrame>
+        {
+            public IClip[] Clips => clips;
+            public IEnumerator<OneFrame> GetEnumerator()
             {
-                if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+                using var scope = open();
+                foreach (var frame in read()) yield return frame;
+            }
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        private static IEnumerable<OneFrame> ReadFramesInOneFrame(IClip[] video, uint targetFrame,
+            int targetWidth, int targetHeight, IPicture.PicturePixelMode? targetPPB, int projectRelativeWidth,
+            int projectRelativeHeight, bool applyTransforms, bool initializeClips, ClipArgumentFrameCache? argumentFrames)
+        {
+            using var project = ValueProviderFrameContext.ProjectFrameCount is null
+                ? ValueProviderFrameContext.PushProject(ValueProviderFrameContext.GetTimelineFrameCount(video)) : null;
+            argumentFrames ??= new();
+            var ppb = targetPPB ?? IPicture.PicturePixelMode.Float16Picture;
+            List<OneFrame> result = new List<OneFrame>();
+            foreach (var original in video)
+            {
+                var clip = argumentFrames.Get(original, targetFrame, c =>
                 {
-                    try
+                    if (initializeClips)
                     {
-                        clip.ReInit(ppb);
-                        ClipInitializationFailure.Clear(clip);
+                        try
+                        {
+                            ClipInitializationFailure.Clear(c);
+                            c.ReInit(ppb);
+                        }
+                        catch (Exception ex)
+                        {
+                            ClipInitializationFailure.Mark(c, "ResolveBinding", ex);
+                            Log(ex, $"Initialize clip {c.Name} ({c.Id}); using fallback", "Timeline");
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        ClipInitializationFailure.Mark(clip, "ResolveBinding", ex);
-                        Log(ex, $"Initialize clip {clip.Name} ({clip.Id}); using fallback", "Timeline");
-                    }
-                }
+                });
+                if (!ClipArgumentBinding.ShouldRender(clip)) continue;
                 if (IsFrameInClipRange(clip, targetFrame))
                 {
                     var endPoint = clip.StartFrame + clip.GetEffectiveDuration();
@@ -66,42 +103,22 @@ namespace projectFrameCut.Render.Rendering
                     int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
                     try
                     {
+                        using var context = ValueProviderFrameContext.PushFrame(targetFrame,
+                            Math.Clamp(((float)targetFrame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
                         if (ClipInitializationFailure.IsMarked(clip))
                         {
                             frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                         }
-                        else if (clip is TransformContainer c)
+                        else if (clip is not MaskClip)
                         {
-                            if (c.Transform == null) c.ReInit(ppb);
-                            var t = c.Transform;
-                            if (t == null)
-                            {
-                                Log($"[Timeline] WARN: Transform for clip {c.Id} is null; skipping transform for frame {targetFrame}");
-                                frame = null;
-                            }
-                            else
-                            {
-                                var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip);
-                                var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip);
-                                if (leftClip == null || rightClip == null)
-                                {
-                                    Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
-                                    frame = null;
-                                }
-                                else
-                                {
-                                    frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, targetFrame, ppb);
-                                }
-                            }
+                            frame = MaskFrameContext.Current?.ReadSource(clip, targetFrame)
+                                ?? VideoClipRotation.ReadFrame(clip, actualFrame, clipTargetWidth, clipTargetHeight, ppb);
                         }
-                        else if (clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
-                        {
-                            frame = sre.Compute(clip, PluginManager.CreateComputer(sre.NeedComputer), clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, ppb), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
-                        }
-                        else
-                        {
-                            frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, ppb);
-                        }
+                    }
+                    catch (Exception ex) when (ex is ClipValueBindingException or OperationCanceledException)
+                    {
+                        foreach (var item in result) item.Clip?.Dispose(true);
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -109,104 +126,71 @@ namespace projectFrameCut.Render.Rendering
                         Log(ex, $"Read source for clip {clip.Name} ({clip.Id}); using fallback", "Timeline");
                         frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                     }
-                    bool isAI = false;
-                    if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
+                    if (frame is not null || clip is MaskClip)
                     {
-                        if (aiMark is bool) isAI = (bool)aiMark;
-                        else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
-                        else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
-                    }
-
-                    if (frame is not null)
-                    {
-                        if (isAI) frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         try
                         {
-                            result.Add(new OneFrame(targetFrame, clip, frame));
+                            result.Add(new OneFrame(targetFrame, clip, frame, resolveEffects: false) { ApplyTransforms = applyTransforms });
                         }
                         catch (Exception ex)
                         {
                             ClipInitializationFailure.Mark(clip, "ResolveEffect", ex);
                             Log(ex, $"Build effects for clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
-                            result.Add(new OneFrame(targetFrame, clip, ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData)));
+                            result.Add(new OneFrame(targetFrame, clip, ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData), resolveEffects: false));
                         }
                     }
                 }
             }
 
-            return result.OrderBy(x => x.LayerIndex >= Renderer.SubTrackOffset ? 1 : 0).ThenByDescending(x => x.LayerIndex).ThenByDescending(x => x.ParentClip.SubLayerIndex);
+            return result.OrderBy(x => x.ParentClip, ClipLayerOrder.BottomToTop);
         }
 
         public static string GetFrameHash(IClip[] video, uint targetFrame)
+            => FrameHashHelper.GetFrameHash(video, targetFrame, new()).Hash;
+
+        public static bool CanCacheFrame(IClip[] video, uint targetFrame)
+            => FrameHashHelper.GetFrameHash(video, targetFrame, new()).CanReuse;
+
+        public static bool CanCacheClipFrame(IClip[] video, IClip clip)
+            => FrameHashHelper.CanPersistClipHash(video, clip);
+
+        public static bool CanCacheClipSource(IClip clip)
         {
-            List<OneFrame> result = new List<OneFrame>();
-            foreach (var clip in video)
-            {
-
-                if (IsFrameInClipRange(clip, targetFrame) || (clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset))
-                {
-                    if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
-                    {
-                        continue; //keep same behavior in Renderer
-                        //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
-                    }
-                    result.Add(CreateHashFrame(targetFrame, clip));
-                }
-            }
-
+            if (ClipInitializationFailure.IsMarked(clip)) return false;
             try
             {
-                var f = JsonSerializer.Serialize(result, FrameHashSerializerOptions);
-                if (f == "[]") return "nullframe";
-                return SHA256.HashData(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
-
-            }
-            catch
-            {
-                Log($"[Timeline] WARN: Failed to serialize frame {targetFrame} for hash computation. Returning fallback hash.");
-                return "__error__";
-            }
-
-        }
-
-        /// <summary>
-        /// Returns the cache identity of one clip at one timeline frame. Unlike the
-        /// project hash this deliberately excludes unrelated clips, while including
-        /// transform inputs so a dependent preview cannot become stale.
-        /// </summary>
-        public static string GetClipFrameHash(IClip[] video, IClip clip, uint targetFrame)
-        {
-            try
-            {
-                var visited = new HashSet<Guid>();
-                var dependencies = CollectHashDependencies(video, clip, visited)
-                    .Select(item => CreateHashFrame(targetFrame, item))
-                    .ToArray();
-                var payload = new ClipFrameHashPayload
+                return clip switch
                 {
-                    Frame = CreateHashFrame(targetFrame, clip),
-                    Dependencies = dependencies,
+                    ProjectReferenceClip or ReferenceLayerClip or ReferencePartClip => false,
+                    VirtualSourceVideoClip virtualClip => virtualClip.VirtualSource?.IsDeterministic == true,
+                    MaskClip mask => Sources.MaskSources.Create(mask.SourceType).IsDeterministic,
+                    VideoClip video => video.HasCurrentDecoder
+                        && video.Decoder is { Disposed: false, IsDeterministic: true, AllowCachingResult: true },
+                    _ => clip.FromPlugin == Plugin.InternalPluginBase.InternalPluginBaseID,
                 };
-                var json = JsonSerializer.Serialize(payload, FrameHashSerializerOptions);
-                return ComputeHash(json);
             }
-            catch
+            catch (Exception ex)
             {
-                Log($"[Timeline] WARN: Failed to serialize clip frame {clip.Id} at frame {targetFrame} for hash computation.");
-                return "__error__";
+                Log(ex, $"Read cache capability for clip {clip.Name} ({clip.Id})", "Timeline");
+                return false;
             }
         }
 
-        private static IReadOnlyList<IClip> CollectHashDependencies(IClip[] video, IClip clip, HashSet<Guid> visited)
+        public static string GetClipFrameHash(IClip[] video, IClip clip, uint targetFrame)
+            => FrameHashHelper.GetClipHash(video, clip, targetFrame, new()).Hash;
+
+        internal static IReadOnlyList<IClip> CollectHashDependencies(IClip[] video, IClip clip, HashSet<Guid> visited)
         {
             var result = new List<IClip>();
-            Guid[] dependencyIds;
-            lock (FrameHashLocks.GetOrAdd(clip.Id, static _ => new object()))
-            {
-                if (clip is not TransformContainer transform || transform.Transform is null)
-                    return result;
-                dependencyIds = [transform.Transform.BindedLeftClip, transform.Transform.BindedRightClip];
-            }
+            var infos = video.Select(c => new TransformClipInfo(c.Id, c.StartFrame, c.Duration, c.LayerIndex, c.SubLayerIndex, c.EffectProviders ?? [])).ToArray();
+            var dependencyIds = Enum.GetValues<TransformSide>()
+                .Select(side => TransformProcessing.Find(infos, clip.Id, side))
+                .Where(found => found is not null)
+                .SelectMany(found => new[] { found!.Value.Owner.Id, TransformProcessing.ReadNextClip(found.Value.Provider.MetaData) })
+                .Concat(ClipValuePassThrough.GetSourceClipIds(clip))
+                .Concat(clip is MaskClip || PreviewRenderComposer.RequiresBackdrop(clip)
+                    ? video.Where(c => ClipLayerOrder.BottomToTop.Compare(c, clip) < 0).Select(c => c.Id) : [])
+                .Where(id => id != Guid.Empty && id != clip.Id).Distinct().ToArray();
 
             if (dependencyIds.Length == 0)
                 return result;
@@ -222,51 +206,114 @@ namespace projectFrameCut.Render.Rendering
             return result;
         }
 
-        private static string ComputeHash(string value)
-            => SHA256.HashData(Encoding.UTF8.GetBytes(value)).Aggregate("0x", (b, c) => b + c.ToString("x2"));
-
-        private static OneFrame CreateHashFrame(uint targetFrame, IClip clip)
-        {
-            lock (FrameHashLocks.GetOrAdd(clip.Id, static _ => new object()))
-            {
-                return new OneFrame(targetFrame, clip, null!);
-            }
-        }
-
-        private sealed class ClipFrameHashPayload
-        {
-            public required OneFrame Frame { get; init; }
-            public required OneFrame[] Dependencies { get; init; }
-        }
-
-
         public static IPicture MixtureLayers(
             IEnumerable<OneFrame> frames,
             uint frameIndex,
             int targetWidth,
             int targetHeight,
-            int targetPPB = 8,
+            int targetPPB = 116,
             Action<IEffect, IPicture>? AfterEffectCallback = null,
             bool autoCenterImplicitClip = false,
             int projectRelativeWidth = 0,
-            int projectRelativeHeight = 0)
+            int projectRelativeHeight = 0,
+            bool transparentBackground = false,
+            bool disposeIntermediateFrames = false,
+            bool clipLocalOutput = false,
+            CancellationToken cancellationToken = default,
+            Action<IEffect, object?>? afterNodeCallback = null,
+            bool beforeLayoutOutput = false, IReadOnlyList<IClip>? allClips = null, bool keepHwAccelPicture = false,
+            IPicture? basePicture = null, bool ignoreMixture = false)
         {
+            using var gpuScope = HwAccelPictureScope.Current is null ? new HwAccelPictureScope() : null;
+            using var gpuEntry = gpuScope?.Enter();
+            if (allClips is null && frames is FrameSequence sequence) allClips = sequence.Clips;
+            if (allClips is null)
+            {
+                var materialized = frames.ToArray();
+                frames = materialized;
+                allClips = materialized.Select(f => f.ParentClip).DistinctBy(c => c.Id).ToArray();
+            }
+            using var project = ValueProviderFrameContext.ProjectFrameCount is null
+                ? ValueProviderFrameContext.PushProject(ValueProviderFrameContext.GetTimelineFrameCount(allClips)) : null;
+            using var maskScope = MaskFrameContext.Open(allClips, frameIndex, targetWidth, targetHeight,
+                projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
+            using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, targetWidth, targetHeight,
+                projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
+            void ObserveNode(IEffect effect, object? value)
+            {
+                afterNodeCallback?.Invoke(effect, value);
+                if (AfterEffectCallback is not null && value is IPicture picture)
+                {
+                    using var downloaded = picture is IHwAccelPicture gpu ? gpu.Download() : null;
+                    AfterEffectCallback(effect, downloaded ?? picture);
+                }
+            }
+            var temporaryFrames = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
+            IPicture? output = null;
+            IPicture Track(IPicture picture)
+            {
+                if (disposeIntermediateFrames) temporaryFrames.Add(picture);
+                return picture;
+            }
             try
             {
                 int layoutRelativeWidth = projectRelativeWidth > 0 ? projectRelativeWidth : targetWidth;
                 int layoutRelativeHeight = projectRelativeHeight > 0 ? projectRelativeHeight : targetHeight;
-                IPicture? result = null;
+                IPicture? result = basePicture is null ? null : Track(DynamicEffectGraph.CopyPicture(basePicture));
                 ConcurrentDictionary<string, object> bindableEffectResultCache = new();
                 Dictionary<string, object> bindableEffectResultCache2 = new();
                 Dictionary<string, bool> producedValueTable = new();
-                foreach (var srcFrame in frames)
+                foreach (var original in frames)
                 {
-                    // Don't resize the frame before applying effects!
-                    // The ResizeEffect and PlaceEffect will handle sizing and positioning.
-                    ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
-                    ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
-                    IPicture effected = srcFrame.Clip;
-                    var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
+                    cancellationToken.ThrowIfCancellationRequested();
+                    ArgumentNullException.ThrowIfNull(original, nameof(frames));
+                    ArgumentNullException.ThrowIfNull(original.ParentClip, nameof(original.ParentClip));
+                    var clip = ClipArgumentBinding.InitializeFrame(original.ParentClip, frameIndex);
+                    if (!ClipArgumentBinding.ShouldRender(clip))
+                    {
+                        if (original.Clip is not null) Track(original.Clip);
+                        continue;
+                    }
+                    if (clip is MaskClip) MaskFrameContext.Current?.Publish(clip, result);
+                    var source = original.Clip;
+                    if (source is null)
+                    {
+                        source = VideoClipRotation.ReadFrame(clip, clip.GetRelativeFrameIndex(frameIndex) ?? 0,
+                            ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth),
+                            ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight), targetPPB);
+                        Track(source);
+                    }
+                    if (!PreviewSourceFrameContext.ReadingRaw && original.ApplyTransforms && TransformProcessing.TryRender(clip,
+                        allClips, frameIndex, targetWidth, targetHeight,
+                        projectRelativeWidth, projectRelativeHeight, targetPPB, out var transformed,
+                        initializeClips: false, preparedSource: source, keepHwAccelPicture: true))
+                    {
+                        Track(source);
+                        source = Track(transformed!);
+                    }
+                    var srcFrame = new OneFrame(frameIndex, clip, source, resolveEffects: false) { Effects = original.Effects };
+                    using var endpointClip = ClipValueFrameContext.Current?.EnterClip(srcFrame.ParentClip.Id);
+                    var clipDuration = srcFrame.ParentClip.GetEffectiveDuration();
+                    var clipProgress = clipDuration > 0
+                        ? Math.Clamp((float)((long)frameIndex - srcFrame.ParentClip.StartFrame) / clipDuration, 0f, 1f) : 0f;
+                    using var frameContext = ValueProviderFrameContext.PushFrame(frameIndex, clipProgress, false, cancellationToken);
+                    using var clipScope = ValueProviderFrameContext.PushClip(srcFrame.ParentClip);
+                    using var observer = AfterEffectCallback is null && afterNodeCallback is null ? null
+                        : ValueProviderFrameContext.ObserveNodes(ObserveNode);
+                    if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
+                    {
+                        result = EffectPictureProcessing.Mix(PreviewSourceFrameContext.ReadingRaw || ignoreMixture ? ClassicOverlayMixture.Default
+                                : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default,
+                            result ?? Track(transparentBackground ? PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero) : FallBackImageGetter(targetWidth, targetHeight)),
+                            srcFrame.Clip, targetPPB, 0, 0, targetWidth, targetHeight);
+                        Track(result);
+                        if (!PreviewSourceFrameContext.ReadingRaw)
+                            srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, EffectStage.Composition, frameIndex);
+                        continue;
+                    }
+                    IPicture effected = source;
+                    IEnumerable<IEffect> effectsList = PreviewSourceFrameContext.ReadingRaw ? []
+                        : srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
                     // TargetX/Y live in project-relative space. Width/height, however, must already
                     // be converted to the current output space before effects can adjust the rect.
                     // This mirrors Renderer.ProcessAndCompositeClip; using PositionTuple directly
@@ -280,16 +327,35 @@ namespace projectFrameCut.Render.Rendering
                         srcFrame.ParentClip.TargetHeight > 0
                             ? ScaleDimensionToTarget(srcFrame.ParentClip.TargetHeight, layoutRelativeHeight, targetHeight)
                             : targetHeight,
-                        false);
-                    // Begin the per-frame value-provider context for this clip: pre-fills the built-in
-                    // frame/progress sources and clears provider values.
-                    var clipDuration = srcFrame.ParentClip.GetEffectiveDuration();
-                    var clipProgress = clipDuration > 0
-                        ? Math.Clamp((float)((long)frameIndex - (long)srcFrame.ParentClip.StartFrame) / clipDuration, 0f, 1f)
-                        : 0f;
-                    ValueProviderFrameContext.BeginFrame(frameIndex, clipProgress);
+                        false, srcFrame.ParentClip.Rotation, srcFrame.ParentClip.Opacity);
+                    bool preserveAspect = true;
                     foreach (var effect in effectsList)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if ((clipLocalOutput || beforeLayoutOutput) && effect.Name is ("__Internal_Place__" or "__Internal_Resize__")) continue;
+                        if (effect is IRenderEffectPipeline graph)
+                        {
+                            EffectPipelineFrameResult graphResult;
+                            try
+                            {
+                                graphResult = graph.Evaluate(effected, srcFrame.ParentClip, frameIndex, targetWidth, targetHeight,
+                                    layoutRelativeWidth, layoutRelativeHeight, clipPos, preserveAspect, ProcessEffectFromCanvas,
+                                    cancellationToken, AfterEffectCallback is null && afterNodeCallback is null ? null : ObserveNode,
+                                    keepHwAccelPicture: true);
+                            }
+                            catch (ObjectDisposedException ex)
+                            {
+                                // 图在合成途中被其他路径释放（例如 clip 被标记初始化失败并清空效果）：跳过该效果，保留当前画面。
+                                Logger.Log(ex, $"Effect graph of clip {srcFrame.ParentClip.Id} was released while composing frame {frameIndex}; skipping it.",
+                                    nameof(Timeline));
+                                continue;
+                            }
+                            Track(effected);
+                            effected = Track(graphResult.Picture);
+                            clipPos = graphResult.Position;
+                            preserveAspect = graphResult.PreserveAspect;
+                            continue;
+                        }
                         if (effect is IValueProviderEffect vp)
                         {
                             throw new InvalidOperationException($"Effect {vp.Name} ({srcFrame.ParentClip.Id}) of clip {srcFrame.ParentClip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
@@ -300,45 +366,30 @@ namespace projectFrameCut.Render.Rendering
                             int scopedEnd = c.IsScoped ? c.EndPoint : (int)(srcFrame.ParentClip.StartFrame + srcFrame.ParentClip.GetEffectiveDuration());
                             if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd) continue;
                             float continuousProgress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
-                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
-                            effected = c.Render(effected, continuousProgress, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight, preserveAspect);
+                            Track(effected);
+                            effected = FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, effected, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => EffectPictureProcessing.Render(effect, effected, targetWidth, targetHeight, continuousProgress), continuousProgress);
+                            Track(effected);
                         }
                         else if (effect is INormalEffect n)
                         {
-                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
-                            effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
-                        }
-                        else if (effect is IBindableArgumentEffect b)
-                        {
-                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
-                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
+                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight, preserveAspect);
+                            Track(effected);
+                            effected = FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, effected, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => EffectPictureProcessing.Render(effect, effected, targetWidth, targetHeight));
+                            Track(effected);
                         }
                         else if (effect is IClipPositionProvider p)
                         {
-                            (var x, var y, var w, var h, bool delta) = p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight);
-                            if (delta)
-                            {
-                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
-                            }
-                            else
-                            {
-                                clipPos = new(x, y, w, h, false);
-                            }
+                            clipPos = clipPos.Apply(FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, null, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight)));
+                            preserveAspect &= p.PreserveAspectRatio;
                         }
                         else if (effect is IContinuousClipPositionProvider cp)
                         {
-                            (var x, var y, var w, var h, bool delta) = cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight);
-                            if (delta)
-                            {
-                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
-                            }
-                            else
-                            {
-                                clipPos = new(x, y, w, h, false);
-                            }
+                            clipPos = clipPos.Apply(FrameHashContext.Compute(effect, srcFrame.ParentClip, frameIndex, null, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight, () => cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight)));
+                            preserveAspect &= cp.PreserveAspectRatio;
                         }
-                        else if (effect is IMixture or ISpeedVarianceProvider //these will be processed later; skip here
-                                        or ITextEffect or IContinuousTextEffect) //these are processed inside TextClip
+                        else if (effect is ITransform or IMixture or ISpeedVarianceProvider //these will be processed later; skip here
+                                        or ITextEffect or IContinuousTextEffect or IVectorComponentEffect or IVectorPictureEffect) //these are processed inside TextClip
                         {
 
                         }
@@ -349,22 +400,32 @@ namespace projectFrameCut.Render.Rendering
 
                         if (AfterEffectCallback is not null)
                         {
-                            IPicture d = effected;
+                            IPicture d = Track(EffectRuntimeDefaults.ApplyOpacity(effected, clipPos.Opacity));
+                            d = Track(VideoClipRotation.Rotate(d, clipPos.Rotation));
                             int x = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
                             int y = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                             if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && y == 0 && effected.Height < targetHeight)
                             {
                                 y += (targetHeight - effected.Height) / 2;
                             }
+                            x += (int)Math.Round((clipPos.TargetWidth - d.Width) / 2d);
+                            y += (int)Math.Round((clipPos.TargetHeight - d.Height) / 2d);
                             if (x != 0 || y != 0 || effected.Width != targetWidth || effected.Height != targetHeight)
                             {
-                                d = PlaceEffect.Process(d, x, y, targetWidth, targetHeight);
+                                d = Track(EffectRuntimeDefaults.Place(d, targetWidth, targetHeight, x, y));
                             }
-                            AfterEffectCallback(effect, d);
+                            using var downloaded = d is IHwAccelPicture gpu ? gpu.Download() : null;
+                            AfterEffectCallback(effect, downloaded ?? d);
                         }
                     }
                     // The per-frame value-provider values are only needed during effect processing.
-                    ValueProviderFrameContext.EndFrame();
+
+                    if (beforeLayoutOutput)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        output = keepHwAccelPicture ? effected : EffectPictureProcessing.Materialize(effected);
+                        return output;
+                    }
 
                     // Position providers may change the clip rectangle without changing the source
                     // frame itself. Honor the resulting Target size before compositing, just like the
@@ -374,36 +435,49 @@ namespace projectFrameCut.Render.Rendering
                         && (effected.Width != clipPos.TargetWidth || effected.Height != clipPos.TargetHeight))
                     {
                         var old = effected;
-                        effected = effected.Resize(clipPos.TargetWidth, clipPos.TargetHeight, true);
+                        effected = EffectPictureProcessing.Resize(effected, clipPos.TargetWidth, clipPos.TargetHeight, preserveAspect);
+                        Track(effected);
                         if (!ReferenceEquals(old, effected))
                         {
                             try { old.Dispose(); } catch { }
                         }
                     }
 
+                    if (!PreviewSourceFrameContext.ReadingRaw)
+                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, EffectStage.Render, frameIndex);
                     int clipX = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
                     int clipY = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
                     {
                         clipY += (targetHeight - effected.Height) / 2;
                     }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    effected = Track(EffectRuntimeDefaults.ApplyOpacity(effected, clipPos.Opacity));
+                    effected = Track(VideoClipRotation.Apply(effected, clipPos.Rotation));
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (clipLocalOutput)
+                    {
+                        output = keepHwAccelPicture ? effected : EffectPictureProcessing.Materialize(effected);
+                        return output;
+                    }
+                    clipX += (int)Math.Round((clipPos.TargetWidth - effected.Width) / 2d);
+                    clipY += (int)Math.Round((clipPos.TargetHeight - effected.Height) / 2d);
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
-                    LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight})");
 
-                    var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
-                    var computerId = mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId;
+                    var mixer = PreviewSourceFrameContext.ReadingRaw || ignoreMixture ? ClassicOverlayMixture.Default
+                        : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     if (result is null)
                     {
-                        if (!needsPlacement)
+                        if (!needsPlacement && (transparentBackground || !effected.HasAlphaChannel)
+                            && !PreviewRenderComposer.RequiresBackdrop(srcFrame.ParentClip))
                         {
                             result = effected;
                         }
                         else
                         {
-                            result = mixer.Mix(
-                                FallBackImageGetter(targetWidth, targetHeight),
+                            result = EffectPictureProcessing.Mix(mixer,
+                                Track(transparentBackground ? PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero) : FallBackImageGetter(targetWidth, targetHeight)),
                                 effected,
-                                PluginManager.CreateComputer(computerId),
                                 targetPPB,
                                 clipX,
                                 clipY,
@@ -413,16 +487,18 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        result = mixer.Mix(
+                        result = EffectPictureProcessing.Mix(mixer,
                             result,
                             effected,
-                            PluginManager.CreateComputer(computerId),
                             targetPPB,
                             clipX,
                             clipY,
                             targetWidth,
                             targetHeight);
                     }
+                    if (result is not null) Track(result);
+                    if (!PreviewSourceFrameContext.ReadingRaw)
+                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, EffectStage.Composition, frameIndex);
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)
@@ -431,36 +507,40 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else if (result is null)
                 {
-                    return Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                    return CreateTransparentFrame(targetWidth, targetHeight, targetPPB);
                 }
                 else
                 {
-                    result = Placer.Render(result, null, targetWidth, targetHeight);
+                    result = EffectRuntimeDefaults.Place(result, targetWidth, targetHeight);
+                    Track(result);
                 }
             ok:
-                result = ClassicOverlayMixture.Default
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), targetPPB)
-                               .Resize(targetWidth, targetHeight, true);
+                result = EffectPictureProcessing.Mix(ClassicOverlayMixture.Default,
+                    Track(transparentBackground ? PictureFP16.GenerateSolidColor(targetWidth, targetHeight, Half.Zero, Half.Zero, Half.Zero, Half.Zero) : FallBackImageGetter(targetWidth, targetHeight)),
+                    result, targetPPB, 0, 0, targetWidth, targetHeight);
+                Track(result);
+                result = Track(EffectPictureProcessing.Resize(result, targetWidth, targetHeight, true));
                 if (MyLoggerExtensions.SaveDiagResult)
                 {
                     var opId = Guid.NewGuid();
                     File.WriteAllText(Path.Combine(MyLoggerExtensions.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(result.ProcessStack, 100000));
                 }
-                return result;
+                output = keepHwAccelPicture ? result : EffectPictureProcessing.Materialize(result);
+                return output;
             }
             catch (Exception ex)
             {
                 Log(ex, $"Render frame {frameIndex}", "Timeline");
                 throw;
             }
+            finally
+            {
+                foreach (var picture in temporaryFrames)
+                    if (!ReferenceEquals(picture, output)) picture.Dispose();
+            }
 
         }
 
-        private static PlaceEffect_HwAccel Placer = new()
-        {
-            StartX = 0,
-            StartY = 0
-        };
 
         private static bool IsFrameInClipRange(IClip clip, uint targetFrame)
             => clip.ContainsFrame(targetFrame);
@@ -475,7 +555,7 @@ namespace projectFrameCut.Render.Rendering
             return Math.Max(1, fallbackWidth);
         }
 
-        private static IPicture ResizeForEffectIfNeeded(IPicture frame, IEffect effect, int targetWidth, int targetHeight)
+        private static IPicture ResizeForEffectIfNeeded(IPicture frame, IEffect effect, int targetWidth, int targetHeight, bool preserveAspect)
         {
             if (!ProcessEffectFromCanvas || !effect.CanProcessFromCanvas
                 || targetWidth <= 0 || targetHeight <= 0
@@ -484,7 +564,7 @@ namespace projectFrameCut.Render.Rendering
                 return frame;
             }
 
-            var resized = frame.Resize(targetWidth, targetHeight, true);
+            var resized = EffectPictureProcessing.Resize(frame, targetWidth, targetHeight, preserveAspect);
             if (!ReferenceEquals(frame, resized))
             {
                 try { frame.Dispose(); } catch { }
@@ -649,71 +729,25 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
-        /// <summary>
-        /// Serializer options for <see cref="GetFrameHash"/>. Transparently forwards most values,
-        /// but writes a stable placeholder for runtime-only dynamic values (delegate getters,
-        /// <see cref="Lazy{T}"/>) injected by the EffectProvider system, which would otherwise make
-        /// serialization throw and degrade every frame's hash to "__error__".
-        /// </summary>
-        private static readonly JsonSerializerOptions FrameHashSerializerOptions = CreateFrameHashSerializerOptions();
-
-        private static JsonSerializerOptions CreateFrameHashSerializerOptions()
-        {
-            var options = new JsonSerializerOptions();
-            options.Converters.Add(new FrameHashObjectConverter());
-            return options;
-        }
-
-
-
-        /// <summary>
-        /// Serializes any <see cref="object"/> value, replacing runtime-only dynamic values
-        /// (binding getter closures, <see cref="Lazy{T}"/>) with a stable placeholder so that
-        /// <see cref="GetFrameHash"/> never throws on EffectProvider-built effects. The binding
-        /// configuration lives in <see cref="IEffectProvider.AnchorsBindingState"/> / StaticFields,
-        /// which are serialized normally, so the hash still distinguishes different bindings.
-        /// </summary>
-        private sealed class FrameHashObjectConverter : JsonConverter<object>
-        {
-            public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-                => JsonSerializer.Deserialize<JsonElement>(ref reader, options);
-
-            public override void Write(Utf8JsonWriter writer, object? value, JsonSerializerOptions options)
-            {
-                if (value is null)
-                {
-                    writer.WriteNullValue();
-                    return;
-                }
-                if (IsFrameHashSkippable(value))
-                {
-                    writer.WriteStringValue($"<dynamic:{value.GetType().Name}>");
-                    return;
-                }
-                var type = value.GetType();
-                if (type == typeof(object))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteEndObject();
-                    return;
-                }
-                JsonSerializer.Serialize(writer, value, type, options);
-            }
-
-            private static bool IsFrameHashSkippable(object value) => value is Delegate || DynamicParam.IsDynamicValue(value);
-        }
-
     }
 
     public class OneFrame
     {
         public uint FrameNumber { get; init; }
-        public IPicture Clip { get; init; }
+        public IPicture? Clip { get; init; }
+        public bool ApplyTransforms { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public IClip ParentClip { get; init; }
-        public OneFrame(uint frameNumber, IClip parent, IPicture pic)
+        public OneFrame(uint frameNumber, IClip parent, IPicture? pic) : this(frameNumber, parent, pic, true)
         {
+        }
+
+        public OneFrame(uint frameNumber, IClip parent, IPicture? pic, bool resolveEffects)
+        {
+            if (pic is null && parent is not MaskClip)
+                throw new ArgumentNullException(nameof(pic));
+            if (ClipArgumentBinding.IsFrameCopy(parent)) resolveEffects = false;
             FrameNumber = frameNumber;
             ParentClip = parent;
             Clip = pic;
@@ -723,6 +757,10 @@ namespace projectFrameCut.Render.Rendering
             if (ClipInitializationFailure.IsMarked(parent))
             {
                 effectInstances = [];
+            }
+            else if (!resolveEffects)
+            {
+                effectInstances = parent.EffectsInstances ?? [];
             }
             else
             {
@@ -748,7 +786,8 @@ namespace projectFrameCut.Render.Rendering
                     .ToArray();
             }
 
-            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider).ToArray();
+            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect.GetStage() is not (EffectStage.Text or EffectStage.VectorContent)
+                && c.TypeOfEffect != EffectType.SpeedVarianceProvider).ToArray();
         }
     }
 }

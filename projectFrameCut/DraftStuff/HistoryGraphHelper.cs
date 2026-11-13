@@ -1,5 +1,8 @@
 ﻿using LocalizedResources;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Shared;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Color = Microsoft.Maui.Graphics.Color;
 
@@ -103,6 +106,7 @@ public sealed class HistoryGraphRowDrawable : IDrawable
 public sealed class SaveSlotHistoryItem
 {
     public Guid SnapshotID { get; init; }
+    public Guid PreviousSnapshot { get; init; }
     public DateTime SavedAt { get; init; }
     public string ChangeReason { get; init; } = string.Empty;
     public string ChangedBy { get; internal set; } = string.Empty;
@@ -187,6 +191,39 @@ public interface IHistoryGraphProvider
 public static class HistoryGraphDataBuilder
 {
     private const string SaveSlotDirectoryName = "saveSlots";
+    private static readonly ConditionalWeakTable<DraftPage, SlotHistoryCache> SlotHistoryCaches = new();
+
+    private sealed class SlotHistoryCache
+    {
+        public readonly Dictionary<string, (long Length, DateTime Modified, SaveSlotHistoryItem Item)> Items = new();
+    }
+
+    private sealed class SnapshotMetadata
+    {
+        public Guid SnapshotID { get; set; }
+        public Guid PreviousSnapshot { get; set; }
+        public DateTime SavedAt { get; set; }
+        public string ChangeReason { get; set; } = string.Empty;
+        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+        public Guid ChangedByUser { get; set; }
+    }
+
+    public static Task<(List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges)> BuildFromDraftPageAsync(DraftPage page)
+    {
+        // Capture mutable editor state before leaving the UI thread.
+        var mapping = (page.ProjectInfo.SnapshotIDMapping ?? new()).ToDictionary(kv => kv.Key,
+            kv => kv.Value with { Next = [.. kv.Value.Next] });
+        var currentId = page.CurrentSnapshotID;
+        var workingPath = page.WorkingPath;
+        var cache = SlotHistoryCaches.GetValue(page, _ => new SlotHistoryCache());
+        return Task.Run(() =>
+        {
+            if (mapping.Count == 0)
+                return (new List<HistoryGraphNode>(), new List<HistoryGraphEdge>());
+            lock (cache)
+                return BuildFromSnapshotMapping(mapping, currentId, ReadSaveSlotHistoryFromPath(workingPath, cache));
+        });
+    }
 
     /// <summary>
     /// Build graph data from a DraftPage's snapshot mapping and on-disk save slots.
@@ -208,79 +245,23 @@ public static class HistoryGraphDataBuilder
     public static (List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges) BuildStandalone(
         string standaloneProjectPath)
     {
-        var nodes = new List<HistoryGraphNode>();
-        var edges = new List<HistoryGraphEdge>();
-
         if (string.IsNullOrWhiteSpace(standaloneProjectPath))
-            return (nodes, edges);
+            return (new(), new());
 
         if (!TryLoadStandaloneProjectInfo(standaloneProjectPath, out var projectInfo, out _))
-            return (nodes, edges);
+            return (new(), new());
 
-        var mapping = projectInfo.SnapshotIDMapping;
-        if (mapping is null || mapping.Count == 0)
-            return (nodes, edges);
-
-        string saveSlotsPath = System.IO.Path.Combine(standaloneProjectPath, SaveSlotDirectoryName);
-        var slotMetaById = new Dictionary<Guid, (DateTime SavedAt, string Reason, string UserName, Guid UserId)>();
-        if (System.IO.Directory.Exists(saveSlotsPath))
+        var history = ReadSaveSlotHistoryFromPath(standaloneProjectPath);
+        var mapping = ProjectJSONStructure.LoadSnapshotMapping(standaloneProjectPath, DraftPage.DraftJSONOption);
+        if (mapping.Count == 0)
         {
-            foreach (var slotDir in System.IO.Directory.GetDirectories(saveSlotsPath, "slot_*"))
-            {
-                string timelinePath = System.IO.Path.Combine(slotDir, "timeline.json");
-                if (!System.IO.File.Exists(timelinePath)) continue;
-                try
-                {
-                    string json = System.IO.File.ReadAllText(timelinePath);
-                    var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, DraftPage.DraftJSONOption);
-                    if (draft is null || draft.SnapshotID == Guid.Empty) continue;
-                    slotMetaById[draft.SnapshotID] = (draft.SavedAt, draft.ChangeReason,
-                        string.IsNullOrWhiteSpace(draft.ChangedByUserDisplayName) ? "Anonymous" : draft.ChangedByUserDisplayName,
-                        draft.ChangedByUser);
-                }
-                catch { }
-            }
+            foreach (var item in history)
+                mapping.TryAdd(item.SnapshotID, new() { Previous = item.PreviousSnapshot });
+            foreach (var kv in mapping)
+                if (mapping.TryGetValue(kv.Value.Previous, out var previous))
+                    previous.Next.Add(kv.Key);
         }
-
-        Guid lastId = projectInfo.LastSnapshotID;
-
-        foreach (var kv in mapping)
-        {
-            slotMetaById.TryGetValue(kv.Key, out var meta);
-            nodes.Add(new HistoryGraphNode
-            {
-                SnapshotID = kv.Key,
-                PreviousSnapshotID = kv.Value.Previous,
-                NextSnapshotIDs = kv.Value.Next,
-                SavedAt = meta.SavedAt,
-                ChangeReason = meta.Reason,
-                ChangedByUserDisplayName = meta.UserName,
-                ChangedByUser = meta.UserId,
-                IsCurrentSnapshot = kv.Key == lastId,
-                IsHead = kv.Value.Next.Count == 0
-            });
-        }
-
-        foreach (var node in nodes)
-        {
-            foreach (var nextId in node.NextSnapshotIDs)
-            {
-                bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, lastId, mapping)
-                                   && IsSnapshotOnCurrentPath(nextId, lastId, mapping);
-                edges.Add(new HistoryGraphEdge
-                {
-                    FromSnapshotID = node.SnapshotID,
-                    ToSnapshotID = nextId,
-                    IsCurrentPath = isCurrentPath
-                });
-            }
-        }
-
-        nodes = nodes.OrderByDescending(n => n.SavedAt == DateTime.MinValue ? DateTime.MaxValue.Ticks : n.SavedAt.Ticks)
-                     .ThenByDescending(n => n.SnapshotID.ToString())
-                     .ToList();
-
-        return (nodes, edges);
+        return BuildFromSnapshotMapping(mapping, projectInfo.LastSnapshotID, history);
     }
 
     /// <summary>
@@ -297,7 +278,9 @@ public static class HistoryGraphDataBuilder
         if (mapping is null || mapping.Count == 0)
             return (nodes, edges);
 
-        var historyById = slotHistory?.ToDictionary(h => h.SnapshotID) ?? new();
+        var historyById = new Dictionary<Guid, SaveSlotHistoryItem>();
+        foreach (var item in slotHistory ?? [])
+            historyById.TryAdd(item.SnapshotID, item);
 
         foreach (var kv in mapping)
         {
@@ -316,17 +299,20 @@ public static class HistoryGraphDataBuilder
             });
         }
 
+        var currentPath = new HashSet<Guid>();
+        var cursor = currentSnapshotId;
+        while (cursor != Guid.Empty && currentPath.Add(cursor) && mapping.TryGetValue(cursor, out var entry))
+            cursor = entry.Previous;
+
         foreach (var node in nodes)
         {
             foreach (var nextId in node.NextSnapshotIDs)
             {
-                bool isCurrentPath = IsSnapshotOnCurrentPath(node.SnapshotID, currentSnapshotId, mapping)
-                                   && IsSnapshotOnCurrentPath(nextId, currentSnapshotId, mapping);
                 edges.Add(new HistoryGraphEdge
                 {
                     FromSnapshotID = node.SnapshotID,
                     ToSnapshotID = nextId,
-                    IsCurrentPath = isCurrentPath
+                    IsCurrentPath = currentPath.Contains(node.SnapshotID) && currentPath.Contains(nextId)
                 });
             }
         }
@@ -356,7 +342,10 @@ public static class HistoryGraphDataBuilder
         return false;
     }
 
-    private static List<SaveSlotHistoryItem> ReadSaveSlotHistoryFromPath(string? workingPath)
+    internal static List<SaveSlotHistoryItem> ReadSaveSlotHistoryFromPath(string? workingPath)
+        => ReadSaveSlotHistoryFromPath(workingPath, null);
+
+    private static List<SaveSlotHistoryItem> ReadSaveSlotHistoryFromPath(string? workingPath, SlotHistoryCache? cache)
     {
         if (string.IsNullOrWhiteSpace(workingPath))
             return [];
@@ -366,33 +355,50 @@ public static class HistoryGraphDataBuilder
             return [];
 
         var result = new List<SaveSlotHistoryItem>();
-        foreach (var slotPath in System.IO.Directory.GetDirectories(saveSlotsPath, "slot_*"))
+        var paths = new HashSet<string>();
+        foreach (var slotPath in System.IO.Directory.EnumerateDirectories(saveSlotsPath, "slot_*"))
         {
             string timelinePath = System.IO.Path.Combine(slotPath, "timeline.json");
-            if (!System.IO.File.Exists(timelinePath))
-                continue;
-
             try
             {
-                string json = System.IO.File.ReadAllText(timelinePath);
-                var draft = System.Text.Json.JsonSerializer.Deserialize<DraftStructureJSON>(json, DraftPage.DraftJSONOption);
+                var file = new FileInfo(timelinePath);
+                if (!file.Exists) continue;
+                paths.Add(timelinePath);
+                if (cache is not null && cache.Items.TryGetValue(timelinePath, out var cached)
+                    && cached.Length == file.Length && cached.Modified == file.LastWriteTimeUtc)
+                {
+                    result.Add(cached.Item);
+                    continue;
+                }
+
+                using var stream = file.OpenRead();
+                var draft = JsonSerializer.Deserialize<SnapshotMetadata>(stream, DraftPage.DraftJSONOption);
                 if (draft is null || draft.SnapshotID == Guid.Empty)
                     continue;
 
-                result.Add(new SaveSlotHistoryItem
+                var item = new SaveSlotHistoryItem
                 {
                     SnapshotID = draft.SnapshotID,
+                    PreviousSnapshot = draft.PreviousSnapshot,
                     SavedAt = draft.SavedAt,
                     ChangeReason = draft.ChangeReason,
                     ChangedBy = string.IsNullOrWhiteSpace(draft.ChangedByUserDisplayName) ? "Anonymous" : draft.ChangedByUserDisplayName,
                     ChangedByUserID = draft.ChangedByUser
-                });
+                };
+                result.Add(item);
+                if (cache is not null)
+                    cache.Items[timelinePath] = (file.Length, file.LastWriteTimeUtc, item);
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore broken slot files and continue loading other records.
+                cache?.Items.Remove(timelinePath);
+                Logger.Log(ex, $"Read history metadata: {timelinePath}", nameof(HistoryGraphDataBuilder));
             }
         }
+
+        if (cache is not null)
+            foreach (var path in cache.Items.Keys.Where(p => !paths.Contains(p)).ToArray())
+                cache.Items.Remove(path);
 
         return result
             .OrderByDescending(i => i.SavedAt)
@@ -456,6 +462,9 @@ public sealed class DraftHistoryGraphProvider : IHistoryGraphProvider
     {
         return HistoryGraphDataBuilder.BuildFromDraftPage(_page);
     }
+
+    public Task<(List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges)> BuildGraphDataAsync()
+        => HistoryGraphDataBuilder.BuildFromDraftPageAsync(_page);
 
     public void NotifyExternalSnapshotChanged()
     {

@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -13,16 +14,17 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </summary>
     /// <remarks>
     /// The instance state is driven by <see cref="Fields"/> / <see cref="AnchorsBindingState"/>.
-    /// Subclasses implement <see cref="BuildEffects"/> to create the final effect(s).
+    /// Implementations are created through the shared registry.
     /// <para />
     /// the stateless factory members (<see cref="RestoreInstance(EffectImplementType, Dictionary{string, object})"/> /
-    /// <see cref="RestoreInstanceWithDefaultType"/>) and the stateful <see cref="Build()"/> all route into it.
+    /// <see cref="RestoreInstanceWithDefaultType"/>) and the stateful <see cref="Build()"/> all route into the shared registry.
     /// </remarks>
     public abstract class EffectProviderBase : IEffectProvider
     {
+
         /// <summary>
         /// The parameter key used to pass the desired <see cref="EffectImplementType"/> into <see cref="Build()"/>.
-        /// It is consumed and immediately removed by <see cref="ResolveImplementType"/> to avoid leaking into serialized parameters.
+        /// It is stored in provider metadata.
         /// </summary>
         public const string ImplementTypeParameterKey = "ImplementType";
         /// <summary>
@@ -44,6 +46,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Keyed by field Id.
         /// </summary>
         private Dictionary<string, object> _fieldValues = new();
+        private readonly Dictionary<string, object> _fieldDataFormats = new();
 
         /// <summary>
         /// Runtime-only value providers injected for the current effect build.
@@ -51,6 +54,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// mistakes a previous build's inline object for persisted binding configuration.
         /// </summary>
         private readonly Dictionary<string, IValueProviderEffect> _inlinedFieldValues = new();
+
+        /// <summary>
+        /// Indicates whether the effect is deterministic or not. Non-deterministic effects may produce different outputs for the same inputs.
+        /// </summary>
+        public abstract bool IsDeterministic { get; }
 
         protected EffectProviderBase()
         {
@@ -67,6 +75,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         public abstract EffectTarget Target { get; }
 
+        public abstract IReadOnlyList<EffectStage> SupportedStages { get; }
+        private EffectStage? stage;
+        public virtual EffectStage Stage
+        {
+            get => stage ?? SupportedStages[0];
+            set => stage = SupportedStages.Contains(value) ? value
+                : throw new ArgumentOutOfRangeException(nameof(value), value, "Unsupported effect stage.");
+        }
+
         public virtual bool Enabled { get; set; } = true;
 
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -80,6 +97,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields => DefineInFields();
 
         public EffectArgumentFieldDescriptor OutField => DefineOutField();
+
+        public virtual EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            (isInput ? context.State.Fields : context.State.Outputs).TryGetValue(fieldId, out var field)
+                ? field.FieldType : EffectArgumentFieldType.Any;
+
+        public virtual object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            PictureDataFormats.Resolve(this, fieldId, isInput, context);
 
         /// <summary>
         /// The single source of truth of the anchor bindings.
@@ -116,11 +140,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             get
             {
                 var result = new Dictionary<string, IEffectArgumentField>();
-                foreach (var desc in DefineFields())
+                foreach (var desc in ParameterFields())
                 {
                     object value = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null
                         ? raw
                         : ParseDefault(desc);
+                    if (desc.TypeContract is not null) value = EffectFieldTypes.ConvertInput(desc.FieldType, value)!;
                     var bindingKey = BoundParameterKey(desc.Id);
                     if (_fieldValues.TryGetValue(bindingKey, out var bsRaw) && bsRaw is not null)
                     {
@@ -129,6 +154,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         {
                             Id = desc.Id,
                             FieldType = desc.FieldType,
+                            TypeContract = desc.TypeContract,
+                            DataFormat = _fieldDataFormats.GetValueOrDefault(desc.Id) ?? desc.DataFormat,
                             BoundProviderId = boundSourceId,
                             StaticFallbackValue = value,
                             DefaultValue = desc.DefaultValue,
@@ -144,6 +171,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         {
                             Id = desc.Id,
                             FieldType = desc.FieldType,
+                            TypeContract = desc.TypeContract,
+                            DataFormat = _fieldDataFormats.GetValueOrDefault(desc.Id) ?? desc.DataFormat,
                             Value = value,
                             DefaultValue = desc.DefaultValue,
                             MinValue = desc.MinValue,
@@ -161,6 +190,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 foreach (var kvp in value)
                 {
                     if (kvp.Value is null) continue;
+                    if (kvp.Value.DataFormat is { } format) _fieldDataFormats[kvp.Key] = format;
+                    else _fieldDataFormats.Remove(kvp.Key);
                     var bindingKey = BoundParameterKey(kvp.Key);
                     if (kvp.Value is DynamicEffectParamField df && df.BoundProviderId is { } boundId)
                     {
@@ -195,19 +226,41 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         protected abstract IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields();
 
+        private IEnumerable<EffectArgumentFieldDescriptor> ParameterFields() => DefineFields()
+            .Concat(DefineInFields().Where(p => p.Key != PrimaryInputAnchorKey).Select(p => p.Value))
+            .Concat(DefineContinuousEffectFields())
+            .DistinctBy(p => p.Id);
+
+        private IReadOnlyList<EffectArgumentFieldDescriptor> DefineContinuousEffectFields()
+        {
+            if (TypeOfEffect is not (EffectType.ContinuousEffect or EffectType.ContinuousTextEffect)
+                && !(TypeName == "Crop" && MetaData.ContainsKey(IsContinuousEffectParameterKey))) return [];
+            const EffectArgumentFieldType flags = EffectArgumentFieldType.NotVisibleInEffectPanel | EffectArgumentFieldType.CannotBeDynamic;
+            return
+            [
+                Field(nameof(IContinuousEffect.IsScoped), EffectArgumentFieldType.Boolean | flags, "false"),
+                Field(nameof(IContinuousEffect.StartPoint), EffectArgumentFieldType.Integer | flags, "0", min: "0"),
+                Field(nameof(IContinuousEffect.EndPoint), EffectArgumentFieldType.Integer | flags, "0", min: "0")
+            ];
+        }
+
         /// <summary>
         /// Define the input fields (anchors) of the effect. Defaults to a single IPicture input.
         /// </summary>
-        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() 
-            => new Dictionary<string, EffectArgumentFieldDescriptor>
-            {
-                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
-            };
+        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() => new Dictionary<string, EffectArgumentFieldDescriptor>
+        {
+            [PrimaryInputAnchorKey] = Field(PrimaryInputAnchorKey, ContentType, ""),
+        };
 
-        /// <summary>
-        /// Define the output field (anchor) of the effect. Defaults to an IPicture output.
-        /// </summary>
-        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The output of the effect. This is a mandatory output.");
+        private EffectArgumentFieldType ContentType => TypeOfEffect switch
+        {
+            EffectType.SpeedVarianceProvider => EffectArgumentFieldType.SpeedVariance,
+            EffectType.ClipPositionProvider or EffectType.ContinuousClipPositionProvider => EffectArgumentFieldType.SizeAndPosition,
+            EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect => EffectArgumentFieldType.AudioSample,
+            _ => Stage.GetContentType(),
+        };
+
+        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, ContentType, "");
 
         /// <summary>
         /// A compact helper for subclasses to declare a settable argument field.
@@ -247,12 +300,33 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// The supported implementation types, resolved by <see cref="SupportedImplementTypes"/>.
         /// </summary>
-        public EffectImplementType[] SupportsImplementTypes => SupportedImplementTypes();
+        public EffectImplementType[] SupportsImplementTypes
+        {
+            get
+            {
+                var typeName = TypeName == "Crop" && MetaData.ContainsKey(IsContinuousEffectParameterKey)
+                    ? "ProgressCrop"
+                    : TypeName;
+                if (typeName is "BlendModeMixture" or "OverlayBlend")
+                    typeName = (_fieldValues.GetValueOrDefault("MixtureType")?.ToString()
+                        ?? DefineFields().FirstOrDefault(f => f.Id == "MixtureType")?.DefaultValue ?? "OverlayBlend") + "Mixture";
+                return Plugins.IPluginBase.EffectImplementations.GetImplementTypes(typeName);
+            }
+        }
 
         /// <summary>
         /// The default implementation type, derived from the first supported type.
         /// </summary>
-        public EffectImplementType DefaultImplementType => SupportsImplementTypes.Length > 0 ? SupportsImplementTypes[0] : EffectImplementType.NotSpecified;
+        public EffectImplementType DefaultImplementType
+        {
+            get
+            {
+                if (SupportsImplementTypes.Contains(EffectImplementType.StaticOrHalfDynamicValueProvider))
+                    return EffectImplementType.StaticOrHalfDynamicValueProvider;
+                var declared = SupportedImplementTypes();
+                return declared.Length > 0 ? declared[0] : EffectImplementType.NotSpecified;
+            }
+        }
 
         /// <summary>
         /// The supported implementation types of this provider. Defaults to <see cref="EffectImplementType.NotSpecified"/>.
@@ -265,10 +339,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
             var p = parameters ?? BuildDynamicParameters();
-            var effects = BuildEffects(implementType, p);
+            var effects = BuildRegisteredEffects(implementType, p);
             if (effects is null || effects.Length == 0)
             {
-                throw new InvalidOperationException($"EffectProvider '{TypeName}' returned no effects from BuildEffects.");
+                throw new InvalidOperationException($"EffectProvider '{TypeName}' returned no registered effects.");
             }
             return effects[0];
         }
@@ -310,27 +384,42 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             _fieldValues[fieldId] = value;
         }
 
+        protected object? GetField(string fieldId) => _fieldValues.GetValueOrDefault(fieldId);
+
         #endregion
 
         #region Build pipeline
 
-        /// <summary>
-        /// Create the final effect(s) from the normalized parameters and the resolved implementation type.
-        /// This is the single place a provider implements its effect-creation logic (inlined from the legacy factories).
-        /// </summary>
-        /// <param name="implementType">the resolved implementation type.</param>
-        /// <param name="parameters">the normalized parameters (reserved keys stripped, values typed).</param>
-        protected abstract IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters);
 
         /// <summary>
         /// Stateful build: resolves the <see cref="ImplementTypeParameterKey"/> from the current
         /// <see cref="_fieldValues"/> and creates the effect(s). Returns the effect stack in render order.
         /// </summary>
-        public IEffect[] Build()
+        public virtual IEffect[] Build()
         {
             var imp = ResolveImplementType(SupportedImplementTypes(), DefaultImplementType);
             var p = BuildDynamicParameters();
-            return BuildEffects(imp, p);
+            return BuildRegisteredEffects(imp, p);
+        }
+
+        public virtual IEffect[] Build<TPicture>() where TPicture : IPicture =>
+            BuildRegisteredEffects(ResolveImplementType(SupportedImplementTypes(), DefaultImplementType), BuildDynamicParameters(),
+                (typeName, implementation, parameters) => Plugins.IPluginBase.EffectImplementations.Create<TPicture>(typeName, implementation, DefaultImplementType, parameters));
+
+        public virtual IEffect[] Build(EffectImplementType implementation, Dictionary<string, object> parameters, object? dataFormat = null) =>
+            BuildRegisteredEffects(implementation, parameters,
+                (name, type, p) => Plugins.IPluginBase.EffectImplementations.CreateForDataFormat(name, type, DefaultImplementType, p, dataFormat));
+
+        private IEffect[] BuildRegisteredEffects(EffectImplementType implementType, Dictionary<string, object> parameters,
+            Func<string, EffectImplementType, Dictionary<string, object>, IEffect>? create = null)
+        {
+            this.ValidateOutputFields();
+            var typeName = TypeName;
+            if (typeName == "Crop" && (MetaData.ContainsKey(IsContinuousEffectParameterKey) || parameters.ContainsKey(IsContinuousEffectParameterKey)))
+                typeName = "ProgressCrop";
+
+            return [create is null ? Plugins.IPluginBase.EffectImplementations.Create(typeName, implementType, DefaultImplementType, parameters)
+                : create(typeName, implementType, parameters)];
         }
 
         /// <summary>
@@ -341,10 +430,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         protected Dictionary<string, object> BuildDynamicParameters()
         {
             var result = new Dictionary<string, object>();
-            foreach (var desc in DefineFields())
+            foreach (var desc in ParameterFields())
             {
-                if (desc.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
-
                 var bindingKey = BoundParameterKey(desc.Id);
                 if (_inlinedFieldValues.TryGetValue(desc.Id, out var inline))
                 {
@@ -358,6 +445,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                     {
                         Id = desc.Id,
                         FieldType = desc.FieldType,
+                        TypeContract = desc.TypeContract,
                         BoundProviderId = boundSourceId,
                         StaticFallbackValue = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null ? raw : ParseDefault(desc),
                     };
@@ -368,14 +456,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                     var value = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null
                         ? raw
                         : ParseDefault(desc);
-                    result[desc.Id] = value; // static bare value
+                    result[desc.Id] = desc.TypeContract is null ? value : EffectFieldTypes.ConvertInput(desc.FieldType, value)!;
                 }
             }
             return result;
         }
 
         /// <summary>
-        /// Reads and removes the <see cref="ImplementTypeParameterKey"/> from <see cref="MetaData"/>.
+        /// Reads the <see cref="ImplementTypeParameterKey"/> from <see cref="MetaData"/>.
         /// </summary>
         protected EffectImplementType ResolveImplementType(IReadOnlyList<EffectImplementType> supported, EffectImplementType defaultType = EffectImplementType.NotSpecified)
         {
@@ -387,16 +475,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 else if (raw is string s && Enum.TryParse<EffectImplementType>(s, out var parsed)) requested = parsed;
                 else if (raw is JsonElement je && je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var ji) && Enum.IsDefined(typeof(EffectImplementType), ji)) requested = (EffectImplementType)ji;
             }
-            MetaData.Remove(ImplementTypeParameterKey);
-            if (requested != EffectImplementType.NotSpecified && !supported.Contains(requested))
-            {
-                return defaultType;
-            }
             return requested;
         }
 
         private static object ParseDefault(EffectArgumentFieldDescriptor desc)
         {
+            if (desc.TypeContract is not null) return EffectFieldTypes.DefaultValue(desc)!;
+            if (desc.FieldType.BaseType() is EffectArgumentFieldType.AudioSample or EffectArgumentFieldType.SpeedVariance) return null!;
+            if (desc.FieldType.HasFlag(EffectArgumentFieldType.Any)) return desc.DefaultValue;
             var baseType = desc.FieldType & (EffectArgumentFieldType)0x3FF;
             return baseType switch
             {

@@ -14,19 +14,24 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns>the new position of the frame</returns>
         public uint GetTargetFrame(uint sourceFrame);
 
+        /// <summary>Maps a clip-local source frame using lengths measured in project frames.</summary>
+        /// <param name="length">The selected clip length before speed processing.</param>
+        /// <param name="sourceLength">Available source length after the source start, or null for an unbounded source.</param>
+        public uint GetTargetFrame(uint sourceFrame, uint length, uint? sourceLength) => GetTargetFrame(sourceFrame);
+
         /// <summary>
         /// Get the length of the clip should be after processing in the processer. This is used for calculating the length of the final output video. 
         /// </summary>
-        /// <remarks>
-        /// The source frame for this method is the frame relative to the draft, and the returned length is also relative to the draft. So if the source frame is 100 and the returned length is 150, it means that after processing, the frame 100 in the draft will become frame 150 in the final output video.
-        /// </remarks>
+        /// <param name="length">The selected clip length before speed processing, in project frames.</param>
         /// <returns>the length of the clip after processing.</returns>
         public uint GetEffectiveLength(uint length);
+
+        /// <summary>Gets the output length with the available source length, both in project frames.</summary>
+        public uint GetEffectiveLength(uint length, uint? sourceLength) => GetEffectiveLength(length);
 
         EffectType IEffect.TypeOfEffect => EffectType.SpeedVarianceProvider;
         EffectImplementType IEffect.ImplementType => EffectImplementType.NotSpecified;
         bool IEffect.Enabled { get => false; set { } } // the simplest way to prevent rendering of ISpeedVarianceProvider is to make it always disabled,
-        string? IEffect.NeedComputer => null;
         int IEffect.RelativeWidth { get => -1; set { } }
         int IEffect.RelativeHeight { get => -1; set { } }
         int IEffect.Index { get => int.MaxValue; set { } }
@@ -37,6 +42,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </summary>
     public class ClassicSpeedVarianceProvider : ISpeedVarianceProvider
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public string TypeName => "ClassicSpeedVarianceProvider";
         public string Name { get; set; } = "ClassicSpeedVarianceProvider";
@@ -110,6 +117,26 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
             return Ratio;
         }
+    }
+
+    public sealed class ReverseSpeedVarianceProvider : IDirectSpeedVarianceProvider
+    {
+        public bool IsDeterministic => true;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string TypeName => "ReverseSpeedVarianceProvider";
+        public string Name { get; set; } = "Reverse";
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string? BindedEffectProvidingSystemID { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new();
+
+        public void Initialize() { }
+        public IEffect WithParameters(Dictionary<string, object> parameters) => new ReverseSpeedVarianceProvider { Parameters = parameters };
+        public uint GetTargetFrame(uint sourceFrame) => throw new NotSupportedException("Reverse playback requires the clip length.");
+        public uint GetTargetFrame(uint sourceFrame, uint length, uint? sourceLength)
+            => sourceFrame < length ? length - 1 - sourceFrame : length;
+        public uint GetEffectiveLength(uint length) => length;
+        public SpeedVarianceFrameMap GetFrameMap(uint length, uint? sourceLength)
+            => new(length, frame => length - 1 - frame, singleFrameStep: -1);
     }
 
     public class ClassicSpeedVarianceProviderFactory

@@ -1,5 +1,7 @@
-﻿using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -11,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Sources;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Compose;
@@ -58,39 +61,75 @@ public class InternalPluginBase : IPluginBase
 
     };
 
+    public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new()
+    {
+        ["Basic"] = () => new BasicTextStyleProvider(),
+        ["Title"] = () => new TitleTextStyleProvider(),
+        ["Pinyin"] = () => new PinyinTextStyleProvider(),
+        ["OldTextClipEntry"] = () => new OldTextClipEntryTextStyleProvider(),
+    };
+
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>>
     {
+        { "Fade", () => new FadeTransformProvider() },
+        { "Crossfade", () => new CrossfadeTransformProvider() },
+        { "AudioFade", () => new AudioFadeTransformProvider() },
+        { "AudioCrossfade", () => new AudioCrossfadeTransformProvider() },
+        { "ExternalSourceTransform", () => new ExternalSourceTransformProvider() },
         { "ZoomIn", () => new ZoomInEffectProvider() },
         { "RemoveColor", () => new RemoveColorEffectProvider() },
         { "Jitter", () => new JitterEffectProvider() },
-        { "Movement", () => new MovementEffectProvider() },
+        { "Jelly", () => new JellyEffectProvider() },
         { "Blur", () => new BlurEffectProvider() },
         { "Crop", () => new CropEffectProvider() },
-        { "Place", () => new PlaceEffectProvider() },
-        { "Resize", () => new ResizeEffectProvider() },
+        { "ClipPosition", () => new ClipPositionProvider() },
+        { "SplitClipPosition", () => new SplitClipPositionProvider() },
         { "Flip", () => new FlipEffectProvider() },
         { "Sharpen", () => new SharpenEffectProvider() },
         { "Vignette", () => new VignetteEffectProvider() },
         { "FadeOpacity", () => new FadeOpacityEffectProvider() },
         { "ColorAdjustment", () => new ColorAdjustmentEffectProvider() },
+        { CustomSpeedVarianceProvider.ProviderTypeName, () => new CustomSpeedVarianceProvider() },
+        { CustomToSpeedVarianceProvider.ConversionTypeName, () => new CustomToSpeedVarianceProvider() },
+        { SpeedVarianceToCustomProvider.ProviderTypeName, () => new SpeedVarianceToCustomProvider() },
         { "ClassicSpeedVarianceProvider", () => new ClassicSpeedVarianceProviderEffectProvider() },
+        { "ReverseSpeedVarianceProvider", () => new ReverseSpeedVarianceProviderEffectProvider() },
         { "ClassicOverlayMixture", () => new ClassicOverlayMixtureProvider() },
+        { RenderOutputProvider.ProviderTypeName, () => new RenderOutputProvider() },
+        { MixtureSourceProvider.SelfTypeName, () => new MixtureSourceProvider(false) },
+        { MixtureSourceProvider.UnderTypeName, () => new MixtureSourceProvider(true) },
         { "ProgressPlacer", () => new ProgressPlacerProvider() },
         { "ProgressCrop", () => new ProgressCropProvider() },
         { "TextFadeIn", () => new TextFadeInEffectProvider() },
-        { "LinearAnimationValueProvider", () => new LinearAnimationValueProviderProvider() },
         { "IntArithmeticAdd", () => new IntArithmeticValueProviderProvider { Operation = IntArithmeticOperation.Add } },
         { "IntArithmeticSubtract", () => new IntArithmeticValueProviderProvider { Operation = IntArithmeticOperation.Subtract } },
         { "IntArithmeticMultiply", () => new IntArithmeticValueProviderProvider { Operation = IntArithmeticOperation.Multiply } },
         { "IntArithmeticDivide", () => new IntArithmeticValueProviderProvider { Operation = IntArithmeticOperation.Divide } },
         { "IntConstant", () => new IntConstantValueProviderProvider() },
+        { "IsUpstreamAvailableOrDefault", () => new IsUpstreamAvailableOrDefaultEffectProvider() },
+        { "IfConditionNode", () => new IfConditionNodeEffectProvider() },
+        { "ConditionComputeNode", () => new ConditionComputeNodeEffectProvider() },
+        { "ConditionalLoopNode", () => new ConditionalLoopNodeEffectProvider() },
+        { "ValueTypeConversionNode", () => new ValueTypeConversionNodeProvider() },
+        { "NumericComparisonNode", () => new NumericComparisonNodeEffectProvider() },
+        { "AdvancedMath1", () => new AdvancedMathEffectProvider(1) },
+        { "AdvancedMath2", () => new AdvancedMathEffectProvider(2) },
+        { "AdvancedMath3", () => new AdvancedMathEffectProvider(3) },
+        { "EqualityComparisonNode", () => new EqualityComparisonNodeEffectProvider() },
         { "IntOverlay", () => new IntOverlayEffectProvider() },
-        { "Rotation", () => new RotationEffectProvider() },
-        { "StraightLineMovementValueProducer", () => new StraightLineMovementValueProducerProvider() },
-        { "PointPlacer", () => new PointPlacerProvider() },
-        { "SubjectMattingMaskGenerator", () => new SubjectMattingMaskGeneratorProvider() },
-        { "MaskApplier", () => new MaskApplierProvider() },
-        { "BlendModeMixture", () => new BlendModeMixtureProvider { ProviderTypeName = "OverlayBlend" } },
+        { "SplitPictureChannels", () => new SplitPictureChannelsEffectProvider() },
+        { "MergePictureChannels", () => new MergePictureChannelsEffectProvider() },
+        { "CreatePictureFP16", () => new CreatePictureFP16Provider() },
+        { "CreateHDRPictureFP16", () => new CreateHDRPictureFP16Provider() },
+        { "ReadPictureFP16Pixel", () => new ReadPictureFP16PixelProvider() },
+        { "WritePictureFP16Pixel", () => new WritePictureFP16PixelProvider() },
+        { "PictureChannelAverage", () => new PictureChannelAverageEffectProvider() },
+        { "Oscilloscope", () => new OscilloscopeEffectProvider() },
+        { "ClipValueOutput", () => new ClipValueExportProvider() },
+        { "ClipValueInput", () => new ClipValueImportProvider() },
+        { "EffectVariableWrite", () => new EffectVariableWriteProvider() },
+        { "EffectVariableRead", () => new EffectVariableReadProvider() },
+        { "BlendModeMixture", () => new BlendModeMixtureProvider { ProviderTypeName = "BlendModeMixture" } },
         { "AddMixture", () => new BlendModeMixtureProvider { MixtureType = "Add" } },
         { "SubtractMixture", () => new BlendModeMixtureProvider { MixtureType = "Subtract" } },
         { "MultiplyMixture", () => new BlendModeMixtureProvider { MixtureType = "Multiply" } },
@@ -101,32 +140,90 @@ public class InternalPluginBase : IPluginBase
         { "DifferenceMixture", () => new BlendModeMixtureProvider { MixtureType = "Difference" } },
     };
 
-    public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
-    {
-        {"AddComputer", () => new Compose.AddComputer() },
-        {"SubtractComputer", () => new Compose.SubtractComputer() },
-        {"MultiplyComputer", () => new Compose.MultiplyComputer() },
-        {"ScreenComputer", () => new Compose.ScreenComputer() },
-        {"OverlayBlendComputer", () => new Compose.OverlayBlendComputer() },
-        {"DarkenComputer", () => new Compose.DarkenComputer() },
-        {"LightenComputer", () => new Compose.LightenComputer() },
-        {"DifferenceComputer", () => new Compose.DifferenceComputer() },
-    };
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
+        FullDynamicEffectFactories.Add(new Dictionary<EffectImplementationKey, Func<IEffect>>
+        {
+            [new("Fade", EffectImplementType.IPicture)] = () => new FadeTransform(),
+            [new("Crossfade", EffectImplementType.IPicture)] = () => new CrossfadeTransform(),
+            [new("AudioFade", EffectImplementType.NotSpecified)] = () => new AudioFadeTransform(),
+            [new("AudioCrossfade", EffectImplementType.NotSpecified)] = () => new AudioCrossfadeTransform(),
+            [new("ExternalSourceTransform", EffectImplementType.IPicture)] = () => new ExternalSourceTransform(),
+            [new("ClipPosition", EffectImplementType.NotSpecified)] = () => new ClipPositionEffect(),
+            [new("SplitClipPosition", EffectImplementType.NotSpecified)] = () => new SplitClipPositionEffect(),
+            [new("RemoveColor", EffectImplementType.IPicture)] = () => new RemoveColorEffect_IPicture(),
+            [new("ClassicOverlayMixture", EffectImplementType.IPicture)] = () => new ClassicOverlayMixture(),
+            [new("AddMixture", EffectImplementType.IPicture)] = () => new AddMixture(),
+            [new("SubtractMixture", EffectImplementType.IPicture)] = () => new SubtractMixture(),
+            [new("MultiplyMixture", EffectImplementType.IPicture)] = () => new MultiplyMixture(),
+            [new("ScreenMixture", EffectImplementType.IPicture)] = () => new ScreenMixture(),
+            [new("OverlayBlendMixture", EffectImplementType.IPicture)] = () => new OverlayBlendMixture(),
+            [new("DarkenMixture", EffectImplementType.IPicture)] = () => new DarkenMixture(),
+            [new("LightenMixture", EffectImplementType.IPicture)] = () => new LightenMixture(),
+            [new("DifferenceMixture", EffectImplementType.IPicture)] = () => new DifferenceMixture(),
+            [new("Blur", EffectImplementType.IPicture)] = () => new BlurEffect_IPicture(),
+            [new("Crop", EffectImplementType.IPicture)] = () => new CropEffect_IPicture(),
+            [new("ProgressCrop", EffectImplementType.IPicture)] = () => new ProgressCropper_IPicture(),
+            [new("Flip", EffectImplementType.IPicture)] = () => new FlipEffect_IPicture(),
+            [new("Sharpen", EffectImplementType.IPicture)] = () => new SharpenEffect_IPicture(),
+            [new("Vignette", EffectImplementType.IPicture)] = () => new VignetteEffect_IPicture(),
+            [new("FadeOpacity", EffectImplementType.IPicture)] = () => new FadeOpacityEffect_IPicture(),
+            [new("ColorAdjustment", EffectImplementType.IPicture)] = () => new ColorAdjustmentEffect_IPicture(),
+            [new("ZoomIn", EffectImplementType.IPicture)] = () => new ZoomInContinuousEffect(),
+            [new("TextFadeIn", EffectImplementType.IPicture)] = () => new TextFadeInContinuousEffect(),
+            [new("Jitter", EffectImplementType.NotSpecified)] = () => new JitterEffect(),
+            [new("Jelly", EffectImplementType.NotSpecified)] = () => new JellyEffect(),
+            [new("ProgressPlacer", EffectImplementType.NotSpecified)] = () => new ProgressPlacer(),
+            [new(CustomSpeedVarianceProvider.ProviderTypeName, EffectImplementType.NotSpecified)] = () => new CustomSpeedVarianceEffect(),
+            [new(CustomToSpeedVarianceProvider.ConversionTypeName, EffectImplementType.NotSpecified)] = () => new CustomSpeedVarianceEffect { TypeName = CustomToSpeedVarianceProvider.ConversionTypeName },
+            [new(SpeedVarianceToCustomProvider.ProviderTypeName, EffectImplementType.NotSpecified)] = () => new SpeedVarianceToCustomEffect(),
+            [new("ClassicSpeedVarianceProvider", EffectImplementType.NotSpecified)] = () => new ClassicSpeedVarianceProvider(),
+            [new("ReverseSpeedVarianceProvider", EffectImplementType.NotSpecified)] = () => new ReverseSpeedVarianceProvider(),
+            [new("SplitPictureChannels", EffectImplementType.NotSpecified)] = () => new SplitPictureChannelsEffect(),
+            [new("IntConstant", EffectImplementType.NotSpecified)] = () => new IntConstantValueProviderEffect(),
+            [new("IsUpstreamAvailableOrDefault", EffectImplementType.NotSpecified)] = () => new IsUpstreamAvailableOrDefaultEffect(),
+            [new("IfConditionNode", EffectImplementType.NotSpecified)] = () => new IfConditionNodeEffect(),
+            [new("ConditionComputeNode", EffectImplementType.NotSpecified)] = () => new ConditionComputeNodeEffect(),
+            [new("ConditionalLoopNode", EffectImplementType.NotSpecified)] = () => new ConditionalLoopNodeEffect(),
+            [new("ValueTypeConversionNode", EffectImplementType.NotSpecified)] = () => new ValueTypeConversionNodeEffect(),
+            [new("NumericComparisonNode", EffectImplementType.NotSpecified)] = () => new NumericComparisonNodeEffect(),
+            [new("AdvancedMath1", EffectImplementType.NotSpecified)] = () => new AdvancedMathEffect(1),
+            [new("AdvancedMath2", EffectImplementType.NotSpecified)] = () => new AdvancedMathEffect(2),
+            [new("AdvancedMath3", EffectImplementType.NotSpecified)] = () => new AdvancedMathEffect(3),
+            [new("EqualityComparisonNode", EffectImplementType.NotSpecified)] = () => new EqualityComparisonNodeEffect(),
+            [new("IntOverlay", EffectImplementType.NotSpecified)] = () => new IntOverlayEffect(),
+            [new("MergePictureChannels", EffectImplementType.NotSpecified)] = () => new MergePictureChannelsEffect(),
+            [new("CreatePictureFP16", EffectImplementType.NotSpecified)] = () => new CreateFP16PictureEffect("CreatePictureFP16", false),
+            [new("CreateHDRPictureFP16", EffectImplementType.NotSpecified)] = () => new CreateFP16PictureEffect("CreateHDRPictureFP16", true),
+            [new("ReadPictureFP16Pixel", EffectImplementType.NotSpecified)] = () => new ReadPictureFP16PixelEffect(),
+            [new("WritePictureFP16Pixel", EffectImplementType.NotSpecified)] = () => new WritePictureFP16PixelEffect(),
+            [new("PictureChannelAverage", EffectImplementType.IPicture)] = () => new PictureChannelAverageEffect(),
+            [new("Oscilloscope", EffectImplementType.IPicture)] = () => new OscilloscopeEffect(),
+            [new("ClipValueOutput", EffectImplementType.NotSpecified)] = () => new ClipValueEndpointEffect("ClipValueOutput", true),
+            [new("ClipValueInput", EffectImplementType.NotSpecified)] = () => new ClipValueEndpointEffect("ClipValueInput", false),
+            [new("EffectVariableWrite", EffectImplementType.NotSpecified)] = () => new EffectVariableEffect("EffectVariableWrite"),
+            [new("EffectVariableRead", EffectImplementType.NotSpecified)] = () => new EffectVariableEffect("EffectVariableRead"),
+            [new("IntArithmeticAdd", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticAdd", Operation = IntArithmeticOperation.Add },
+            [new("IntArithmeticSubtract", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticSubtract", Operation = IntArithmeticOperation.Subtract },
+            [new("IntArithmeticMultiply", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticMultiply", Operation = IntArithmeticOperation.Multiply },
+            [new("IntArithmeticDivide", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticDivide", Operation = IntArithmeticOperation.Divide },
+        });
+
+
 
 
 
     public Dictionary<string, IVideoSource> VideoSourceProvider =>
         new Dictionary<string, (Func<bool>, IVideoSource)>
         {
-            { "DecoderContextHW", (HWAccelDecodeOptionGetter, new DecoderContextHW()) },
-            { "DecoderContext8Bit", (AlwaysTrue, new DecoderContext8Bit())},
-            { "DecoderContext16Bit", (AlwaysTrue, new DecoderContext16Bit()) },
-            { "HDRDecoderContext", (AlwaysTrue, new HDRDecoderContext())},
+            { "DecoderContextHWFP16", (HWAccelDecodeOptionGetter, new DecoderContextHWFP16()) },
+            { "DecoderContextFP16", (AlwaysTrue, new DecoderContextFP16()) },
+            { "HDRDecoderContextFP16", (AlwaysTrue, new HDRDecoderContextFP16())},
             { "AlphaBrightnessDecoderContext", (AlwaysTrue, new AlphaBrightnessDecoderContext()) },
             { "HttpDecoderContext", (AlwaysTrue, new HttpDecoderContext()) },
             { "FFmpegDeviceDecoderContext", (AlwaysTrue, new FFmpegDeviceDecoderContext()) },
             { "RPSVDecoderContext", (AlwaysTrue, new RawPictureSequenceStreamVideoDecoderContext()) },
-            { "DecoderContextPJFCProject", (AlwaysTrue, new DecoderContextPJFCProject()) }
+            { "DecoderContextPJFCProject", (AlwaysTrue, new DecoderContextPJFCProject()) },
+            { nameof(EmptyVideoSource), (AlwaysTrue, new EmptyVideoSource()) }
         }.ComputeCondition();
 
     public IVideoSource VideoSourceCreator(string filePath)
@@ -174,20 +271,12 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider =>
         new Dictionary<string, (Func<bool>, Func<string, IVideoWriter>)>
         {
-            { "VideoWriterHWAccel", ((() => HWAccelEncodeOptionGetter() && !(OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())), new((_) => new VideoWriterHWAccel())) },
-            { "VideoWriter", (AlwaysTrue, new((_) => new VideoWriter())) },
-            { "HDRVideoWriter", (AlwaysTrue, new((_) => new HDRVideoWriter())) },
+            { "VideoWriterHWAccelFP16", ((() => HWAccelEncodeOptionGetter() && !(OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())), new((_) => new VideoWriterHWAccelFP16())) },
+            { "VideoWriterFP16", (AlwaysTrue, new((_) => new VideoWriterFP16())) },
+            { "HDRVideoWriterFP16", (AlwaysTrue, new((_) => new HDRVideoWriterFP16())) },
             { "AlphaBrightnessVideoWriter", (AlwaysTrue, new((_) => new AlphaBrightnessVideoWriter())) },
             { "BlackHoleWriter", (AlwaysTrue, new((_) => new BlackholeVideoWriter())) }
         }.ComputeCondition();
-
-    public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, ITransform>>
-    {
-        {
-            "Crossfade",
-            (prevId, nextId) => new CrossfadeTransform { PreviousClipId = prevId, NextClipId = nextId }
-        }
-    };
 
     IClip IPluginBase.ClipCreator(JsonElement element)
     {
@@ -199,10 +288,14 @@ public class InternalPluginBase : IPluginBase
             ClipMode.PhotoClip => HandlePhotoClip(element),
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
+            ClipMode.SubtitleClip => element.Deserialize<SubtitleClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
             ClipMode.MarkingClip => element.Deserialize<MarkingClip>() ?? throw new NullReferenceException(),
-            ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
+            ClipMode.TransformClip => throw new NotSupportedException("Standalone transform clips are no longer supported."),
             ClipMode.VectorCanvasClip => element.Deserialize<VectorCanvasClip>() ?? throw new NullReferenceException(),
+            ClipMode.VectorComponentClip => element.Deserialize<VectorComponentClip>() ?? throw new NullReferenceException(),
+            ClipMode.MaskClip => element.Deserialize<MaskClip>() ?? throw new NullReferenceException(),
+            ClipMode.ProjectReferenceClip => element.Deserialize<ProjectReferenceClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }
@@ -247,17 +340,6 @@ public class InternalPluginBase : IPluginBase
         };
     }
 
-    ITransform IPluginBase.TransformCreator(JsonElement element)
-    {
-        var typeName = element.GetProperty("TypeName").GetString();
-        return typeName switch
-        {
-            "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
-            "ExternalSourceTransform" => element.Deserialize<ExternalSourceTransform>() ?? throw new NullReferenceException("Failed to deserialize ExternalSourceTransform."),
-            _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
-        };
-    }
-
     IVectorComponent IPluginBase.VectComponentCreator(JsonElement element)
     {
         var typeName = element.GetProperty("TypeName").GetString();
@@ -274,6 +356,7 @@ public class InternalPluginBase : IPluginBase
             "Polygon" => element.Deserialize<PolygonComponent>(options)!,
             "Polyline" => element.Deserialize<PolylineComponent>(options)!,
             "ComponentGroup" => element.Deserialize<ComponentGroup>(options)!,
+            "EvaluatedVectorComponent" => element.Deserialize<projectFrameCut.Render.VectorContent.EvaluatedVectorComponent>(options)!,
             "Text" => element.Deserialize<TextComponent>(options)!,
             _ => throw new NotSupportedException($"Unknown component type: {typeName}"),
         };
@@ -281,13 +364,17 @@ public class InternalPluginBase : IPluginBase
 
     string? IPluginBase.ReadLocalizationItem(string key, string locate)
     {
-        var loc = ISimpleLocalizerBase_PropertyPanel.GetMapping().FirstOrDefault(x => x.Key == locate, ISimpleLocalizerBase_PropertyPanel.GetMapping().First()).Value;
-        if (!loc.IsItemExist(key)) return null;
-        return loc.DynamicLookup(key, key);
+        if (key == "DisplayName_Transform_Fade" && locate == "zh-CN") return "淡入淡出";
+        var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+        var loc = map.GetValueOrDefault(locate) ?? map.First().Value;
+        var text = loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : null;
+        if (!string.IsNullOrEmpty(text) && !text.StartsWith("Unset localization item:", StringComparison.Ordinal)) return text;
+        return map.First().Value.IsItemExist(key) ? map.First().Value.DynamicLookup(key, key) : null;
     }
 
     bool IPluginBase.OnLoaded(out string FailedReason)
     {
+        projectFrameCut.Drawing.Processing.Resizing.PictureResizer.Default = new EffectPictureResizer();
         try
         {
             TextClipFontRegistry.Initialize();

@@ -27,6 +27,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntArithmeticValueProviderEffect : IValueProviderEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Int Arithmetic";
@@ -41,7 +43,6 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public bool IsReorderable => false;
-        public string? NeedComputer => null;
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
 
@@ -98,23 +99,20 @@ namespace projectFrameCut.Render.Effect
         string[]? IEffectArgumentField.PresetOptions { get => null; set { } }
         string? IEffectArgumentField.Remarks { get => null; set { } }
 
+        internal static int Calculate(int a, int b, IntArithmeticOperation operation) => operation switch
+        {
+            IntArithmeticOperation.Add => a + b,
+            IntArithmeticOperation.Subtract => a - b,
+            IntArithmeticOperation.Multiply => a * b,
+            IntArithmeticOperation.Divide => b == 0 ? 0 : a / b,
+            _ => 0,
+        };
+
         public Func<object> GetGetter() => () =>
         {
             int a = ResolveInt(Parameters, "A");
             int b = ResolveInt(Parameters, "B");
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s A: {a} ({Parameters.GetValueOrDefault("A")?.GetType()?.Name ?? "<null>"})");
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s B: {b} ({Parameters.GetValueOrDefault("B")?.GetType()?.Name ?? "<null>"})");
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s Operation: {Operation} ");
-            var result = Operation switch
-            {
-                IntArithmeticOperation.Add => a + b,
-                IntArithmeticOperation.Subtract => a - b,
-                IntArithmeticOperation.Multiply => a * b,
-                IntArithmeticOperation.Divide => b == 0 ? 0 : a / b,
-                _ => 0,
-            };
-            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s Result: {result}");
-            return result;
+            return Calculate(a, b, Operation);
 
         };
     }
@@ -126,6 +124,10 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntArithmeticValueProviderProvider : EffectProviderBase
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => EffectStages.Values;
+
+        public override bool IsDeterministic => true;
+
         public IntArithmeticValueProviderProvider()
         {
             Name = "Int Arithmetic";
@@ -140,15 +142,16 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectType TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
 
-        public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
+        public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider;
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
-        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
-        {
-            // A value provider has no picture input.
-            return new Dictionary<string, EffectArgumentFieldDescriptor>();
-        }
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>
+            {
+                ["A"] = Field("A", EffectArgumentFieldType.Integer, "0"),
+                ["B"] = Field("B", EffectArgumentFieldType.Integer, "0"),
+            };
 
         protected override EffectArgumentFieldDescriptor DefineOutField()
         {
@@ -162,20 +165,10 @@ namespace projectFrameCut.Render.Effect
             };
         }
 
-        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
-        {
-            return
-            [
-                Field("A", EffectArgumentFieldType.Integer, "0"),
-                Field("B", EffectArgumentFieldType.Integer, "0"),
-            ];
-        }
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            return [IntArithmeticValueProviderEffect.FromParametersDictionary(TypeName, Operation, parameters)];
-        }
+
     }
 }

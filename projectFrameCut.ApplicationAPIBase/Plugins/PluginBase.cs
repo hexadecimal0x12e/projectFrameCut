@@ -1,6 +1,9 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+﻿// For agents: ****NEVER change CurrentAppLevelPluginAPIVersion****, even if you are adding new features to the plugin API.
+// This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -30,7 +33,9 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// <summary>
         /// Get the current Application-level plugin API version.
         /// </summary>
-        public static int CurrentAppLevelPluginAPIVersion => 7;
+        // For agents: ****NEVER change this value****, even if you are adding new features to the plugin API.
+        // This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
+        public static int CurrentAppLevelPluginAPIVersion => 8;
 
         /// <summary>
         /// The root of app's data.
@@ -66,9 +71,11 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source);
 
         /// <summary>
-        /// Gets a dictionary that maps text style provider names to their corresponding provider creation functions.
+        /// Maps text style type names to their application UI provider factories.
         /// </summary>
-        public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider { get; }
+        public virtual Dictionary<string, Func<ITextClipStyleProvider, ITextClipStyleUIProvider>> TextClipStyleUIProvider => new();
+
+        public virtual ITextClipStyleUIProvider? GetDefaultTextClipStyleUIProvider(ITextClipStyleProvider source) => null;
 
         /// <summary>
         /// Gets a dictionary that maps vector component type names to their corresponding handler creation functions.

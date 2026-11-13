@@ -10,12 +10,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public interface IContinuousEffect : IEffect
     {
         /// <summary>
-        /// Represents the start point of the effect inside this Clip.
+        /// Represents the inclusive start frame of the effect on the timeline.
         /// Only used when <see cref="IsScoped"/> is true.
         /// </summary>
         public int StartPoint { get; set; }
         /// <summary>
-        /// Represents the end point of the effect inside this Clip.
+        /// Represents the exclusive end frame of the effect on the timeline.
         /// Only used when <see cref="IsScoped"/> is true.
         /// </summary>
         public int EndPoint { get; set; }
@@ -31,11 +31,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <param name="source">The input frame.</param>
         /// <param name="progress">A value between 0 and 1 indicating the current progress of the effect.</param>
-        /// <param name="computer">A provided computer for accelerated computing.</param>
         /// <param name="targetWidth">Output canvas' width.</param>
         /// <param name="targetHeight">Output canvas' height.</param>
         /// <returns>the processed frame</returns>
-        public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight);
+        public IPicture Render(IPicture source, float progress, int targetWidth, int targetHeight);
 
         /// <summary>
         /// If you'd like to initialize the effect before use, override it.

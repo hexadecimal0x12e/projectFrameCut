@@ -45,12 +45,20 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public int TargetWidth { get; set; }
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields => ClipArgumentHandler.SourceCropFields;
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public ISourceReplacementEffect? AlternativeSource { get; set; }
@@ -69,16 +77,23 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     || bool.TryParse(directCropRaw?.ToString(), out var parsedDirectCrop) && parsedDirectCrop);
             if (directCropEnabled || StartingX > 0 || StartingY > 0)
             {
-                var cropper = new CropEffect_HwAccel
+                int cropWidth = targetWidth, cropHeight = targetHeight;
+                if (directCropEnabled)
                 {
-                    Width = targetWidth,
-                    Height = targetHeight,
-                    StartX = StartingX,
-                    StartY = StartingY,
-                    RelativeWidth = 0,
-                    RelativeHeight = 0,
-                };
-                return cropper.Render(source, PluginManager.CreateComputer(cropper.NeedComputer), targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                    if (EffectParamConvert.TryConvertToInt(ExtraData?.GetValueOrDefault("__Internal_DirectCropWidth__"), out int width) && width > 0)
+                        cropWidth = width;
+                    if (EffectParamConvert.TryConvertToInt(ExtraData?.GetValueOrDefault("__Internal_DirectCropHeight__"), out int height) && height > 0)
+                        cropHeight = height;
+                }
+                return EffectRuntimeDefaults.Execute("PhotoCrop", "Crop", EffectImplementType.IPicture,
+                    new() { ["Width"] = cropWidth, ["Height"] = cropHeight, ["StartX"] = StartingX, ["StartY"] = StartingY }, e =>
+                    {
+                        e.Parameters["Width"] = cropWidth;
+                        e.Parameters["Height"] = cropHeight;
+                        e.Parameters["StartX"] = StartingX;
+                        e.Parameters["StartY"] = StartingY;
+                        return ((INormalEffect)e).Render(source, targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                    });
             }
             else
             {
@@ -88,8 +103,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
-            source = targetPPB == 16 ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
+            source = PictureFP16.Load(FilePath);
             source.CanBeDisposed = false;
             source.ProcessStack = new List<PictureProcessStack>
             {
@@ -111,6 +127,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IDisposable.Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             source?.CanBeDisposed = false;
             source?.Dispose(true);
         }

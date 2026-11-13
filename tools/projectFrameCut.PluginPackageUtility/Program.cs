@@ -33,7 +33,7 @@ internal static class PluginPackageCli
             Console.WriteLine($"Created {result.OutputPath}");
             Console.WriteLine($"Plugin: {result.PluginId}");
             Console.WriteLine($"Publisher: {result.PublisherId}");
-            Console.WriteLine($"Signing certificate: {result.SigningCertificateFingerprint}");
+            Console.WriteLine($"Signing certificate: {(string.IsNullOrEmpty(result.SigningCertificateFingerprint) ? "unsigned" : result.SigningCertificateFingerprint)}");
             Console.WriteLine($"Immutable files: {result.ImmutableFileCount}");
             Console.WriteLine($"Package SHA-256: {result.PackageSha256}");
             return 0;
@@ -183,15 +183,22 @@ internal static class PluginPackageCli
             }
         }
 
-        if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(output) ||
-            string.IsNullOrWhiteSpace(certificate) || string.IsNullOrWhiteSpace(chain))
+        if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(output))
         {
-            throw new ArgumentException("--input, --output, --certificate, and --chain are required.");
+            throw new ArgumentException("--input and --output are required.");
         }
 
         var passwordSources = (password is not null ? 1 : 0) +
                               (passwordEnvironmentVariable is not null ? 1 : 0) +
                               (passwordFromStandardInput ? 1 : 0);
+        if (string.IsNullOrWhiteSpace(certificate) != string.IsNullOrWhiteSpace(chain))
+        {
+            throw new ArgumentException("--certificate and --chain must be supplied together.");
+        }
+        if (string.IsNullOrWhiteSpace(certificate) && passwordSources > 0)
+        {
+            throw new ArgumentException("Password options require --certificate and --chain.");
+        }
         if (passwordSources > 1)
         {
             throw new ArgumentException("Choose only one of --password, --password-env, or --password-stdin.");
@@ -263,11 +270,12 @@ internal static class PluginPackageCli
     {
         Console.WriteLine("projectFrameCut Plugin Package Utility");
         Console.WriteLine();
-        Console.WriteLine("Create a certificate-chain protected external plugin package:");
+        Console.WriteLine("Create an external plugin package:");
         Console.WriteLine("  pack --input <staging-dir> --output <package.pjfc-plugin> ");
-        Console.WriteLine("       --certificate <signing-leaf.pfx> --chain <leaf-to-root.pem>");
+        Console.WriteLine("       [--certificate <signing-leaf.pfx> --chain <leaf-to-root.pem>]");
         Console.WriteLine("       [--password <value> | --password-env <NAME> | --password-stdin] [--force]");
         Console.WriteLine();
+        Console.WriteLine("Omit --certificate and --chain for unsigned development packages.");
         Console.WriteLine("Managed packages require <PluginID>.dll; external packages do not contain a managed assembly.");
         Console.WriteLine("If metadata.json is absent, generate it with --plugin-id and --version.");
         Console.WriteLine("Use --main-assembly when the assembly file name differs from the plugin ID.");
@@ -284,8 +292,8 @@ public sealed class PluginPackageOptions
 {
     public required string InputDirectory { get; init; }
     public required string OutputPath { get; init; }
-    public required string SigningCertificatePath { get; init; }
-    public required string CertificateChainPath { get; init; }
+    public string? SigningCertificatePath { get; init; }
+    public string? CertificateChainPath { get; init; }
     public string? CertificatePassword { get; init; }
     public string? PluginId { get; init; }
     public string? Version { get; init; }
@@ -336,18 +344,20 @@ public static class PluginPackageBuilder
         ArgumentNullException.ThrowIfNull(options);
         var inputDirectory = Path.GetFullPath(options.InputDirectory);
         var outputPath = Path.GetFullPath(options.OutputPath);
-        var certificatePath = Path.GetFullPath(options.SigningCertificatePath);
-        var chainPath = Path.GetFullPath(options.CertificateChainPath);
+        if (string.IsNullOrWhiteSpace(options.SigningCertificatePath) != string.IsNullOrWhiteSpace(options.CertificateChainPath))
+            throw new ArgumentException("The signing certificate and certificate chain must be supplied together.");
+        var certificatePath = string.IsNullOrWhiteSpace(options.SigningCertificatePath) ? null : Path.GetFullPath(options.SigningCertificatePath);
+        var chainPath = string.IsNullOrWhiteSpace(options.CertificateChainPath) ? null : Path.GetFullPath(options.CertificateChainPath);
 
         if (!Directory.Exists(inputDirectory))
         {
             throw new DirectoryNotFoundException($"Plugin staging directory '{inputDirectory}' was not found.");
         }
-        if (!File.Exists(certificatePath))
+        if (certificatePath is not null && !File.Exists(certificatePath))
         {
             throw new FileNotFoundException("The signing certificate was not found.", certificatePath);
         }
-        if (!File.Exists(chainPath))
+        if (chainPath is not null && !File.Exists(chainPath))
         {
             throw new FileNotFoundException("The certificate chain was not found.", chainPath);
         }
@@ -356,12 +366,12 @@ public static class PluginPackageBuilder
             throw new IOException($"Output file '{outputPath}' already exists. Use --force to replace it.");
         }
 
-        using var signingCertificate = LoadSigningCertificate(certificatePath, options.CertificatePassword);
-        var chainCertificates = PluginTrustValidator.LoadCertificateChainFromPem(
+        using var signingCertificate = certificatePath is null ? null : LoadSigningCertificate(certificatePath, options.CertificatePassword);
+        var chainCertificates = chainPath is null ? new X509Certificate2Collection() : PluginTrustValidator.LoadCertificateChainFromPem(
             await File.ReadAllTextAsync(chainPath, cancellationToken));
         try
         {
-            ValidateSigningMaterial(signingCertificate, chainCertificates);
+            if (signingCertificate is not null) ValidateSigningMaterial(signingCertificate, chainCertificates);
 
             var metadataPath = Path.Combine(inputDirectory, MetadataFileName);
             var metadata = File.Exists(metadataPath)
@@ -389,9 +399,11 @@ public static class PluginPackageBuilder
                 throw new FileNotFoundException($"The main plugin assembly '{Path.GetRelativePath(inputDirectory, assemblyPath)}' was not found.", assemblyPath);
             }
 
-            var publisherId = PluginTrustValidator.GetCertificateSha256Fingerprint(chainCertificates[1]);
-            var signingFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(signingCertificate);
-            var encryptionKey = metadata.BackendKind == PluginBackendKind.ManagedAssembly ? PluginTrustValidator.DerivePluginEncryptionKey(signingCertificate) : string.Empty;
+            var publisherId = signingCertificate is null ? string.Empty : PluginTrustValidator.GetCertificateSha256Fingerprint(chainCertificates[1]);
+            var signingFingerprint = signingCertificate is null ? string.Empty : PluginTrustValidator.GetCertificateSha256Fingerprint(signingCertificate);
+            var encryptionKey = metadata.BackendKind == PluginBackendKind.ManagedAssembly
+                ? signingCertificate is null ? Convert.ToHexString(RandomNumberGenerator.GetBytes(32)) : PluginTrustValidator.DerivePluginEncryptionKey(signingCertificate)
+                : string.Empty;
             var assemblyBytes = assemblyPath is null ? [] : await File.ReadAllBytesAsync(assemblyPath, cancellationToken);
             var assemblyHash = assemblyPath is null ? string.Empty : PluginTrustValidator.ComputeSha256Hex(assemblyBytes);
 
@@ -420,12 +432,12 @@ public static class PluginPackageBuilder
                 }
             }
             packageFiles[MetadataFileName] = JsonSerializer.SerializeToUtf8Bytes(metadata, MetadataJsonOptions);
-            packageFiles[PublisherChainFileName] = ExportCertificateChainPem(chainCertificates);
+            if (signingCertificate is not null) packageFiles[PublisherChainFileName] = ExportCertificateChainPem(chainCertificates);
 
             if (metadata.BackendKind == PluginBackendKind.ManagedAssembly)
             {
                 packageFiles[metadata.PluginID + ".dll.enc"] = FileCryptoService.EncryptToFileWithPassword(encryptionKey, assemblyBytes);
-                packageFiles[metadata.PluginID + ".dll.sig"] = Encoding.UTF8.GetBytes(Convert.ToBase64String(Sign(signingCertificate, assemblyBytes)));
+                if (signingCertificate is not null) packageFiles[metadata.PluginID + ".dll.sig"] = Encoding.UTF8.GetBytes(Convert.ToBase64String(Sign(signingCertificate, assemblyBytes)));
             }
             packageFiles[HashtableFileName] = CreateHashtable(packageFiles);
 
@@ -448,11 +460,12 @@ public static class PluginPackageBuilder
                     .ToList()
             };
 
-            EnsureRequiredManifestFiles(manifest, metadata.PluginID);
+            if (signingCertificate is not null) EnsureRequiredManifestFiles(manifest, metadata.PluginID);
             var canonicalManifest = PluginTrustValidator.GetCanonicalManifestBytes(manifest);
             packageFiles[ManifestFileName] = canonicalManifest;
-            packageFiles[ManifestSignatureFileName] = Encoding.UTF8.GetBytes(
-                Convert.ToBase64String(Sign(signingCertificate, canonicalManifest)));
+            if (signingCertificate is not null)
+                packageFiles[ManifestSignatureFileName] = Encoding.UTF8.GetBytes(
+                    Convert.ToBase64String(Sign(signingCertificate, canonicalManifest)));
 
             await WritePackageAsync(outputPath, packageFiles, options.Force, cancellationToken);
             var packageHash = await ComputeFileSha256Async(outputPath, cancellationToken);

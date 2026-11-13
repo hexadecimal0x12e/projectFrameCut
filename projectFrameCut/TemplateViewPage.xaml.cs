@@ -26,6 +26,12 @@ public partial class TemplateViewPage : ContentPage
 
     public static bool HasNavigatedToTemplate = false;
 
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _viewModel.ReloadTemplates();
+    }
+
     public TemplateViewPage()
     {
         InitializeComponent();
@@ -304,6 +310,11 @@ public partial class TemplateViewPage : ContentPage
         await PreviewTemplate();
     }
 
+    private async void CreateScriptTemplate_Clicked(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new Template.ScriptTemplateCreatePage());
+    }
+
     private async void CreateVideo_Clicked(object sender, EventArgs e)
     {
         await CreateVideoFromTemplate();
@@ -441,7 +452,7 @@ public partial class TemplateViewPage : ContentPage
 
         var view = new Template.TemplateCreatePage(fullTemplate);
         view.ConfigureForProjectCreationMode();
-        view.CloseRequested += async (_, _) =>
+        view.CloseRequested += async () =>
         {
             // 清理临时解压目录
             TemplatePackageIO.TryCleanupExtractDir(tempExtractDir);

@@ -1,10 +1,15 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.LivePreview;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -17,11 +22,23 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace projectFrameCut.InteractableEditor
 {
     public partial class InteractableEditor : ContentView, IInteractableEditor
     {
+        public bool IsPreviewBusy
+        {
+            get;
+            set
+            {
+                if (field == value) return;
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+
         #region types
 
         public enum ResizeHandle
@@ -61,10 +78,8 @@ namespace projectFrameCut.InteractableEditor
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
         private const string TextClipStyleAllowFreeResizeKey = "TextClipStyleAllowFreeResize";
-        private const string TextStyleParametersKey = "TextStyleProvider_Parameters";
         private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
         private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
-        private const string TextStyleProviderParametersKey = "TextStyleProvider_Parameters";
 
         private const string DisableMoveKey = "InteractableEditor_DisableMove";
         private const string DisableHorizontalResizeKey = "InteractableEditor_DisableHorizontalResize";
@@ -96,10 +111,14 @@ namespace projectFrameCut.InteractableEditor
         private readonly Dictionary<Guid, ClipOverlayState> _clipStates = new();
         private readonly object _clipStatesLock = new();
         private readonly Dictionary<Guid, object> _previewSourceClips = new();
+        private readonly record struct ClipLayout(Rect Bounds, float Rotation, IClip? FrameClip);
+        private Dictionary<Guid, ClipLayout>? _pendingFrameLayouts;
+        private uint _pendingFrame;
         private readonly Dictionary<Guid, IInteractableElement> _genericElements = new();
         private readonly Dictionary<Guid, InteractiveRect> _genericLastRects = new();
         private ClipOverlayState? _activeState;
         private Func<Task>? _previewRefreshCallback;
+        private Func<Task>? _fullScreenPreviewCallback;
         private Func<Task<ImageSource?>>? _overviewImageSourceProvider;
         private bool _overviewImageSourceRequested;
         private int _overviewImageSourceVersion;
@@ -116,7 +135,9 @@ namespace projectFrameCut.InteractableEditor
         private Action? _manageReferenceLinesRequestedCallback;
         private Action<Color>? _defaultColorPickerRequestedCallback;
         private Func<string, Task>? _previewResolutionChangedCallback;
+        private Func<Task>? _dynamicPreviewTargetResolutionChangedCallback;
         private List<string> _previewResolutionOptions = [];
+        private Dictionary<string, long> _dynamicPreviewTargetResolutionOptions = [];
         private bool _suppressPreviewResolutionChanged;
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
@@ -129,6 +150,7 @@ namespace projectFrameCut.InteractableEditor
         private ShapeHandleProvider? _shapeHandleProvider;
         private ShapeHandleDragHandler? _shapeHandleDragHandler;
         private bool _isShapeHandleDragInProgress;
+        public bool CustomHandleUpdatesManagedExternally { get; set; }
 
         private CancellationTokenSource? _commitUpdateDebounceCts;
         private readonly object _commitUpdateDebounceLock = new();
@@ -188,7 +210,19 @@ namespace projectFrameCut.InteractableEditor
         public bool EnableSnapping { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = true;
         public bool LockLayout { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = false;
         public bool EnableKeyframeRecording { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = false;
-        public bool AllowClipOutOfBounds { get; set { if (field == value) return; field = value; LogDiagnostic($"AllowClipOutOfBounds now is {field}"); OnPropertyChanged(); OnPropertyChanged(nameof(DisallowClipOutOfBounds)); } } = false;
+        public bool AllowClipOutOfBounds
+        {
+            get;
+            set
+            {
+                if (field == value) return;
+                field = value;
+                LogDiagnostic($"AllowClipOutOfBounds now is {field}");
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(DisallowClipOutOfBounds));
+                UpdateVisuals();
+            }
+        } = false;
         public bool DisallowClipOutOfBounds
         {
             get => !AllowClipOutOfBounds;
@@ -344,7 +378,34 @@ namespace projectFrameCut.InteractableEditor
 
         public void SetStaticPreviewVisible(bool isVisible)
         {
-            PreviewOverlayImage.IsVisible = isVisible;
+            StaticPreviewHost.IsVisible = isVisible;
+        }
+
+        public void SetStaticPreviewFrame(PreviewFrameSource frame, ImageSource? source)
+        {
+#if WINDOWS
+            if (frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb)
+            {
+                if (StaticNativePreviewHost.Content is HdrPreviewView view)
+                    view.Frame = frame;
+                else
+                    StaticNativePreviewHost.Content = new HdrPreviewView
+                    {
+                        Frame = frame,
+                        HorizontalOptions = LayoutOptions.Fill,
+                        VerticalOptions = LayoutOptions.Fill,
+                        InputTransparent = true,
+                    };
+                StaticNativePreviewHost.IsVisible = true;
+                PreviewOverlayImage.IsVisible = false;
+                PreviewOverlayImage.Source = null;
+                return;
+            }
+#endif
+            StaticNativePreviewHost.Content = null;
+            StaticNativePreviewHost.IsVisible = false;
+            PreviewOverlayImage.Source = source;
+            PreviewOverlayImage.IsVisible = true;
         }
 
 #endregion
@@ -357,7 +418,15 @@ namespace projectFrameCut.InteractableEditor
             public Guid ClipId { get; init; }
 
             // Dynamic custom shape handles
-            private readonly List<(View View, PanGestureRecognizer Pan, string HandleId, double StartX, double StartY)> _customHandles = new();
+            private sealed class CustomHandleState
+            {
+                public required View View { get; init; }
+                public required string HandleId { get; init; }
+                public Func<View>? Factory { get; init; }
+                public Action<string, PanUpdatedEventArgs>? Callback { get; set; }
+                public int? GestureId { get; set; }
+            }
+            private readonly List<CustomHandleState> _customHandles = new();
 
             public ClipOverlayState(InteractableEditor owner, Guid clipId, string? displayName = null)
             {
@@ -367,6 +436,7 @@ namespace projectFrameCut.InteractableEditor
                 {
                     InputTransparent = true,
                     CascadeInputTransparent = false,
+                    IsClippedToBounds = false,
                     IsVisible = false,
                     ZIndex = 101,
                     BackgroundColor = Colors.Transparent
@@ -477,6 +547,7 @@ namespace projectFrameCut.InteractableEditor
             public AbsoluteLayout Root { get; }
             public Border ClipVisual { get; }
             public ContentView PreviewHost { get; }
+            public bool IsPositionedPreview { get; set; }
             public BoxView HandleTL { get; }
             public BoxView HandleTR { get; }
             public BoxView HandleBL { get; }
@@ -543,7 +614,7 @@ namespace projectFrameCut.InteractableEditor
                     || (!ClipVisual.IsVisible && !PreviewHost.IsVisible);
             }
 
-            public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual, Brush? clipStroke = null)
+            public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual, Brush? clipStroke = null, float? clipRotation = null)
             {
                 // The editor's clip collection can be replaced while a draft is loading or a
                 // history snapshot is being applied. Prefer the current selection as a fallback
@@ -557,24 +628,56 @@ namespace projectFrameCut.InteractableEditor
                 Root.IsVisible = true;
                 AbsoluteLayout.SetLayoutBounds(Root, new Rect(displayX, displayY, displayW, displayH));
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
+                float rotation = clipRotation ?? (clip is null ? 0 : _owner.GetClipRotation(clip));
+                if (clipRotation is null && clip is null && _owner._previewSourceClips.TryGetValue(ClipId, out var source))
+                    rotation = source switch
+                    {
+                        ClipElementUI uiClip => _owner.GetClipRotation(uiClip),
+                        IClip sourceClip => VideoClipRotation.GetAngle(sourceClip, _owner._currentFrame, (int)_owner._videoWidth, (int)_owner._videoHeight),
+                        _ => 0
+                    };
+                ClipVisual.Rotation = rotation;
                 ClipVisual.IsVisible = _owner.ShowAllBorders || showClipVisual;
                 if (ClipVisual.IsVisible)
                 {
-                    ClipVisual.Stroke = (clip?.ShowDefaultBorder != false || _owner.ShowAllBorders)
+                    ClipVisual.Stroke = (_owner.ShowAllBorders || (clip is not null
+                        && clip.ShowDefaultBorder
+                        && clip.ShowDefaultHandles
+                        && (clip.IsHorizontalResizable || clip.IsVerticalResizable)))
                         ? (clipStroke ?? Colors.Yellow)
                         : Colors.Transparent;
                 }
-                UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
+                if (IsPositionedPreview)
+                {
+                    var rect = _owner.GetRenderRect();
+                    PreviewHost.WidthRequest = _owner._videoWidth;
+                    PreviewHost.HeightRequest = _owner._videoHeight;
+                    PreviewHost.Scale = rect.Width / _owner._videoWidth;
+                    AbsoluteLayout.SetLayoutBounds(PreviewHost, new Rect(rect.X - displayX, rect.Y - displayY, _owner._videoWidth, _owner._videoHeight));
+                    UpdatePreviewHostVisibility();
+                }
+                else UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH, rotation);
                 UpdateRootInputTransparency();
 
                 double handleSize = HandleSize;
-                AbsoluteLayout.SetLayoutBounds(HandleTL, new Rect(-handleSize / 2, -handleSize / 2, handleSize, handleSize));
-                AbsoluteLayout.SetLayoutBounds(HandleTR, new Rect(displayW - handleSize / 2, -handleSize / 2, handleSize, handleSize));
-                AbsoluteLayout.SetLayoutBounds(HandleBL, new Rect(-handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
-                AbsoluteLayout.SetLayoutBounds(HandleBR, new Rect(displayW - handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
+                double radians = rotation * Math.PI / 180d;
+                PlaceHandle(HandleTL, 0, 0);
+                PlaceHandle(HandleTR, displayW, 0);
+                PlaceHandle(HandleBL, 0, displayH);
+                PlaceHandle(HandleBR, displayW, displayH);
+
+                void PlaceHandle(View view, double x, double y)
+                {
+                    double dx = x - displayW / 2, dy = y - displayH / 2;
+                    AbsoluteLayout.SetLayoutBounds(view, new Rect(
+                        displayW / 2 + dx * Math.Cos(radians) - dy * Math.Sin(radians) - handleSize / 2,
+                        displayH / 2 + dx * Math.Sin(radians) + dy * Math.Cos(radians) - handleSize / 2,
+                        handleSize, handleSize));
+                }
 
                 bool resizeHandleVisible = showHandles
                     && clip is not null
+                    && clip.ShowDefaultHandles
                     && (clip.IsHorizontalResizable || clip.IsVerticalResizable);
                 HandleTL.IsVisible = resizeHandleVisible;
                 HandleTR.IsVisible = resizeHandleVisible;
@@ -612,6 +715,12 @@ namespace projectFrameCut.InteractableEditor
                 Action<string, PanUpdatedEventArgs>? dragCallback)
             {
                 int targetCount = descriptors?.Count ?? 0;
+                if (_owner.Clips.TryGetValue(ClipId, out var clip) && !clip.ShowDefaultHandles)
+                    HandleTL.IsVisible = HandleTR.IsVisible = HandleBL.IsVisible = HandleBR.IsVisible = false;
+
+                if (_customHandles.Where((h, i) => i < targetCount
+                    && (h.HandleId != descriptors![i].Id || h.Factory != descriptors[i].CustomHandleFactory)).Any())
+                    ClearCustomHandles();
 
                 // Remove excess handles
                 while (_customHandles.Count > targetCount)
@@ -625,24 +734,28 @@ namespace projectFrameCut.InteractableEditor
                 for (int i = 0; i < targetCount; i++)
                 {
                     var desc = descriptors![i];
-                    double size = desc.Size > 0 ? desc.Size : 12;
-                    double hx = desc.NormalizedX * displayW - size / 2;
-                    double hy = desc.NormalizedY * displayH - size / 2;
+                    double size = double.IsFinite(desc.Size) && desc.Size > 0 ? desc.Size : 12;
+                    bool visible = float.IsFinite(desc.NormalizedX) && float.IsFinite(desc.NormalizedY)
+                        && double.IsFinite(displayW) && double.IsFinite(displayH) && displayW > 0 && displayH > 0;
+                    double hx = visible ? desc.NormalizedX * displayW - size / 2 : 0;
+                    double hy = visible ? desc.NormalizedY * displayH - size / 2 : 0;
 
                     if (i < _customHandles.Count)
                     {
                         var existing = _customHandles[i];
                         AbsoluteLayout.SetLayoutBounds(existing.View, new Rect(hx, hy, size, size));
-                        if (desc.HandleGetter is null && existing.View is BoxView boxView)
+                        if (desc.CustomHandleFactory is null && existing.View is BoxView boxView)
                         {
                             boxView.Color = desc.FillColor;
                         }
-                        existing.View.IsVisible = true;
-                        _customHandles[i] = (existing.View, existing.Pan, desc.Id, hx, hy);
+                        existing.View.WidthRequest = existing.View.HeightRequest = size;
+                        existing.View.TranslationX = existing.View.TranslationY = 0;
+                        existing.View.IsVisible = visible;
+                        existing.Callback = dragCallback;
                     }
                     else
                     {
-                        var handle = desc.HandleGetter?.Invoke() ?? new BoxView
+                        var handle = desc.CustomHandleFactory?.Invoke() ?? new BoxView
                         {
                             WidthRequest = size,
                             HeightRequest = size,
@@ -651,45 +764,41 @@ namespace projectFrameCut.InteractableEditor
                             InputTransparent = false,
                             ZIndex = int.MaxValue
                         };
+                        handle.InputTransparent = false;
+                        handle.ZIndex = int.MaxValue;
+                        handle.WidthRequest = handle.HeightRequest = size;
+                        handle.IsVisible = visible;
                         var pan = new PanGestureRecognizer();
-                        var handleId = desc.Id;
-                        // Capture the initial position for visual drag tracking
-                        double startHx = hx;
-                        double startHy = hy;
+                        var state = new CustomHandleState { View = handle, HandleId = desc.Id, Factory = desc.CustomHandleFactory, Callback = dragCallback };
                         pan.PanUpdated += (_, e) =>
                         {
-                            // Visual tracking: move the handle with the finger
-                            switch (e.StatusType)
-                            {
-                                case GestureStatus.Started:
-                                    startHx = handle.TranslationX;
-                                    startHy = handle.TranslationY;
-                                    break;
-                                case GestureStatus.Running:
-                                    handle.TranslationX = startHx + e.TotalX / _owner.ZoomScale;
-                                    handle.TranslationY = startHy + e.TotalY / _owner.ZoomScale;
-                                    break;
-                                case GestureStatus.Completed:
-                                case GestureStatus.Canceled:
-                                    handle.TranslationX = 0;
-                                    handle.TranslationY = 0;
-                                    break;
-                            }
-                            dragCallback?.Invoke(handleId, e);
+                            if (e.StatusType == GestureStatus.Started) state.GestureId = e.GestureId;
+                            if (e.StatusType is GestureStatus.Completed or GestureStatus.Canceled) state.GestureId = null;
+                            state.Callback?.Invoke(state.HandleId, e);
                         };
                         handle.GestureRecognizers.Add(pan);
                         AbsoluteLayout.SetLayoutBounds(handle, new Rect(hx, hy, size, size));
                         Root.Children.Add(handle);
-                        _customHandles.Add((handle, pan, desc.Id, hx, hy));
+                        _customHandles.Add(state);
                     }
                 }
             }
 
             public void ClearCustomHandles()
             {
-                foreach (var (view, _, _, _, _) in _customHandles)
-                    Root.Children.Remove(view);
+                var handles = _customHandles.ToArray();
                 _customHandles.Clear();
+                foreach (var handle in handles)
+                {
+                    var callback = handle.Callback;
+                    handle.Callback = null;
+                    if (handle.GestureId is int gestureId)
+                    {
+                        handle.GestureId = null;
+                        callback?.Invoke(handle.HandleId, new PanUpdatedEventArgs(GestureStatus.Canceled, gestureId, 0, 0));
+                    }
+                    Root.Children.Remove(handle.View);
+                }
             }
 
             public void UpdateDebugInfo(bool isVisible, string? text, double displayW, double displayH)
@@ -841,7 +950,7 @@ namespace projectFrameCut.InteractableEditor
 
             private static Image CreateImageBuffer()
             {
-                return new Image
+                return new PreviewImage
                 {
                     Aspect = Aspect.Fill,
                     InputTransparent = true,
@@ -943,7 +1052,7 @@ namespace projectFrameCut.InteractableEditor
                 UpdatePreviewHostVisibility();
             }
 
-            private void UpdatePreviewHostLayout(double displayW, double displayH, double logicalW, double logicalH)
+            private void UpdatePreviewHostLayout(double displayW, double displayH, double logicalW, double logicalH, float rotation)
             {
                 if (logicalW <= 0 || logicalH <= 0 || displayW <= 0 || displayH <= 0)
                 {
@@ -953,10 +1062,11 @@ namespace projectFrameCut.InteractableEditor
                     return;
                 }
 
-                PreviewHost.WidthRequest = logicalW;
-                PreviewHost.HeightRequest = logicalH;
+                var bounds = VideoClipRotation.GetBounds(rotation, 0, 0, logicalW, logicalH);
+                PreviewHost.WidthRequest = bounds.Width;
+                PreviewHost.HeightRequest = bounds.Height;
                 PreviewHost.Scale = Math.Clamp(displayW / logicalW, 0.0001d, 1000d);
-                AbsoluteLayout.SetLayoutBounds(PreviewHost, new Rect(0, 0, logicalW, logicalH));
+                AbsoluteLayout.SetLayoutBounds(PreviewHost, new Rect(bounds.X * PreviewHost.Scale, bounds.Y * PreviewHost.Scale, bounds.Width, bounds.Height));
                 UpdatePreviewHostVisibility();
             }
 
@@ -1173,6 +1283,7 @@ namespace projectFrameCut.InteractableEditor
                     _activeState.SizeLabel.ScaleY = 1d;
                     _activeState.ClipVisual.StrokeThickness = _stateOrigThickness;
                 }
+                _activeState.ClearCustomHandles();
             }
             UpdateVisuals(true);
             RequestInteractivePreviewRefresh();
@@ -1292,6 +1403,19 @@ namespace projectFrameCut.InteractableEditor
                 _canvasWidth / 2d,
                 _canvasHeight / 2d);
             LogDiagnostic($"[Zoom] Zoom-in button changed zoom to {ZoomScale:F2}x");
+        }
+
+        private async void FullScreenButton_Clicked(object? sender, EventArgs e)
+        {
+            if (_fullScreenPreviewCallback is null) return;
+            try
+            {
+                await _fullScreenPreviewCallback();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Enter full screen preview", this);
+            }
         }
 
         private void EnsureOverviewImageSource()
@@ -1459,6 +1583,13 @@ namespace projectFrameCut.InteractableEditor
             return this;
         }
 
+        public InteractableEditor ConfigureFullScreenPreview(Func<Task>? callback)
+        {
+            _fullScreenPreviewCallback = callback;
+            FullScreenButton.IsVisible = callback is not null;
+            return this;
+        }
+
         public InteractableEditor ConfigureOverviewImageSource(Func<Task<ImageSource?>>? provider)
         {
             Interlocked.Increment(ref _overviewImageSourceVersion);
@@ -1517,10 +1648,12 @@ namespace projectFrameCut.InteractableEditor
         public InteractableEditor ConfigurePreviewResolution(
             IEnumerable<string> options,
             string? selectedOption,
-            Func<string, Task>? changedCallback)
+            Func<string, Task>? changedCallback,
+            Func<Task>? dynamicTargetResolutionChangedCallback = null)
         {
             _previewResolutionOptions = options?.ToList() ?? [];
             _previewResolutionChangedCallback = changedCallback;
+            _dynamicPreviewTargetResolutionChangedCallback = dynamicTargetResolutionChangedCallback;
 
             _suppressPreviewResolutionChanged = true;
             try
@@ -1677,7 +1810,7 @@ namespace projectFrameCut.InteractableEditor
 
             ShapeHandleProvider? legacyProvider = provider is null
                 ? null
-                : id => provider(id).Select(h => new projectFrameCut.InteractableEditor.ShapeHandleDescriptor(
+                : id => provider(id).Select(h => new ShapeHandleDescriptor(
                     h.Id, h.NormalizedX, h.NormalizedY, h.FillColor, h.Size, h.ViewFactory)).ToList();
             ShapeHandleDragHandler? legacyDragHandler = dragHandler is null
                 ? null
@@ -1729,6 +1862,7 @@ namespace projectFrameCut.InteractableEditor
         {
             _videoWidth = width;
             _videoHeight = height;
+            _pendingFrameLayouts = null;
             UpdateOverviewViewport();
             UpdateVisuals(ignorePositionProvider);
         }
@@ -1756,7 +1890,7 @@ namespace projectFrameCut.InteractableEditor
 
             try
             {
-                Dispatcher.Dispatch(() =>
+                void AttachState()
                 {
                     if (!ClipStatesHost.Children.Contains(state.Root))
                     {
@@ -1772,7 +1906,9 @@ namespace projectFrameCut.InteractableEditor
                             });
                         }
                     }
-                });
+                }
+                if (Dispatcher.IsDispatchRequired) Dispatcher.Dispatch(AttachState);
+                else AttachState();
                 return state;
             }
             catch (Exception e1)
@@ -1944,6 +2080,7 @@ namespace projectFrameCut.InteractableEditor
 
         private ClipOverlayState? ResolveClipAtPoint(Point tapPoint)
         {
+            if (!AllowClipOutOfBounds && !GetRenderRect().Contains(tapPoint)) return null;
             var hostOffsetX = ClipStatesHost.X;
             var hostOffsetY = ClipStatesHost.Y;
 
@@ -1964,6 +2101,13 @@ namespace projectFrameCut.InteractableEditor
 
                 var left = hostOffsetX + bounds.X;
                 var top = hostOffsetY + bounds.Y;
+                if (!state.IsPositionedPreview && state.PreviewHost.IsVisible)
+                {
+                    var previewBounds = AbsoluteLayout.GetLayoutBounds(state.PreviewHost);
+                    left += previewBounds.X;
+                    top += previewBounds.Y;
+                    bounds = new Rect(bounds.X, bounds.Y, previewBounds.Width * state.PreviewHost.Scale, previewBounds.Height * state.PreviewHost.Scale);
+                }
                 var right = left + bounds.Width;
                 var bottom = top + bounds.Height;
 
@@ -2048,7 +2192,7 @@ namespace projectFrameCut.InteractableEditor
                 (int)Math.Round(y, MidpointRounding.AwayFromZero),
                 Math.Max(1, (int)Math.Round(w, MidpointRounding.AwayFromZero)),
                 Math.Max(1, (int)Math.Round(h, MidpointRounding.AwayFromZero)),
-                false);
+                false, GetClipRotation(_currentClip), GetClipOpacity(_currentClip));
 
             callback(_currentClip.Id.ToString(), _currentFrame, keyframePosition, handle);
         }
@@ -2075,6 +2219,7 @@ namespace projectFrameCut.InteractableEditor
                     previous.HandleBL.IsVisible = false;
                     previous.HandleBR.IsVisible = false;
                     previous.SizeLabel.IsVisible = false;
+                    previous.ClearCustomHandles();
                 }
 
                 _activeState = state;
@@ -2089,6 +2234,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void ClearClipStates()
         {
+            _customHandleLivePreviews.Clear();
             foreach (var state in _clipStates.Values)
             {
                 state.ClearCustomHandles();
@@ -2103,7 +2249,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void OnCustomHandlePanUpdated(Guid clipId, string handleId, PanUpdatedEventArgs e)
         {
-            if (_isViewportPinching) return;
+            if (_isViewportPinching && e.StatusType != GestureStatus.Canceled) return;
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
@@ -2135,7 +2281,7 @@ namespace projectFrameCut.InteractableEditor
 
             var context = new ShapeHandleDragContext
             {
-                ClipId = clipId,
+                ElementId = clipId,
                 HandleId = handleId,
                 DisplayW = rootBounds.Width * ZoomScale,
                 DisplayH = rootBounds.Height * ZoomScale,
@@ -2144,9 +2290,43 @@ namespace projectFrameCut.InteractableEditor
             };
 
             _shapeHandleDragHandler(clipId, handleId, e, context);
+            if (!CustomHandleUpdatesManagedExternally && e.StatusType == GestureStatus.Running)
+                RefreshCustomHandleVisuals(clipId);
+            if (e.StatusType is GestureStatus.Completed or GestureStatus.Canceled)
+            {
+                RefreshCustomHandleVisuals(clipId);
+                if (!CustomHandleUpdatesManagedExternally) RequestInteractivePreviewRefresh();
+            }
+        }
 
-            if (e.StatusType == GestureStatus.Completed)
-                RequestInteractivePreviewRefresh();
+        public void RefreshCustomHandleVisuals(Guid clipId)
+            => UpdateVisuals(true, new HashSet<Guid> { clipId }, reorderClips: false);
+
+        private readonly HashSet<Guid> _customHandleLivePreviews = [];
+
+        public void ApplyCustomHandleLivePreview(Guid clipId, View view)
+        {
+            if (!Clips.ContainsKey(clipId)) return;
+            _customHandleLivePreviews.Add(clipId);
+            ApplyCustomHandlePreview(new PreparedPreview(clipId, () => view, null, null));
+        }
+
+        public void EndCustomHandleLivePreview(Guid clipId)
+        {
+            if (!_customHandleLivePreviews.Remove(clipId)) return;
+            if (_clipStates.TryGetValue(clipId, out var state))
+            {
+                state.SetPreviewView(null);
+                state.RefreshPreviewVisibility();
+            }
+        }
+
+        public void ApplyCustomHandlePreview(PreparedPreview preview)
+        {
+            if (!Clips.ContainsKey(preview.ClipId) || PreviewErrorView.GetView(preview) is not { } view) return;
+            var state = GetOrCreateClipState(preview.ClipId);
+            state.SetPreviewView(view, isTransparentAt: preview.IsTransparentAt);
+            state.RefreshPreviewVisibility();
         }
 
         #endregion
@@ -2479,19 +2659,26 @@ namespace projectFrameCut.InteractableEditor
             UpdateVisuals();
         }
 
-        public Task UpdateClips(ConcurrentDictionary<Guid, ClipElementUI> clips)
+        public Task UpdateClips(ConcurrentDictionary<Guid, ClipElementUI> clips) => UpdateClips(clips, true);
+
+        internal Task UpdateClips(ConcurrentDictionary<Guid, ClipElementUI> clips, bool updateVisuals)
         {
             Clips = clips;
             _allClips = clips;
-            UpdateVisuals();
+            _pendingFrameLayouts = null;
+            if (updateVisuals) UpdateVisuals();
             return Task.CompletedTask;
         }
+
+        internal void RefreshClipSources(IReadOnlySet<Guid> clipIds)
+            => UpdateVisuals(clipFilter: clipIds, reorderClips: false);
 
         /// <summary>
         /// 更新当前帧号，用于显示该帧的所有clips
         /// </summary>
         public void UpdateCurrentFrame(uint frameNumber)
         {
+            _pendingFrameLayouts = null;
             _currentFrame = frameNumber;
             UpdateVisuals();
         }
@@ -2499,6 +2686,38 @@ namespace projectFrameCut.InteractableEditor
         public void SetCurrentFrame(uint currentFrame)
         {
             UpdateCurrentFrame(currentFrame);
+        }
+
+        internal void PrepareFrameLayout(uint frame, bool reusePrepared = false)
+        {
+            if (reusePrepared && _pendingFrame == frame && _pendingFrameLayouts is not null) return;
+            _pendingFrame = frame;
+            _pendingFrameLayouts = null;
+            if (IsInteractiveManipulationInProgress) return;
+            // 缓存逻辑布局，等同帧的预览内容齐备后再应用。
+            _pendingFrameLayouts = _allClips?.Values
+                .Where(c => IsClipVisibleAtFrame(c, frame))
+                .ToDictionary(c => c.Id, c => ResolveClipLayout(c, frame, false, usePreviewSource: false));
+        }
+
+        internal void ApplyFrameLayout(uint frame)
+        {
+            var layouts = TakeFrameLayouts(frame);
+            bool frameChanged = _currentFrame != frame;
+            _currentFrame = frame;
+            if (layouts is not null)
+            {
+                foreach (var (id, layout) in layouts)
+                    if (layout.FrameClip is not null) _previewSourceClips[id] = layout.FrameClip;
+            }
+            if (layouts is not null || frameChanged) UpdateVisuals(preparedLayouts: layouts);
+        }
+
+        private Dictionary<Guid, ClipLayout>? TakeFrameLayouts(uint frame)
+        {
+            var layouts = _pendingFrame == frame && !IsInteractiveManipulationInProgress ? _pendingFrameLayouts : null;
+            _pendingFrameLayouts = null;
+            return layouts;
         }
 
         public void SetAssets(ConcurrentDictionary<string, AssetItem>? assets)
@@ -2625,8 +2844,11 @@ namespace projectFrameCut.InteractableEditor
             return new Rect(offX, offY, drawW, drawH);
         }
 
-        private void UpdateVisuals(bool ignorePositionProvider = false, IReadOnlySet<Guid>? clipFilter = null)
+        private void UpdateVisuals(bool ignorePositionProvider = false, IReadOnlySet<Guid>? clipFilter = null, bool reorderClips = true, IReadOnlyDictionary<Guid, ClipLayout>? preparedLayouts = null)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var visualsMark = new UserMarkRange("Editor.UpdateVisuals", $"frame={_currentFrame}, filtered={clipFilter?.Count.ToString() ?? "all"}");
+#endif
             if (_videoWidth <= 0 || _videoHeight <= 0 || _canvasWidth <= 0 || _canvasHeight <= 0)
                 return;
 
@@ -2640,6 +2862,8 @@ namespace projectFrameCut.InteractableEditor
             {
                 Rect renderRect = GetRenderRect();
                 double scale = renderRect.Width / _videoWidth;
+
+                ClipStatesHost.ClipBounds = AllowClipOutOfBounds ? null : renderRect;
 
                 UpdateRenderRectOverlay(renderRect);
                 UpdateReferenceLines(renderRect, scale);
@@ -2658,7 +2882,7 @@ namespace projectFrameCut.InteractableEditor
                 // 当使用DraftPage中的所有clips时，先处理多clips模式
                 if (_allClips is not null)
                 {
-                    UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider, clipFilter);
+                    UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider, clipFilter, reorderClips, preparedLayouts);
                     return;
                 }
 
@@ -2683,13 +2907,20 @@ namespace projectFrameCut.InteractableEditor
                         continue;
                     }
 
-                    // Clamp to keep UI stable.
-                    w = Math.Clamp(w, MinSize, _videoWidth);
-                    h = Math.Clamp(h, MinSize, _videoHeight);
-                    if (!AllowClipOutOfBounds)
+                    if (GetClipArgumentPreview(clipId) is null)
                     {
-                        x = Math.Clamp(x, 0, _videoWidth - w);
-                        y = Math.Clamp(y, 0, _videoHeight - h);
+                        w = Math.Clamp(w, MinSize, _videoWidth);
+                        h = Math.Clamp(h, MinSize, _videoHeight);
+                        if (!AllowClipOutOfBounds)
+                        {
+                            x = Math.Clamp(x, 0, _videoWidth - w);
+                            y = Math.Clamp(y, 0, _videoHeight - h);
+                        }
+                    }
+                    else
+                    {
+                        w = Math.Max(1, w);
+                        h = Math.Max(1, h);
                     }
 
                     double displayX = renderRect.X + x * scale;
@@ -2851,6 +3082,9 @@ namespace projectFrameCut.InteractableEditor
         /// <param name="preparedPreviews">The prepared previews</param>
         public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<PreparedPreview> preparedPreviews)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var dispatchMark = new UserMarkRange("Preview.DispatchApply", $"previews={preparedPreviews.Count}, host=editor");
+#endif
             if (Dispatcher.IsDispatchRequired)
             {
                 return await Dispatcher.DispatchAsync(() => ApplyPreparedPreviews(preparedPreviews));
@@ -2866,12 +3100,31 @@ namespace projectFrameCut.InteractableEditor
         /// <b>THIS FUNCTION MUST BE CALLED ON THE UI THREAD.</b>
         /// </remarks>
         /// <param name="preparedPreviews">The prepared previews</param>
-        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         public bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> preparedPreviews)
+            => ApplyPreparedPreviewsCore(preparedPreviews, null);
+
+        internal bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> preparedPreviews, uint frame)
+            => ApplyPreparedPreviewsCore(preparedPreviews, frame);
+
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+        private bool ApplyPreparedPreviewsCore(IReadOnlyList<PreparedPreview> preparedPreviews, uint? frame)
         {
-            var canvasPreview = preparedPreviews.FirstOrDefault(static preview => preview.IsCanvasPreview);
-            if (canvasPreview is not null)
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var applyMark = new UserMarkRange("Preview.Apply", $"previews={preparedPreviews.Count}, host=editor");
+#endif
+            var views = new View?[preparedPreviews.Count];
+            var canvasIndex = -1;
+            for (var i = 0; i < preparedPreviews.Count; i++)
             {
+                views[i] = PreviewErrorView.GetView(preparedPreviews[i]);
+                if (canvasIndex < 0 && preparedPreviews[i].IsCanvasPreview) canvasIndex = i;
+            }
+            bool frameChanged = frame.HasValue && _currentFrame != frame.Value;
+            var preparedLayouts = frame.HasValue ? TakeFrameLayouts(frame.Value) : null;
+            if (frame.HasValue) _currentFrame = frame.Value;
+            if (canvasIndex >= 0)
+            {
+                if (_customHandleLivePreviews.Count > 0) return true;
                 foreach (var state in _clipStates.Values)
                 {
                     state.SetPreviewView(null);
@@ -2879,7 +3132,10 @@ namespace projectFrameCut.InteractableEditor
                 }
                 _previewSourceClips.Clear();
 
-                var canvasView = canvasPreview.View;
+                var canvasView = views[canvasIndex];
+                foreach (var preview in preparedPreviews)
+                    if (preview.Source is not null) _previewSourceClips[preview.ClipId] = preview.Source;
+                if (!IsInteractiveManipulationInProgress) UpdateVisuals(reorderClips: false, preparedLayouts: preparedLayouts);
                 if (LivePreviewerHost.Content is HdrPreviewView existingHdr && canvasView is HdrPreviewView incomingHdr)
                 {
                     existingHdr.Frame = incomingHdr.Frame;
@@ -2893,9 +3149,12 @@ namespace projectFrameCut.InteractableEditor
                 }
                 SetRealtimePreviewContent(canvasView);
                 LivePreviewerHost.IsVisible = canvasView is not null;
-                PreviewOverlayImage.IsVisible = false;
+                SetStaticPreviewVisible(false);
                 return canvasView is not null;
             }
+
+            SetStaticPreviewVisible(false);
+            LivePreviewerHost.IsVisible = false;
 
             if (preparedPreviews.Count == 0)
             {
@@ -2904,7 +3163,7 @@ namespace projectFrameCut.InteractableEditor
                     var hasPreviewView = false;
                     foreach (var state in _clipStates.Values)
                     {
-                        var keepExisting = ShouldKeepExistingPreviewFrame(state.ClipId);
+                        var keepExisting = _customHandleLivePreviews.Contains(state.ClipId) || ShouldKeepExistingPreviewFrame(state.ClipId);
                         state.SetPreviewView(null, keepExistingWhenNull: keepExisting);
                         hasPreviewView |= state.HasPreviewView;
                     }
@@ -2928,15 +3187,18 @@ namespace projectFrameCut.InteractableEditor
                     {
                         state.RefreshPreviewVisibility();
                     }
+                    if (preparedLayouts is not null || frameChanged) UpdateVisuals(preparedLayouts: preparedLayouts);
                     return false;
                 }
             }
 
             var knownStates = new HashSet<Guid>();
+            var layoutChanged = new HashSet<Guid>();
             var hasVisiblePreview = false;
 
-            foreach (var prepared in preparedPreviews)
+            for (var i = 0; i < preparedPreviews.Count; i++)
             {
+                var prepared = preparedPreviews[i];
                 if (prepared.ClipId == Guid.Empty)
                 {
                     continue;
@@ -2951,20 +3213,32 @@ namespace projectFrameCut.InteractableEditor
 
                 if (prepared.Source is not null)
                 {
+                    if (_previewSourceClips.GetValueOrDefault(prepared.ClipId) is not IClip previous
+                        || previous.TargetX != prepared.Source.TargetX || previous.TargetY != prepared.Source.TargetY
+                        || previous.TargetWidth != prepared.Source.TargetWidth || previous.TargetHeight != prepared.Source.TargetHeight)
+                        layoutChanged.Add(prepared.ClipId);
                     _previewSourceClips[prepared.ClipId] = prepared.Source;
                 }
 
                 var state = GetOrCreateClipState(prepared.ClipId);
+                if (state.IsPositionedPreview != prepared.IsPositionedClipPreview) layoutChanged.Add(prepared.ClipId);
+                state.IsPositionedPreview = prepared.IsPositionedClipPreview;
                 var suppressPreviewForResize = ShouldSuppressPreviewForResize(prepared.ClipId);
 
                 knownStates.Add(prepared.ClipId);
+                if (_customHandleLivePreviews.Contains(prepared.ClipId))
+                {
+                    hasVisiblePreview |= state.HasPreviewView;
+                    continue;
+                }
                 if (suppressPreviewForResize)
                 {
                     state.SetPreviewView(null);
                     continue;
                 }
 
-                if (prepared.View is not null)
+                var previewView = views[i];
+                if (previewView is not null)
                 {
                     var shouldDeferViewSwap = ShouldKeepExistingPreviewFrame(prepared.ClipId)
                         && state.HasPreviewView;
@@ -2976,7 +3250,7 @@ namespace projectFrameCut.InteractableEditor
                     }
                     else
                     {
-                        state.SetPreviewView(prepared.View, isTransparentAt: prepared.IsTransparentAt);
+                        state.SetPreviewView(previewView, isTransparentAt: prepared.IsTransparentAt);
                         hasVisiblePreview = true;
                     }
                 }
@@ -2992,7 +3266,7 @@ namespace projectFrameCut.InteractableEditor
             {
                 if (!knownStates.Contains(entry.Key))
                 {
-                    var keepExisting = ShouldKeepExistingPreviewFrame(entry.Key);
+                    var keepExisting = _customHandleLivePreviews.Contains(entry.Key) || ShouldKeepExistingPreviewFrame(entry.Key);
                     entry.Value.SetPreviewView(null, keepExistingWhenNull: keepExisting);
                     if (!keepExisting)
                     {
@@ -3001,12 +3275,18 @@ namespace projectFrameCut.InteractableEditor
                 }
             }
 
-            // Applying a new frame must not invalidate every overlay layout. Layout
-            // is updated by the geometry/selection paths; the streaming path only
-            // refreshes visibility after changing the buffered image.
             foreach (var state in _clipStates.Values)
             {
                 state.RefreshPreviewVisibility();
+            }
+            if (preparedLayouts is not null || frameChanged)
+            {
+                UpdateVisuals(preparedLayouts: preparedLayouts);
+            }
+            else if (layoutChanged.Count > 0)
+            {
+                LogDiagnostic($"[Preview] Updating layout for {layoutChanged.Count} clips at frame {_currentFrame}.");
+                UpdateVisuals(clipFilter: layoutChanged, reorderClips: false);
             }
             return hasVisiblePreview;
         }
@@ -3023,6 +3303,9 @@ namespace projectFrameCut.InteractableEditor
             clipType = ClipMode.AudioClip;
             isCurrentClip = _currentClip is not null && _currentClip.Id == clipId;
 
+            if (GetClipArgumentPreview(clipId) is { } frameClip)
+                return TryResolveSourceClipRect(frameClip, ignorePosotionProvider, ref x, ref y, ref w, ref h, out clipType);
+
             if (isCurrentClip)
             {
                 clipType = _currentClip!.ClipType;
@@ -3036,6 +3319,12 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return TryResolveSourceClipRect(sourceClip, ignorePosotionProvider, ref x, ref y, ref w, ref h, out clipType);
+        }
+
+        private IClip? GetClipArgumentPreview(Guid clipId)
+        {
+            if (_currentClip?.Id == clipId && IsInteractiveManipulationInProgress) return null;
+            return _previewSourceClips.GetValueOrDefault(clipId) is IClip clip && ClipArgumentBinding.IsFrameCopy(clip) ? clip : null;
         }
 
         private bool TryResolveSourceClipRect(object sourceClip, bool ignorePositionProvider, ref double x, ref double y, ref double w, ref double h, out ClipMode clipType)
@@ -3115,7 +3404,8 @@ namespace projectFrameCut.InteractableEditor
                     h = iclip.TargetHeight;
                 }
 
-                if (clipType == ClipMode.TextClip && TryResolveTextClipViewRect(iclip.ExtraData, out var textRect))
+                if (clipType == ClipMode.TextClip && !ClipArgumentBinding.IsFrameCopy(iclip)
+                    && TryResolveTextClipViewRect(iclip.ExtraData, out var textRect))
                 {
                     x += textRect.X;
                     y += textRect.Y;
@@ -3161,7 +3451,66 @@ namespace projectFrameCut.InteractableEditor
             RenderRectVisual.IsVisible = true;
         }
 
-        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale, bool ignorePositionProvider, IReadOnlySet<Guid>? clipFilter)
+        private ClipLayout ResolveClipLayout(ClipElementUI clip, uint frame, bool ignorePositionProvider, bool usePreviewSource = true)
+        {
+            var clipInstance = usePreviewSource ? GetClipArgumentPreview(clip.Id) : GetClipInstance(clip);
+            if (!usePreviewSource && clipInstance is not null)
+                clipInstance = ClipArgumentBinding.InitializeFrame(clipInstance, frame);
+            var argumentClip = clipInstance is not null && ClipArgumentBinding.IsFrameCopy(clipInstance) ? clipInstance : null;
+            double x = argumentClip?.TargetX ?? clip.TargetX;
+            double y = argumentClip?.TargetY ?? clip.TargetY;
+            int targetWidth = argumentClip?.TargetWidth ?? clip.TargetWidth;
+            int targetHeight = argumentClip?.TargetHeight ?? clip.TargetHeight;
+            double w = targetWidth > 0 ? targetWidth : _videoWidth;
+            double h = targetHeight > 0 ? targetHeight : _videoHeight;
+
+            if (argumentClip is null && clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
+            {
+                ComputeFittedRectFromAsset(null, clip, _videoWidth, _videoHeight, ref w, ref h);
+                if (w <= 0) w = _videoWidth;
+                if (h <= 0) h = _videoHeight;
+            }
+
+            if (argumentClip is null && clip.ClipType == ClipMode.TextClip && TryResolveTextClipViewRect(clip.ExtraData, out var textRect))
+            {
+                x += textRect.X;
+                y += textRect.Y;
+                w = textRect.Width;
+                h = textRect.Height;
+            }
+
+            clipInstance ??= GetClipInstance(clip);
+            if (!ignorePositionProvider && clipInstance is not null)
+            {
+                ApplyPositionProvidersToRect(
+                    argumentClip is not null ? argumentClip.EffectsInstances : clip.Effects?.Values,
+                    clipInstance, frame, (int)Math.Round(_videoWidth), (int)Math.Round(_videoHeight),
+                    ref x, ref y, ref w, ref h);
+            }
+
+            if (argumentClip is null)
+            {
+                w = Math.Clamp(w, MinSize, _videoWidth);
+                h = Math.Clamp(h, MinSize, _videoHeight);
+                if (!AllowClipOutOfBounds)
+                {
+                    x = Math.Clamp(x, 0, _videoWidth - w);
+                    y = Math.Clamp(y, 0, _videoHeight - h);
+                }
+            }
+            else
+            {
+                w = Math.Max(1, w);
+                h = Math.Max(1, h);
+            }
+
+            float rotation = argumentClip is not null
+                ? VideoClipRotation.GetAngle(argumentClip, frame, (int)_videoWidth, (int)_videoHeight)
+                : VideoClipRotation.GetAngle(clip.Rotation, clipInstance, clip.Effects?.Values, frame, (int)_videoWidth, (int)_videoHeight);
+            return new ClipLayout(new Rect(x, y, w, h), rotation, argumentClip);
+        }
+
+        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale, bool ignorePositionProvider, IReadOnlySet<Guid>? clipFilter, bool reorderClips, IReadOnlyDictionary<Guid, ClipLayout>? preparedLayouts)
         {
             //LogDiagnostic($"Updating visuals for {_allClips.Count} clips, scale: {scale}");
             if (_allClips is null || _allClips.Count == 0)
@@ -3170,73 +3519,24 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            var activeClips = _allClips.Values
-                .Where(IsClipVisibleInCurrentFrame)
-                .Where(c => clipFilter is null || clipFilter.Contains(c.Id))
+            IEnumerable<ClipElementUI> candidates = clipFilter is null ? _allClips.Values
+                : clipFilter.Select(id => _allClips.TryGetValue(id, out var clip) ? clip : null).OfType<ClipElementUI>();
+            var activeClips = candidates
+                .Where(c => preparedLayouts?.ContainsKey(c.Id) ?? IsClipVisibleInCurrentFrame(c))
                 .ToList();
             var activeClipIds = activeClips.Select(c => c.Id).ToHashSet();
 
             // 遍历所有clips，筛选出在当前帧范围内的clips
             foreach (var clip in activeClips)
             {
-                //LogDiagnostic($"Updating layout of {clip.Id}");
-                Stopwatch sw = Stopwatch.StartNew();
-
                 var state = GetOrCreateClipState(clip.Id);
-
-                // 计算clip的位置和大小
-                double x;
-                double y;
-                double w;
-                double h;
-
-                x = clip.TargetX;
-                y = clip.TargetY;
-                w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
-                h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
-
-                // 当 TargetWidth 和 TargetHeight 均未设置时，根据资产原始比例计算适配尺寸
-                if (clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
-                {
-                    ComputeFittedRectFromAsset(null, clip, _videoWidth, _videoHeight, ref w, ref h);
-                    if (w <= 0) w = _videoWidth;
-                    if (h <= 0) h = _videoHeight;
-                }
-
-                if (clip.ClipType == ClipMode.TextClip && TryResolveTextClipViewRect(clip.ExtraData, out var textRect))
-                {
-                    x += textRect.X;
-                    y += textRect.Y;
-                    w = textRect.Width;
-                    h = textRect.Height;
-                }
-
-                // 安全获取 clip 实例用于位置提供器；回调未配置时跳过。
-                var clipInstance = GetClipInstance(clip);
-                if (clip.Effects?.Count > 0 && !ignorePositionProvider && clipInstance is not null)
-                {
-                    ApplyPositionProvidersToRect(
-                        clip.Effects.Values,
-                        clipSource: clipInstance,
-                        _currentFrame,
-                        (int)Math.Round(_videoWidth),
-                        (int)Math.Round(_videoHeight),
-                        ref x, ref y, ref w, ref h);
-                }
-
-                // Clamp to keep UI stable.
-                w = Math.Clamp(w, MinSize, _videoWidth);
-                h = Math.Clamp(h, MinSize, _videoHeight);
-                if (!AllowClipOutOfBounds)
-                {
-                    x = Math.Clamp(x, 0, _videoWidth - w);
-                    y = Math.Clamp(y, 0, _videoHeight - h);
-                }
+                var layout = preparedLayouts?.GetValueOrDefault(clip.Id) ?? ResolveClipLayout(clip, _currentFrame, ignorePositionProvider);
+                var (x, y, w, h) = (layout.Bounds.X, layout.Bounds.Y, layout.Bounds.Width, layout.Bounds.Height);
 
                 bool isCurrentClip = _currentClip is not null
                     && _currentClip.Id == clip.Id;
 
-                if (_genericElements.TryGetValue(clip.Id, out var genericElement))
+                if (layout.FrameClip is null && _genericElements.TryGetValue(clip.Id, out var genericElement))
                 {
                     var nextRect = new InteractiveRect(x, y, w, h);
                     var previousRect = _genericLastRects.GetValueOrDefault(clip.Id, nextRect);
@@ -3273,7 +3573,8 @@ namespace projectFrameCut.InteractableEditor
                     showSizeLabel: showSizeLabel,
                     sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
                     showClipVisual: isCurrentClip,
-                    clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null);
+                    clipStroke: isCurrentClip ? GetClipOverlayStroke(clip) : null,
+                    clipRotation: layout.Rotation);
 
                 UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
 
@@ -3298,20 +3599,17 @@ namespace projectFrameCut.InteractableEditor
             if (clipFilter is null)
             {
                 var inactiveIds = _clipStates.Keys.Except(activeClipIds).ToList();
-                MainThread.BeginInvokeOnMainThread(() =>
+                foreach (var inactiveId in inactiveIds)
                 {
-                    foreach (var inactiveId in inactiveIds)
+                    if (_clipStates.TryGetValue(inactiveId, out var state))
                     {
-                        if (_clipStates.TryGetValue(inactiveId, out var state))
-                        {
-                            state.Hide();
-                        }
+                        state.Hide();
                     }
-                });
+                }
             }
 
 
-            ReorderClipStateRootsByZIndex();
+            if (reorderClips) ReorderClipStateRootsByZIndex();
         }
 
         private void UpdateClipStateZIndex(ClipOverlayState state, Guid clipId)
@@ -3340,13 +3638,7 @@ namespace projectFrameCut.InteractableEditor
 
         private static int ResolveClipOverlayZIndex(ClipElementUI clip)
         {
-            // Keep overlay order aligned with timeline track order (lower track index on top).
-            var layer = Math.Max(0, clip.origTrack ?? 0);
-            var subLayer = Math.Max(0, clip.SubLayerIndex);
-            var composite = (long)layer * 10000L + Math.Min(9999, subLayer);
-            var zIndex = composite >= int.MaxValue ? int.MinValue : -((int)composite);
-            //LogDiagnostic($"For clip {clip.Id}/{clip.DisplayName}, track:{layer}, sub:{subLayer}, ZIndex is {zIndex}");
-            return zIndex;
+            return ClipLayerOrder.GetPreviewZIndex((uint)Math.Max(0, clip.origTrack ?? 0), (uint)Math.Max(0, clip.SubLayerIndex));
         }
 
         private void ReorderClipStateRootsByZIndex()
@@ -3394,6 +3686,9 @@ namespace projectFrameCut.InteractableEditor
 
         [DebuggerStepThrough()]
         private bool IsClipVisibleInCurrentFrame(ClipElementUI clip)
+            => IsClipVisibleAtFrame(clip, _currentFrame);
+
+        private bool IsClipVisibleAtFrame(ClipElementUI clip, uint frame)
         {
             if (!clip.ShouldDisplayInUI)
                 return false;
@@ -3403,7 +3698,7 @@ namespace projectFrameCut.InteractableEditor
 
             if (_getClipInstanceCallback is not null && _getClipInstanceCallback(clip) is IClip c)
             {
-                return c.ContainsFrame(_currentFrame);
+                return c.ContainsFrame(frame);
             }
 
             if (clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft"))
@@ -3444,7 +3739,7 @@ namespace projectFrameCut.InteractableEditor
             uint clipEndFrame = clipStartFrame + clipDurationFrames;
 
             // 检查当前帧是否在clip的范围内
-            return _currentFrame >= clipStartFrame && _currentFrame < clipEndFrame;
+            return frame >= clipStartFrame && frame < clipEndFrame;
         }
 
 #endregion
@@ -3518,6 +3813,7 @@ namespace projectFrameCut.InteractableEditor
                             : 0;
                         var unsnapped = new Rect(newVisualX, newVisualY, _startW, _startH);
                         _panPreviewRect = ApplyClipSnapping(unsnapped, snapThresholdVideo, handle: null);
+                        if (_allClips.Values.Any(c => c.ClipType == ClipMode.MaskClip)) RequestInteractivePreviewRefresh();
 
                         // Snap visual to the snapped preview rect for magnetic feel
                         _activeState.Root.TranslationX = _stateOrigX + (_panPreviewRect.Value.X - _startX) * scale / ZoomScale;
@@ -3623,6 +3919,10 @@ namespace projectFrameCut.InteractableEditor
                     double dx = e.TotalX / scale;
                     double dy = e.TotalY / scale;
 
+                    float rotation = _currentClip is null ? 0 : GetClipRotation(_currentClip);
+                    double radians = rotation * Math.PI / 180d;
+                    (dx, dy) = (dx * Math.Cos(radians) + dy * Math.Sin(radians), -dx * Math.Sin(radians) + dy * Math.Cos(radians));
+
                     if (_currentClip is not null)
                     {
                         // For TextClip with partial axis constraints (FixedWidth /
@@ -3669,6 +3969,21 @@ namespace projectFrameCut.InteractableEditor
                         ApplyAspectLockedResize(handle, ref newX, ref newY, ref newW, ref newH);
                     }
 
+                    if (rotation != 0)
+                    {
+                        double cx = newX - _startX + (newW - _startW) / 2;
+                        double cy = newY - _startY + (newH - _startH) / 2;
+                        newX = _startX + _startW / 2 + cx * Math.Cos(radians) - cy * Math.Sin(radians) - newW / 2;
+                        newY = _startY + _startH / 2 + cx * Math.Sin(radians) + cy * Math.Cos(radians) - newH / 2;
+                        _panPreviewRect = new Rect(newX, newY, newW, newH);
+                        if (_allClips.Values.Any(c => c.ClipType == ClipMode.MaskClip)) RequestInteractivePreviewRefresh();
+                        _activeState.UpdateLayout(renderRect.X + newX * scale / ZoomScale, renderRect.Y + newY * scale / ZoomScale,
+                            newW * scale / ZoomScale, newH * scale / ZoomScale, newW, newH, true, true,
+                            $"{Math.Round(newW)} x {Math.Round(newH)}", true, GetClipOverlayStroke(_currentClip));
+                        _lastPanUpdateTicks = _panTimer.ElapsedTicks;
+                        break;
+                    }
+
                     double snapThresholdVideo = _currentClip?.CanSnapWhileResizing != false
                         ? ComputeSnapThresholdVideo(scale)
                         : 0;
@@ -3680,6 +3995,7 @@ namespace projectFrameCut.InteractableEditor
                     newW = snapped.Width;
                     newH = snapped.Height;
                     _panPreviewRect = snapped;
+                    if (_allClips.Values.Any(c => c.ClipType == ClipMode.MaskClip)) RequestInteractivePreviewRefresh();
 
 
 
@@ -3770,11 +4086,21 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
-        private bool IsInteractiveManipulationInProgress
+        public bool IsInteractiveManipulationInProgress
             => _isClipPanInProgress || _isHandleResizeInProgress || _isShapeHandleDragInProgress;
 
+        public void ApplyInteractivePreviewLayout(projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO clip)
+        {
+            if (!IsInteractiveManipulationInProgress || _currentClip?.Id != clip.Id) return;
+            GetCurrentRect(true, out double x, out double y, out double w, out double h);
+            clip.TargetX = (int)Math.Round(x);
+            clip.TargetY = (int)Math.Round(y);
+            clip.TargetWidth = Math.Max(1, (int)Math.Round(w));
+            clip.TargetHeight = Math.Max(1, (int)Math.Round(h));
+        }
+
         private bool ShouldKeepExistingPreviewFrame(Guid clipId)
-            => (_isClipPanInProgress || _isShapeHandleDragInProgress)
+            => _isClipPanInProgress
                 && !_isHandleResizeInProgress
                 && _currentClip is not null
                 && _currentClip.Id == clipId;
@@ -4370,6 +4696,23 @@ namespace projectFrameCut.InteractableEditor
 
         #region helpers
 
+        private float GetClipRotation(ClipElementUI clip)
+        {
+            if (GetClipArgumentPreview(clip.Id) is { } frameClip)
+                return VideoClipRotation.GetAngle(frameClip, _currentFrame, (int)_videoWidth, (int)_videoHeight);
+            return VideoClipRotation.GetAngle(clip.Rotation, GetClipInstance(clip), clip.Effects?.Values,
+                _currentFrame, (int)_videoWidth, (int)_videoHeight);
+        }
+
+        private float GetClipOpacity(ClipElementUI clip)
+        {
+            if (GetClipArgumentPreview(clip.Id) is { } frameClip)
+                return VideoClipRotation.GetOpacity(frameClip.Opacity, frameClip, frameClip.EffectsInstances,
+                    _currentFrame, (int)_videoWidth, (int)_videoHeight);
+            return VideoClipRotation.GetOpacity(clip.Opacity, GetClipInstance(clip), clip.Effects?.Values,
+                _currentFrame, (int)_videoWidth, (int)_videoHeight);
+        }
+
         private static void ApplyPositionProvidersToRect(IEnumerable<IEffect>? effects, IClip? clipSource, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
         {
             if (effects is null)
@@ -4546,35 +4889,26 @@ namespace projectFrameCut.InteractableEditor
                 return false;
             }
 
-            var parameters = ReadTextStyleParameters(clip.ExtraData);
-            var provider = projectFrameCut.Services.TextStyleServices.RestoreTextStyleProvider(providerFrom, providerType, parameters);
+            var provider = TextClipStyles.Restore(clip.ExtraData);
             if (provider is null)
             {
                 return false;
             }
 
-            if (parameters is not null)
-            {
-                provider.Parameters = new Dictionary<string, string>(parameters);
-            }
 
-            var updated = provider.HandleClipResize(
+            provider.HandleClipResize(
                 isInRatio: isInRatio,
                 TargetX: clip.TargetX,
                 TargetY: clip.TargetY,
                 TargetWidth: Math.Max(1, targetWidth),
                 TargetHeight: Math.Max(1, targetHeight));
 
-            if (updated is { Count: > 0 })
-            {
-                provider.Parameters = new Dictionary<string, string>(updated);
-            }
 
             // Editor resize overrides any previously-set manual font size.
-            provider.Parameters.Remove(BasicTextStyleProvider.ManualSizeKey);
+            provider.GetParameters().Remove(BasicTextStyleProvider.ManualSizeKey);
 
-            clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(provider.Parameters);
-            clip.ExtraData[TextStyleProviderParametersKey] = new Dictionary<string, string>(provider.Parameters);
+            TextClipStyles.Save(provider, clip.ExtraData);
+            ClipInfoBuilder.SyncTextStyleClipArguments(clip, provider);
 
             var entries = provider.BuildEntries();
             if (entries.Length > 0)
@@ -4597,7 +4931,7 @@ namespace projectFrameCut.InteractableEditor
 
         private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
         {
-            if (clip.ClipType == ClipMode.SolidColorClip || clip.AllowFreeScaleResize) return true;
+            if (clip.ClipType is ClipMode.SolidColorClip or ClipMode.MaskClip || clip.AllowFreeScaleResize) return true;
 
             if (clip.ClipType == ClipMode.TextClip)
             {
@@ -4629,13 +4963,8 @@ namespace projectFrameCut.InteractableEditor
                 || !TryReadExtraDataString(extraData, TextStyleProviderTypeKey, out var providerType))
                 return false;
 
-            var parameters = ReadTextStyleParameters(extraData);
-            var provider = Services.TextStyleServices.RestoreTextStyleProvider(
-                providerFrom, providerType, parameters);
+            var provider = TextClipStyles.Restore(extraData);
             if (provider is null) return false;
-
-            if (parameters is not null)
-                provider.Parameters = new Dictionary<string, string>(parameters);
 
             allowFree = provider.AllowFreeRatioResize;
             return true;
@@ -4667,7 +4996,7 @@ namespace projectFrameCut.InteractableEditor
         {
             UpdateCanvasSize(Width, Height, true);
 
-            if (StaticPreviewOverlayImage.IsVisible)
+            if (StaticPreviewHost.IsVisible)
             {
                 await (_updateCallback?.Invoke() ?? Task.CompletedTask);
             }
@@ -4679,7 +5008,28 @@ namespace projectFrameCut.InteractableEditor
 
         private void OptionsButton_Clicked(object sender, EventArgs e)
         {
+            UpdateDynamicPreviewResolutionOptions();
             OptionsOverlay.IsVisible = true;
+        }
+
+        private void UpdateDynamicPreviewResolutionOptions()
+        {
+            DynamicPreviewResolutionOptions.IsVisible = ShowClipPreviewOverlays && DynamicPreview.IgnorePreviewWindowSize;
+            if (!DynamicPreviewResolutionOptions.IsVisible) return;
+
+            DynamicPreviewTargetResolutionLabel.Text = SettingsManager.SettingLocalizedResources.Edit_DynamicPreviewTargetResolution;
+            _dynamicPreviewTargetResolutionOptions = DynamicPreviewSettings.TargetResolutionOptions;
+            _suppressPreviewResolutionChanged = true;
+            try
+            {
+                DynamicPreviewTargetResolutionPicker.ItemsSource = _dynamicPreviewTargetResolutionOptions.Keys.ToList();
+                DynamicPreviewTargetResolutionPicker.SelectedItem = _dynamicPreviewTargetResolutionOptions.FirstOrDefault(p => p.Value == DynamicPreview.TargetResolutionPixels).Key
+                    ?? _dynamicPreviewTargetResolutionOptions.Keys.First();
+            }
+            finally
+            {
+                _suppressPreviewResolutionChanged = false;
+            }
         }
 
         private void CloseOptionsButton_Clicked(object sender, EventArgs e)
@@ -4705,10 +5055,33 @@ namespace projectFrameCut.InteractableEditor
             try
             {
                 await _previewResolutionChangedCallback(selected);
+                UpdateDynamicPreviewResolutionOptions();
             }
             finally
             {
                 PreviewResolutionPicker.IsEnabled = true;
+            }
+        }
+
+        private async void DynamicPreviewTargetResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressPreviewResolutionChanged || !DynamicPreview.IgnorePreviewWindowSize || !ShowClipPreviewOverlays
+                || DynamicPreviewTargetResolutionPicker.SelectedItem is not string selected
+                || !_dynamicPreviewTargetResolutionOptions.TryGetValue(selected, out var pixels)
+                || pixels == DynamicPreview.TargetResolutionPixels)
+                return;
+
+            DynamicPreviewTargetResolutionPicker.IsEnabled = false;
+            try
+            {
+                DynamicPreviewSettings.SetTargetResolution(pixels);
+                await ((_dynamicPreviewTargetResolutionChangedCallback ?? _previewRefreshCallback)?.Invoke() ?? Task.CompletedTask);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Log(ex, "Change dynamic preview target resolution", this); }
+            finally
+            {
+                DynamicPreviewTargetResolutionPicker.IsEnabled = true;
             }
         }
 
@@ -4796,17 +5169,12 @@ namespace projectFrameCut.InteractableEditor
                 return false;
             }
 
-            var parameters = ReadTextStyleParameters(data);
-            var provider = projectFrameCut.Services.TextStyleServices.RestoreTextStyleProvider(providerFrom, providerType, parameters);
+            var provider = TextClipStyles.Restore(data);
             if (provider is null)
             {
                 return false;
             }
 
-            if (parameters is not null)
-            {
-                provider.Parameters = new Dictionary<string, string>(parameters);
-            }
 
             // The provider builds entries in *project-pixel space*, where lengths
             // are interpreted against the clip's own bounding box. Ask
@@ -4862,20 +5230,7 @@ namespace projectFrameCut.InteractableEditor
             return !string.IsNullOrWhiteSpace(value);
         }
 
-        private static Dictionary<string, string>? ReadTextStyleParameters(Dictionary<string, object>? data)
-        {
-            if (TryReadStringDictionary(data, TextStyleParametersKey, out var parameters))
-            {
-                return parameters;
-            }
 
-            if (TryReadStringDictionary(data, TextStyleProviderParametersKey, out var providerParameters))
-            {
-                return providerParameters;
-            }
-
-            return null;
-        }
 
         private static bool TryReadStringDictionary(Dictionary<string, object>? data, string key, out Dictionary<string, string> values)
         {

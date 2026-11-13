@@ -6,7 +6,7 @@ namespace projectFrameCut.Render.Contracts;
 
 public static class PluginIsolationProtocol
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 5;
     public const long DefaultMaximumPayloadBytes = 2L * 1024 * 1024 * 1024;
 }
 
@@ -40,13 +40,15 @@ public enum IsolationPayloadAccess
 [ProtoContract]
 public sealed class IsolationMediaDescriptor
 {
+    [ProtoMember(13)] public bool UsesFloat16 { get; set; }
     [ProtoMember(1)] public int LayoutVersion { get; set; } = 1;
     [ProtoMember(2)] public int Width { get; set; }
     [ProtoMember(3)] public int Height { get; set; }
     [ProtoMember(4)] public int BitsPerChannel { get; set; }
     [ProtoMember(5)] public bool HasAlpha { get; set; }
     [ProtoMember(6)] public bool HasHdrBrightness { get; set; }
-    [ProtoMember(7)] public float MaximumBrightness { get; set; }
+    [ProtoIgnore] public Half MaximumBrightness { get; set; }
+    [ProtoMember(7)] private ushort MaximumBrightnessBits { get => BitConverter.HalfToUInt16Bits(MaximumBrightness); set => MaximumBrightness = BitConverter.UInt16BitsToHalf(value); }
     [ProtoMember(8)] public long RedLength { get; set; }
     [ProtoMember(9)] public long GreenLength { get; set; }
     [ProtoMember(10)] public long BlueLength { get; set; }
@@ -76,6 +78,7 @@ public sealed class IsolationChannelCapabilities
     [ProtoMember(4)] public long MaximumSharedMemoryBytes { get; set; } = PluginIsolationProtocol.DefaultMaximumPayloadBytes;
     [ProtoMember(5)] public bool SupportsResourceTransfer { get; set; }
     [ProtoMember(6)] public string Platform { get; set; } = string.Empty;
+    [ProtoMember(7)] public bool SupportsFieldTypeResolution { get; set; }
 }
 
 public sealed class PluginIsolationTransportOptions
@@ -97,6 +100,7 @@ public sealed class PluginIsolationLaunchContext
     public required string PluginEncryptionKey { get; init; }
     public required string InstancePackageName { get; init; }
     public PluginIsolationTransportOptions Transport { get; init; } = new();
+    public string? ExternalSourceManifestHash { get; init; }
 }
 
 public interface IIsolationControlChannel : IRenderTransport
@@ -230,9 +234,8 @@ public sealed class StreamIsolationControlChannel : IIsolationControlChannel
                 var data = await IsolationFrame.ReadAsync(_stream, CancellationToken.None).ConfigureAwait(false);
                 if (data is null) break;
                 var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(data);
-                if (!_pending.TryRemove(response.RequestId, out var completion))
-                    throw new InvalidDataException($"The isolation runtime returned an unknown request ID '{response.RequestId}'.");
-                completion.TrySetResult(response);
+                // A canceled caller may still receive a response from the backend.
+                if (_pending.TryRemove(response.RequestId, out var completion)) completion.TrySetResult(response);
             }
             failure = new EndOfStreamException("The isolation control channel was closed.");
         }

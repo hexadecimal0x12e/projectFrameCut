@@ -9,11 +9,12 @@ namespace projectFrameCut.Render.RPCProtocol;
 /// format intentionally matches the named-pipe transport so Android workers do
 /// not need a second RPC protocol.
 /// </summary>
-public sealed class UnixSocketRenderClientTransport : IRenderTransport
+public sealed class UnixSocketRenderClientTransport : IRenderNotificationTransport
 {
     private readonly string _socketPath;
     private readonly string _token;
     private readonly string _clientId;
+    private readonly IReadOnlyList<ExternalRpcClientAuthorization> _persistentAuthorizations;
     private readonly SemaphoreSlim _connectGate = new(1, 1);
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly ConcurrentDictionary<Guid, TaskCompletionSource<RenderResponseEnvelope>> _pending = new();
@@ -22,8 +23,9 @@ public sealed class UnixSocketRenderClientTransport : IRenderTransport
     private Task? _readerTask;
     private Exception? _connectionError;
     private int _disposed;
+    public event Action<DynamicPreviewClock>? DynamicPreviewClockReceived;
 
-    public UnixSocketRenderClientTransport(string socketPath, string token, string clientId)
+    public UnixSocketRenderClientTransport(string socketPath, string token, string clientId, IReadOnlyList<ExternalRpcClientAuthorization>? persistentAuthorizations = null)
     {
         if (string.IsNullOrWhiteSpace(socketPath)) throw new ArgumentException("Socket path is required.", nameof(socketPath));
         if (string.IsNullOrWhiteSpace(token)) throw new ArgumentException("Socket token is required.", nameof(token));
@@ -31,6 +33,7 @@ public sealed class UnixSocketRenderClientTransport : IRenderTransport
         _socketPath = Path.GetFullPath(socketPath);
         _token = token;
         _clientId = clientId;
+        _persistentAuthorizations = persistentAuthorizations ?? [];
     }
 
     public async ValueTask<RenderResponseEnvelope> SendAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
@@ -82,7 +85,12 @@ public sealed class UnixSocketRenderClientTransport : IRenderTransport
                 connectTimeout.CancelAfter(TimeSpan.FromSeconds(2));
                 await socket.ConnectAsync(new UnixDomainSocketEndPoint(_socketPath), connectTimeout.Token).ConfigureAwait(false);
                 var stream = new NetworkStream(socket, ownsSocket: true);
-                var handshake = new RenderPipeHandshake { ClientId = _clientId, Token = _token };
+                var handshake = new RenderPipeHandshake
+                {
+                    ClientId = _clientId,
+                    Token = _token,
+                    PersistentAuthorizations = _persistentAuthorizations.ToList(),
+                };
                 await RenderPipeFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(handshake), cancellationToken).ConfigureAwait(false);
                 var responseBytes = await RenderPipeFrame.ReadAsync(stream, cancellationToken).ConfigureAwait(false)
                     ?? throw new RenderPipeException("Render worker closed the socket during handshake.");
@@ -115,6 +123,11 @@ public sealed class UnixSocketRenderClientTransport : IRenderTransport
                 var bytes = await RenderPipeFrame.ReadAsync(stream, CancellationToken.None).ConfigureAwait(false);
                 if (bytes is null) break;
                 var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(bytes);
+                if (response.DynamicPreviewClock is { } clock)
+                {
+                    DynamicPreviewClockReceived?.Invoke(clock);
+                    continue;
+                }
                 if (_pending.TryRemove(response.RequestId, out var completion)) completion.TrySetResult(response);
             }
         }
@@ -195,6 +208,8 @@ public sealed class UnixSocketRenderServer(IRenderService service)
         };
         await RenderPipeFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(response), cancellationToken).ConfigureAwait(false);
         if (!accepted) return;
+        if (_service is IExternalRpcAuthorizationHost authorizationHost)
+            authorizationHost.SetAuthorizations(handshake.PersistentAuthorizations);
 
         using var connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var writeGate = new SemaphoreSlim(1, 1);
@@ -219,6 +234,19 @@ public sealed class UnixSocketRenderServer(IRenderService service)
 
     private async Task DispatchAndWriteAsync(Stream stream, SemaphoreSlim writeGate, RenderRequestEnvelope request, CancellationToken cancellationToken)
     {
+        using var notifications = RenderRpcNotifications.UseDynamicPreviewClockSender(async (clock, token) =>
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationToken);
+            await writeGate.WaitAsync(linked.Token).ConfigureAwait(false);
+            try
+            {
+                await RenderPipeFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(new RenderResponseEnvelope
+                {
+                    DynamicPreviewClock = clock,
+                }), CancellationToken.None).ConfigureAwait(false);
+            }
+            finally { writeGate.Release(); }
+        });
         RenderResponseEnvelope response;
         try { response = await _service.DispatchAsync(request, cancellationToken).ConfigureAwait(false); }
         catch (OperationCanceledException ex)

@@ -1,25 +1,34 @@
-﻿using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using projectFrameCut.DraftStuff;
+#if !HEADLESS
 using projectFrameCut.ViewModels;
+#endif
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+#if !HEADLESS
 using CommunityToolkit.Maui.Alerts;
+#endif
+
 using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Asset
 {
     public static class AssetDatabase
     {
+        public const string ImportModeSetting = "Edit_AssetImportMode";
+
         public static void Initialize(string json)
         {
-            Assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(json, DraftPage.DraftJSONOption) ?? new ConcurrentDictionary<string, AssetItem>();
+            Assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(json, DraftImportAndExportHelper.DraftJSONOption) ?? new ConcurrentDictionary<string, AssetItem>();
 
             DecoderContextPJFCProject.GlobalAssetGetter = new(() => Assets);
         }
@@ -27,11 +36,30 @@ namespace projectFrameCut.Asset
         public static ConcurrentDictionary<string, AssetItem> Assets { get; set; } = new();
 
 
-        public static async Task<AssetItem?> Add(string path, Page page)
+#if !HEADLESS
+        public static async Task<bool?> PickImportModeAsync(Page page)
+        {
+            switch (SettingsManager.GetSetting(ImportModeSetting, "ask"))
+            {
+                case "copy": return true;
+                case "reference": return false;
+            }
+            var mode = await UIServices.DisplayActionSheetAsync(page, Localized.DraftPage_AssetPanel_ImportMode, Localized._Cancel, null,
+                Localized.DraftPage_AssetPanel_ImportCopy, Localized.DraftPage_AssetPanel_ImportReference);
+            if (mode == Localized.DraftPage_AssetPanel_ImportCopy) return true;
+            if (mode == Localized.DraftPage_AssetPanel_ImportReference) return false;
+            return null;
+        }
+
+        public static async Task<AssetItem?> Add(string path, Page page, bool? copyToLibrary = null)
         {
             if (string.IsNullOrWhiteSpace(path)) return null;
+            copyToLibrary ??= await PickImportModeAsync(page);
+            if (copyToLibrary is null) return null;
+            path = Path.GetFullPath(path);
             var name = Path.GetFileNameWithoutExtension(path);
             var nameInput = await page.DisplayPromptAsync(Localized.AssetPage_AddAAsset_InputName, Path.GetFileName(path), Localized._OK, Localized._Cancel, name, 0, null, name);
+            if (nameInput is null) return null;
             if (!string.IsNullOrEmpty(nameInput)) name = nameInput;
             var type = AssetItem.GetAssetType(path);
             if (type == AssetType.Other)
@@ -42,16 +70,19 @@ namespace projectFrameCut.Asset
                     {Localized.AssetPage_AssetType_Audio, AssetType.Audio },
                     {Localized.AssetPage_AssetType_Image, AssetType.Image },
                     {Localized.AssetPage_AssetType_Font, AssetType.Font },
+                    {Localized.AssetPage_AssetType_VectorComposition, AssetType.VectorComposition },
+                    {Localized.Subtitle_Title, AssetType.Subtitle },
                 };
-                var selection = await page.DisplayActionSheetAsync(Localized.AssetPage_AssetType_Unknown(name), null, null, map.Keys.ToArray());
-                if (!map.TryGetValue(selection, out type)) return null;
+                var selection = await UIServices.DisplayActionSheetAsync(page, Localized.AssetPage_AssetType_Unknown(name), Localized._Cancel, null, map.Keys.ToArray());
+                if (selection is null || !map.TryGetValue(selection, out type)) return null;
             }
+            string? replaceId = null;
             if (AssetDatabase.Assets.Any(c => c.Value.Name == name))
             {
-                var existing = AssetDatabase.Assets.Values.First((v) => v.Name == Path.GetFileNameWithoutExtension(path));
+                var existing = AssetDatabase.Assets.Values.First(v => v.Name == name);
                 if (existing is not null)
                 {
-                    string opt = await page.DisplayActionSheetAsync(
+                    string? opt = await UIServices.DisplayActionSheetAsync(page,
                         Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), existing.Name),
                         Localized._Cancel,
                         null,
@@ -65,8 +96,7 @@ namespace projectFrameCut.Asset
                     {
                         if (!string.IsNullOrEmpty(existing.AssetId))
                         {
-                            Remove(existing.AssetId);
-                            Log($"Replaced existing asset {existing.Name} with new one from {path}");
+                            replaceId = existing.AssetId;
                         }
                     }
                     else if (opt == Localized.DraftPage_DuplicatedAsset_Skip)
@@ -86,18 +116,23 @@ namespace projectFrameCut.Asset
             AssetItem? asset = null;
             await Task.Run(() =>
             {
-                ok = Add(path, name, type, out asset, createProxy);
+                ok = Add(path, name, type, out asset, createProxy, copyToLibrary.Value);
             });
             if (!ok)
             {
                 await page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(name), Localized._OK);
                 return null;
             }
+            if (replaceId is not null) Remove(replaceId);
+            if (type == AssetType.Font) TextServices.LoadFonts();
             return asset;
         }
 
-        public static bool Add(string path, string name, AssetType type, out AssetItem asset, bool proxyOption = false)
+#endif
+
+        public static bool Add(string path, string name, AssetType type, out AssetItem asset, bool proxyOption = false, bool copyToLibrary = true)
         {
+            path = Path.GetFullPath(path);
             var createdAsset = Create(path, name, type);
             if (createdAsset is null)
             {
@@ -106,19 +141,37 @@ namespace projectFrameCut.Asset
             }
 
             asset = createdAsset;
-            asset.Path = Path.Combine(MauiProgram.DataPath, "My Assets", $"{asset.AssetId}{Path.GetExtension(path)}");
+            asset.IsReference = !copyToLibrary;
+            asset.Path = copyToLibrary ? Path.Combine(MauiProgram.DataPath, "My Assets", $"{asset.AssetId}{Path.GetExtension(path)}") : path;
             if (asset.AssetId is null || asset.Path is null) return false;
 
+            if (copyToLibrary)
+            {
+                try
+                {
+                    File.Copy(path, asset.Path);
+                }
+                catch
+                {
+                    if (File.Exists(asset.Path)) File.Delete(asset.Path);
+                    throw;
+                }
+            }
+            if (type == AssetType.Image) asset.ThumbnailPath = asset.Path;
             if (AssetDatabase.Assets.TryAdd(asset.AssetId, asset))
             {
-                File.Copy(path, asset.Path);
-                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
+                Log($"Imported shared asset '{path}' as {(copyToLibrary ? "copy" : "reference")} at '{asset.Path}'.");
 
                 new Thread(() =>
                 {
+#if !HEADLESS
                     Toast.Make(Localized.AssetPage_PostProcess_StartPrompt(name));
-                    StartBackgroundProcessing(createdAsset, path, type, proxyOption, name);
+#endif
+                    StartBackgroundProcessing(createdAsset, createdAsset.Path!, type, proxyOption, name);
+#if !HEADLESS
                     Toast.Make(Localized.AssetPage_PostProcess_FinishPrompt(name));
+#endif
 
                 }).Start();
                 return true;
@@ -141,17 +194,25 @@ namespace projectFrameCut.Asset
 
                     try
                     {
-                        VideoResizer.ReencodeToResolution(asset.Path, proxiedPath, 1280, 720, "libx264");
+                        var temporaryProxy = proxiedPath + ".tmp";
+                        VideoResizer.ReencodeToResolution(asset.Path, temporaryProxy, 1280, 720, "libx264");
+                        File.Move(temporaryProxy, proxiedPath, true);
+                        File.WriteAllText(proxiedPath + ".ready", "");
                         Log($"Proxy created for asset {name}: {proxiedPath}");
                     }
                     catch (Exception ex)
                     {
                         Log(ex, $"Failed to create proxy for asset {name}");
                     }
+                    finally
+                    {
+                        var temporaryProxy = proxiedPath + ".tmp";
+                        if (File.Exists(temporaryProxy)) File.Delete(temporaryProxy);
+                    }
                 }
 
                 File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"),
-                    JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                    JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
             }
             catch (Exception ex)
             {
@@ -175,19 +236,36 @@ namespace projectFrameCut.Asset
             asset.Path = sourcePath;
             asset.SecondPerFrame = -1;
             asset.Duration = 0;
-            var thumbnailPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", asset.AssetId + ".png");
-            asset.ThumbnailPath = thumbnailPath;
+            asset.ThumbnailPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", asset.AssetId + ".png");
             bool fail = false;
             switch (asset.AssetType)
             {
+                case AssetType.Subtitle:
+                    asset.ClipType = ClipMode.SubtitleClip;
+                    asset.ThumbnailPath = null;
+                    break;
+                case AssetType.VectorComposition:
+                    {
+#if HEADLESS
+                        if (Path.GetExtension(sourcePath).Equals(".svg", StringComparison.OrdinalIgnoreCase))
+                            projectFrameCut.Drawing.Vector.ImportExport.SVGToVectorElement.ImportFromFile(sourcePath);
+                        else
+                        {
+                            using var json = JsonDocument.Parse(File.ReadAllText(sourcePath));
+                        }
+#else
+                        VectorClipServices.Import(sourcePath);
+#endif
+                        asset.ClipType = ClipMode.VectorComponentClip;
+                        asset.ThumbnailPath = null;
+                        Log($"Created vector composition asset {asset.AssetId}: {sourcePath}");
+                        break;
+                    }
                 case AssetType.Video:
                     {
                         try
                         {
-                            var vid = PluginManager.CreateVideoSource(sourcePath);
-                            asset.Duration = vid.TotalFrames;
-                            asset.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U).SaveToPng(thumbnailPath);
+                            GenerateThumbnail(asset);
                         }
                         catch (Exception ex)
                         {
@@ -203,7 +281,7 @@ namespace projectFrameCut.Asset
                     {
                         try
                         {
-                            var aud = PluginManager.CreateAudioSource(sourcePath);
+                            using var aud = PluginManager.CreateAudioSource(sourcePath);
                             asset.Duration = aud.Duration;
                             asset.SecondPerFrame = (float)(1f);
                         }
@@ -216,35 +294,28 @@ namespace projectFrameCut.Asset
                         }
                         try
                         {
-                            PluginManager.CreateVideoSource(sourcePath).GetFrame(0U).SaveToPng(thumbnailPath);
+                            GenerateThumbnail(asset);
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            Log(ex, $"Read cover for asset '{sourcePath}'");
                             try
                             {
-                                asset.ThumbnailPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", ".unknown_music.png");
-
-                                if (!File.Exists(asset.ThumbnailPath))
-                                {
-                                    var path = FileSystemService.GetAppPackageFileSync("Images","unknown_music.png");
-                                    File.Copy(path, asset.ThumbnailPath, true);
-                                }
+                                asset.ThumbnailPath = GetDefaultAudioThumbnail();
                             }
-                            catch { }
-
-
+                            catch (Exception fallbackError)
+                            {
+                                Log(fallbackError, "Load default audio asset thumbnail");
+                            }
                         }
                         break;
                     }
                 case AssetType.Font:
                     {
-                        TextServices.GenerateFontThumbnail(sourcePath).SaveToPng(thumbnailPath);
-                        var t = new Thread(TextServices.LoadFonts)
-                        {
-                            Priority = ThreadPriority.BelowNormal,
-                            IsBackground = true
-                        };
-                        t.Start();
+#if !HEADLESS
+                        GenerateThumbnail(asset);
+#endif
+
                         break;
                     }
                 case AssetType.Image:
@@ -253,6 +324,7 @@ namespace projectFrameCut.Asset
                         break;
                     }
             }
+#if !HEADLESS
             if (DeviceInfo.DeviceType == DeviceType.Virtual)
             {
                 return (AssetItem?)asset;
@@ -261,7 +333,119 @@ namespace projectFrameCut.Asset
             {
                 return (fail ? null : asset);
             }
+#else
+            return fail ? null : asset;
+#endif
         }
+
+        public static void GenerateThumbnail(AssetItem asset)
+        {
+            if (asset.AssetType == AssetType.Image)
+            {
+                if (!File.Exists(asset.Path)) throw new FileNotFoundException("Asset image was not found.", asset.Path);
+                asset.ThumbnailPath = asset.Path;
+                return;
+            }
+            if (asset.AssetType is not (AssetType.Video or AssetType.Audio or AssetType.Font))
+            {
+                asset.ThumbnailPath = null;
+                return;
+            }
+            if (!File.Exists(asset.Path)) throw new FileNotFoundException("Asset source was not found.", asset.Path);
+            ArgumentException.ThrowIfNullOrWhiteSpace(asset.AssetId);
+            var directory = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails");
+            Directory.CreateDirectory(directory);
+            // 更换文件名，避免图片控件继续使用旧的缩略图缓存。
+            var thumbnailPath = Path.Combine(directory, $"{asset.AssetId}.{Guid.NewGuid():N}.png");
+            var previousPath = asset.ThumbnailPath;
+            try
+            {
+                switch (asset.AssetType)
+                {
+                    case AssetType.Video:
+                        using (var video = PluginManager.CreateVideoSource(asset.Path))
+                        using (var frame = video.GetFrame(0U))
+                        {
+                            frame.SaveToPng(thumbnailPath);
+                            asset.Duration = video.TotalFrames;
+                            asset.SecondPerFrame = (float)(1 / video.Fps);
+                        }
+                        break;
+                    case AssetType.Audio:
+                        using (var cover = MediaCoverReader.Read(asset.Path))
+                        {
+                            if (cover is not null) cover.SaveToPng(thumbnailPath);
+                            else thumbnailPath = GetDefaultAudioThumbnail();
+                        }
+                        break;
+                    case AssetType.Font:
+#if HEADLESS
+                        throw new NotSupportedException("Font thumbnails require the application frontend.");
+#else
+                        using (var picture = TextServices.GenerateFontThumbnail(asset.Path))
+                            picture.SaveToPng(thumbnailPath);
+                        break;
+#endif
+                }
+                asset.ThumbnailPath = thumbnailPath;
+            }
+            catch
+            {
+                try
+                {
+                    if (IsAssetThumbnail(asset.AssetId, thumbnailPath) && File.Exists(thumbnailPath))
+                        File.Delete(thumbnailPath);
+                }
+                catch (Exception ex) { Log(ex, $"Remove incomplete thumbnail for asset '{asset.Name}'"); }
+                throw;
+            }
+            if (previousPath != asset.ThumbnailPath && IsAssetThumbnail(asset.AssetId, previousPath))
+            {
+                try { File.Delete(previousPath!); }
+                catch (Exception ex) { Log(ex, $"Remove old thumbnail for asset '{asset.Name}'"); }
+            }
+        }
+
+        public static (int Success, int Failed) RegenerateThumbnails(IProgress<(int Completed, int Total)>? progress = null)
+        {
+            var assets = Assets.Values.ToArray();
+            int success = 0, failed = 0;
+            foreach (var asset in assets)
+            {
+                try
+                {
+                    GenerateThumbnail(asset);
+                    success++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    Log(ex, $"Regenerate thumbnail for asset '{asset.Name}' ({asset.Path})");
+                }
+                progress?.Report((success + failed, assets.Length));
+            }
+            File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"),
+                JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
+            Log($"Regenerated asset thumbnails: {success} succeeded, {failed} failed.");
+            return (success, failed);
+        }
+
+        private static string GetDefaultAudioThumbnail()
+        {
+            var path = Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", ".unknown_music.png");
+#if !HEADLESS
+            if (!File.Exists(path))
+                File.Copy(FileSystemService.GetAppPackageFileSync("Images", "unknown_music.png"), path, true);
+#endif
+            return path;
+        }
+
+        private static bool IsAssetThumbnail(string? assetId, string? path) =>
+            !string.IsNullOrWhiteSpace(assetId) && !string.IsNullOrWhiteSpace(path)
+            && string.Equals(Path.GetDirectoryName(path), Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails"),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+            && Path.GetFileName(path).StartsWith(assetId + ".", StringComparison.OrdinalIgnoreCase)
+            && Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase);
 
         public static bool Remove(string assetId)
         {
@@ -270,15 +454,16 @@ namespace projectFrameCut.Asset
             {
                 if (Assets.TryRemove(assetId, out var asset))
                 {
-                    if (File.Exists(asset.Path))
+                    if (!asset.IsReference && File.Exists(asset.Path) && !Assets.Values.Any(x => string.Equals(x.Path, asset.Path,
+                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
                     {
                         File.Delete(asset.Path);
                     }
-                    if (File.Exists(asset.ThumbnailPath) && !Path.GetFileName(asset.ThumbnailPath).StartsWith('.'))
+                    if (File.Exists(asset.ThumbnailPath) && IsAssetThumbnail(asset.AssetId, asset.ThumbnailPath))
                     {
                         File.Delete(asset.ThumbnailPath);
                     }
-                    File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                    File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
                     return true;
                 }
 
@@ -297,7 +482,7 @@ namespace projectFrameCut.Asset
             if (Assets.TryGetValue(assetId, out var asset))
             {
                 asset.Name = newName;
-                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
                 return true;
             }
             return false;

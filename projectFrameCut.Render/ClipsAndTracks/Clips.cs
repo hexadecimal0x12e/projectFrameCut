@@ -33,6 +33,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -69,6 +73,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -79,8 +85,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             IPicture result = targetPPB.Value switch
             {
-                16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), R, G, B, A),
-                8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+                116 => PictureFP16.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (Half)(R / 65535f), (Half)(G / 65535f), (Half)(B / 65535f), (Half?)A),
+                16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), R, G, B, (Half?)A),
+                8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, targetWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, targetHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), (Half?)A),
                 _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
             };
             result.CanBeDisposed = false;
@@ -88,7 +95,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
-            => Picture16bpp.GenerateSolidColor(EffectiveOutputWidth, EffectiveOutputHeight, R, G, B, A);
+            => PictureFP16.GenerateSolidColor(EffectiveOutputWidth, EffectiveOutputHeight, (Half)(R / 65535f), (Half)(G / 65535f), (Half)(B / 65535f), (Half?)A);
 
         public SolidColorClip()
         {
@@ -98,12 +105,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            ClipInitializationFailure.Clear(this);
            EffectHelper.ResolveClipEffects(this);
 
         }
 
         public void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
 
         }
 
@@ -112,6 +121,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ReInit();
         }
 
         private int ResolveConfiguredInt(string key, int fallback)
@@ -181,7 +191,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     {
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
-        public ClipMode ClipType => ClipMode.MarkingClip;
+        public virtual ClipMode ClipType => ClipMode.MarkingClip;
 
         public Guid Id { get; init; }
         public string Name { get; init; }
@@ -191,6 +201,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public virtual uint? SourceFrameCount => null;
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get => 1; init { } }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
@@ -198,6 +210,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -209,6 +225,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -218,8 +236,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? MarkData;
         public Guid MarkID;
 
-        public void Dispose()
+        public virtual void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
         }
 
         public uint? GetClipLength() => null;
@@ -234,12 +253,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
         }
 
-        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        public virtual void ReInit(IPicture.PicturePixelMode targetPPB)
         {
             throw new NotImplementedException();
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
+        public virtual IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotImplementedException();
         }

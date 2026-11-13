@@ -1,5 +1,6 @@
 ﻿using Microsoft.Maui.Controls.Xaml;
 using LocalizedResources;
+using projectFrameCut.Setting.SettingManager;
 using System.Diagnostics;
 
 namespace LocalizedResources
@@ -36,6 +37,19 @@ namespace LocalizedResources
         {
             return ProvideValue(serviceProvider);
         }
+    }
+
+    [ContentProperty(nameof(Key))]
+    [AcceptEmptyServiceProvider]
+    [DebuggerNonUserCode()]
+    public class SettingLocalizedExtension : IMarkupExtension<string>
+    {
+        public string Key { get; set; } = string.Empty;
+
+        public string ProvideValue(IServiceProvider serviceProvider) => string.IsNullOrEmpty(Key)
+            ? string.Empty : SettingsManager.SettingLocalizedResources.DynamicLookup(Key, $"@{Key}");
+
+        object IMarkupExtension.ProvideValue(IServiceProvider serviceProvider) => ProvideValue(serviceProvider);
     }
 
     [ContentProperty(nameof(Value))]

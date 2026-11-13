@@ -5,7 +5,6 @@ namespace projectFrameCut.Render.VectorContent.Components;
 public class LineComponent : BaseShapeComponent
 {
     public override string TypeName => "Line";
-    protected override string[] ShapeFieldIds => ["X1", "Y1", "X2", "Y2"];
 
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()

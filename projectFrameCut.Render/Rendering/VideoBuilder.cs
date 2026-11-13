@@ -1,10 +1,13 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using projectFrameCut.Render.RenderAPIBase.Context;
 using System.IO;
 using System.Threading;
 using System.Runtime.InteropServices;
@@ -114,7 +117,6 @@ namespace projectFrameCut.Render.Rendering
         /// of this value. E.g. with MaxPendingFrames=120 and Threshold=0.7, disk routing
         /// triggers when ~84 frames are buffered.
         /// When 0 (default), falls back to <see cref="Duration"/> as the comparison base.
-        /// Typically set to the same value as the Renderer's <c>MaxPendingWriteFrames</c>.
         /// </summary>
         public int DiskCacheMaxPendingFrames { get; set; }
         /// <summary>
@@ -154,9 +156,10 @@ namespace projectFrameCut.Render.Rendering
         public int minFrameCountToGeneratePreview { get; set; } = 10;
         private int _framesSinceLastPreview;
         private uint _lastPreviewFrame;
+        private int _hasPreviewFrame;
         private int _previewGenerationInProgress;
         private long _previewGeneration;
-        private readonly object _previewFileGate = new();
+        private readonly Lock _previewFileGate = new();
         private char _previewActiveSlot = 'B';
 
         /// <summary>
@@ -203,6 +206,16 @@ namespace projectFrameCut.Render.Rendering
             writer.FramePerSecond = framerate;
             writer.PixelFormat = fmt;
             writer.OutputPath = outputPath;
+            if (writer is HDRVideoWriterFP16 hdrWriter)
+            {
+                hdrWriter.PreferHardwareAcceleration = encoder.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_amf", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_qsv", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_vaapi", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_videotoolbox", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_mediacodec", StringComparison.OrdinalIgnoreCase)
+                    || encoder.EndsWith("_mf", StringComparison.OrdinalIgnoreCase);
+            }
 
             if (!string.IsNullOrWhiteSpace(writerType))
             {
@@ -262,6 +275,7 @@ namespace projectFrameCut.Render.Rendering
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
             }
+            using var preview = CapturePreviewFrame(frame);
             if (!BlockWrite)
             {
                 if (ForceUseDiskCache || ShouldRouteToDisk())
@@ -283,9 +297,7 @@ namespace projectFrameCut.Render.Rendering
                 writer.Append(frame);
                 if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
             }
-
-            TryGeneratePreview(frame, index, requireIncreasingFrame: true);
-
+            TryGeneratePreview(preview ?? frame, index, requireIncreasingFrame: true);
         }
 
         public void Dispose()
@@ -314,7 +326,7 @@ namespace projectFrameCut.Render.Rendering
             index = StartFrame;
             if (BlockWrite)
             {
-                Log($"[VideoWriter] Working in sync-writing mode.");
+                Log($"[VideoWriterFP16] Working in sync-writing mode.");
                 return new(() => { });
             }
             return new Thread(() =>
@@ -351,7 +363,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             })
             {
-                Name = $"VideoWriter for {outputPath}",
+                Name = $"VideoWriterFP16 for {outputPath}",
                 Priority = ThreadPriority.AboveNormal
             };
 
@@ -481,7 +493,7 @@ namespace projectFrameCut.Render.Rendering
         private bool ShouldRouteToDisk()
         {
             if (!_enableDiskCacheRouting) return false;
-            if (DiskCacheFull) return false; // disk limit reached -> fall back to memory (fills -> Renderer pauses via MaxPendingWriteFrames)
+            if (DiskCacheFull) return false;
             if (DiskCacheMaxPendingFrames > 0)
                 return Cache.Count >= (int)(DiskCacheMaxPendingFrames * _diskCacheThreshold);
             if (Duration > 0)
@@ -498,21 +510,8 @@ namespace projectFrameCut.Render.Rendering
             var path = GetDiskCachePath(index);
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan);
 
-            if (frame is HDRPicture16bpp hdr)
-            {
-                hdr.Save(fs, _cacheEncoder);
-                _diskCacheBpp[index] = 32;
-            }
-            else if (frame.BitPerPixel == 16)
-            {
-                ((IPicture<ushort>)frame).Save(fs, _cacheEncoder);
-                _diskCacheBpp[index] = 16;
-            }
-            else
-            {
-                ((IPicture<byte>)frame).Save(fs, _cacheEncoder);
-                _diskCacheBpp[index] = 8;
-            }
+            frame.Save(fs, _cacheEncoder);
+            _diskCacheBpp[index] = 116;
 
             _diskCache[index] = path;
             Interlocked.Increment(ref _framesOnDisk);
@@ -547,21 +546,8 @@ namespace projectFrameCut.Render.Rendering
                 try { File.Delete(path); } catch { }
 
                 using var ms = new MemoryStream(rawData);
-                if (depth == 32)
-                {
-                    if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(ms, out HDRPicture16bpp? hdr)) { goto fail; }
-                    frame = hdr;
-                }
-                else if (depth == 16)
-                {
-                    if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(ms, out Picture16bpp? p16)) { goto fail; }
-                    frame = p16;
-                }
-                else
-                {
-                    if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(ms, out Picture8bpp? p8)) { goto fail; }
-                    frame = p8;
-                }
+                if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoadFP16(ms, out var fp)) goto fail;
+                frame = fp!;
 
                 // Decode succeeded — clean up tracking
                 _diskCacheBpp.TryRemove(frameIndex, out _);
@@ -648,6 +634,66 @@ namespace projectFrameCut.Render.Rendering
             if (DoGCAfterEachWrite) GC.Collect();
             if (!string.IsNullOrEmpty(logMessage)) Log(logMessage);
         }
+
+        internal void BeginBufferedOutput(uint startFrame, uint duration)
+        {
+            if (Volatile.Read(ref buildStarted)) throw new InvalidOperationException("The builder already has an active writer.");
+            BlockWrite = false;
+            StartFrame = index = startFrame;
+            Duration = duration;
+        }
+
+        internal bool TryWriteNextBufferedFrame(CancellationToken token, out uint frameIndex, out TimeSpan elapsed)
+        {
+            token.ThrowIfCancellationRequested();
+            frameIndex = index;
+            elapsed = TimeSpan.Zero;
+            if (!Cache.TryRemove(frameIndex, out var frame) && !TryLoadDiskFrame(frameIndex, out frame)) return false;
+            long started = Stopwatch.GetTimestamp();
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                IRenderContext.CurrentFrameBuffer = frame;
+                IRenderContext.SetWorkerState(frameIndex, RenderWorkerStage.WritingOutput, "VideoBuilder");
+                WriteFrame(frameIndex, frame);
+            }
+            catch
+            {
+                frame.Dispose();
+                throw;
+            }
+            finally { IRenderContext.CurrentFrameBuffer = null; }
+            elapsed = Stopwatch.GetElapsedTime(started);
+            return true;
+        }
+
+        internal void DiscardBufferedFrame(uint frameIndex)
+        {
+            if (Cache.TryRemove(frameIndex, out var picture)) picture.Dispose();
+            if (_diskCache.TryRemove(frameIndex, out var path))
+            {
+                _diskCacheBpp.TryRemove(frameIndex, out _);
+                Interlocked.Decrement(ref _framesOnDisk);
+                try { File.Delete(path); }
+                catch (Exception ex) { Log(ex, "Discard buffered video frame", this); }
+            }
+            if (FramePendedToWrite.TryRemove(frameIndex, out _)) Interlocked.Decrement(ref _totalFramesCount);
+        }
+
+        internal void NotifyFrameWritten(uint frameIndex, IPicture frame)
+        {
+            FramePendedToWrite[frameIndex] = true;
+            Interlocked.Increment(ref _totalFramesCount);
+            Interlocked.Increment(ref _writtenFramesCount);
+            index = frameIndex + 1;
+            TryGeneratePreview(frame, frameIndex, requireIncreasingFrame: true);
+            if (DoGCAfterEachWrite) GC.Collect();
+            if (LogStat) Log($"[VideoBuilder] Frame #{frameIndex} wrote.");
+        }
+
+        internal IPicture? CapturePreviewFrame(IPicture frame)
+            => EnablePreview && Volatile.Read(ref _framesSinceLastPreview) + 1 >= Math.Max(1, minFrameCountToGeneratePreview)
+                ? Effect.DynamicEffectGraph.CopyPicture(frame) : null;
 
         private static string FormatFrameRanges(uint[] frameIndexes)
         {
@@ -736,14 +782,26 @@ namespace projectFrameCut.Render.Rendering
             try
             {
                 Interlocked.Exchange(ref _framesSinceLastPreview, 0);
-                if (requireIncreasingFrame && frameIndex <= Volatile.Read(ref _lastPreviewFrame)) return;
+                if (requireIncreasingFrame && Volatile.Read(ref _hasPreviewFrame) != 0 && frameIndex <= Volatile.Read(ref _lastPreviewFrame)) return;
 
                 SavePreview(frame);
-                if (requireIncreasingFrame) Volatile.Write(ref _lastPreviewFrame, frameIndex);
+                if (requireIncreasingFrame)
+                {
+                    Volatile.Write(ref _lastPreviewFrame, frameIndex);
+                    Volatile.Write(ref _hasPreviewFrame, 1);
+                }
 
-                var previewGenerated = OnPreviewGenerated;
-                if (previewGenerated is not null)
-                    previewGenerated(this, frame.Clone());
+                if (OnPreviewGenerated is { } previewGenerated)
+                    foreach (EventHandler<IPicture> handler in previewGenerated.GetInvocationList())
+                    {
+                        var picture = Effect.DynamicEffectGraph.CopyPicture(frame);
+                        try { handler(this, picture); }
+                        catch { picture.Dispose(); throw; }
+                    }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Generate render preview");
             }
             finally
             {
@@ -809,6 +867,7 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
+                if (!File.Exists(statePath)) return string.Empty;
                 using var stream = new FileStream(statePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(stream);
                 var value = reader.ReadToEnd().Trim();

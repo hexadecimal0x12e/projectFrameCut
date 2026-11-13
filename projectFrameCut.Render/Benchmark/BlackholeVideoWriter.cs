@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -23,38 +23,18 @@ namespace projectFrameCut.Render.Benchmark
 
         public uint DurationWritten => _index;
 
-        public IPicture.PicturePixelMode? TargetPPB => null;
+        public IPicture.PicturePixelMode? TargetPPB => IPicture.PicturePixelMode.Float16Picture;
         public Dictionary<string, string>? Metadata { get; set; }
         public bool PreferToSpeed { get; set; }
 
         public event EventHandler<IPicture>? OnFrameWrite;
 
-        public void Append(IPicture<ushort> picture)
+        public void Append(IPicture<Half> picture)
         {
             _index++;
-            if (OnFrameWrite is null)
-            {
-                picture.Dispose();
-            }
-            else
-            {
-                OnFrameWrite?.Invoke(this, picture);
-            }
+            if (OnFrameWrite is null) picture.Dispose();
+            else OnFrameWrite.Invoke(this, picture);
         }
-
-        public void Append(IPicture<byte> picture)
-        {
-            _index++;
-            if (OnFrameWrite is null)
-            {
-                picture.Dispose();
-            }
-            else
-            {
-                OnFrameWrite?.Invoke(this, picture);
-            }
-        }
-
         public void Dispose()
         {
         }

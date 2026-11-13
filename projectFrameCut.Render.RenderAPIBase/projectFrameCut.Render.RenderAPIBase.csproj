@@ -1,15 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net10.0</TargetFrameworks>
+		<TargetFrameworks>net11.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<AssemblyVersion>8.0.0.0</AssemblyVersion>
-		<FileVersion>8.0.0.0</FileVersion>
+		<AssemblyVersion>10.0.0.0</AssemblyVersion>
+		<FileVersion>10.0.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>codename 'projectFrameCut'</Product>
 		<Description>projectFrameCut render/3rd plugins shared library</Description>
@@ -21,7 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
-  </ItemGroup>
+		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing\projectFrameCut.Drawing.csproj" />
+	</ItemGroup>
 
 
   <ItemGroup>
@@ -29,6 +30,8 @@
 		<InternalsVisibleTo Include="projectFrameCut" />
 		<InternalsVisibleTo Include="projectFrameCut.Render" />
 		<InternalsVisibleTo Include="projectFrameCut.Render.PluginIsolation"/>
+		<InternalsVisibleTo Include="projectFrameCut.StandaloneRender" />
+		<InternalsVisibleTo Include="projectFrameCut.Render.Contracts.Tests" />
 	</ItemGroup>
 
 </Project>

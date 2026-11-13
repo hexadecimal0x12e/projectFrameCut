@@ -2,6 +2,7 @@
 using Android.App;
 using Android.Content;
 using Android.OS;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Services;
 using OperationCanceledException = System.OperationCanceledException;
@@ -91,6 +92,7 @@ public sealed class RenderRpcService : Service
         if (string.IsNullOrWhiteSpace(socketPath) || string.IsNullOrWhiteSpace(token)) return;
 
         var dataRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraDataRoot);
+        projectFrameCut.Shared.ProjectCachePaths.Configure(intent.GetStringExtra(projectFrameCut.Shared.ProjectCachePaths.EnvironmentKey));
         if (string.IsNullOrWhiteSpace(dataRoot)) dataRoot = MauiProgram.BasicDataPath;
         var ffmpegRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraFfmpegRoot) ?? string.Empty;
         var processIdPath = intent.GetStringExtra(AndroidRenderWorkerController.ExtraProcessIdPath);
@@ -137,14 +139,35 @@ public sealed class RenderRpcService : Service
             await using var backend = new RenderBackendService(
                 stateRoot: dataRoot,
                 completionSink: RenderCompletionNotifier.Notify,
-                progressSink: RenderCompletionNotifier.NotifyProgress);
-            await new UnixSocketRenderServer(backend)
+                progressSink: RenderCompletionNotifier.NotifyProgress,
+                previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
+            await new UnixSocketRenderServer(new EditorRpcService(backend))
                 .RunAsync(socketPath, token, cancellationToken)
                 .ConfigureAwait(false);
         }
         finally
         {
             try { if (File.Exists(socketPath)) File.Delete(socketPath); } catch { }
+        }
+    }
+
+    private sealed class EditorRpcService(IRenderService backend) : IRenderService
+    {
+        public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
+        {
+            if (request.Operation == RenderOperation.TestingBackendCrash &&
+                request.ProtocolVersion >= RenderProtocol.MinimumSupportedVersion && request.ProtocolVersion <= RenderProtocol.CurrentVersion)
+            {
+                System.Environment.FailFast("TestingBackendCrash requested.");
+            }
+            var response = await backend.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
+            if (request.Operation == RenderOperation.GetCapabilities && response.Error is null)
+            {
+                var capabilities = RenderRpcSerializer.Deserialize<RenderCapabilities>(response.Payload);
+                capabilities.Operations.Add(nameof(RenderOperation.TestingBackendCrash));
+                response.Payload = RenderRpcSerializer.Serialize(capabilities);
+            }
+            return response;
         }
     }
 

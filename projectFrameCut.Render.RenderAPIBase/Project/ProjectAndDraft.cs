@@ -1,4 +1,5 @@
 using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -268,10 +269,37 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
 
 
     /// <summary>
-    /// Represents the structure of a draft in JSON format.
+    /// Project settings stored with a draft snapshot.
     /// </summary>
+    public sealed class ProjectSettingsSnapshot
+    {
+        public uint FrameRate { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public string? CoverPath { get; set; }
+        public Dictionary<string, string> Properties { get; set; } = new();
+        public Dictionary<string, string> UserDefinedProperties { get; set; } = new();
+
+        public static ProjectSettingsSnapshot Capture(ProjectJSONStructure project) => new()
+        {
+            FrameRate = project.TargetFrameRate, Width = project.RelativeWidth, Height = project.RelativeHeight,
+            CoverPath = project.ThumbPath, Properties = new(project.Properties), UserDefinedProperties = new(project.UserDefinedProperties),
+        };
+
+        public void ApplyTo(ProjectJSONStructure project)
+        {
+            project.TargetFrameRate = FrameRate;
+            project.RelativeWidth = Width;
+            project.RelativeHeight = Height;
+            project.ThumbPath = CoverPath;
+            project.Properties = new(Properties);
+            project.UserDefinedProperties = new(UserDefinedProperties);
+        }
+    }
+
     public class DraftStructureJSON
     {
+        public ProjectSettingsSnapshot? ProjectSettings { get; set; }
         /// <summary>
         /// The unique identifier for the draft snapshot. 
         /// </summary>
@@ -337,7 +365,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// <summary>
     /// The data structure of a clip. Mostly used in JSON serialization/deserialization.
     /// </summary>
-    public class ClipDraftDTO
+    public class ClipDraftDTO : IJsonOnSerializing
     {
         public const string ProjectFrameRateMetaKey = "__ProjectFrameRate";
         public const string FrameSemanticVersionMetaKey = "__ClipFrameSemanticVersion";
@@ -348,10 +376,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string TypeName { get; set; } = string.Empty;
         public Guid Id { get; set; } = Guid.Empty;
         public string Name { get; set; } = string.Empty;
+        public string BindedSoundTrack { get; set; } = string.Empty;
         public uint LayerIndex { get; set; }
         public uint SubLayerIndex { get; set; }
         public uint StartFrame { get; set; }
-        public uint RelativeStartFrame { get; init; }
+        public uint RelativeStartFrame { get; set; }
         public uint Duration { get; set; }
         public float FrameTime { get; set; } // seconds per frame (1 / framerate)
         public float SecondPerFrameRatio { get; set; }
@@ -363,6 +392,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
@@ -373,9 +404,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
 
+        void IJsonOnSerializing.OnSerializing() => MetaData = ClipInitializationMetadata.ForPersistence(MetaData);
+
     }
 
-    public class SoundtrackDTO
+    public class SoundtrackDTO : IJsonOnSerializing
     {
         public string FromPlugin { get; set; } = string.Empty;
         public TrackMode TrackType { get; set; } = TrackMode.SpecialTrack;
@@ -384,13 +417,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string Name { get; set; } = string.Empty;
         public string? FilePath { get; set; }
         public uint LayerIndex { get; set; }
+        public uint SubLayerIndex { get; set; }
         public uint StartFrame { get; set; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float SecondPerFrameRatio { get; set; }
+        public bool ShouldDisplayInUI { get; set; } = true;
+        public EffectAndMixtureJSONStructure[]? Effects { get; set; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
+
+        void IJsonOnSerializing.OnSerializing() => MetaData = ClipInitializationMetadata.ForPersistence(MetaData);
 
     }
 
@@ -402,8 +441,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     {
         public string Name { get; set; } = string.Empty;
         public string? Path { get; set; }
+        public bool IsReference { get; set; }
         public string? SourceHash { get; set; }
-        public AssetType AssetType { get; set; } = AssetType.Other;
+        private AssetType assetType = AssetType.Other;
+        public AssetType AssetType
+        {
+            get => assetType == AssetType.Other && ClipType == ClipMode.VectorComponentClip ? AssetType.VectorComposition : assetType;
+            set => assetType = value;
+        }
         public ClipMode ClipType { get; set; }
 
         public long? Duration { get; set; }
@@ -413,7 +458,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public DateTime CreatedAt { get; set; }
 
         public Guid CreatedBy { get; set; }
-        public bool IsAIGenerated { get; set; } = false;
 
 
         public int Width { get; set; }
@@ -427,6 +471,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Video => ClipMode.VideoClip,
                 AssetType.Image => ClipMode.PhotoClip,
                 AssetType.Audio => ClipMode.AudioClip,
+                AssetType.VectorComposition => ClipMode.VectorComponentClip,
+                AssetType.Subtitle => ClipMode.SubtitleClip,
                 _ => ClipType
             };
         }
@@ -446,6 +492,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 projectFrameCut.Shared.AssetType.Image => "\ud83d\uddbc\ufe0f",//🖼️
                 projectFrameCut.Shared.AssetType.Audio => "\ud83c\udfb5",//🎵
                 projectFrameCut.Shared.AssetType.Font => "\ud83d\udd24",//🔤
+                projectFrameCut.Shared.AssetType.VectorComposition => "◈",
                 _ => ClipType switch
                 {
                     projectFrameCut.Shared.ClipMode.VideoClip => "\ud83d\udcfd\ufe0f",//📽️
@@ -484,12 +531,29 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public static AssetType GetAssetType(string path)
         {
             var ext = System.IO.Path.GetExtension(path).ToLower();
+            if (ext == ".json" && System.IO.File.Exists(path))
+            {
+                try
+                {
+                    using var json = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(path));
+                    var root = json.RootElement;
+                    if (root.ValueKind == System.Text.Json.JsonValueKind.Array && root.GetArrayLength() > 0)
+                        root = root[0];
+                    if (root.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                        (root.TryGetProperty("VectorCanvas.Components", out _) ||
+                         (root.TryGetProperty("TypeName", out _) && root.TryGetProperty("Parameters", out _) && root.TryGetProperty("Index", out _))))
+                        return AssetType.VectorComposition;
+                }
+                catch (System.Text.Json.JsonException) { }
+            }
             return ext switch
             {
                 ".mp4" or ".mov" or ".avi" or ".mkv" or ".webm" => AssetType.Video,
                 ".mp3" or ".wav" or ".aac" or ".flac" or ".ogg" => AssetType.Audio,
-                ".jpg" or ".jpeg" or ".png" or ".bmp" or ".svg" or ".gif" or ".svg" => AssetType.Image,
-                ".ttf" or ".otf" => AssetType.Font,
+                ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" => AssetType.Image,
+                ".svg" or ".pjfcvec" => AssetType.VectorComposition,
+                ".srt" or ".vtt" or ".ass" or ".ssa" => AssetType.Subtitle,
+                ".ttf" or ".otf" or ".ttc" => AssetType.Font,
                 _ => AssetType.Other
             };
         }
@@ -502,6 +566,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Audio => "Audio",
                 AssetType.Image => "Image",
                 AssetType.Font => "Font",
+                AssetType.VectorComposition => "VectorComposition",
+                AssetType.Subtitle => "Subtitle",
                 _ => "Other"
             };
         }

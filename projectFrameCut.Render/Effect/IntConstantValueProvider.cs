@@ -16,6 +16,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntConstantValueProviderEffect : IValueProviderEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Int Constant";
@@ -30,7 +32,6 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public bool IsReorderable => false;
-        public string? NeedComputer => null;
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
 
@@ -91,7 +92,6 @@ namespace projectFrameCut.Render.Effect
         public Func<object> GetGetter() => () =>
         {
             var value = ResolveInt(Parameters, "Value");
-            Log($"IntConstantValueProviderEffect {Id}/{Name}'s Value: {value} ({Parameters.GetValueOrDefault("Value")?.GetType()?.Name ?? "<null>"})");
             return value;
 
         };
@@ -102,6 +102,10 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntConstantValueProviderProvider : EffectProviderBase
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => EffectStages.Values;
+
+        public override bool IsDeterministic => true;
+
         public IntConstantValueProviderProvider()
         {
             Name = "Int Constant";
@@ -112,7 +116,7 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectType TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
 
-        public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
+        public override EffectTarget Target => EffectTarget.Pipeline | EffectTarget.ValueProvider;
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -138,15 +142,12 @@ namespace projectFrameCut.Render.Effect
         {
             return
             [
-                Field("Value", EffectArgumentFieldType.Integer, "0", remarks: "The constant integer to provide. Can be bound to a value provider."),
+                Field("Value", EffectArgumentFieldType.Integer | EffectArgumentFieldType.CannotBeDynamic, "0", remarks: "The constant integer to provide."),
             ];
         }
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            return [IntConstantValueProviderEffect.FromParametersDictionary(TypeName, parameters)];
-        }
+
     }
 }

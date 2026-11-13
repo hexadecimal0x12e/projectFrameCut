@@ -1,4 +1,6 @@
 ﻿using LocalizedResources;
+using Microsoft.Maui.Layouts;
+using projectFrameCut.Shared;
 using Color = Microsoft.Maui.Graphics.Color;
 using Point = Microsoft.Maui.Graphics.Point;
 using Rect = Microsoft.Maui.Graphics.Rect;
@@ -59,11 +61,6 @@ public partial class HistoryGraphView : ContentView
 
             foreach (var (from, to) in Connections)
             {
-                bool isCurrentPath = from.Depth == 0 && to.Depth == 0;
-
-                canvas.StrokeColor = isCurrentPath ? CurrentPathColor : BranchColor;
-                canvas.StrokeSize = (float)(isCurrentPath ? 3 * Scale : 2 * Scale);
-
                 var start = new Point(
                     (from.X + from.NodeWidth) * Scale + PanX,
                     (from.Y + from.NodeHeight / 2) * Scale + PanY);
@@ -71,6 +68,13 @@ public partial class HistoryGraphView : ContentView
                     (to.X) * Scale + PanX,
                     (to.Y + to.NodeHeight / 2) * Scale + PanY);
 
+                if (Math.Max(start.X, end.X) + 60 < dirtyRect.Left || Math.Min(start.X, end.X) - 60 > dirtyRect.Right
+                    || Math.Max(start.Y, end.Y) + 4 < dirtyRect.Top || Math.Min(start.Y, end.Y) - 4 > dirtyRect.Bottom)
+                    continue;
+
+                bool isCurrentPath = from.Depth == 0 && to.Depth == 0;
+                canvas.StrokeColor = isCurrentPath ? CurrentPathColor : BranchColor;
+                canvas.StrokeSize = (float)(isCurrentPath ? 3 * Scale : 2 * Scale);
                 DrawCurve(canvas, start, end);
             }
 
@@ -104,9 +108,11 @@ public partial class HistoryGraphView : ContentView
 
     // List view state
     private List<HistoryGraphNode> _currentNodes = new();
-    private List<HistoryGraphRowDrawable> _rowDrawables = new();
-    private List<GraphicsView> _rowGraphicsViews = new();
+    private readonly Dictionary<int, (Grid View, Label Reason, HistoryGraphRowDrawable Drawable, GraphicsView Graphic)> _listRows = new();
+    private HashSet<(Guid From, Guid To)> _listEdges = new();
+    private const double ListRowHeight = 56;
     private HistoryViewMode _viewMode = HistoryViewMode.Graph;
+    private bool _graphBuilt;
 
     // Canvas state
     private double _panStartX, _panStartY;
@@ -164,24 +170,63 @@ public partial class HistoryGraphView : ContentView
         }
     }
 
+    public void LoadHistoryWhenVisible(Func<Task<(List<HistoryGraphNode> Nodes, List<HistoryGraphEdge> Edges)>> loadHistory)
+    {
+        bool loading = false;
+        Loaded += OnLoaded;
+        if (IsLoaded) OnLoaded(this, EventArgs.Empty);
+
+        async void OnLoaded(object? sender, EventArgs e)
+        {
+            if (loading) return;
+            loading = true;
+            LoadingIndicator.IsVisible = LoadingIndicator.IsRunning = true;
+            try
+            {
+                var (nodes, edges) = await loadHistory();
+                if (!IsLoaded) return;
+                LoadHistory(nodes, edges, _provider?.CurrentSnapshotID
+                    ?? nodes.FirstOrDefault(n => n.IsCurrentSnapshot)?.SnapshotID ?? Guid.Empty);
+                Loaded -= OnLoaded;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "Load project history", this);
+                EmptyHint.Text = ex.Message;
+                EmptyHint.IsVisible = true;
+            }
+            finally
+            {
+                LoadingIndicator.IsVisible = LoadingIndicator.IsRunning = false;
+                loading = false;
+            }
+        }
+    }
+
     public void LoadHistory(
         List<HistoryGraphNode> nodes,
         List<HistoryGraphEdge> edges,
         Guid currentSnapshotId)
     {
         _currentSnapshotId = currentSnapshotId;
+        foreach (var node in nodes)
+            node.IsCurrentSnapshot = node.SnapshotID == currentSnapshotId;
         _selectedNode = null;
         _selectedSnapshotId = Guid.Empty;
         DetailsPanel.IsVisible = false;
+        EmptyHint.Text = "No history available";
 
         // Clear existing
         NodesContainer.Children.Clear();
         _nodeViewModels.Clear();
         _connectionsDrawable.Connections.Clear();
         ListContent.Children.Clear();
-        _currentNodes.Clear();
-        _rowDrawables.Clear();
-        _rowGraphicsViews.Clear();
+        _currentNodes = nodes;
+        _listRows.Clear();
+        _listEdges = edges.Select(e => (e.FromSnapshotID, e.ToSnapshotID)).ToHashSet();
+        ListContent.HeightRequest = nodes.Count * ListRowHeight;
+        _graphBuilt = false;
+        _pendingInitialFocus = false;
 
         if (nodes.Count == 0)
         {
@@ -195,23 +240,12 @@ public partial class HistoryGraphView : ContentView
 
         EmptyHint.IsVisible = false;
 
-        // Store raw nodes for list view
-        _currentNodes = nodes;
-
-        // ── Build graph view ──
-        BuildGraphView(nodes, currentSnapshotId);
-
-        // ── Build list view ──
-        BuildListView(nodes, edges);
-
         InfoLabel.Text = _provider is not null
             ? $"{_provider.ProviderName}: {nodes.Count} snapshots"
             : $"{nodes.Count} snapshots";
 
         UpdateViewMode();
 
-        // Keep nodes readable on first open and start around the active snapshot.
-        _pendingInitialFocus = true;
         Dispatcher.Dispatch(TryApplyInitialView);
     }
 
@@ -219,6 +253,8 @@ public partial class HistoryGraphView : ContentView
     {
         if (_provider is null) return;
         _currentSnapshotId = _provider.CurrentSnapshotID;
+        foreach (var node in _currentNodes)
+            node.IsCurrentSnapshot = node.SnapshotID == _currentSnapshotId;
 
         // Update graph view selection
         foreach (var vm in _nodeViewModels)
@@ -231,26 +267,7 @@ public partial class HistoryGraphView : ContentView
         }
         ConnectionsLayer.Invalidate();
 
-        // Update list view selection
-        for (int i = 0; i < _rowDrawables.Count; i++)
-        {
-            bool isCurrent = i < _currentNodes.Count && _currentNodes[i].SnapshotID == _currentSnapshotId;
-            _rowDrawables[i].IsCurrentSnapshot = isCurrent;
-            _rowDrawables[i].IsSelected = _currentNodes.Count > i && _currentNodes[i].SnapshotID == _selectedSnapshotId;
-            if (i < _rowGraphicsViews.Count)
-                _rowGraphicsViews[i].Invalidate();
-        }
-
-        // Update current highlighting in rows
-        for (int i = 0; i < ListContent.Children.Count; i++)
-        {
-            if (ListContent.Children[i] is Grid row && i < _currentNodes.Count)
-            {
-                row.BackgroundColor = _currentNodes[i].SnapshotID == _currentSnapshotId
-                    ? Color.FromArgb("#1A4A9EFF")
-                    : Colors.Transparent;
-            }
-        }
+        RefreshListRows();
     }
 
     #endregion
@@ -284,15 +301,6 @@ public partial class HistoryGraphView : ContentView
         var parentByNode = BuildParentMap(_nodeViewModels, nodeDict);
         ComputeLayout(_nodeViewModels, nodeDict, parentByNode, currentSnapshotId);
 
-        // Create MAUI views
-        foreach (var vm in _nodeViewModels)
-        {
-            var view = CreateNodeView(vm);
-            vm.View = view;
-            NodesContainer.Children.Add(view);
-            AbsoluteLayout.SetLayoutBounds(view, new Rect(vm.X, vm.Y, vm.NodeWidth, vm.NodeHeight));
-        }
-
         // Draw the same validated parent links used by the layout. Snapshot Previous links
         // are authoritative; stale or differently ordered Next lists must not move edges.
         foreach (var (childId, parentId) in parentByNode)
@@ -303,39 +311,93 @@ public partial class HistoryGraphView : ContentView
         ConnectionsLayer.Invalidate();
     }
 
+    private void UpdateVisibleGraphNodes()
+    {
+        if (!_graphBuilt || _viewMode != HistoryViewMode.Graph
+            || GraphViewContainer.Width <= 0 || GraphViewContainer.Height <= 0)
+            return;
+
+        double scale = NodesContainer.Scale;
+        double left = -NodesContainer.TranslationX / scale - 80;
+        double top = -NodesContainer.TranslationY / scale - 80;
+        double right = left + GraphViewContainer.Width / scale + 160;
+        double bottom = top + GraphViewContainer.Height / scale + 160;
+        foreach (var vm in _nodeViewModels)
+        {
+            bool visible = vm.X + vm.NodeWidth >= left && vm.X <= right
+                && vm.Y + vm.NodeHeight >= top && vm.Y <= bottom;
+            if (visible && vm.View is null)
+            {
+                vm.View = CreateNodeView(vm);
+                AbsoluteLayout.SetLayoutBounds(vm.View, new Rect(vm.X, vm.Y, vm.NodeWidth, vm.NodeHeight));
+                NodesContainer.Children.Add(vm.View);
+            }
+            else if (!visible && vm.View is not null)
+            {
+                NodesContainer.Children.Remove(vm.View);
+                vm.View = null;
+            }
+        }
+    }
+
     #endregion
 
     #region List View Building
 
-    private void BuildListView(List<HistoryGraphNode> nodes, List<HistoryGraphEdge> edges)
+    private void OnListViewScrolled(object? sender, ScrolledEventArgs e) => UpdateVisibleListRows();
+
+    private void OnListViewSizeChanged(object? sender, EventArgs e) => UpdateVisibleListRows();
+
+    private void UpdateVisibleListRows()
     {
-        var edgeSet = new HashSet<(Guid from, Guid to)>();
-        foreach (var edge in edges)
-            edgeSet.Add((edge.FromSnapshotID, edge.ToSnapshotID));
+        if (_viewMode != HistoryViewMode.List || _currentNodes.Count == 0 || ListViewContainer.Height <= 0)
+            return;
 
-        for (int i = 0; i < nodes.Count; i++)
+        int first = Math.Clamp((int)(ListViewContainer.ScrollY / ListRowHeight) - 3, 0, _currentNodes.Count - 1);
+        int last = Math.Min(_currentNodes.Count - 1,
+            (int)((ListViewContainer.ScrollY + ListViewContainer.Height) / ListRowHeight) + 3);
+        foreach (var kv in _listRows.Where(kv => kv.Key < first || kv.Key > last).ToArray())
         {
-            var node = nodes[i];
-            Guid prevId = node.PreviousSnapshotID;
-            Guid nextId = node.NextSnapshotID;
+            ListContent.Children.Remove(kv.Value.View);
+            _listRows.Remove(kv.Key);
+        }
+        for (int i = first; i <= last; i++)
+        {
+            if (_listRows.ContainsKey(i)) continue;
+            var node = _currentNodes[i];
+            var row = BuildListRow(node,
+                _listEdges.Contains((node.PreviousSnapshotID, node.SnapshotID)) || node.PreviousSnapshotID != Guid.Empty || i > 0,
+                _listEdges.Contains((node.SnapshotID, node.NextSnapshotID)) || node.NextSnapshotID != Guid.Empty || i < _currentNodes.Count - 1);
 
-            bool hasPredecessor = edgeSet.Contains((prevId, node.SnapshotID)) || prevId != Guid.Empty;
-            bool hasSuccessor = edgeSet.Contains((node.SnapshotID, nextId)) || nextId != Guid.Empty;
-            bool isFirst = i == 0;
-            bool isLast = i == nodes.Count - 1;
-
-            var row = BuildListRow(node, hasPredecessor || !isFirst, hasSuccessor || !isLast);
-
-            var capturedNode = node;
             var tapGesture = new TapGestureRecognizer();
-            tapGesture.Tapped += (_, _) => OnListItemTapped(capturedNode);
-            row.GestureRecognizers.Add(tapGesture);
-
-            ListContent.Children.Add(row);
+            tapGesture.Tapped += (_, _) => OnListItemTapped(node);
+            row.View.GestureRecognizers.Add(tapGesture);
+            AbsoluteLayout.SetLayoutFlags(row.View, AbsoluteLayoutFlags.WidthProportional);
+            AbsoluteLayout.SetLayoutBounds(row.View, new Rect(0, i * ListRowHeight, 1, ListRowHeight));
+            _listRows[i] = row;
+            ListContent.Children.Add(row.View);
         }
     }
 
-    private View BuildListRow(HistoryGraphNode node, bool hasPredecessor, bool hasSuccessor)
+    private void RefreshListRows()
+    {
+        foreach (var (index, row) in _listRows)
+        {
+            var node = _currentNodes[index];
+            bool isCurrent = node.SnapshotID == _currentSnapshotId;
+            row.Drawable.IsCurrentSnapshot = isCurrent;
+            row.Drawable.IsSelected = node.SnapshotID == _selectedSnapshotId;
+            row.View.BackgroundColor = isCurrent ? Color.FromArgb("#1A4A9EFF") : Colors.Transparent;
+            row.Reason.Text = (isCurrent ? "* " : "")
+                + (string.IsNullOrWhiteSpace(node.ChangeReason) ? "(no description)" : node.ChangeReason.Trim());
+            row.Reason.TextColor = isCurrent ? Colors.White : Color.FromArgb("#ccc");
+            row.Reason.FontAttributes = isCurrent ? FontAttributes.Bold : FontAttributes.None;
+            row.Graphic.Invalidate();
+        }
+    }
+
+    private (Grid View, Label Reason, HistoryGraphRowDrawable Drawable, GraphicsView Graphic) BuildListRow(
+        HistoryGraphNode node, bool hasPredecessor, bool hasSuccessor)
     {
         var drawable = new HistoryGraphRowDrawable
         {
@@ -348,13 +410,10 @@ public partial class HistoryGraphView : ContentView
         var graphView = new GraphicsView
         {
             WidthRequest = 50,
-            HeightRequest = 56,
+            HeightRequest = ListRowHeight,
             Drawable = drawable,
             BackgroundColor = Colors.Transparent
         };
-
-        _rowDrawables.Add(drawable);
-        _rowGraphicsViews.Add(graphView);
 
         string reasonText = string.IsNullOrWhiteSpace(node.ChangeReason)
             ? "(no description)"
@@ -396,26 +455,26 @@ public partial class HistoryGraphView : ContentView
                 new ColumnDefinition { Width = GridLength.Star }
             },
             Padding = new Thickness(0, 0),
+            HeightRequest = ListRowHeight,
             BackgroundColor = isCurrent ? Color.FromArgb("#1A4A9EFF") : Colors.Transparent
         };
 
         row.Add(graphView, 0);
         row.Add(textStack, 1);
 
-        return row;
+        return (row, reasonLabel, drawable, graphView);
     }
 
     private void OnListItemTapped(HistoryGraphNode node)
     {
         _selectedSnapshotId = node.SnapshotID;
-        _selectedNode = null;
+        if (_selectedNode?.View is Border previous)
+            UpdateNodeBorderStyle(previous, _selectedNode);
+        _selectedNode = _nodeViewModels.FirstOrDefault(n => n.SnapshotID == node.SnapshotID);
+        if (_selectedNode?.View is Border selected)
+            UpdateNodeBorderStyle(selected, _selectedNode);
 
-        for (int i = 0; i < _rowDrawables.Count; i++)
-        {
-            _rowDrawables[i].IsSelected = i < _currentNodes.Count && _currentNodes[i].SnapshotID == _selectedSnapshotId;
-            if (i < _rowGraphicsViews.Count)
-                _rowGraphicsViews[i].Invalidate();
-        }
+        RefreshListRows();
 
         _provider?.OnNodeSelected(node);
 
@@ -471,35 +530,35 @@ public partial class HistoryGraphView : ContentView
         int lane = 0;
         var positioned = new HashSet<Guid>();
 
-        double LayoutNode(HistoryGraphNodeViewModel node, int column)
+        void LayoutNode(HistoryGraphNodeViewModel root)
         {
-            positioned.Add(node.SnapshotID);
-            node.X = xPadding + column * columnSpacing;
-            node.Depth = currentPath.Contains(node.SnapshotID) ? 0 : 1;
-
-            var childList = children[node.SnapshotID];
-            if (childList.Count == 0)
+            var stack = new Stack<(HistoryGraphNodeViewModel Node, int Column)>();
+            stack.Push((root, 0));
+            while (stack.TryPop(out var item))
             {
-                node.Y = yPadding + lane++ * rowSpacing;
-                return node.Y;
-            }
+                var node = item.Node;
+                if (!positioned.Add(node.SnapshotID)) continue;
+                node.X = xPadding + item.Column * columnSpacing;
+                node.Y = yPadding + lane * rowSpacing;
+                node.Depth = currentPath.Contains(node.SnapshotID) ? 0 : 1;
 
-            // The current path (or the first stable child) stays on the parent's lane;
-            // every additional branch receives its own non-overlapping subtree lanes.
-            node.Y = LayoutNode(childList[0], column + 1);
-            for (int i = 1; i < childList.Count; i++)
-                LayoutNode(childList[i], column + 1);
-            return node.Y;
+                var childList = children[node.SnapshotID];
+                if (childList.Count == 0)
+                    lane++;
+                else
+                    for (int i = childList.Count - 1; i >= 0; i--)
+                        stack.Push((childList[i], item.Column + 1));
+            }
         }
 
         foreach (var root in roots)
-            LayoutNode(root, 0);
+            LayoutNode(root);
 
         // Corrupt cyclic data has no root. Keep those records visible without drawing
         // misleading cyclic links.
         foreach (var node in nodes.OrderBy(n => n.SavedAt).ThenBy(n => n.SnapshotID))
             if (!positioned.Contains(node.SnapshotID))
-                LayoutNode(node, 0);
+                LayoutNode(node);
     }
 
     private static Dictionary<Guid, Guid> BuildParentMap(
@@ -513,12 +572,14 @@ public partial class HistoryGraphView : ContentView
             .ToDictionary(n => n.SnapshotID, n => n.PreviousSnapshotID);
 
         var cyclic = new HashSet<Guid>();
+        var visited = new HashSet<Guid>();
         foreach (var node in nodes)
         {
+            if (visited.Contains(node.SnapshotID)) continue;
             var path = new List<Guid>();
             var indices = new Dictionary<Guid, int>();
             var id = node.SnapshotID;
-            while (result.TryGetValue(id, out var parentId))
+            while (!visited.Contains(id) && result.TryGetValue(id, out var parentId))
             {
                 if (indices.TryGetValue(id, out int cycleStart))
                 {
@@ -530,6 +591,7 @@ public partial class HistoryGraphView : ContentView
                 path.Add(id);
                 id = parentId;
             }
+            visited.UnionWith(path);
         }
 
         foreach (var id in cyclic)
@@ -610,8 +672,10 @@ public partial class HistoryGraphView : ContentView
         return frame;
     }
 
-    private static void UpdateNodeBorderStyle(Border border, HistoryGraphNodeViewModel vm)
+    private void UpdateNodeBorderStyle(Border border, HistoryGraphNodeViewModel vm)
     {
+        if (border.Content is Grid grid && grid.Children.FirstOrDefault() is Label title)
+            title.Text = vm.DisplayLabel;
         if (vm.IsCurrentSnapshot)
         {
             border.Stroke = Color.FromArgb("#4A9EFF");
@@ -635,6 +699,11 @@ public partial class HistoryGraphView : ContentView
             border.Stroke = Color.FromArgb("#555555");
             border.StrokeThickness = 1.5;
             border.BackgroundColor = Color.FromArgb("#2d2d2d");
+        }
+        if (vm.SnapshotID == _selectedSnapshotId)
+        {
+            border.Stroke = Color.FromArgb("#FFB74D");
+            border.StrokeThickness = 3;
         }
     }
 
@@ -661,13 +730,7 @@ public partial class HistoryGraphView : ContentView
             border.StrokeThickness = 3;
         }
 
-        // Also deselect list view
-        for (int i = 0; i < _rowDrawables.Count; i++)
-        {
-            _rowDrawables[i].IsSelected = false;
-            if (i < _rowGraphicsViews.Count)
-                _rowGraphicsViews[i].Invalidate();
-        }
+        RefreshListRows();
 
         _provider?.OnNodeSelected(
             new HistoryGraphNode
@@ -777,7 +840,19 @@ public partial class HistoryGraphView : ContentView
 
         if (isGraph && !isEmpty)
         {
+            if (!_graphBuilt)
+            {
+                BuildGraphView(_currentNodes, _currentSnapshotId);
+                _graphBuilt = true;
+                _pendingInitialFocus = true;
+            }
+            TryApplyInitialView();
+            UpdateVisibleGraphNodes();
             ConnectionsLayer.Invalidate();
+        }
+        else if (!isEmpty)
+        {
+            UpdateVisibleListRows();
         }
     }
 
@@ -856,6 +931,7 @@ public partial class HistoryGraphView : ContentView
         _connectionsDrawable.PanX = NodesContainer.TranslationX;
         _connectionsDrawable.PanY = NodesContainer.TranslationY;
         _connectionsDrawable.Scale = NodesContainer.Scale;
+        UpdateVisibleGraphNodes();
     }
 
 #if WINDOWS
@@ -944,11 +1020,13 @@ public partial class HistoryGraphView : ContentView
     {
         if (_pendingInitialFocus)
             TryApplyInitialView();
+        UpdateVisibleGraphNodes();
     }
 
     private void TryApplyInitialView()
     {
-        if (!_pendingInitialFocus || GraphViewContainer.Width <= 0 || GraphViewContainer.Height <= 0)
+        if (!_pendingInitialFocus || _viewMode != HistoryViewMode.Graph
+            || GraphViewContainer.Width <= 0 || GraphViewContainer.Height <= 0)
             return;
 
         _pendingInitialFocus = false;

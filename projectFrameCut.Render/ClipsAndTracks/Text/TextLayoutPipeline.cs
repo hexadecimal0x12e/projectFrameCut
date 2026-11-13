@@ -67,7 +67,7 @@ public static class TextLayoutPipeline
                 var originX = prepared.PixelEntry.X;
                 var topY = prepared.PixelEntry.Y + verticalAlignShift;
                 var rotationOriginY = topY + baselineOffsetPx;
-                var inkStrokeInflate = MathF.Max(0f, prepared.PixelEntry.StrokeThickness) * 0.5f;
+                var inkStrokeInflate = engineEntry is RichTextEntry ? 0 : MathF.Max(0f, prepared.PixelEntry.StrokeThickness) * 0.5f;
 
                 bounds = new TextBounds(
                     originX + inkBounds.MinX * unit - inkStrokeInflate,
@@ -216,6 +216,7 @@ public static class TextLayoutPipeline
                 var horizontalEngine = new NormalTypesettingEngine
                 {
                     FallbackFonts = TextClipFontRegistry.FallbackFonts,
+                    FontResolver = TextClipFontRegistry.ResolveFont,
                     DebugMode = TextClip.DiagMode,
                 };
                 layout = horizontalEngine.Layout(engineEntry, primaryFont);
@@ -275,6 +276,7 @@ public static class TextLayoutPipeline
         };
 
         var wwPx = pixelEntry.GetWrappingWidth();
+        ScaleRichText(converted, 1 / unit);
         if (wwPx.HasValue && wwPx.Value > 0f)
             converted.SetWrappingWidth(wwPx.Value / unit);
 
@@ -302,10 +304,26 @@ public static class TextLayoutPipeline
         };
 
         var wwEng = engineEntry.GetWrappingWidth();
+        ScaleRichText(converted, unit);
         if (wwEng.HasValue && wwEng.Value > 0f)
             converted.SetWrappingWidth(wwEng.Value * unit);
 
         return converted;
+    }
+
+    internal static void ScaleRichText(TextEntry entry, float scale)
+    {
+        if (entry is not RichTextEntry rich) return;
+        rich.StyledRanges = rich.StyledRanges.Select(r => r with
+        {
+            Style = r.Style with
+            {
+                FontSize = r.Style.FontSize * scale,
+                StrokeThickness = r.Style.StrokeThickness * scale,
+                CharacterSpacing = r.Style.CharacterSpacing * scale,
+                WordSpacing = r.Style.WordSpacing * scale
+            }
+        }).ToList();
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -341,6 +359,7 @@ public static class TextLayoutPipeline
         var engine = new NormalTypesettingEngine
         {
             FallbackFonts = TextClipFontRegistry.FallbackFonts,
+            FontResolver = TextClipFontRegistry.ResolveFont,
         };
         return engine.Measure(engineEntry, primaryFont);
     }
@@ -354,6 +373,16 @@ public static class TextLayoutPipeline
     {
         if (string.IsNullOrEmpty(engineEntry.Text))
             return default;
+
+        if (engineEntry is RichTextEntry)
+        {
+            var bounds = new NormalTypesettingEngine
+            {
+                FallbackFonts = TextClipFontRegistry.FallbackFonts,
+                FontResolver = TextClipFontRegistry.ResolveFont
+            }.MeasureInkBounds(engineEntry, primaryFont);
+            return new(bounds.MinX, bounds.MinY, bounds.MaxX, bounds.MaxY);
+        }
 
         float lineHeight = engineEntry.FontSize * (1f + engineEntry.LineSpacing);
         ushort spaceGlyphIndex = primaryFont.GetGlyphIndex(' ');
@@ -504,6 +533,13 @@ public static class TextLayoutPipeline
         var unit = ctx.UnitLength;
         var engineWW = pixelWW.Value / unit;
 
+        if (engineEntry is RichTextEntry rich)
+            return new NormalTypesettingEngine
+            {
+                FallbackFonts = TextClipFontRegistry.FallbackFonts,
+                FontResolver = TextClipFontRegistry.ResolveFont
+            }.Wrap(rich, primaryFont, engineWW);
+
         var broken = LineBreakHandler.BreakLine(engineEntry, primaryFont, engineWW);
         return engineEntry with { Text = broken };
     }
@@ -583,7 +619,7 @@ public static class TextLayoutPipeline
 
     internal static FontFace? ResolveFont(TextEntry entry)
     {
-        if (TextClipFontRegistry.TryGetFont(entry.FontName, out var primaryFont) && primaryFont is not null)
+        if (TextClipFontRegistry.ResolveFont(entry.FontName, entry.FontStyle) is { } primaryFont)
             return primaryFont;
         var fallbackName = TextClipFontRegistry.FallbackFamilyName;
         if (fallbackName is null) return null;

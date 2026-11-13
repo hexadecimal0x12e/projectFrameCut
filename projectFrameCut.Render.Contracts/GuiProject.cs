@@ -10,12 +10,44 @@ public enum GuiProjectOperation
     GetEffectProviderType, GetEffectProviderField, GetClipEffectProvider,
     AddClipEffectProvider, SetClipEffectProvider, RemoveClipEffectProvider,
     GetProjectHistory, UndoProjectHistory, RedoProjectHistory, RestoreProjectHistory,
+    GetFramePreview, GetClipFramePreview,
+    GetClipEffectGraph, GetClipEffectBinding, GetClipEffectBindingSource,
+    SetClipEffectBinding, RemoveClipEffectBinding, ClearClipEffectBinding, SetClipEffectOutput,
+    GetClipArgument, SetClipArgument,
+    GetClipValueEndpoint, AddClipValueEndpoint, SetClipValueEndpoint, RemoveClipValueEndpoint,
+    GetClipEffectGroup, AddClipEffectGroup, SetClipEffectGroup, RemoveClipEffectGroup,
+    GetClipEffectGroupTemplate, ImportClipEffectGroup, GetEffectGroupTemplate, SaveClipEffectGroup,
+    GetVectorComponentType, GetVectorClip, AddVectorCanvasClip, AddVectorComponentClip, SetVectorClip,
+    GetVectorComponent, AddVectorComponent, SetVectorComponent, RemoveVectorComponent,
+    GetClipProperties, SetClipProperties, GetClipGeometry, SetClipGeometry,
+    GetMaskSourceType, AddSolidColorClip, AddMaskClip, AddEmptyVideoClip, AddExternalSourceClip,
+    GetSubtitleClip, AddSubtitleClip, SetSubtitleClip,
+    GetSubtitleCue, AddSubtitleCue, SetSubtitleCue, RemoveSubtitleCue,
+    SplitClip, JoinClip, SplitClipGroup, RemoveTrack,
+    GetExternalSource, AddExternalSource, SetExternalSource, RemoveExternalSource,
+    GetTransformType, GetClipTransform, SetClipTransform, RemoveClipTransform, GetClipTransformPreview,
+    GetSettings, SetSettings,
+    GetClipEffectStep, AddClipEffectStep, SetClipEffectStep, RemoveClipEffectStep,
+    AddSubTrack,
+    StartBatch, CompleteBatch, StopBatch,
+    ExportFrameSequence, GetRequestProgress,
+    ExportAudioSamples,
 }
 
 [ProtoContract]
 public sealed class GuiProjectSession
 {
     [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public bool SupportsBatch { get; set; }
+}
+
+[ProtoContract]
+public sealed class CreateGuiProjectPipeRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public bool Isolated { get; set; }
+    [ProtoMember(3)] public string ClientName { get; set; } = string.Empty;
+    [ProtoMember(4)] public bool SuppressConnectionNotification { get; set; }
 }
 
 [ProtoContract]
@@ -27,6 +59,7 @@ public sealed class GuiProjectRequest
     [ProtoMember(4)] public int TimeoutSeconds { get; set; } = 60;
     [ProtoMember(5)] public string ChangeReason { get; set; } = string.Empty;
     [ProtoMember(6)] public string ClientName { get; set; } = string.Empty;
+    [ProtoMember(7)] public Guid BatchId { get; set; }
 }
 
 [ProtoContract]
@@ -34,6 +67,11 @@ public sealed class GuiProjectWork
 {
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public GuiProjectRequest? Request { get; set; }
+    [ProtoMember(3)] public string ConnectedClientName { get; set; } = string.Empty;
+    [ProtoMember(4)] public Guid ConnectionId { get; set; }
+    [ProtoMember(5)] public Guid DisconnectedConnectionId { get; set; }
+    [ProtoMember(6)] public int ActiveConnectionCount { get; set; }
+    [ProtoMember(7)] public string ConnectionPipeToken { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -43,6 +81,9 @@ public sealed class GuiProjectResult
     [ProtoMember(2)] public Guid RequestId { get; set; }
     [ProtoMember(3)] public string Json { get; set; } = "null";
     [ProtoMember(4)] public RemoteError? Error { get; set; }
+    [ProtoMember(5)] public bool IsProgress { get; set; }
+    [ProtoMember(6)] public int PercentComplete { get; set; }
+    [ProtoMember(7)] public int SecondsRemaining { get; set; } = -1;
 }
 
 [ProtoContract]

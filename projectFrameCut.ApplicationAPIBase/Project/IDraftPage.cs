@@ -9,6 +9,8 @@ namespace projectFrameCut.ApplicationAPIBase.Project
     /// Exposes timeline editing operations and host page capabilities to application plugins.
     /// Provides the contract for the draft/project editing surface, including clip management,
     /// track manipulation, state persistence, and UI interaction.
+    /// <br/>
+    /// <b>This is not for plugins to implement directly.</b>
     /// </summary>
     public interface IDraftPage : IContentView, Microsoft.Maui.Controls.ILayout, IPageController, IElementConfiguration<Page>, IPaddingElement, IView, ITitledElement, IToolbarElement, ISafeAreaView
     {
@@ -16,6 +18,14 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// Gets the main multi-window host used by the draft editor.
         /// </summary>
         public MultiWindowView MainMultiWindowView { get; }
+
+        /// <summary>Gets the current overall editor layout.</summary>
+        DraftPageForm CurrentForm { get; }
+
+        /// <summary>Switches the overall editor layout on the UI thread.</summary>
+        Task SwitchFormAsync(DraftPageForm form);
+
+        event EventHandler? FormChanged;
 
         /// <summary>
         /// Gets current playhead frame position.
@@ -91,15 +101,15 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         void AddATrack(int trackId);
 
         /// <summary>
-        /// Creates and inserts a transform clip between the selected clip and a neighbor.
+        /// Attaches a transform provider to the selected clip edge.
         /// </summary>
-        /// <param name="transformFactory">Factory function that creates the transform instance.</param>
+        /// <param name="transformFactory">Factory function that creates the transform provider.</param>
         /// <param name="center">The center clip around which the transform is placed.</param>
         /// <param name="left">Whether the transform connects to the left neighbor.</param>
         /// <param name="right">Whether the transform connects to the right neighbor.</param>
-        /// <param name="elementSetter">Optional action to configure the newly created clip element.</param>
+        /// <param name="elementSetter">Optional action to configure the owning clip element.</param>
         /// <returns>True if the transform was successfully added; otherwise false.</returns>
-        bool AddTransformBetweenSelected(Func<Guid, Guid, Render.RenderAPIBase.ClipAndTrack.ITransform> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter = null);
+        bool AddTransformBetweenSelected(Func<Render.RenderAPIBase.EffectAndMixture.IEffectProvider> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter = null);
 
         /// <summary>
         /// Applies the state from the specified snapshot slot to the current draft.
@@ -261,4 +271,12 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// <returns>A task representing the asynchronous popup operation.</returns>
         Task ShowAPopup(View? content = null, View? border = null, IClipElementUI? clip = null, string mode = "bottom");
     }
+
+    public enum DraftPageForm
+    {
+        Workspace,
+        Mobile,
+        Preview
+    }
+
 }

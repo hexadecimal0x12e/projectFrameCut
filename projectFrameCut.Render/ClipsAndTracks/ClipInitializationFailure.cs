@@ -5,9 +5,13 @@ using projectFrameCut.Drawing.Processing.Composing;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace projectFrameCut.Render.ClipsAndTracks;
@@ -18,11 +22,11 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 /// </summary>
 public static class ClipInitializationFailure
 {
-    public const string FailedKey = "__ClipInitializationFailed";
-    public const string StageKey = "__ClipInitializationFailureStage";
-    public const string MessageKey = "__ClipInitializationFailureMessage";
-    public const string FailedEffectsKey = "__ClipInitializationFailedEffects";
-    public const string FailedEffectProvidersKey = "__ClipInitializationFailedEffectProviders";
+    public const string FailedKey = ClipInitializationMetadata.FailedKey;
+    public const string StageKey = ClipInitializationMetadata.StageKey;
+    public const string MessageKey = ClipInitializationMetadata.MessageKey;
+    public const string FailedEffectsKey = ClipInitializationMetadata.FailedEffectsKey;
+    public const string FailedEffectProvidersKey = ClipInitializationMetadata.FailedEffectProvidersKey;
 
     private const float IconToCanvasScale = 0.32f;    // 图标边长占画布较短边的比例
     private const float IconVerticalAnchor = 0.40f;   // 图标中心在画布中的垂直位置（略偏上，为下方错误文本留出空间）
@@ -36,6 +40,8 @@ public static class ClipInitializationFailure
     /// 资源按需懒加载并常驻内存（图标尺寸小、数量少，可接受）；加载失败缓存 null 以免重复尝试。
     /// </summary>
     private static readonly ConcurrentDictionary<string, IPicture?> IconCache = new();
+    private static readonly Lock FallbackFrameGate = new();
+    private static readonly FrameHashCache FallbackFrames = new();
 
     /// <summary>
     /// Stage → 图标资源名。目前所有 Stage 均使用 ErrorSign；
@@ -49,6 +55,7 @@ public static class ClipInitializationFailure
         StageIconResourceMap["SourceReading"] = "projectFrameCut.Render.Resource.Error_SourceFail.png";
         StageIconResourceMap["SourceNotFound"] = "projectFrameCut.Render.Resource.Error_SourceNotFound.png";
         StageIconResourceMap["SourceNotMatch"] = "projectFrameCut.Render.Resource.Error_SourceNotFound.png";
+        StageIconResourceMap["ExternalSourceUnavailable"] = "projectFrameCut.Render.Resource.Error_ExternalSource.png";
         StageIconResourceMap["ResolveBinding"] = "projectFrameCut.Render.Resource.Error_BindingFail.png";
         StageIconResourceMap["ResolveEffect"] = "projectFrameCut.Render.Resource.Error.png";
     }
@@ -65,7 +72,11 @@ public static class ClipInitializationFailure
     {
         ArgumentNullException.ThrowIfNull(clip);
         clip.ExtraData ??= new Dictionary<string, object>();
+        if (clip is VideoClip video && RemoteRpcVideoSource.IsExternalPath(video.FilePath)
+            && stage is "SourceReading" or "SourceNotFound" or "SourceNotMatch")
+            stage = "ExternalSourceUnavailable";
         Mark(clip.ExtraData, stage, exception);
+        projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(clip);
         clip.EffectsInstances = [];
         clip.SpeedVarianceProviderInstance = null;
         clip.MixtureInstance = null;
@@ -76,6 +87,13 @@ public static class ClipInitializationFailure
     {
         ArgumentNullException.ThrowIfNull(extraData);
         ArgumentNullException.ThrowIfNull(exception);
+        for (var current = exception; current is not null; current = current.InnerException)
+            if (current is DynamicCalculationLimitException)
+            {
+                stage = "DynamicCalculationLimit";
+                exception = current;
+                break;
+            }
         extraData[FailedKey] = true;
         extraData[StageKey] = string.IsNullOrWhiteSpace(stage) ? "Initialization" : stage;
         extraData[MessageKey] = GetUsefulMessage(exception);
@@ -87,11 +105,15 @@ public static class ClipInitializationFailure
     }
 
     public static void Clear(Dictionary<string, object>? extraData)
+        => ClipInitializationMetadata.Clear(extraData);
+
+    public static void ClearRecovered(IClip clip, params string[] stages)
     {
-        if (extraData is null) return;
-        extraData.Remove(FailedKey);
-        extraData.Remove(StageKey);
-        extraData.Remove(MessageKey);
+        var stage = GetStage(clip.ExtraData);
+        if (!IsMarked(clip) || HasDeferredFailures(clip.ExtraData)
+            || stage is null || !stages.Contains(stage)) return;
+        Clear(clip);
+        Log($"[Clip] Recovered {stage} for clip {clip.Name} ({clip.Id}).");
     }
 
     public static bool IsMarked(IClip clip) => IsMarked(clip.ExtraData);
@@ -115,6 +137,20 @@ public static class ClipInitializationFailure
     {
         if (!IsMarked(extraData)) return string.Empty;
         var stage = ReadString(extraData, StageKey, "Initialization");
+        if (stage == "DynamicCalculationLimit")
+        {
+            var text = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources?.ClipFallback_DynamicCalculationLimit;
+            if (string.IsNullOrEmpty(text) || text.StartsWith("Unset localization item:", StringComparison.Ordinal))
+                text = ISimpleLocalizerBase_PropertyPanel.GetMapping()["zh-CN"].ClipFallback_DynamicCalculationLimit;
+            return $"{text}{Environment.NewLine}{ReadString(extraData, MessageKey, string.Empty)}";
+        }
+        if (stage == "ExternalSourceUnavailable")
+        {
+            var text = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources?.ClipFallback_ExternalSourceUnavailable;
+            return string.IsNullOrEmpty(text) || text.StartsWith("Unset localization item:", StringComparison.Ordinal)
+                ? ISimpleLocalizerBase_PropertyPanel.GetMapping()["zh-CN"].ClipFallback_ExternalSourceUnavailable
+                : text;
+        }
         var message = ReadString(extraData, MessageKey, "Unknown error");
         var localizedHeader = "A error happens while reading source.";
         if(LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources is ISimpleLocalizerBase_PropertyPanel pp)
@@ -160,11 +196,31 @@ public static class ClipInitializationFailure
     {
         width = Math.Max(1, width);
         height = Math.Max(1, height);
+        string key = $"{width}:{height}:{pixelMode.Value}:{IVectorContentClip.GlobalDefaultAntiAliasMode}:" +
+            $"{RuntimeHelpers.GetHashCode(IVectorContentClip.GlobalDefaultRasterizer)}:{stage?.Length ?? 0}:{stage}:{description}";
+        lock (FallbackFrameGate)
+        {
+            if (FallbackFrames.TryRead(key, out var cached) && cached is IPicture picture) return picture;
+            var frame = RenderFallbackFrame(width, height, pixelMode, stage, description);
+            try { FallbackFrames.Write(key, frame); }
+            catch
+            {
+                frame.Dispose();
+                throw;
+            }
+            return frame;
+        }
+    }
+
+    private static IPicture RenderFallbackFrame(int width, int height, IPicture.PicturePixelMode pixelMode,
+        string? stage, string? description)
+    {
         // 暗红背景（RGB 58,22,22），与红色系图标、白字黑描边文字协调且不刺眼
         IPicture picture = (int)pixelMode switch
         {
-            8 => Picture8bpp.GenerateSolidColor(width, height, 58, 22, 22, 1),
-            16 => Picture16bpp.GenerateSolidColor(width, height, 14906, 5654, 5654, 1),
+            116 => PictureFP16.GenerateSolidColor(width, height, (Half)(58 / 255f), (Half)(22 / 255f), (Half)(22 / 255f), Half.One),
+            8 => Picture8bpp.GenerateSolidColor(width, height, 58, 22, 22, Half.One),
+            16 => Picture16bpp.GenerateSolidColor(width, height, 14906, 5654, 5654, Half.One),
             _ => throw new InvalidDataException("Unsupport pixel mode.")
         };
 
@@ -265,7 +321,7 @@ public static class ClipInitializationFailure
             var entry = new TextEntry
             {
                 Text = description,
-                FontName = "HarmonyOS Sans SC Medium",
+                FontName = "HarmonyOS Sans SC",
                 FontStyle = "Regular",
                 FontSize = fontSize,
                 X = targetWidth * 0.5f,        // 水平居中
@@ -274,11 +330,11 @@ public static class ClipInitializationFailure
                 FillR = ushort.MaxValue,
                 FillG = ushort.MaxValue,
                 FillB = ushort.MaxValue,
-                FillA = 1f,
+                FillA = Half.One,
                 StrokeR = 0,
                 StrokeG = 0,
                 StrokeB = 0,
-                StrokeA = 1f,
+                StrokeA = Half.One,
                 StrokeThickness = MathF.Max(1f, fontSize * 0.08f),
                 CharacterSpacing = 0f,
                 WordSpacing = 0f,
@@ -289,7 +345,10 @@ public static class ClipInitializationFailure
             var ctx = TextLayoutContext.FromCanvas(targetWidth, targetHeight);
             var vectorCanvas = TextLayoutPipeline.LayoutForRender([entry], ctx, targetWidth, targetHeight);
             if (vectorCanvas.Elements.Count == 0)
-                return null;   // 字体不可用：静默跳过文本层
+            {
+                Log($"Clip initialization fallback text layout is empty (font: {entry.FontName}, canvas: {targetWidth}x{targetHeight}).", "warning");
+                return null;
+            }
 
             textLayer = IVectorContentClip.GlobalDefaultRasterizer.Convert(
                 vectorCanvas, targetWidth, targetHeight, transparentBackground: true,
@@ -297,8 +356,9 @@ public static class ClipInitializationFailure
 
             return ComposeOverlay(basePicture, textLayer, 0, 0, targetWidth, targetHeight, targetPPB);
         }
-        catch
+        catch (Exception ex)
         {
+            Log(ex, "render clip initialization fallback text");
             return null;
         }
         finally
@@ -334,7 +394,9 @@ public static class ClipInitializationFailure
         IPicture? result = null;
         try
         {
-            if (baseForCompose is IPicture<ushort> uBase && topForCompose is IPicture<ushort> uTop)
+            if (baseForCompose is IPicture<Half> fb && topForCompose is IPicture<Half> ft)
+                result = PictureComposer.Default.Compose(fb, ft, BlendMode.Overlay, startX, startY, targetWidth, targetHeight);
+            else if (baseForCompose is IPicture<ushort> uBase && topForCompose is IPicture<ushort> uTop)
                 result = PictureComposer.Default.Compose(uBase, uTop, BlendMode.Overlay, startX, startY, targetWidth, targetHeight);
             else if (baseForCompose is IPicture<byte> bBase && topForCompose is IPicture<byte> bTop)
                 result = PictureComposer.Default.Compose(bBase, bTop, BlendMode.Overlay, startX, startY, targetWidth, targetHeight);

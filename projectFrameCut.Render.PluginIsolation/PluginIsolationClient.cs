@@ -33,8 +33,25 @@ public sealed class PluginIsolationClient : IAsyncDisposable
         return plugin.Providers.ToDictionary(x => x.TypeName, x => (Func<IEffectProvider>)(() =>
         {
             var descriptor = Invoke<IsolationCreateProviderRequest, IsolationProviderDescriptor>(RenderOperation.IsolationCreateProvider, new() { TypeName = x.TypeName });
-            return new RemoteEffectProvider(_session, descriptor);
+            if (descriptor.HasKeyFrames) return descriptor.HasMultipleOutputs
+                ? new RemoteKeyFramedMultipleOutputEffectProvider(_session, descriptor) : new RemoteKeyFramedEffectProvider(_session, descriptor);
+            return descriptor.HasMultipleOutputs
+                ? new RemoteMultipleOutputEffectProvider(_session, descriptor) : new RemoteEffectProvider(_session, descriptor);
         }));
+    }
+
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> CreateEffectImplementations()
+    {
+        var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
+        return plugin.EffectImplementations.ToDictionary(
+            x => new EffectImplementationKey(x.TypeName, (EffectImplementType)x.ImplementType),
+            x => (Func<IEffect>)(() =>
+            {
+                var descriptor = Invoke<IsolationEffectImplementationCatalogItem, IsolationEffectDescriptor>(
+                    RenderOperation.IsolationCreateEffectImplementation,
+                    new() { TypeName = x.TypeName, ImplementType = x.ImplementType });
+                return RemoteEffectFactory.Create(_session, descriptor);
+            }));
     }
 
     public Dictionary<string, IVideoSource> CreateVideoSources()
@@ -46,7 +63,8 @@ public sealed class PluginIsolationClient : IAsyncDisposable
     public Dictionary<string, Func<string, IAudioSource>> CreateAudioSources()
     {
         var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
-        return plugin.AudioSources.ToDictionary(x => x.TypeName, x => (Func<string, IAudioSource>)(source => RemoteAudioSource.CreatePrototype(_session, x).CreateNew(source)));
+        return plugin.AudioSources.ToDictionary(x => x.TypeName, x => (Func<string, IAudioSource>)(source =>
+            source is null ? RemoteAudioSource.CreatePrototype(_session, x) : RemoteAudioSource.CreatePrototype(_session, x).CreateNew(source)));
     }
 
     public Dictionary<string, Func<string, IVideoWriter>> CreateVideoWriters()
@@ -57,28 +75,6 @@ public sealed class PluginIsolationClient : IAsyncDisposable
             var state = Invoke<IsolationCreateVideoWriterRequest, IsolationVideoWriterState>(RenderOperation.IsolationCreateVideoWriter,
                 new() { TypeName = x, FactoryArgument = argument });
             return new RemoteVideoWriter(_session, state);
-        }));
-    }
-
-    public Dictionary<string, Func<Guid, Guid, ITransform>> CreateTransforms()
-    {
-        var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
-        return plugin.Transforms.ToDictionary(x => x, x => (Func<Guid, Guid, ITransform>)((left, right) =>
-        {
-            var state = Invoke<IsolationCreateTransformRequest, IsolationTransformState>(RenderOperation.IsolationCreateTransform,
-                new() { TypeName = x, LeftClipId = left.ToString(), RightClipId = right.ToString() });
-            return new RemoteTransform(_session, state);
-        }));
-    }
-
-    public Dictionary<string, Func<IComputer>> CreateComputers()
-    {
-        var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
-        return plugin.Computers.ToDictionary(x => x, x => (Func<IComputer>)(() =>
-        {
-            var descriptor = Invoke<IsolationProviderCatalogItem, IsolationComputerDescriptor>(RenderOperation.IsolationCreateComputer,
-                new() { TypeName = x });
-            return new RemoteComputer(_session, descriptor);
         }));
     }
 
@@ -112,13 +108,6 @@ public sealed class PluginIsolationClient : IAsyncDisposable
         var descriptor = Invoke<IsolationVectorComponentRequest, IsolationVectorComponentDescriptor>(RenderOperation.IsolationCreateVectorComponent,
             new() { Json = element.GetRawText() });
         return new RemoteVectorComponent(_session, descriptor);
-    }
-
-    public ITransform RestoreTransform(JsonElement element)
-    {
-        var state = Invoke<IsolationCreateTransformRequest, IsolationTransformState>(RenderOperation.IsolationCreateTransform,
-            new() { Json = element.GetRawText() });
-        return new RemoteTransform(_session, state);
     }
 
     public IReadOnlyCollection<string> ProjectTools => _plugin?.ProjectTools ?? [];

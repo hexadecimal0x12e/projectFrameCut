@@ -42,6 +42,8 @@ public sealed class RenderWorkerService : Service
         };
 
         base.OnCreate();
+        using var process = System.Diagnostics.Process.GetCurrentProcess();
+        ProcessPriorityBoost.RaiseToHighest(process);
         EnsureNotificationChannel();
     }
 
@@ -95,6 +97,7 @@ public sealed class RenderWorkerService : Service
         if (_workers.ContainsKey(socketPath)) return;
 
         var dataRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraDataRoot);
+        projectFrameCut.Shared.ProjectCachePaths.Configure(intent.GetStringExtra(projectFrameCut.Shared.ProjectCachePaths.EnvironmentKey));
         if (string.IsNullOrWhiteSpace(dataRoot)) dataRoot = MauiProgram.BasicDataPath;
         var ffmpegRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraFfmpegRoot) ?? string.Empty;
         var independent = intent.GetBooleanExtra(AndroidRenderWorkerController.ExtraIndependent, false);
@@ -120,7 +123,8 @@ public sealed class RenderWorkerService : Service
         await using var backend = new RenderBackendService(
             stateRoot: dataRoot,
             completionSink: RenderCompletionNotifier.Notify,
-            progressSink: RenderCompletionNotifier.NotifyProgress);
+            progressSink: RenderCompletionNotifier.NotifyProgress,
+            previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
         await new UnixSocketRenderServer(backend)
             .RunAsync(host.SocketPath, token, host.Cancellation.Token)
             .ConfigureAwait(false);
@@ -135,18 +139,28 @@ public sealed class RenderWorkerService : Service
         {
             "render",
             $"--project={options.ProjectRoot}",
+            $"--timelineSource={options.TimelineSource}",
+            $"--projectCacheDirectory={(string.IsNullOrWhiteSpace(options.CacheRoot) ? projectFrameCut.Shared.ProjectCachePaths.Initialize(options.ProjectRoot, options.ProjectName) : options.CacheRoot)}",
             $"--output={options.OutputPath}",
             $"--output_options={options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}",
+            $"--finalVideoBitRate={options.FinalVideoBitRate.GetValueOrDefault()}",
             $"--target={(options.WriteToVoid ? "void" : "all")}",
             $"--assetDbFile={options.AssetDatabasePath}",
             $"--FFmpegLibraryPath={options.FFmpegLibraryPath}",
             $"--temp_path={options.TempPath}",
             $"--maxParallelThreads={Math.Max(1, options.MaxParallelThreads)}",
-            $"--oneByOneRender={options.OneByOneRender}",
+            $"--allowWorkerOversubscription={options.AllowWorkerOversubscription}",
+            $"--renderAheadFrames={options.RenderAheadFrames}",
+            $"--enableMemoryBudget={options.EnableMemoryBudget}",
+            $"--maxBufferedBytes={options.MaxBufferedBytes}",
+            $"--enableGpuBufferPoolLimit={options.EnableGpuBufferPoolLimit}",
+            $"--gpuBufferPoolMaxBytes={options.GpuBufferPoolMaxBytes}",
             $"--GCOptions={Math.Clamp(options.GcOption, 0, 2)}",
             $"--enableThreadAffinity={options.EnableThreadAffinity}",
-            $"--prepareInWorker={options.PrepareInWorker}",
-            $"--renderByLayer={options.RenderByLayer}",
+            $"--coreAffinityOverride={string.Join(",", options.WorkerCPUCoreIndexs)}",
+            $"--reuseDynamicPreviewCache={options.ReuseDynamicPreviewCache}",
+            $"--incrementalRendering={options.EnableDeferredComposition}",
+            $"--chunkResume={options.ChunkResume}",
             $"--rpcSocket={host.SocketPath}",
             $"--rpcToken={token}",
             $"--jobId={options.JobId:D}",

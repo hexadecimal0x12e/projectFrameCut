@@ -1,0 +1,112 @@
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using System.Collections.Concurrent;
+using projectFrameCut.Shared;
+using System.Runtime.CompilerServices;
+
+namespace projectFrameCut.Render.Effect;
+
+public static class ClipArgumentBinding
+{
+    private sealed record FrameCopy(IClip Source, uint Frame, bool ShouldRender);
+    private static readonly ConditionalWeakTable<IClip, FrameCopy> Copies = new();
+
+    public static bool IsFrameCopy(IClip clip) => Copies.TryGetValue(clip, out _);
+
+    internal static uint GetFrameIndex(IClip clip, uint fallback) => Copies.TryGetValue(clip, out var copy) ? copy.Frame : fallback;
+
+    public static bool ShouldRender(IClip frameClip) => Copies.TryGetValue(frameClip, out var copy) ? copy.ShouldRender
+        : frameClip.EffectsInstances?.OfType<IRenderEffectPipeline>().FirstOrDefault(g => g.Stage == EffectStage.Render)
+            ?.ShouldRender(frameClip, (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? frameClip.StartFrame)) ?? true;
+
+    internal static bool TryGetFrame(IClip clip, uint frame, out IClip? result)
+    {
+        result = null;
+        return ClipValueFrameContext.Current?.TryGetComputed((typeof(ClipArgumentBinding), clip.Id, frame), out result) == true;
+    }
+
+    public static IClip InitializeFrame(IClip clip, uint frame)
+    {
+        if (Rendering.FrameHashContext.Current is { } context)
+            return context.Evaluate((typeof(ClipArgumentBinding), clip.Id, frame), () => InitializeFrameCore(clip, frame), c => c, _ => { });
+        return InitializeFrameCore(clip, frame);
+    }
+
+    private static IClip InitializeFrameCore(IClip clip, uint frame)
+    {
+        using var clipScope = ValueProviderFrameContext.PushClip(clip);
+        if (Copies.TryGetValue(clip, out var copy))
+        {
+            if (copy.Frame == frame)
+            {
+                ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), clip);
+                return clip;
+            }
+            clip = copy.Source;
+        }
+        if (TryGetFrame(clip, frame, out var cached)) return cached!;
+        try
+        {
+            var provider = clip.EffectProvidersInstances?.OfType<ClipArgumentProvider>().SingleOrDefault();
+            if (provider is not { Enabled: true })
+            {
+                var graph = clip.EffectsInstances?.OfType<IRenderEffectPipeline>().FirstOrDefault(g => g.Stage == EffectStage.Render);
+                if (graph is null) return clip;
+                var frameClip = clip.CopyForFrame();
+                bool visible = graph.ShouldRender(clip, frame);
+                Copies.Add(frameClip, new(clip, frame, visible));
+                ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), frameClip);
+                return frameClip;
+            }
+            using var context = ValueProviderFrameContext.PushFrame(frame, clip.GetEffectiveDuration() > 0
+                ? Math.Clamp((float)((long)frame - clip.StartFrame) / clip.GetEffectiveDuration(), 0, 1) : 0);
+            var result = clip.HandleArguments(provider.Evaluate(clip));
+            bool shouldRender = result.EffectsInstances?.OfType<IRenderEffectPipeline>().FirstOrDefault(g => g.Stage == EffectStage.Render)?.ShouldRender(result, frame) ?? true;
+            if (ReferenceEquals(result, clip) || result.Id != clip.Id)
+                throw new InvalidOperationException("The clip argument handler must return a frame copy with the same id.");
+            Copies.Add(result, new(clip, frame, shouldRender));
+            ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
+            result.EffectStagePlan?.Complete(result, EffectStage.Text, frame);
+            return result;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            ClipInitializationFailure.Mark(clip, "ClipArguments", ex);
+            Logger.Log(ex, $"Initialize arguments for clip {clip.Id}, frame {frame}", nameof(ClipArgumentBinding));
+            return clip;
+        }
+    }
+}
+
+public sealed class ClipArgumentFrameCache
+{
+    private readonly ConcurrentDictionary<(Guid Clip, uint Frame), Lazy<IClip>> clips = new();
+
+    public IClip Get(IClip clip, uint frame, Action<IClip>? initialize = null)
+    {
+        if (Rendering.FrameHashContext.Current is { } context)
+            return context.Evaluate((typeof(ClipArgumentFrameCache), clip.Id, frame), () =>
+            {
+                if (!ClipArgumentBinding.IsFrameCopy(clip)) initialize?.Invoke(clip);
+                return ClipArgumentBinding.InitializeFrame(clip, frame);
+            }, c => c, _ => { });
+        var result = clips.GetOrAdd((clip.Id, frame), _ => new(() =>
+        {
+            if (ClipArgumentBinding.TryGetFrame(clip, frame, out var cached)) return cached!;
+            if (!ClipArgumentBinding.IsFrameCopy(clip)) initialize?.Invoke(clip);
+            return ClipArgumentBinding.InitializeFrame(clip, frame);
+        })).Value;
+        ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
+        return result;
+    }
+
+    public void RemoveFrame(uint frame)
+    {
+        foreach (var key in clips.Keys)
+            if (key.Frame == frame) clips.TryRemove(key, out _);
+    }
+
+    public void Clear() => clips.Clear();
+}

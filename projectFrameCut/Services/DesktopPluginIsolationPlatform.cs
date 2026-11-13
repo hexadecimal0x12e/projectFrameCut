@@ -66,7 +66,7 @@ internal sealed class DesktopPluginIsolationPlatform : IPluginIsolationPlatform
                     PreferredPayloadKind = context.Transport.PayloadMode ?? IsolationPayloadKind.SharedMemory,
                 }),
             }, timeout.Token).ConfigureAwait(false);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
             var capabilities = RenderRpcSerializer.Deserialize<IsolationChannelCapabilities>(response.Payload);
             if (capabilities.ProtocolVersion != PluginIsolationProtocol.CurrentVersion)
                 throw new InvalidDataException("Plugin isolation protocol version mismatch.");
@@ -110,7 +110,7 @@ internal sealed class DesktopPluginIsolationPlatform : IPluginIsolationPlatform
                     }) info.ArgumentList.Add(argument);
                     if (MyLoggerExtensions.LoggingDiagnosticInfo) info.ArgumentList.Add("--logDiagnostic");
                     var worker = Process.Start(info) ?? throw new InvalidOperationException("Unable to start the plugin isolation worker.");
-                    if (noConsole)
+                    if (noConsole && MyLoggerExtensions.LoggingDiagnosticInfo)
                     {
                         worker.ErrorDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Logger.Log(e.Data, "PluginWorker Stderr"); };
                         worker.OutputDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Logger.Log(e.Data, "PluginWorker Stdout"); };

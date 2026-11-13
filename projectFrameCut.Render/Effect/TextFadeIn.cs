@@ -8,13 +8,14 @@ namespace projectFrameCut.Render.Effect
 {
     public class TextFadeInContinuousEffect : IContinuousTextEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "TextFadeIn";
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool YieldProcessStep => false;
         public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; }
@@ -31,7 +32,7 @@ namespace projectFrameCut.Render.Effect
 
         public TextEntry[] Process(TextEntry[] source, float progress)
         {
-            float alpha = Math.Clamp(progress, 0f, 1f);
+            Half alpha = Half.Clamp((Half)progress, Half.Zero, Half.One);
 
             var result = new TextEntry[source.Length];
             for (int i = 0; i < source.Length; i++)
@@ -48,7 +49,6 @@ namespace projectFrameCut.Render.Effect
         {
             return new TextFadeInContinuousEffect
             {
-                ImplementType = this.ImplementType,
                 RelativeWidth = this.RelativeWidth,
                 RelativeHeight = this.RelativeHeight,
                 Name = this.Name,
@@ -66,6 +66,10 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class TextFadeInEffectProvider : EffectProviderBase
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Text];
+
+        public override bool IsDeterministic => true;
+
         public TextFadeInEffectProvider()
         {
             Name = "TextFadeIn";
@@ -86,9 +90,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            return [new TextFadeInContinuousEffect { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType }];
-        }
+
     }
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using projectFrameCut.Shared;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using projectFrameCut.Drawing.Base;
 
 

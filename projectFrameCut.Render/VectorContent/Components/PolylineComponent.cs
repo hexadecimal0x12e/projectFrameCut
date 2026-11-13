@@ -5,7 +5,6 @@ namespace projectFrameCut.Render.VectorContent.Components;
 public class PolylineComponent : BaseShapeComponent
 {
     public override string TypeName => "Polyline";
-    protected override string[] ShapeFieldIds => [];
 
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()
@@ -22,10 +21,7 @@ public class PolylineComponent : BaseShapeComponent
 
     protected override ShapeCanvasElement BuildBaseShape()
     {
-        var points = Parameters.TryGetValue("Points", out var value) && value is List<Point> pts
-            ? pts
-            : [];
-        return ShapeCanvasElement.DrawPolyline(points.ToArray());
+        return ShapeCanvasElement.DrawPolyline(GetPoints().ToArray());
     }
 }
 

@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media.Imaging;
 using projectFrameCut.Controls;
 using projectFrameCut.LivePreview;
+using projectFrameCut.Render.Contracts;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
 using CanvasDirectXPixelFormat = Windows.Graphics.DirectX.DirectXPixelFormat;
@@ -44,15 +45,28 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
     };
     private CanvasDevice? _device;
     private CanvasSwapChain? _swapChain;
+    private CanvasBitmap? _opaqueBitmap;
+    private ScRgbFrame? _opaqueFrame;
+    private CanvasBitmap? _transparentBitmap;
+    private ScRgbFrame? _transparentFrame;
     private CompositionGraphicsDevice? _graphicsDevice;
     private CompositionDrawingSurface? _surface;
     private CompositionSurfaceBrush? _surfaceBrush;
     private SpriteVisual? _surfaceVisual;
     private int _updateVersion;
+    private bool _connected;
+    private PreviewFrameSource? _requestedFrame;
+    private bool _hasFrameRequest;
     private int _frameWidth;
     private int _frameHeight;
     private int _swapChainWidth;
     private int _swapChainHeight;
+    private bool _swapChainContentDirty;
+    private Matrix3x2? _swapChainTransform;
+    private Vector2 _compositionScale;
+    private PreviewLoadDiagnostics? _presentTiming;
+    private bool _frameSubmitted;
+    private bool _presentationConfigured;
 
     public HdrPreviewViewHandler() : base(Mapper)
     {
@@ -70,6 +84,9 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
     protected override void ConnectHandler(PlatformGrid platformView)
     {
         base.ConnectHandler(platformView);
+        _connected = true;
+        VirtualView.Timing?.Stage("native handler connected");
+        _panel.Loaded += OnPanelLoaded;
         _panel.SizeChanged += OnPanelSizeChanged;
         _panel.CompositionScaleChanged += OnCompositionScaleChanged;
         UpdateFrame(VirtualView.Frame);
@@ -77,7 +94,12 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
 
     protected override void DisconnectHandler(PlatformGrid platformView)
     {
+        _connected = false;
+        _requestedFrame = null;
+        _hasFrameRequest = false;
+        VirtualView.Timing?.Finish("handler detached");
         Interlocked.Increment(ref _updateVersion);
+        _panel.Loaded -= OnPanelLoaded;
         _panel.SizeChanged -= OnPanelSizeChanged;
         _panel.CompositionScaleChanged -= OnCompositionScaleChanged;
         DisposeSwapChain();
@@ -87,16 +109,50 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         base.DisconnectHandler(platformView);
     }
 
-    private void UpdateFrame(PreviewFrameSource? frame)
+    private bool IsCurrent(int version) => _connected && version == Volatile.Read(ref _updateVersion);
+
+    private async void UpdateFrame(PreviewFrameSource? frame)
     {
+        if (!_connected || (_hasFrameRequest && ReferenceEquals(_requestedFrame, frame))) return;
+        _requestedFrame = frame;
+        _hasFrameRequest = true;
         var version = Interlocked.Increment(ref _updateVersion);
-        _ = PresentAsync(frame, version);
+        if (!IsCurrent(version)) return;
+        var timing = VirtualView.Timing;
+        timing?.Stage("native frame mapped");
+        try
+        {
+            if (frame is not null && frame.ScRgb is not { IsCurrent: true } && frame.Png is null)
+            {
+                timing?.Stage("materialization queued");
+                frame = await Task.Run(() =>
+                {
+                    timing?.Stage("materialization started");
+                    var prepared = HdrPreviewView.PrepareFrame(frame);
+                    timing?.Stage("materialization finished");
+                    return prepared;
+                });
+            }
+            if (!IsCurrent(version)) return;
+            timing?.Stage("frame materialized; UI resumed");
+            _presentTiming = timing;
+            Present(frame, version);
+        }
+        catch (Exception ex)
+        {
+            if (IsCurrent(version)) _hasFrameRequest = false;
+            timing?.Finish("materialization failed");
+            Log(ex, $"Present preview frame '{frame?.VfdPath}'", this);
+        }
     }
 
-    private async Task PresentAsync(PreviewFrameSource? frame, int version)
+    private void Present(PreviewFrameSource? frame, int version)
     {
+        _frameSubmitted = false;
+        _presentationConfigured = false;
         if (frame is null)
         {
+            _presentTiming?.Finish("cleared");
             ShowError(null);
             _panel.Visibility = Visibility.Collapsed;
             SetSurfaceVisibility(false);
@@ -104,47 +160,51 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(frame.FallbackImagePath))
-            await LoadFallbackAsync(frame.FallbackImagePath, version);
-
-        if (version != Volatile.Read(ref _updateVersion)) return;
-        if (string.IsNullOrWhiteSpace(frame.ScRgbPath))
+        if (!IsCurrent(version)) return;
+        if (frame.TargetPixelFormat != PreviewPixelFormat.Rgba16FloatScRgb)
         {
             _panel.Visibility = Visibility.Collapsed;
             SetSurfaceVisibility(false);
-            if (frame.RequireSwapChain)
-                ShowError("FP16 scRGB preview data is unavailable.");
+            LoadFallback(frame, version);
             return;
         }
 
         try
         {
-            var expectedStride = checked(frame.Width * 8);
-            if (frame.Width <= 0 || frame.Height <= 0 || frame.Stride != expectedStride)
-                throw new InvalidDataException($"Invalid FP16 preview layout: {frame.Width}x{frame.Height}, stride {frame.Stride}.");
+            var materialized = frame.ScRgb ?? throw new InvalidOperationException("Preview scRGB data was not prepared.");
+            lock (materialized.PixelsGate)
+            {
+                if (!IsCurrent(version)) return;
+                if (!materialized.IsCurrent)
+                {
+                    _hasFrameRequest = false;
+                    UpdateFrame(frame with { ScRgb = null, Png = null });
+                    return;
+                }
 
-            var bytes = await File.ReadAllBytesAsync(frame.ScRgbPath);
-            if (version != Volatile.Read(ref _updateVersion)) return;
-            if (bytes.Length != checked(frame.Stride * frame.Height))
-                throw new InvalidDataException($"Invalid FP16 preview payload length {bytes.Length}.");
+                _device ??= CanvasDevice.GetSharedDevice();
+                if (!_device.IsPixelFormatSupported(CanvasDirectXPixelFormat.R16G16B16A16Float))
+                    throw new NotSupportedException("The active Direct3D device does not support R16G16B16A16_FLOAT.");
+                _presentTiming?.Stage("graphics device ready");
 
-            _device ??= CanvasDevice.GetSharedDevice();
-            if (!_device.IsPixelFormatSupported(CanvasDirectXPixelFormat.R16G16B16A16Float))
-                throw new NotSupportedException("The active Direct3D device does not support R16G16B16A16_FLOAT.");
+                if (materialized.HasTransparency)
+                    PresentTransparentFrame(materialized);
+                else
+                    PresentOpaqueHdrFrame(materialized);
 
-            if (HasTransparentPixels(bytes))
-                PresentTransparentFrame(bytes, frame.Width, frame.Height);
-            else
-                PresentOpaqueHdrFrame(bytes, frame.Width, frame.Height);
-
-            if (version != Volatile.Read(ref _updateVersion)) return;
-            ShowError(null);
-            _fallback.Visibility = Visibility.Collapsed;
+                if (!IsCurrent(version)) return;
+                ShowError(null);
+                _fallback.Visibility = Visibility.Collapsed;
+                _presentationConfigured = true;
+                _presentTiming?.Stage("presentation configured");
+                if (_frameSubmitted) _presentTiming?.ContentReady("HDR content ready");
+            }
         }
         catch (Exception ex)
         {
-            if (version != Volatile.Read(ref _updateVersion)) return;
-            Log(ex, "Show HDR Preview content", this);
+            if (!IsCurrent(version)) return;
+            _presentTiming?.Stage("HDR presentation failed");
+            Log(ex, $"Show HDR preview content '{frame.VfdPath}'", this);
             DisposeSwapChain();
             ElementCompositionPreview.SetElementChildVisual(PlatformView, null);
             DisposeCompositionResources();
@@ -152,35 +212,65 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
             SetSurfaceVisibility(false);
             if (frame.RequireSwapChain)
             {
+                _hasFrameRequest = false;
+                _presentTiming?.Finish("failed");
                 _fallback.Visibility = Visibility.Collapsed;
                 ShowError($"HDR preview failed: {ex.Message}");
             }
             else
             {
                 ShowError(null);
-                _fallback.Visibility = string.IsNullOrWhiteSpace(frame.FallbackImagePath)
-                    ? Visibility.Collapsed
-                    : Visibility.Visible;
+                LoadFallback(frame, version);
             }
         }
     }
 
-    private async Task LoadFallbackAsync(string path, int version)
+    private async void LoadFallback(PreviewFrameSource frame, int version)
     {
+        var timing = _presentTiming;
         try
         {
-            using var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var stream = file.AsRandomAccessStream();
+            timing?.Stage("PNG preparation started");
+            var bytes = frame.Png ?? await Task.Run(() => PreviewFrameMaterializer.ToPngBytes(frame));
+            if (!IsCurrent(version)) return;
+            timing?.Stage("PNG bytes ready");
+            using var memory = new MemoryStream(bytes, writable: false);
+            using var stream = memory.AsRandomAccessStream();
             var bitmap = new BitmapImage();
-            await bitmap.SetSourceAsync(stream);
-            if (version != Volatile.Read(ref _updateVersion)) return;
+            var assigned = false;
+            if (timing is not null)
+            {
+                bitmap.ImageOpened += (_, _) =>
+                {
+                    if (!IsCurrent(version)) return;
+                    timing.Stage("native fallback image opened");
+                    if (assigned) timing.ContentReady("fallback content ready");
+                };
+                bitmap.ImageFailed += (_, e) =>
+                {
+                    if (IsCurrent(version)) timing.Finish($"fallback image failed: {e.ErrorMessage}");
+                };
+            }
+            bitmap.SetSource(stream);
+            timing?.Stage("PNG decoded");
+            if (!IsCurrent(version)) return;
             _fallback.Source = bitmap;
             _fallback.Visibility = Visibility.Visible;
+            timing?.Stage("fallback source assigned");
+            assigned = true;
+            if (bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
+                timing?.ContentReady("fallback content ready");
         }
-        catch
+        catch (Exception ex)
         {
-            if (version == Volatile.Read(ref _updateVersion))
+            if (IsCurrent(version))
+            {
+                _hasFrameRequest = false;
+                timing?.Finish("fallback failed");
+                Log(ex, $"Load preview fallback '{frame.VfdPath}'", this);
                 _fallback.Visibility = Visibility.Collapsed;
+                ShowError($"Preview failed: {ex.Message}");
+            }
         }
     }
 
@@ -190,101 +280,175 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         _error.Visibility = string.IsNullOrWhiteSpace(message) ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private static bool HasTransparentPixels(byte[] bytes)
+    private static bool HasSameContent(ScRgbFrame? previous, ScRgbFrame frame)
+        => previous is not null && previous.Width == frame.Width && previous.Height == frame.Height
+            && previous.Stride == frame.Stride && previous.ContentHash == frame.ContentHash;
+
+    private void UploadBitmap(ref CanvasBitmap? bitmap, ScRgbFrame? previous, ScRgbFrame frame)
     {
-        // The backend writes one little-endian Half per RGBA channel. Half(1) is 0x3c00.
-        // The payload length was validated above, so every alpha sample has two bytes.
-        for (var alphaOffset = 6; alphaOffset < bytes.Length; alphaOffset += 8)
+        if (bitmap is not null && previous is not null && previous.Width == frame.Width && previous.Height == frame.Height)
         {
-            if (bytes[alphaOffset] != 0x00 || bytes[alphaOffset + 1] != 0x3c)
-                return true;
+            bitmap.SetPixelBytes(frame.Bytes);
+            return;
         }
 
-        return false;
+        bitmap?.Dispose();
+        bitmap = null;
+        bitmap = CanvasBitmap.CreateFromBytes(
+            _device!, frame.Bytes, frame.Width, frame.Height,
+            CanvasDirectXPixelFormat.R16G16B16A16Float, 96f, CanvasAlphaMode.Premultiplied);
     }
 
-    private void PresentOpaqueHdrFrame(byte[] bytes, int width, int height)
+    private void PresentOpaqueHdrFrame(ScRgbFrame frame)
     {
         SetSurfaceVisibility(false);
 
-        if (_swapChain is null || _swapChainWidth != width || _swapChainHeight != height)
+        if (_swapChain is null)
         {
-            DisposeSwapChain();
             _swapChain = new CanvasSwapChain(
                 _device!,
-                width,
-                height,
+                frame.Width,
+                frame.Height,
                 96f,
                 CanvasDirectXPixelFormat.R16G16B16A16Float,
                 2,
                 CanvasAlphaMode.Premultiplied);
             _panel.SwapChain = _swapChain;
-            _swapChainWidth = width;
-            _swapChainHeight = height;
-            UpdateSwapChainTransform();
+            _swapChainWidth = frame.Width;
+            _swapChainHeight = frame.Height;
+            _swapChainContentDirty = true;
+            _swapChainTransform = null;
         }
-
-        using var bitmap = CanvasBitmap.CreateFromBytes(
-            _device!,
-            bytes,
-            width,
-            height,
-            CanvasDirectXPixelFormat.R16G16B16A16Float,
-            96f,
-            CanvasAlphaMode.Premultiplied);
-        using (var drawing = _swapChain!.CreateDrawingSession(Microsoft.UI.Colors.Transparent))
+        else if (_swapChainWidth != frame.Width || _swapChainHeight != frame.Height)
         {
-            drawing.DrawImage(bitmap);
+            _swapChain.ResizeBuffers(frame.Width, frame.Height);
+            _swapChainWidth = frame.Width;
+            _swapChainHeight = frame.Height;
+            _swapChainContentDirty = true;
+            _swapChainTransform = null;
         }
-        _swapChain!.Present(0);
+        _presentTiming?.Stage("swap chain ready");
+
+        if (_opaqueBitmap is null || !HasSameContent(_opaqueFrame, frame))
+        {
+            _swapChainContentDirty = true;
+            UploadBitmap(ref _opaqueBitmap, _opaqueFrame, frame);
+            _presentTiming?.Stage("opaque bitmap uploaded");
+        }
+        else
+        {
+            _presentTiming?.Stage("swap chain content reused");
+        }
+        _opaqueFrame = frame;
         _panel.Visibility = Visibility.Visible;
+        DrawOpaqueFrame();
     }
 
-    private void PresentTransparentFrame(byte[] bytes, int width, int height)
+    private void PresentTransparentFrame(ScRgbFrame frame)
     {
         _panel.Visibility = Visibility.Collapsed;
-        EnsureDrawingSurface(width, height);
+        EnsureDrawingSurface(frame.Width, frame.Height);
+        _presentTiming?.Stage("composition surface ready");
 
-        using var bitmap = CanvasBitmap.CreateFromBytes(
-            _device!,
-            bytes,
-            width,
-            height,
-            CanvasDirectXPixelFormat.R16G16B16A16Float,
-            96f,
-            CanvasAlphaMode.Premultiplied);
+        if (HasSameContent(_transparentFrame, frame))
+        {
+            _transparentFrame = frame;
+            SetSurfaceVisibility(true);
+            ContentSubmitted("composition content reused");
+            return;
+        }
+
+        UploadBitmap(ref _transparentBitmap, _transparentFrame, frame);
+        _presentTiming?.Stage("transparent bitmap uploaded");
         using (var drawing = CanvasComposition.CreateDrawingSession(_surface!))
         {
             drawing.Clear(Microsoft.UI.Colors.Transparent);
-            drawing.DrawImage(bitmap);
+            drawing.DrawImage(_transparentBitmap!);
         }
+        _transparentFrame = frame;
         SetSurfaceVisibility(true);
+        ContentSubmitted("composition drawing submitted");
     }
 
+    private void OnPanelLoaded(object sender, RoutedEventArgs e)
+        => RefreshOpaqueFrame();
+
     private void OnPanelSizeChanged(object sender, Microsoft.UI.Xaml.SizeChangedEventArgs e)
-        => UpdateSwapChainTransform();
+        => RefreshOpaqueFrame();
 
     private void OnCompositionScaleChanged(SwapChainPanel sender, object args)
-        => UpdateSwapChainTransform();
+        => RefreshOpaqueFrame();
 
-    private void UpdateSwapChainTransform()
+    private void RefreshOpaqueFrame()
     {
-        if (_swapChain is null || _swapChainWidth <= 0 || _swapChainHeight <= 0 || _panel.ActualWidth <= 0 || _panel.ActualHeight <= 0)
+        if (!_connected || _panel.Visibility != Visibility.Visible)
             return;
+
+        try
+        {
+            DrawOpaqueFrame();
+        }
+        catch (Exception ex)
+        {
+            _swapChainContentDirty = true;
+            _hasFrameRequest = false;
+            Log(ex, "Resize HDR preview content", this);
+        }
+    }
+
+    private void DrawOpaqueFrame()
+    {
+        if (_swapChain is null || _opaqueBitmap is null || _swapChainWidth <= 0 || _swapChainHeight <= 0 || _panel.ActualWidth <= 0 || _panel.ActualHeight <= 0)
+        {
+            _presentTiming?.Stage("waiting for swap chain layout");
+            return;
+        }
 
         var scale = Math.Min(_panel.ActualWidth / _swapChainWidth, _panel.ActualHeight / _swapChainHeight);
         var offsetX = (_panel.ActualWidth - _swapChainWidth * scale) * 0.5;
         var offsetY = (_panel.ActualHeight - _swapChainHeight * scale) * 0.5;
-        _swapChain.TransformMatrix = new Matrix3x2((float)scale, 0f, 0f, (float)scale, (float)offsetX, (float)offsetY);
+        var transform = new Matrix3x2((float)scale, 0f, 0f, (float)scale, (float)offsetX, (float)offsetY);
+        var compositionScale = new Vector2(_panel.CompositionScaleX, _panel.CompositionScaleY);
+        if (!_swapChainContentDirty && _swapChainTransform == transform && _compositionScale == compositionScale)
+        {
+            _frameSubmitted = true;
+            return;
+        }
+
+        _swapChain.TransformMatrix = transform;
+        // A real layout change needs Present; the next back buffer may still hold an older frame.
+        using (var drawing = _swapChain.CreateDrawingSession(Microsoft.UI.Colors.Transparent))
+        {
+            drawing.DrawImage(_opaqueBitmap);
+        }
+        _presentTiming?.Stage("swap chain drawing submitted");
+        _swapChain.Present(0);
+        _swapChainContentDirty = false;
+        _swapChainTransform = transform;
+        _compositionScale = compositionScale;
+        ContentSubmitted("swap chain presented");
+    }
+
+    private void ContentSubmitted(string stage)
+    {
+        _frameSubmitted = true;
+        _presentTiming?.Stage(stage);
+        if (_presentationConfigured) _presentTiming?.ContentReady("HDR content ready");
     }
 
     private void DisposeSwapChain()
     {
+        _opaqueBitmap?.Dispose();
+        _opaqueBitmap = null;
+        _opaqueFrame = null;
         _panel.SwapChain = null;
         _swapChain?.Dispose();
         _swapChain = null;
         _swapChainWidth = 0;
         _swapChainHeight = 0;
+        _swapChainContentDirty = false;
+        _swapChainTransform = null;
+        _compositionScale = default;
         _panel.Visibility = Visibility.Collapsed;
     }
 
@@ -329,6 +493,9 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
 
     private void DisposeCompositionResources()
     {
+        _transparentBitmap?.Dispose();
+        _transparentBitmap = null;
+        _transparentFrame = null;
         if (_surfaceBrush is not null)
             _surfaceBrush.Surface = null;
         _surface?.Dispose();

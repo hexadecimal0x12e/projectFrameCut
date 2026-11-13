@@ -3,6 +3,7 @@ using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Runtime.Versioning;
 
 namespace projectFrameCut.Services;
 
@@ -11,10 +12,13 @@ internal sealed class ExternalPluginBackendPlatform(ExternalPluginBackendLaunchO
     internal static string InstanceName => $"external-{Environment.ProcessId}";
     internal static string SessionDirectory => Path.Combine(MauiProgram.CachePath, "plugin-external-backend");
 
+    [UnsupportedOSPlatform("ios")]
+    [UnsupportedOSPlatform("maccatalyst")]
+    [UnsupportedOSPlatform("android")]
     public async ValueTask<IPluginIsolationSession> StartAsync(PluginIsolationLaunchContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if(!OperatingSystem.IsWindows() || !OperatingSystem.IsLinux() || !OperatingSystem.IsMacOS())
+        if (!(OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
             throw new PlatformNotSupportedException("External plugin backends are only supported on Windows, Linux, and macOS.");
         if (context.Transport.ControlMode is not (IsolationControlMode.Auto or IsolationControlMode.NamedPipe))
             throw new NotSupportedException($"External plugin backends do not support control mode '{context.Transport.ControlMode}'.");
@@ -24,8 +28,12 @@ internal sealed class ExternalPluginBackendPlatform(ExternalPluginBackendLaunchO
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         var pluginRoot = Path.GetFullPath(context.PluginRoot);
         var pluginsRoot = Path.GetFullPath(Path.Combine(MauiProgram.BasicDataPath, "Plugins"));
-        if (!pluginRoot.StartsWith(pluginsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, comparison) ||
-            !string.Equals(Path.GetFileName(pluginRoot), context.PluginId, comparison))
+        if (!(pluginRoot.StartsWith(pluginsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, comparison) &&
+            string.Equals(Path.GetFileName(pluginRoot), context.PluginId, comparison))
+#if WINDOWS
+            && !WindowsAppExtensionService.IsVerifiedRoot(context.PluginId, pluginRoot)
+#endif
+            )
             throw new UnauthorizedAccessException("The external backend package directory is invalid.");
         var sessionRoot = Path.GetFullPath(context.SessionRoot);
         if (!string.Equals(Path.GetDirectoryName(sessionRoot), Path.GetFullPath(SessionDirectory), comparison) ||
@@ -60,7 +68,7 @@ internal sealed class ExternalPluginBackendPlatform(ExternalPluginBackendLaunchO
                     PreferredPayloadKind = context.Transport.PayloadMode ?? IsolationPayloadKind.SharedMemory,
                 }),
             }, timeout.Token).ConfigureAwait(false);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
             var capabilities = RenderRpcSerializer.Deserialize<IsolationChannelCapabilities>(response.Payload);
             if (capabilities.ProtocolVersion != PluginIsolationProtocol.CurrentVersion)
                 throw new InvalidDataException("External plugin backend protocol version mismatch.");

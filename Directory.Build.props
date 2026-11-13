@@ -2,6 +2,22 @@
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-		<MauiVersion>10.0.100</MauiVersion>
+		<MauiVersion>11.0.10</MauiVersion>
+		<ExtensionsVersion>11.0.0</ExtensionsVersion>
+		<ExtensionsConfigurationVersion>11.0.0</ExtensionsConfigurationVersion>
+		<MAUIGTK4Version>0.1.0-preview.14.26555.2</MAUIGTK4Version>
   </PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="projectFrameCut.Drawing.Base.IPicture">
+			<Alias>IPicture</Alias>
+		</Using>
+		<Using Include="projectFrameCut.Drawing.Base.PictureExtensions">
+			<Alias>PictureExtensions</Alias>
+		</Using>
+		<Using Include="projectFrameCut.Shared.Logger">
+			<Static>True</Static>
+		</Using>
+		<Using Include="System.Half" Alias="float16" />
+	</ItemGroup>
 </Project>

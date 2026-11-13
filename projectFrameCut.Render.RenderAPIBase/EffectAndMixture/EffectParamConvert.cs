@@ -17,6 +17,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static object? Normalize(object? raw)
         {
+            if (raw is Half half) return (float)half;
             if (raw is not JsonElement element)
             {
                 return raw;
@@ -33,6 +34,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 JsonValueKind.Null => null,
+                JsonValueKind.Object when element.TryGetProperty(nameof(CustomEffectPortValue.ContractId), out _)
+                    && element.TryGetProperty(nameof(CustomEffectPortValue.Data), out _) => element.Deserialize<CustomEffectPortValue>(),
                 _ => element.ToString(),
             };
         }

@@ -5,7 +5,6 @@ namespace projectFrameCut.Render.VectorContent.Components;
 public class RoundedRectangleComponent : BaseShapeComponent
 {
     public override string TypeName => "RoundedRectangle";
-    protected override string[] ShapeFieldIds => ["Width", "Height", "CornerRadius"];
 
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()

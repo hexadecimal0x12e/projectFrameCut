@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent.Components;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
@@ -36,7 +37,7 @@ public class RoundedRectangleHandler : BaseVectorComponentHandler
         float r = Math.Clamp(cr, 0f, maxR);
         return new[]
         {
-            new ShapeHandleDescriptor { Id = "corner-r", NormalizedX = w - r, NormalizedY = r, PositionType = ShapeHandlePositionType.Corner },
+            new ShapeHandleDescriptor { Id = "corner-r", NormalizedX = w - r, NormalizedY = 0f, PositionType = ShapeHandlePositionType.Corner },
         };
     }
 
@@ -47,14 +48,6 @@ public class RoundedRectangleHandler : BaseVectorComponentHandler
         float h = GetParam(component, "Height", 0.3f);
         float maxR = Math.Min(w, h) / 2f;
 
-        // The handle sits at (w-r, r) — diagonally inward from the top-right
-        // corner.  Project the new position back onto that diagonal so that
-        // both horizontal and vertical drag components contribute to the
-        // radius change (previously only newY was used, making horizontal
-        // drags feel dead).
-        float rFromX = w - newX;
-        float rFromY = newY;
-        float r = (rFromX + rFromY) / 2f;
-        component.Parameters["CornerRadius"] = Math.Clamp(r, 0f, maxR);
+        component.Parameters["CornerRadius"] = Math.Clamp(w - newX, 0f, maxR);
     }
 }

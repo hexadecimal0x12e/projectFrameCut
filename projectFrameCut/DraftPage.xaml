@@ -5,11 +5,27 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:local="clr-namespace:projectFrameCut"
              xmlns:controls="clr-namespace:projectFrameCut.Controls"
+             xmlns:editor="clr-namespace:projectFrameCut.InteractableEditor"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:mw="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:DataType="local:DraftPage"
-             Shell.NavBarIsVisible="False"
+             Shell.NavBarIsVisible="{OnPlatform Default=True, Android=False, iOS=False}"
+             NavigationPage.HasNavigationBar="{OnPlatform Default=True, Android=False, iOS=False}"
              Title="">
+    <ContentPage.Resources>
+        <Style x:Key="DraftTitleBarButtonStyle" TargetType="Button">
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <Setter Property="FontFamily" Value="Font_Regular" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Style.Triggers>
+                <Trigger TargetType="Button" Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </ContentPage.Resources>
     <ContentPage.MenuBarItems>
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_Project}">
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe04b;}" Command="{Binding GoRenderCommand}" />
@@ -31,20 +47,20 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding SettingsCommand}"/>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_RestartBackend}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe042;}" Command="{Binding RestartBackendCommand}"/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CreateRpcToken}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe73e;}" Command="{Binding CreateRpcTokenCommand}"/>
+            <MenuFlyoutItem x:Name="CreateRpcPipeMenuItem" Text="{l:Localized Key=DraftPage_CreateRpcToken}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe73e;}" Command="{Binding CreateRpcTokenCommand}"/>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_ExitWithoutSave}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding ExitNoSaveCommand}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe879;}" Command="{Binding ExitCommand}"/>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14d;}" Command="{Binding CopyCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14d;}" Command="{Binding CopyCommand}" IsEnabled="{Binding CanEditSelection}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="C" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14e;}" Command="{Binding CutCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14e;}" Command="{Binding CutCommand}" IsEnabled="{Binding CanEditSelection}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="X" />
@@ -114,6 +130,10 @@
                 <MenuFlyoutItem.KeyboardAccelerators>
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe413;}" Command="{Binding ShowAssetPanelCommand}" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Clip_ExportCurrentFrame}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe3f4;}" Command="{Binding ExportCurrentFrameCommand}" />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Clip_ExportSelectedClipFrame}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe3f4;}" Command="{Binding ExportSelectedClipFrameCommand}" IsEnabled="{Binding SelectedAnyClip}" />
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_Combine}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_Spilt}}}" Command="{Binding SpiltOrCombineCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.IconImageSource>
@@ -131,21 +151,21 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
 
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding DeleteCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding DeleteCommand}" IsEnabled="{Binding CanEditSelection}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator
                     Key="Delete" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+        </MenuBarItem>
+
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Timeline}">
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe037;}" Command="{Binding PlayPauseCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="Space" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-        </MenuBarItem>
-
-        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Timeline}">
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_ScrollLeft}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5c4;}" Command="{Binding TimelineScrollCommand}" CommandParameter="-10" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
@@ -204,6 +224,9 @@
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Manage}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding ManageReferenceLinesCommand}" />
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Clear}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14c;}" Command="{Binding ClearReferenceLinesCommand}" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Timeline_AddTrack}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe145;}" Command="{Binding AddTrackCommand}" />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Timeline_AddSubTrack}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe145;}" Command="{Binding AddSubTrackCommand}" />
         </MenuBarItem>
         <MenuBarItem x:Name="ViewMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_View}">
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
@@ -211,9 +234,9 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8ff;}" Command="{Binding ZoomCommand}" CommandParameter="-" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
-                                Key="Equal" />
+                                Key="{OnPlatform WinUI=187, Default=Equal}" />
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Shift'}" 
-                                Key="OemPlus" />
+                                Key="{OnPlatform WinUI=187, Default=OemPlus}" />
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="Add" />
                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -221,13 +244,13 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomReset}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xea10;}" Command="{Binding ZoomCommand}" CommandParameter="0" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
-                                Key="0" />
+                                Key="{OnPlatform WinUI=Number0, Default=0}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomOut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe900;}" Command="{Binding ZoomCommand}" CommandParameter="+" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
-                                Key="OemMinus" />
+                                Key="{OnPlatform WinUI=189, Default=OemMinus}" />
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="Subtract" />
                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -290,16 +313,41 @@
 
     </ContentPage.MenuBarItems>
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{l:Localized Key=DraftPage_CommandPanel}"  Command="{Binding ShowCommandPanelCommand}" />
+        <ToolbarItem x:Name="CommandPanelToolbarItem" Text="{l:Localized Key=DraftPage_CommandPanel}" Command="{Binding ShowCommandPanelCommand}" />
     </ContentPage.ToolbarItems>
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="25"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" x:Name="UpperContent">
+        <Grid x:Name="MobileTitleBar"
+              IsVisible="{Binding HasMobileTitleBar}"
+              ColumnDefinitions="*,44"
+              HeightRequest="24"
+              Padding="4,2"
+              BackgroundColor="{AppThemeBinding Light=#100B08, Dark=#D2D2CF}">
+
+            <ScrollView Grid.Column="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="2" BindableLayout.ItemsSource="{Binding MenuBarItems}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="MenuBarItem">
+                            <Button Style="{StaticResource DraftTitleBarButtonStyle}"
+                                    Text="{Binding Text}" IsEnabled="{Binding IsEnabled}"
+                                    Clicked="MobileMenu_Clicked" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+            <Button Grid.Column="1" Style="{StaticResource DraftTitleBarButtonStyle}"
+                    FontFamily="Icons" Text="&#xe9a9;" FontSize="22" Padding="0"
+                    Clicked="MobileCommandPanel_Clicked"
+                    SemanticProperties.Description="{l:Localized Key=DraftPage_CommandPanel}" />
+        </Grid>
+
+        <Grid Grid.Row="1" x:Name="UpperContent" IsVisible="{Binding IsWorkspaceForm}">
             <mw:MultiWindowView x:FieldModifier="public"
                                 x:Name="MainMultiWindowView"
                                 ZIndex="0"
@@ -315,10 +363,6 @@
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill" />
                 <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />
-                <ContentView x:Name="AssistanceHost"
-                             BackgroundColor="Transparent"
-                             HorizontalOptions="Fill"
-                             VerticalOptions="Fill" />
                 <ContentView x:Name="AddClipHost"
                              BackgroundColor="Transparent"
                              HorizontalOptions="Fill"
@@ -326,10 +370,10 @@
             </Grid>
         </Grid>
 
-        <Grid x:Name="FixedLayoutRoot"
-              Grid.Row="0"
+        <Grid x:Name="MobileLayoutRoot"
+              Grid.Row="1"
               Grid.RowSpan="2"
-              IsVisible="False"
+              IsVisible="{Binding IsMobileForm}"
               ZIndex="20"
               BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
             <Grid.RowDefinitions>
@@ -353,9 +397,53 @@
                     VerticalOptions="End" />
         </Grid>
 
-        <Grid Grid.Row="1"
+        <Grid x:Name="PreviewLayoutRoot"
+              Grid.Row="1"
+              Grid.RowSpan="2"
+              RowDefinitions="*,Auto"
+              IsVisible="{Binding IsPreviewForm}"
+              BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
+            <editor:LightweightInteractableEditor x:Name="PreviewFormEditor" />
+            <Grid Grid.Row="1" Padding="12,4,12,8" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+                <Slider x:Name="PreviewFormProgress"
+                        Grid.ColumnSpan="4"
+                        Minimum="0"
+                        Maximum="1"
+                        ValueChanged="PreviewFormProgress_ValueChanged"
+                        DragStarted="PreviewFormProgress_DragStarted"
+                        DragCompleted="PreviewFormProgress_DragCompleted" />
+                <Button Grid.Row="1"
+                        Text="{l:Localized Key=_Back}"
+                        Clicked="PreviewFormExitButton_Clicked" />
+                <Button x:Name="PreviewFormPlayPauseButton"
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        FontFamily="Icons"
+                        Text="&#xe037;"
+                        FontSize="20"
+                        Padding="10,0"
+                        Clicked="PlayPauseButton_Clicked"
+                        ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}"
+                        SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" />
+                <Label x:Name="PreviewFormTimeLabel"
+                       Grid.Row="1"
+                       Grid.Column="2"
+                       Text="00:00.00 / 00:00.00"
+                       HorizontalOptions="End"
+                       VerticalOptions="Center" />
+                <Button x:Name="PreviewFormFullScreenButton"
+                        Grid.Row="1"
+                        Grid.Column="3"
+                        Text="{l:Localized Key=DraftPage_Preview_FullScreen}"
+                        IsVisible="{Binding SupportsPreviewFullScreen}"
+                        Clicked="PreviewFormFullScreenButton_Clicked" />
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="2"
               Margin="0,8,0,8"
               x:Name="MainControlGrid"
+              IsVisible="False"
               ZIndex="1"
               HeightRequest="44"
               MaximumHeightRequest="44"
@@ -368,7 +456,6 @@
             <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
                 <Button x:Name="AddClip" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  FontFamily="Icons" Text="&#xe145;" FontSize="24" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
                 <Button x:Name="AssetPanelButton" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  Text="&#xe413;" FontSize="24"  FontFamily="Icons" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
-                <Button x:Name="AssistantToggleButton" Text="&#xe0b7;" FontSize="24" FontFamily="Icons"  ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatViewTitle}" SemanticProperties.Description="{l:Localized Key=AIAssistant_ChatViewTitle}"  Margin="8,0,0,0" Clicked="AssistantToggleButton_Clicked" />
                 <HorizontalStackLayout IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding UnNullUseCompactLayout, Converter={toolkit:InvertedBoolConverter}}"  HorizontalOptions="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject=End, FalseObject=Start}}" Margin="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject='0,0,0,0', FalseObject='8,0,0,0'}}">
                     <BoxView WidthRequest="1" Margin="8,0,4,0" BackgroundColor="#80aaaaaa" />
                     <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
@@ -385,7 +472,7 @@
                     <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xe14e;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltOrCombineCommand}" IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
                     <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
                     <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa"  />
-                    <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" Command="{Binding UnselectCommand}"  SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
+                    <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
                 </HorizontalStackLayout>
             </ScrollView>
 
@@ -396,10 +483,10 @@
             </HorizontalStackLayout>
         </Grid>
 
-        <Grid x:Name="LowerContent" Grid.Row="0">
+        <Grid x:Name="LowerContent" Grid.Row="1" IsClippedToBounds="True">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="12"/>
+                <RowDefinition Height="18"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -464,57 +551,42 @@
                 </HorizontalStackLayout>
             </Grid>
 
-            <HorizontalStackLayout Grid.Row="1"
-                                   x:Name="RulerLayout"
-                                   HeightRequest="12"
-                                   BackgroundColor="LightGray" />
+            <GraphicsView Grid.Row="1"
+                          x:Name="RulerLayout"
+                          HeightRequest="18"
+                          BackgroundColor="{AppThemeBinding Light=#F2F2F2, Dark=#252525}"
+                          SizeChanged="ClipPreviewViewport_SizeChanged" />
 
-            <ScrollView Grid.Row="2" x:Name="TracksAndClipsLayout" Orientation="Vertical">
-                <VerticalStackLayout>
-                    <Grid x:Name="MainTrackContentGrid">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="8*"/>
-                        </Grid.ColumnDefinitions>
+            <ScrollView Grid.Row="2" x:Name="TracksAndClipsLayout" Orientation="Vertical" Scrolled="TracksAndClipsLayout_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HandlerChanging="TimelineScrollView_HandlerChanging" HandlerChanged="TimelineScrollView_HandlerChanged">
+                <Grid x:Name="TracksContentGrid" ColumnDefinitions="1*,8*" RowDefinitions="Auto,Auto">
+                    <VerticalStackLayout Grid.Column="0">
+                        <VerticalStackLayout x:Name="TrackHeadLayout" Padding="2" SizeChanged="ClipPreviewViewport_SizeChanged" />
+                        <VerticalStackLayout x:Name="SubTrackHeadLayout" Padding="2" />
+                    </VerticalStackLayout>
 
-                        <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
-
-                        </VerticalStackLayout>
-
-                        <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
+                    <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HandlerChanging="TimelineScrollView_HandlerChanging" HandlerChanged="TimelineScrollView_HandlerChanged" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never">
+                        <VerticalStackLayout x:Name="TimelineContentLayout" HorizontalOptions="Fill" SizeChanged="ClipPreviewViewport_SizeChanged">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <PinchGestureRecognizer PinchUpdated="TimelinePinchUpdated" />
+                            </VerticalStackLayout.GestureRecognizers>
                             <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" />
-                        </ScrollView>
-                    </Grid>
-
-                    <Grid x:Name="SubTrackContentGrid">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="8*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <VerticalStackLayout x:Name="SubTrackHeadLayout" Grid.Column="0" Padding="2">
-
-                        </VerticalStackLayout>
-
-                        <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill">
                             <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" />
-                        </ScrollView>
-                    </Grid>
-                    <Grid ColumnDefinitions="1*,8*">
-                        <Button Margin="0,8,0,0"
-                                Grid.Column="0"
-                                x:Name="AddTrackButton"
-                                Text="+"
-                                Clicked="AddTrackButton_Clicked"
-                                HeightRequest="80" />
-                    </Grid>
-                </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
 
+                    <Button Grid.Row="1"
+                            Grid.Column="0"
+                            Margin="0,8,0,0"
+                            x:Name="AddTrackButton"
+                            Text="+"
+                            Clicked="AddTrackButton_Clicked"
+                            HeightRequest="80" />
+                </Grid>
             </ScrollView>
-            <BoxView Grid.Row="2" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
+            <BoxView Grid.Row="1" Grid.RowSpan="2" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="0" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
-        <Grid Grid.Row="2" BackgroundColor="#80001122" Margin="0,0,0,0">
+        <Grid Grid.Row="3" BackgroundColor="#80001122" Margin="0,0,0,0">
             <Grid x:Name="StatusBarGrid">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="25"/>
@@ -545,6 +617,7 @@
         </Grid>
 
         <AbsoluteLayout x:Name="OverlayLayer"
+                        Grid.Row="1"
                         Grid.RowSpan="3"
                         ZIndex="10000"
                         InputTransparent="True"

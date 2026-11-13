@@ -1,4 +1,6 @@
-﻿using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+﻿using projectFrameCut.Services;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
@@ -23,6 +25,7 @@ public partial class RenderSettingPage : ContentPage
     ConcurrentDictionary<string, EffectImplementType> effectImplementTypes = new();
 #if WINDOWS || LINUX
     AcceleratorDeviceInfo[] AcceleratorDevices = Array.Empty<AcceleratorDeviceInfo>();
+    Task<AcceleratorDeviceInfo[]>? acceleratorDiscovery;
 #endif
 
     Dictionary<EffectImplementType, string> LocalizedImplementTypes = new Dictionary<EffectImplementType, string>
@@ -45,6 +48,18 @@ public partial class RenderSettingPage : ContentPage
         { "SSAA 2x", "ssaa2x" },
         { "SSAA 4x", "ssaa4x" },
         { "SSAA 8x", "ssaa8x" },
+    };
+
+    Dictionary<string, string> OutputCacheBehaviors = new()
+    {
+        { SettingLocalizedResources.Render_OutputCacheBehavior_Chunk, "chunk" },
+        { SettingLocalizedResources.Render_OutputCacheBehavior_Disabled, "disabled" },
+    };
+
+    Dictionary<string, bool> DynamicCalculationOptions = new()
+    {
+        { SettingLocalizedResources.Render_DynamicCalculationOriginal, false },
+        { SettingLocalizedResources.Render_DynamicCalculation, true },
     };
 
     Dictionary<string, string> ChunkSizeModeMapping = new Dictionary<string, string>
@@ -107,31 +122,29 @@ public partial class RenderSettingPage : ContentPage
         }
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
 
 #if WINDOWS || LINUX
-        if (AcceleratorDevices.Length == 0)
-        {
-            Task t = new(() =>
-            {
-                AcceleratorDevices = AcceleratorsManager.DiscoverDevices();
-            });
-            t.Start();
-            t.ContinueWith((_) => Dispatcher.Dispatch(BuildPPB));
-        }
-        else
-        {
-            BuildPPB();
-        }
-#else
-        BuildPPB();
+        AcceleratorDevices = (await (acceleratorDiscovery ??= Task.Run(AcceleratorsManager.DiscoverDevices)))
+            .Where(IsSelectableAccelerator)
+            .ToArray();
 #endif
+        BuildPPB();
     }
+
+#if WINDOWS || LINUX
+    private static bool IsSelectableAccelerator(AcceleratorDeviceInfo device) =>
+        device.Type != "CPU" && !(device.Type == "OpenCL"
+            && device.Name.Contains("Intel", StringComparison.OrdinalIgnoreCase)
+            && device.Name.Contains(" CPU", StringComparison.OrdinalIgnoreCase));
+#endif
 
     private void BuildPPB()
     {
+        var scrollY = (Content as ScrollView)?.ScrollY ?? 0;
+        string cacheBehavior = IsBoolSettingTrueOrDefault("render_enableChunkRender", false) ? "chunk" : "disabled";
         var isCPUBigLittleCore = ThreadAffinityHelper.GetCpuCoreGroups().Count > 1;
         if (!isCPUBigLittleCore && !Settings.ContainsKey("render_enableThreadAffinity")) WriteSetting("render_enableThreadAffinity", "False");
         var suggestedMaxPendingFrame = ((int)(Environment.WorkingSet / ((1920 * 1080 * 3) + 32)) / 2 + 5) / 10 * 10;
@@ -141,31 +154,38 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_DefaultExportOpts, SettingLocalizedResources.Render_DefaultExportOpts_Subtitle), null)
             .AddPicker("render_DefaultResolution", Localized.RenderPage_SelectResolution, resolutions, GetSetting("render_DefaultResolution", "3840x2160"), null)
             .AddPicker("render_DefaultFramerate", Localized.RenderPage_SelectFrameRate, framerates, GetSetting("render_DefaultFramerate", "60"), null)
-            //.AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
-            .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null)
+            .AddPicker("render_DefaultBitRate", Localized.RenderPage_BitRate, RenderPageViewModel.BitRateOptions.Keys.ToArray(), RenderPageViewModel.BitRateOptions.ReverseLookup(GetSetting("render_DefaultBitRate", "auto"), Localized.RenderPage_BitRateAuto))
+            .AppendWhen(GetSetting("render_DefaultBitRate", "auto") == "custom", p => p.AddEntry("render_DefaultCustomBitRateMbps", $"{Localized.RenderPage_BitRate} (Mbps)", GetSetting("render_DefaultCustomBitRateMbps", ""), Localized.RenderPage_BitRateAuto, c => c.Keyboard = Keyboard.Numeric))
             .AddSeparator()
-            .AppendWhen(!IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true), p => p.AddSlider("render_defaultMaxParallelWorkers", SettingLocalizedResources.Render_MaxParallelWorkers, 1, 64, (int)GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8)))
-            .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), Localized.DynamicLookup($"RenderPage_PostRenderAction_{GetSetting("render_DefaultPostRenderAction", "None")}", Localized.RenderPage_PostRenderAction_None), null))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderingBehavior, SettingLocalizedResources.Render_RenderingBehavior_Subtitle), null)
+            .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), RenderPageViewModel.PostRenderActionNames.ReverseLookup(RenderPageViewModel.GetPlatformPostRenderAction(Enum.TryParse<PostRenderAction>(GetSetting("render_DefaultPostRenderAction", "None"), out var postRenderAction) ? postRenderAction : PostRenderAction.None), Localized.RenderPage_PostRenderAction_None), null))
             .AddPicker("render_preferredAntiAliasMode", SettingLocalizedResources.Render_AntiAliasMode, AntiAliasModeMapping.Keys.ToArray(), AntiAliasModeMapping.ReverseLookup(GetSetting("render_preferredAntiAliasMode", "ssaa4x"), "SSAA 4x"), null)
+            .AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true))
+            .AddPicker(DynamicEffectCalculation.EnabledSetting, SettingLocalizedResources.Render_DynamicCalculationMode,
+                DynamicCalculationOptions.Keys.ToArray(), DynamicCalculationOptions.ReverseLookup(IsBoolSettingTrueOrDefault(DynamicEffectCalculation.EnabledSetting, false), SettingLocalizedResources.Render_DynamicCalculationOriginal))
+            .AddEntry(DynamicEffectCalculation.StepsSetting, SettingLocalizedResources.Render_DynamicCalculationSteps,
+                GetSetting(DynamicEffectCalculation.StepsSetting, "10000"), "10000", c => c.Keyboard = Keyboard.Numeric)
+            .AddCheckbox("render_reuseDynamicPreviewCache", SettingLocalizedResources.Render_ReuseDynamicPreviewCache, IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false))
             .AddSeparator()
-            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_ComposeOption, SettingLocalizedResources.Render_ComposeOption_Desc))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_HwAccelOption, SettingLocalizedResources.Render_HwAccelOption_Desc))
             .AddCheckbox("render_preferHwAccelResizeProvider", SettingLocalizedResources.Render_PreferHwAccelResizeProvider, IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true))
             .AddCheckbox("render_PreferDecoderCropResize", SettingLocalizedResources.Render_PreferDecoderCropResize, IsBoolSettingTrueOrDefault("render_PreferDecoderCropResize", true))
             .AddCheckbox("render_enableHwAccelRasterizer", SettingLocalizedResources.Render_EnableHwAccelRasterizer, IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true))
             .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture, IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
-            .AddCheckbox("render_enableBatchProcess", SettingLocalizedResources.Render_EnableBatchProcess, IsBoolSettingTrueOrDefault("render_enableBatchProcess", true))
+            .AddCheckbox("render_enableGpuBufferPoolLimit", SettingLocalizedResources.Render_EnableGpuBufferPoolLimit, RenderSchedulingSettings.EnableGpuBufferPoolLimit)
+            .AppendWhen(RenderSchedulingSettings.EnableGpuBufferPoolLimit, p => p.AddEntry("render_gpuBufferPoolMiB", SettingLocalizedResources.Render_GpuBufferPoolMiB, (RenderSchedulingSettings.GpuBufferPoolMaxBytes / (1024 * 1024)).ToString(), "128", c => c.Keyboard = Keyboard.Numeric))
             .AddSeparator()
-            .AddCheckbox("render_RenderByLayer", SettingLocalizedResources.Render_RenderByLayer, IsBoolSettingTrue("render_RenderByLayer"), null)
-            .AddCheckbox("render_prepareInWorkerThreads", SettingLocalizedResources.Render_PrepareInWorkerThreads, IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true))
-            .AppendWhen(IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true) && PluginManager.LoadedPlugins.Any(c => !c.Key.StartsWith("projectFrameCut")), p => p.AddText(new Label { Text = SettingLocalizedResources.Render_PrepareInWorkerThreads_3rdPluginWarn, TextColor = Colors.Yellow }))
-            .AddCheckbox("render_enableChunkRender", SettingLocalizedResources.Render_ChunkRender_Enable, IsBoolSettingTrueOrDefault("render_enableChunkRender", false))
-            .AddCheckbox("render_allowEffectOutOfOrder", SettingLocalizedResources.Render_AllowEffectOutOfOrder, IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_Scheduling, SettingLocalizedResources.Render_Scheduling_Desc))
+            .AddButton(SettingLocalizedResources.Render_ScheduleBenchmark, async (_, _) => await Navigation.PushAsync(new ScheduleBenchmarkPage()))
+            .AddEntry("render_defaultMaxParallelWorkers", SettingLocalizedResources.Render_MaxParallelWorkers, GetSetting("render_defaultMaxParallelWorkers", "8"), "8", c => c.Keyboard = Keyboard.Numeric)
+            .AddEntry("render_renderAheadFrames", SettingLocalizedResources.Render_RenderAheadFrames, GetSetting("render_renderAheadFrames", "0"), SettingLocalizedResources.Render_RenderAheadFrames_Desc, c => c.Keyboard = Keyboard.Numeric)
+            .AddCheckbox("render_allowWorkerOversubscription", SettingLocalizedResources.Render_AllowWorkerOversubscription, IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true))
             .AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", isCPUBigLittleCore), p => p.IsEnabled = isCPUBigLittleCore)
             .AppendWhen(!isCPUBigLittleCore, c => c.AddCustomChild(new Label { Text = SettingLocalizedResources.Render_EnableAutoThreadAffinity_Unsupported, TextColor = Colors.Gray, FontSize = 12 }))
             .AddSeparator()
-            .AddEntry("render_maxPendingWriteFrames", SettingLocalizedResources.Render_MaxPendingWriteFrames, GetSetting("render_maxPendingWriteFrames", suggestedMaxPendingFrame.ToString()), SettingLocalizedResources.Render_MaxPendingWriteFrames_Desc, c => c.Keyboard = Keyboard.Numeric)
-            .AddCheckbox("render_enableDiskCacheRouting", SettingLocalizedResources.Render_EnableDiskBuffer, IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false))
-            .AppendWhen(IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false), c => c.AddEntry("render_MaxDiskBufferCount", SettingLocalizedResources.Render_MaxDiskBufferCount, GetSetting("render_MaxDiskBufferCount", "500"), SettingLocalizedResources.Render_MaxPendingWriteFrames_Desc, c => c.Keyboard = Keyboard.Numeric))
+            .AddPicker("render_outputCacheBehavior", SettingLocalizedResources.Render_OutputCacheBehavior, OutputCacheBehaviors.Keys.ToArray(), OutputCacheBehaviors.ReverseLookup(cacheBehavior, SettingLocalizedResources.Render_OutputCacheBehavior_Disabled))
+            .AddCheckbox("render_enableMemoryBudget", SettingLocalizedResources.Render_EnableMemoryBudget, RenderSchedulingSettings.EnableMemoryBudget)
+            .AddEntry("render_maxBufferedMiB", SettingLocalizedResources.Render_MaxBufferedMiB, GetSetting("render_maxBufferedMiB", "0"), SettingLocalizedResources.Render_MaxBufferedMiB_Desc, c => c.Keyboard = Keyboard.Numeric)
             .AddSeparator();
 
 #if WINDOWS || LINUX
@@ -173,27 +193,25 @@ public partial class RenderSettingPage : ContentPage
         string[] accelDisplayNames = devices.Length > 0
             ? devices.Select(a => $"{a.Name} ({a.Type})").ToArray()
             : ["No accelerator found"];
-        var multiAccel = AcceleratorsManager.IsMultiAccelEnabled;
-        var currentMainName = AcceleratorsManager.DefaultAccelerator?.Name ?? "";
-        var renderingNames = AcceleratorsManager.AcceleratorsForRendering
-            .Select(a => a.Name).ToHashSet();
-
-        // Find which display string matches the current main accelerator
-        var selectedDisplay = devices.FirstOrDefault(d => d.Name == currentMainName) is { } match
+        var config = AcceleratorsManager.GetConfiguration(devices);
+        SyncAcceleratorSettings(config);
+        var multiAccel = config.EnableMultiAccel;
+        var renderingNames = config.RenderingAcceleratorNames.ToHashSet();
+        var selectedDisplay = devices.FirstOrDefault(d => d.Name == config.MainAcceleratorName) is { } match
             ? $"{match.Name} ({match.Type})"
-            : accelDisplayNames.FirstOrDefault() ?? "";
+            : "";
 
         rootPPB
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
             .AppendWhen(devices.Length < 1 || !devices.Any(c => c.Type != "CPU"),
                 (p) => p.AddCustomChild(new Label { Text = Localized.WelocmePage_NoAccel, TextColor = Colors.Yellow }))
             .AddCheckbox("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel,
-                (s) => s.IsEnabled = devices.Count(c => c.Type != "CPU") >= 2)
+                (s) => s.IsEnabled = multiAccel || devices.Count(c => c.Type != "CPU") >= 2)
             .AppendWhen(devices.Count(c => c.Type != "CPU") < 2,
                 (p) => p.AddText(new Label { Text = SettingLocalizedResources.Render_EnableMultiAccel_NotAvailable, TextColor = Colors.Gray, FontSize = 12 }))
             .AddPicker("accel_DeviceId",
                 multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel,
-                accelDisplayNames, selectedDisplay, null);
+                accelDisplayNames, selectedDisplay, p => p.IsEnabled = devices.Length > 0);
 
         if (multiAccel && devices.Length > 0)
         {
@@ -201,7 +219,7 @@ public partial class RenderSettingPage : ContentPage
                 .AddSeparator()
                 .AddText(SettingLocalizedResources.Render_SelectAccel_MultiAccel, fontSize: 16)
                 .AddCheckbox("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll,
-                    renderingNames.Count == devices.Count(d => d.Type != "CPU"), null);
+                    devices.Where(d => d.Type != "CPU").All(d => renderingNames.Contains(d.Name)), null);
 
             for (int i = 0; i < devices.Length; i++)
             {
@@ -217,33 +235,24 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
             .AddPicker("render_AndroidHWAccelType", SettingLocalizedResources.Render_AndroidHwAccleImpType, AndroidHWAccelImpTypeMapping.Keys.ToArray(), AndroidHWAccelImpTypeMapping.ReverseLookup(GetSetting("render_AndroidHWAccelType", "vulkan"), SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan));
 #endif
-        //rootPPB
-        //    .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
-        //    .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
-        //    .AddSeparator();
 
         if (showMoreOpts)
         {
             rootPPB
+                .AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
-                .AppendWhen(IsBoolSettingTrueOrDefault("render_enableChunkRender", false),
-                p => p.AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true))
-                .AddPicker("render_chunkSizeMode", SettingLocalizedResources.Render_ChunkRender_SizeMode, ChunkSizeModeMapping.Keys.ToArray(), ChunkSizeModeMapping.ReverseLookup(GetSetting("render_chunkSizeMode", "frames"), SettingLocalizedResources.Render_ChunkRender_SizeMode_Frames), null)
+                .AppendWhen(cacheBehavior == "chunk",
+                p => p.AddPicker("render_chunkSizeMode", SettingLocalizedResources.Render_ChunkRender_SizeMode, ChunkSizeModeMapping.Keys.ToArray(), ChunkSizeModeMapping.ReverseLookup(GetSetting("render_chunkSizeMode", "frames"), SettingLocalizedResources.Render_ChunkRender_SizeMode_Frames), null)
                 .AddEntry("render_chunkFrames", SettingLocalizedResources.Render_ChunkRender_Frames, GetSetting("render_chunkFrames", "3600"), SettingLocalizedResources.Render_ChunkRender_Frames_Desc, c => c.Keyboard = Keyboard.Numeric)
                 .AddEntry("render_chunkSeconds", SettingLocalizedResources.Render_ChunkRender_Seconds, GetSetting("render_chunkSeconds", "60"), SettingLocalizedResources.Render_ChunkRender_Seconds_Desc, c => c.Keyboard = Keyboard.Numeric)
-                .AddEntry("render_chunkParallelism", SettingLocalizedResources.Render_ChunkRender_Parallelism, GetSetting("render_chunkParallelism", "1"), SettingLocalizedResources.Render_ChunkRender_Parallelism_Desc, c => c.Keyboard = Keyboard.Numeric)
                 .AddCheckbox("render_chunkKeepFiles", SettingLocalizedResources.Render_ChunkRender_KeepFiles, IsBoolSettingTrue("render_chunkKeepFiles"))
                 .AddSeparator()
-                .AppendWhen(IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false), c => c.AddSlider("render_DiskBufferThreshold", SettingLocalizedResources.Render_DiskBufferThreshold, 0, 1, GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7)))
                 .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric))
                 .AddSeparator()
-                .AddCheckbox("render_forceImpType_ForceHwAccel", SettingLocalizedResources.Render_ForceImpType_ForceHwAccel, IsBoolSettingTrue("render_forceImpType_ForceHwAccel"), null)
+                .AddEntry("render_coreAffinityOverride", SettingLocalizedResources.Render_CoreAffinityOverride, GetSetting("render_coreAffinityOverride", ""), SettingLocalizedResources.Render_CoreAffinityOverride_Desc)
+                .AddCheckbox("render_forceImpType_ForceHwAccel", SettingLocalizedResources.Render_ForceImpType_ForceHwAccel, IsBoolSettingTrueOrDefault("render_forceImpType_ForceHwAccel", true), null)
                 .AddCheckbox("render_forceImpType_ForceIPicture", SettingLocalizedResources.Render_ForceImpType_ForceIPicture, IsBoolSettingTrue("render_forceImpType_ForceIPicture"), null)
-                .AddSeparator()
-                .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
-                .AddCheckbox("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null)
-                .AppendWhen(!isCPUBigLittleCore, c => c.AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", isCPUBigLittleCore)))
-                .AddEntry("render_coreAffinityOverride", SettingLocalizedResources.Render_CoreAffinityOverride, GetSetting("render_coreAffinityOverride", ""), SettingLocalizedResources.Render_CoreAffinityOverride_Desc);
+                .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.GetValueOrDefault(GetSettingAs("render_GCOption", 0, 0), SettingLocalizedResources.Render_GCOption_LetCLRDoGC));
 
         }
         else
@@ -252,7 +261,33 @@ public partial class RenderSettingPage : ContentPage
         }
 
         Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
+        if (scrollY > 0 && Content is ScrollView scroll)
+            Dispatcher.Dispatch(async () => await scroll.ScrollToAsync(0, scrollY, false));
     }
+
+#if WINDOWS || LINUX
+    private void SyncAcceleratorSettings(AcceleratorsManager.AcceleratorsStore config)
+    {
+        if (AcceleratorDevices.FirstOrDefault(d => d.Name == config.MainAcceleratorName) is not { } main)
+            return;
+        WriteIfChanged("accel_DeviceId", main.Index.ToString());
+        WriteIfChanged("accel_MultiDeviceID", string.Join(",", AcceleratorDevices
+            .Where(d => config.RenderingAcceleratorNames.Contains(d.Name)).Select(d => d.Index)));
+        WriteIfChanged("accel_enableMultiAccel", config.EnableMultiAccel.ToString());
+
+        void WriteIfChanged(string key, string value)
+        {
+            if (!Settings.TryGetValue(key, out var current) || current != value)
+                WriteSetting(key, value);
+        }
+    }
+
+    private void SaveAcceleratorConfiguration(string mainName, string[] renderingNames, bool multiAccel)
+    {
+        AcceleratorsManager.ApplyConfiguration(mainName, renderingNames, multiAccel);
+        BuildPPB();
+    }
+#endif
 
 
     public async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
@@ -261,98 +296,89 @@ public partial class RenderSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case DynamicEffectCalculation.EnabledSetting:
+                    WriteSetting(args.Id, DynamicCalculationOptions.GetValueOrDefault(args.Value?.ToString() ?? "", false).ToString());
+                    await DraftPage.RefreshCalculationSettingsAsync();
+                    return;
+                case DynamicEffectCalculation.StepsSetting:
+                    if (!int.TryParse(args.Value?.ToString(), out int steps) || steps < 0)
+                    {
+                        BuildPPB();
+                        return;
+                    }
+                    WriteSetting(args.Id, steps.ToString());
+                    await DraftPage.RefreshCalculationSettingsAsync();
+                    return;
+                case "render_DefaultBitRate":
+                    WriteSetting(args.Id, RenderPageViewModel.BitRateOptions.GetValueOrDefault(args.Value?.ToString() ?? "", "auto"));
+                    BuildPPB();
+                    return;
+                case "render_DefaultCustomBitRateMbps":
+                    if (!RenderPageViewModel.TryParseVideoBitRate(args.Value?.ToString() ?? "", out _))
+                    {
+                        await DisplayAlertAsync(Localized._Error, Localized.RenderPage_InvalidBitRate, Localized._OK);
+                        return;
+                    }
+                    WriteSetting(args.Id, args.Value?.ToString()?.Trim() ?? "");
+                    return;
 #if WINDOWS || LINUX
                 case "accel_DeviceId":
-                    if (args.Value is string str && AcceleratorDevices.Length > 0)
                     {
-                        // str is in format "Name (Type)" — extract the name part
-                        var name = str;
-                        var parenIdx = str.LastIndexOf(" (", StringComparison.Ordinal);
-                        if (parenIdx > 0) name = str.Substring(0, parenIdx);
-
-                        if (AcceleratorDevices.Any(d => d.Name == name))
+                        if (args.Value is string str && AcceleratorDevices.FirstOrDefault(d => $"{d.Name} ({d.Type})" == str) is { } dev)
                         {
-                            var dev = AcceleratorDevices.First(d => d.Name == name);
-                            // Save single-accelerator config (disable multi-accel)
-                            AcceleratorsManager.SetDefaultAccelerator(dev.Name);
+                            var config = AcceleratorsManager.GetConfiguration(AcceleratorDevices);
+                            SaveAcceleratorConfiguration(dev.Name,
+                                config.EnableMultiAccel ? config.RenderingAcceleratorNames : [dev.Name], config.EnableMultiAccel);
                         }
+                        return;
                     }
-                    return;
                 case "accel_enableMultiAccel":
                     if (args.Value is bool en)
                     {
-                        var mainName = AcceleratorsManager.DefaultAccelerator?.Name ?? "";
-                        if (en)
-                        {
-                            // Enable multi-accel: include all non-CPU devices
-                            var allNames = AcceleratorDevices.Where(d => d.Type != "CPU").Select(d => d.Name).ToArray();
-                            AcceleratorsManager.ApplyConfiguration(
-                                mainName, allNames, true);
-                        }
-                        else
-                        {
-                            // Disable multi-accel: use just the main accelerator
-                            AcceleratorsManager.ApplyConfiguration(
-                                mainName, [mainName], false);
-                        }
+                        var config = AcceleratorsManager.GetConfiguration(AcceleratorDevices);
+                        SaveAcceleratorConfiguration(config.MainAcceleratorName, en
+                            ? AcceleratorDevices.Where(d => d.Type != "CPU").Select(d => d.Name).ToArray()
+                            : [config.MainAcceleratorName], en);
                     }
-                    BuildPPB();
                     return;
                 case var _ when args.Id != null && args.Id.StartsWith("accel_device_"):
-                    // Individual per-accelerator checkbox changed
-                    try
                     {
                         if (!int.TryParse(args.Id.AsSpan("accel_device_".Length), out var devIdx)) return;
                         if (devIdx < 0 || devIdx >= AcceleratorDevices.Length) return;
+                        if (args.Value is not bool isChecked || AcceleratorDevices[devIdx].Type == "CPU") return;
+                        var config = AcceleratorsManager.GetConfiguration(AcceleratorDevices);
+                        if (!config.EnableMultiAccel) return;
 
-                        // Collect all currently-checked device names from UI state
-                        var checkedNames = new List<string>();
+                        var checkedNames = new HashSet<string>();
                         for (int i = 0; i < AcceleratorDevices.Length; i++)
                         {
                             if (AcceleratorDevices[i].Type == "CPU") continue;
-                            var key = $"accel_device_{i}";
-                            // The panel component holds the live toggle state
-                            if (rootPPB?.Components?[key] is Microsoft.Maui.Controls.Switch sw && sw.IsToggled)
+                            if (rootPPB.Components.TryGetValue($"accel_device_{i}", out var control) && control is CheckBox cb && cb.IsChecked)
                                 checkedNames.Add(AcceleratorDevices[i].Name);
                         }
-                        if (checkedNames.Count == 0) checkedNames.Add(AcceleratorDevices[devIdx].Name); // keep at least one
-
-                        var mainName = AcceleratorDevices.First().Name;
-                        AcceleratorsManager.ApplyConfiguration(
-                            mainName, checkedNames.ToArray(), true);
-
-                        // Sync select-all checkbox
-                        var nonCpuCount = AcceleratorDevices.Count(d => d.Type != "CPU");
-                        Dispatcher.Dispatch(() =>
-                        {
-                            if (rootPPB?.Components?["selectAllAccels"] is Microsoft.Maui.Controls.Switch selectAll)
-                                selectAll.IsToggled = checkedNames.Count >= nonCpuCount;
-                        });
-                    }
-                    catch (Exception ex) { Log(ex); }
-                    return;
-                case "selectAllAccels":
-                    try
-                    {
-                        var mainName = AcceleratorsManager.DefaultAccelerator?.Name ?? "";
-                        if ((bool)args.Value)
-                        {
-                            // Select all non-CPU
-                            var allNames = AcceleratorDevices.Where(d => d.Type != "CPU").Select(d => d.Name).ToArray();
-                            AcceleratorsManager.ApplyConfiguration(
-                                mainName, allNames, true);
-                        }
+                        if (isChecked)
+                            checkedNames.Add(AcceleratorDevices[devIdx].Name);
                         else
+                            checkedNames.Remove(AcceleratorDevices[devIdx].Name);
+                        if (checkedNames.Count == 0)
                         {
-                            // Deselect all but the first non-CPU (keep at least one)
-                            var first = AcceleratorDevices.FirstOrDefault(d => d.Type != "CPU");
-                            if (first is not null)
-                                AcceleratorsManager.ApplyConfiguration(
-                                    first.Name, [first.Name], true);
+                            BuildPPB();
+                            return;
                         }
+                        if (checkedNames.SetEquals(config.RenderingAcceleratorNames)) return;
+                        SaveAcceleratorConfiguration(config.MainAcceleratorName, checkedNames.ToArray(), true);
+                        return;
                     }
-                    catch (Exception ex) { Log(ex); }
-                    return;
+                case "selectAllAccels":
+                    {
+                        if (args.Value is not bool selectAll) return;
+                        var names = AcceleratorDevices.Where(d => d.Type != "CPU").Select(d => d.Name).ToArray();
+                        if (names.Length == 0) return;
+                        var config = AcceleratorsManager.GetConfiguration(AcceleratorDevices);
+                        SaveAcceleratorConfiguration(config.MainAcceleratorName,
+                            selectAll ? names : [names.Contains(config.MainAcceleratorName) ? config.MainAcceleratorName : names[0]], true);
+                        return;
+                    }
 #endif
                 case "showMoreOpts":
                     {
@@ -360,6 +386,14 @@ public partial class RenderSettingPage : ContentPage
                         BuildPPB();
                         return;
                     }
+                case "render_renderAheadFrames":
+                case "render_maxBufferedMiB":
+                    if (long.TryParse(args.Value?.ToString(), out var number) && number >= 0
+                        && number <= (args.Id == "render_renderAheadFrames" ? int.MaxValue : long.MaxValue / (1024 * 1024)))
+                    {
+                        WriteSetting(args.Id, number.ToString());
+                    }
+                    return;
                 case "render_GCOption":
                     {
                         var key = GCOptionMapping.FirstOrDefault(k => k.Value == args.Value as string, new(0, "letCLRDoCollection"));
@@ -371,6 +405,21 @@ public partial class RenderSettingPage : ContentPage
                         WriteSetting("render_GCOption", key.Key.ToString());
                         return;
                     }
+                case "render_enableGpuBufferPoolLimit":
+                    if (args.Value is bool poolLimit)
+                    {
+                        WriteSetting(args.Id, poolLimit.ToString());
+                        HwAccelPictureSession.DefaultEnableBufferPoolLimit = poolLimit;
+                        BuildPPB();
+                    }
+                    return;
+                case "render_gpuBufferPoolMiB":
+                    if (long.TryParse(args.Value?.ToString(), out var poolMiB) && poolMiB > 0 && poolMiB <= long.MaxValue / (1024 * 1024))
+                    {
+                        WriteSetting(args.Id, poolMiB.ToString());
+                        HwAccelPictureSession.DefaultBufferPoolMaxBytes = poolMiB * 1024 * 1024;
+                    }
+                    return;
                 case "render_DefaultPostRenderAction":
                     {
                         if (args.Value is string localizedAction)
@@ -446,6 +495,13 @@ public partial class RenderSettingPage : ContentPage
                         WriteSetting(args.Id, mode);
                         break;
                     }
+                case "render_outputCacheBehavior":
+                    if (args.Value is string selected && OutputCacheBehaviors.TryGetValue(selected, out var behavior))
+                    {
+                        WriteSetting("render_enableChunkRender", (behavior == "chunk").ToString());
+                        BuildPPB();
+                    }
+                    break;
                 case "render_enableThreadAffinity":
                 case "render_enableDiskCacheRouting":
                     if (args.Value != null)
@@ -467,6 +523,7 @@ public partial class RenderSettingPage : ContentPage
         }
         catch (Exception ex)
         {
+            Log(ex, $"Change render setting '{args.Id}'", this);
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

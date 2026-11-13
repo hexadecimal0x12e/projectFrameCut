@@ -1,365 +1,144 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Input;
-using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Render.RenderAPIBase.Project;
-using projectFrameCut.DraftStuff;
-using projectFrameCut.Services;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Project;
 
 namespace projectFrameCut.Asset;
 
 public class ProjectAssetViewModel : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
+    private int _filterVersion;
 
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
+    private void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    public ObservableCollection<AssetItemViewModel> LocalAssets
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = new();
+    public ObservableCollection<AssetItemViewModel> LocalAssets { get; } = new();
+    public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
+    public bool CanEdit { get; }
+    public bool CanManageProxy { get; }
 
-    public ObservableCollection<AssetItemViewModel> SharedAssets
+    public bool IsIdle
     {
         get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = new();
+        set { field = value; OnPropertyChanged(); }
+    } = true;
 
-    public ObservableCollection<AssetItemViewModel> FilteredLocalAssets
+    public string Summary
     {
         get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = new();
-
-    public ObservableCollection<AssetItemViewModel> FilteredSharedAssets
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = new();
+        set { field = value; OnPropertyChanged(); }
+    } = "";
 
     public string SearchText
     {
         get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-            FilterAssets();
-        }
+        set { field = value ?? ""; OnPropertyChanged(); _ = FilterAssets(); }
     } = "";
 
     public int OrderOption
     {
         get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-            FilterAssets();
-        }
-    } = 0;
+        set { field = value; OnPropertyChanged(); _ = FilterAssets(); }
+    }
 
-    public string LocalAssetsTitle
+    public bool MissingOnly
     {
         get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "本地素材";
-
-    public string SharedAssetsTitle
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "共享素材";
-
-    public string AddButtonText
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "Add";
-
-    public ICommand AddAssetCommand { get; set; }
-    public ICommand RemoveAssetCommand { get; set; }
-    public ICommand AddToTrackCommand { get; set; }
-
-    public ProjectAssetViewModel()
-    {
-
+        set { field = value; OnPropertyChanged(); _ = FilterAssets(); }
     }
 
-    public ProjectAssetViewModel(ICommand addAssetCommand, ICommand removeAssetCommand, ICommand addToTrackCommand)
+    public ProjectAssetViewModel(bool canEdit, bool canManageProxy)
     {
-        AddAssetCommand = addAssetCommand;
-        RemoveAssetCommand = removeAssetCommand;
-        AddToTrackCommand = addToTrackCommand;
-    }
-
-    private async Task OnAddAsset()
-    {
-        // 这个方法将在 ProjectAssetView.xaml.cs 中被重载
-    }
-
-    public async Task OnRemoveAsset(AssetItemViewModel asset)
-    {
-        // 这个方法将在 ProjectAssetView.xaml.cs 中被重载
-    }
-
-    public async Task OnAddToTrack(AssetItemViewModel asset)
-    {
-        // 这个方法将在 ProjectAssetView.xaml.cs 中被重载
+        CanEdit = canEdit;
+        CanManageProxy = canManageProxy;
     }
 
     public async Task FilterAssets()
     {
-        FilteredLocalAssets.Clear();
-        FilteredSharedAssets.Clear();
-
-        List<AssetItemViewModel> localFiltered = new();
-        List<AssetItemViewModel> sharedFiltered = new();
-
-        if (string.IsNullOrWhiteSpace(SearchText))
+        int version = ++_filterVersion;
+        string search = SearchText.Trim().ToLowerInvariant();
+        var assets = LocalAssets.Where(a => !MissingOnly || a.IsMissing).ToList();
+        try
         {
-            // 如果搜索文本为空，显示所有素材
-            localFiltered.AddRange(LocalAssets);
-            sharedFiltered.AddRange(SharedAssets);
-        }
-        else
-        {
-            var inputPron = (await TextServices.GetHowToPronuce(SearchText, default)).ToLower();
-            var inputPronInLocate = ((await TextServices.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
-            // 过滤素材
-            var searchLower = SearchText.ToLower();
-            foreach (var asset in LocalAssets)
+            if (search.Length > 0)
             {
-                var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
-                var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                var inputPron = (await TextServices.GetHowToPronuce(search, default)).ToLowerInvariant();
+                var language = TextHelper.FromLanguageCode(Localized._LocaleId_);
+                var inputLocal = (await TextServices.GetHowToPronuce(search, language)).ToLowerInvariant();
+                var filtered = new List<AssetItemViewModel>();
+                foreach (var asset in assets)
                 {
-                    localFiltered.Add(asset);
+                    if (version != _filterVersion) return;
+                    if (asset.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                        || asset.Path.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    {
+                        filtered.Add(asset);
+                        continue;
+                    }
+                    var pronunciation = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLowerInvariant();
+                    var local = (await TextServices.GetHowToPronuce(asset.Name, language)).ToLowerInvariant();
+                    if (pronunciation.Contains(search) || pronunciation.Contains(inputPron) || pronunciation.Contains(inputLocal)
+                        || local.Contains(search) || local.Contains(inputPron) || local.Contains(inputLocal))
+                        filtered.Add(asset);
                 }
+                assets = filtered;
             }
-            foreach (var asset in SharedAssets)
-            {
-                var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
-                var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
-                {
-                    sharedFiltered.Add(asset);
-                }
-            }
+            assets = OrderOption == 1
+                ? (await assets.OrderByPronounceAsync(a => a.Name)).ToList()
+                : assets.OrderByDescending(a => a.OriginalAsset.CreatedAt).ToList();
+            if (version != _filterVersion) return;
+            FilteredLocalAssets.Clear();
+            foreach (var asset in assets) FilteredLocalAssets.Add(asset);
         }
-
-        // 应用排序
-        if (OrderOption == 0)
+        catch (Exception ex)
         {
-            // By add date - 使用原始资产的创建时间
-            localFiltered = localFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
-            sharedFiltered = sharedFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
-        }
-        else if (OrderOption == 1)
-        {
-            // By name - 使用发音排序
-            localFiltered = (await localFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
-            sharedFiltered = (await sharedFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
-        }
-
-        foreach (var asset in localFiltered)
-        {
-            FilteredLocalAssets.Add(asset);
-        }
-        foreach (var asset in sharedFiltered)
-        {
-            FilteredSharedAssets.Add(asset);
+            Logger.Log(ex, "Filter project assets", this);
         }
     }
 }
 
-public class AssetItemViewModel : INotifyPropertyChanged
+public class AssetItemViewModel
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public AssetItem OriginalAsset { get; }
+    internal ProjectAssetFile? File { get; }
+    public string Id { get; }
+    public string Name => OriginalAsset.Name;
+    public string Icon => OriginalAsset.Icon ?? "";
+    public string Path { get; }
+    public string ThumbnailPath { get; }
+    public bool HasThumbnail => System.IO.File.Exists(ThumbnailPath);
+    public string DurationDisplay => OriginalAsset.DurationTimeDisplay;
+    public bool IsMissing { get; }
+    public string FileStatus => IsMissing ? Localized.DraftSettingPage_AssetFiles_Missing : Localized.DraftSettingPage_AssetFiles_Available;
+    public Color StatusColor => IsMissing ? Colors.OrangeRed : Colors.Green;
+    public string References { get; }
+    public bool CanEdit { get; }
+    public bool CanRelink => CanEdit && File is not null;
+    public bool IsVideo => OriginalAsset.GetClipMode() == ClipMode.VideoClip;
+    public bool IsAddable => CanEdit && !IsMissing && OriginalAsset.AssetType is AssetType.Video or AssetType.Image or AssetType.Audio or AssetType.VectorComposition or AssetType.Subtitle;
+    public string ProxyPath { get; }
+    public bool HasProxy => System.IO.File.Exists(ProxyPath) && System.IO.File.Exists(ProxyPath + ".ready");
+    public string ProxyStatus => HasProxy ? Localized.AssetPage_ProxyReady : Localized.AssetPage_ProxyNotCreated;
+    public string CreateProxyText => HasProxy ? Localized.AssetPage_RebuildProxy : Localized.AssetPage_CreateProxy;
+    public bool CanCreateProxy { get; }
+    public bool CanRemoveProxy { get; }
 
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    internal AssetItemViewModel(string id, AssetItem asset, ProjectAssetFile? file, string projectRoot, ProjectAssetViewModel parent)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-
-    public string Id
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "";
-
-    public string Name
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "";
-
-    public string Icon
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "";
-
-    public string Path
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "";
-
-    public string DurationDisplay
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "";
-
-    public string ThumbnailPath
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "";
-
-    public bool HasThumbnail
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = false;
-
-    public string DisplayLabel
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = "";
-
-    public Brush BackgroundColor
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = Brush.Gray;
-
-    public uint FrameCount
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = 0;
-
-    public bool IsInfiniteLength
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = false;
-
-    public bool IsLocal
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    } = true;
-
-    public ICommand RemoveAssetCommand { get; set; }
-    public ICommand AddToTrackCommand { get; set; }
-
-    public bool IsAddable => OriginalAsset != null && (OriginalAsset.AssetType == AssetType.Video || OriginalAsset.AssetType == AssetType.Image || OriginalAsset.AssetType == AssetType.Audio);
-
-    public AssetItem OriginalAsset { get; set; }
-
-    public AssetItemViewModel(AssetItem asset, ProjectAssetViewModel parent, bool isLocal = true)
-    {
+        Id = id;
         OriginalAsset = asset;
-        Id = asset.AssetId ?? "";
-        Name = asset.Name;
-        Icon = asset.Icon ?? "";
-        Path = asset.Path ?? "";
-        DurationDisplay = asset.DurationDisplay;
-        ThumbnailPath = asset.ThumbnailPath ?? "";
-        HasThumbnail = File.Exists(asset.ThumbnailPath);
-        DisplayLabel = $"{asset.Icon} {asset.Name}";
-        BackgroundColor = ClipElementUI.DetermineAssetColor(asset.AssetType, asset.GetClipMode());
-        FrameCount = (uint)(asset.Duration ?? 0L);
-        IsInfiniteLength = asset.isInfiniteLength;
-        IsLocal = isLocal;
-        RemoveAssetCommand = parent.RemoveAssetCommand;
-        AddToTrackCommand = parent.AddToTrackCommand;
+        File = file;
+        Path = ProjectAssetFile.ResolvePath(asset.Path ?? "", projectRoot);
+        ThumbnailPath = ProjectAssetFile.ResolvePath(asset.ThumbnailPath ?? "", projectRoot);
+        IsMissing = file?.IsMissing ?? !System.IO.File.Exists(Path);
+        References = Localized.DraftSettingPage_AssetFiles_References(file?.ReferenceCount ?? 0);
+        CanEdit = parent.CanEdit;
+        ProxyPath = System.IO.Path.Combine(ProjectCachePaths.GetRoot(projectRoot), "proxy", $"{System.IO.Path.GetFileNameWithoutExtension(Path)}.proxy.mp4");
+        CanCreateProxy = parent.CanManageProxy && IsVideo && !IsMissing;
+        CanRemoveProxy = parent.CanManageProxy && IsVideo && (System.IO.File.Exists(ProxyPath) || System.IO.File.Exists(ProxyPath + ".ready"));
     }
 }

@@ -1,6 +1,7 @@
-﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent.Components;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
@@ -44,8 +45,12 @@ public class EllipseHandler : BaseVectorComponentHandler
     {
         switch (handleId)
         {
-            case "rx": component.Parameters["RadiusX"] = Math.Max(0.001f, newX); break;
-            case "ry": component.Parameters["RadiusY"] = Math.Max(0.001f, newY); break;
+            case "rx":
+                component.Parameters["RadiusX"] = Math.Max(0.001f, newX);
+                break;
+            case "ry":
+                component.Parameters["RadiusY"] = Math.Max(0.001f, newY);
+                break;
         }
     }
 }

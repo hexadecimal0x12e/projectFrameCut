@@ -1,4 +1,6 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
@@ -34,7 +36,12 @@ namespace projectFrameCut.ApplicationPluginBase
             { "TextFadeIn", p => new TextFadeInUI(p) },
             { "ProgressPlacer", p => new ProgressPlacerUI(p) },
             { "ProgressCrop", p => new ProgressCropUI(p) },
+            { "ProgressPlacer_Step", p => new ProgressPlacerUI(p) },
+            { "ProgressCrop_Step", p => new ProgressCropUI(p) },
             { "ColorAdjustment", p => new ColorAdjustmentUI(p) },
+            { "AdvancedMath1", p => new AdvancedMathUI(p) },
+            { "AdvancedMath2", p => new AdvancedMathUI(p) },
+            { "AdvancedMath3", p => new AdvancedMathUI(p) },
         };
 
         public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source)
@@ -42,13 +49,12 @@ namespace projectFrameCut.ApplicationPluginBase
             return new EffectProviderUI(source);
         }
 
-        public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>
+        public Dictionary<string, Func<ITextClipStyleProvider, ITextClipStyleUIProvider>> TextClipStyleUIProvider => new()
         {
-            { "Basic", () => new BasicTextStyleProvider() },
-            { "Title", () => new TitleTextStyleProvider() },
-            { "Pinyin", () => new PinyinTextStyleProvider() },
-            { "LlmTranslate", () => new LlmTranslateTextStyleProvider() },
+            ["OldTextClipEntry"] = p => new OldTextClipEntryTextStyleUIProvider(),
         };
+
+        public ITextClipStyleUIProvider? GetDefaultTextClipStyleUIProvider(ITextClipStyleProvider source) => new TextClipStyleUIProvider();
 
         public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider => new()
         {
@@ -75,6 +81,7 @@ namespace projectFrameCut.ApplicationPluginBase
 
         void IApplicationPluginBase.OnApplicationPluginLoaded()
         {
+            IBindableGraph.Creator = () => new projectFrameCut.Interaction.BindableGraphView();
             IInteractableEditor.creator = new(() => new InteractableEditor.InteractableEditor());
 
             ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(locateId, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Versioning;
+using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
@@ -203,17 +204,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             private set => SetValue(CanGoBackPropertyKey, value);
         }
 
-        private static readonly BindablePropertyKey CanGoForwardPropertyKey =
-            BindableProperty.CreateReadOnly(nameof(CanGoForward), typeof(bool), typeof(MultiWindowItem), false);
-
-        public static readonly BindableProperty CanGoForwardProperty = CanGoForwardPropertyKey.BindableProperty;
-
-        public bool CanGoForward
-        {
-            get => (bool)GetValue(CanGoForwardProperty);
-            private set => SetValue(CanGoForwardPropertyKey, value);
-        }
-
         private static readonly BindablePropertyKey IsMinimizedPropertyKey =
             BindableProperty.CreateReadOnly(nameof(IsMinimized), typeof(bool), typeof(MultiWindowItem), false);
 
@@ -227,17 +217,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         public bool IsInStandaloneWindowMode => _isInWindowMode;
 
-#pragma warning disable CS0618
-        [Obsolete("Go forward is an unusual design for stack-based navigation (you can't put back a disappeared things back). Consider using navigation within the window content instead.", false)] // I don't know why I did this hah
-        public bool AllowGoForward
-        {
-            get => (bool)GetValue(AllowGoForwardProperty);
-            set => SetValue(AllowGoForwardProperty, value);
-        }
 
-        public static readonly BindableProperty AllowGoForwardProperty =
-            BindableProperty.Create(nameof(AllowGoForward), typeof(bool), typeof(MultiWindowItem), false);
-#pragma warning restore CS0618 
 
         /// <summary>
         /// A Id to mark this window. Used for comparing.
@@ -291,6 +271,22 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// restored to a floating size when the user starts dragging a snapped window.
         /// </summary>
         internal Rect? PreSnapBounds { get; set; }
+
+        internal bool IsMaximized => _isMaximized;
+
+        internal Rect GetRestoreBounds()
+        {
+            if (_isInWindowMode) return new Rect(_preWindowX, _preWindowY, _preWindowWidth, _preWindowHeight);
+            if (_isMaximized) return new Rect(_preMaxX, _preMaxY, _preMaxWidth, _preMaxHeight);
+            return new Rect(TranslationX, TranslationY, WidthRequest > 0 ? WidthRequest : Width,
+                IsMinimized ? _preMinHeight : (HeightRequest > 0 ? HeightRequest : Height));
+        }
+
+        internal void SetLayoutHeight(double height)
+        {
+            if (IsMinimized) _preMinHeight = ConstrainWindowHeight(height);
+            HeightRequest = IsMinimized ? MinimizedWindowHeight : ConstrainWindowHeight(height);
+        }
 
         private double _preMinHeight;
 
@@ -1154,8 +1150,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void OnDockTapped(object sender, EventArgs e)
         {
-            PerformDock(true);
+            Dock();
         }
+
+        /// <summary>Returns this item from its independent OS window to its original host.</summary>
+        public void Dock() => PerformDock(true);
 
         private void PerformDock(bool closeWindow)
         {
@@ -1224,8 +1223,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // Reset margin just in case
             this.Margin = new Thickness(0);
 
-            // Disconnect handler to avoid context mismatch issues
-            this.Handler = null;
+            this.DisconnectHandlers();
 
             // 3. Restore to Original Parent
             if (_originalParent is Layout layout)
@@ -1311,10 +1309,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (CanGoBack) GoBack();
         }
 
-        private void OnForwardTapped(object sender, EventArgs e)
-        {
-            if (CanGoForward) GoForward();
-        }
 
         private async void OnPopOutTapped(object sender, EventArgs e)
         {
@@ -1384,8 +1378,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 // Snapshot
                 _preMaxX = this.TranslationX;
                 _preMaxY = this.TranslationY;
-                _preMaxWidth = this.Width;
-                _preMaxHeight = this.Height;
+                _preMaxWidth = this.WidthRequest > 0 ? this.WidthRequest : this.Width;
+                _preMaxHeight = this.HeightRequest > 0 ? this.HeightRequest : this.Height;
                 _preCol = Grid.GetColumn(this);
                 _preRow = Grid.GetRow(this);
                 _preColSpan = Grid.GetColumnSpan(this);
@@ -1530,6 +1524,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 contentPage.Content = null;
             }
+
+            // Disconnect the old handlers before the new window replaces them.
+            this.DisconnectHandlers();
 
             // 2. Disable MDI-style interactions (Internal gestures)
             IsDraggable = false;
@@ -1783,34 +1780,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
-        /// <summary>
-        /// Go forward is an unusual operation in .NET MAUI's Navigation stack, but we implement it here for MDI-style navigation. It will only work if the current content was previously navigated back from.
-        /// Go forward to the next content if any in the forward stack. 
-        /// </summary>
-        public void GoForward()
-        {
-            if (_hostWindow is not null)
-            {
-                throw new InvalidOperationException("Cannot go forward in standalone window mode, because of .NET MAUI's Navigation stack doesn't allow this. Use NavigateTo instead.");
-            }
-            if (_forwardStack.Count > 0)
-            {
-                if (Content != null)
-                {
-                    _backStack.Push((View)Content);
-                }
-
-                var view = _forwardStack.Pop();
-                Content = view;
-                UpdateNavigationState();
-                OnNavigate?.Invoke(this, (view, Content));
-            }
-        }
-
         private void UpdateNavigationState()
         {
             CanGoBack = _backStack.Count > 0;
-            CanGoForward = _forwardStack.Count > 0;
         }
 
         #endregion

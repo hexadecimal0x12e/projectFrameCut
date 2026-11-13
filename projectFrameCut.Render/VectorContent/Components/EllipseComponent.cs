@@ -5,7 +5,6 @@ namespace projectFrameCut.Render.VectorContent.Components;
 public class EllipseComponent : BaseShapeComponent
 {
     public override string TypeName => "Ellipse";
-    protected override string[] ShapeFieldIds => ["RadiusX", "RadiusY"];
 
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()

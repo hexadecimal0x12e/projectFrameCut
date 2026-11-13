@@ -1,0 +1,139 @@
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+
+namespace projectFrameCut.Render.Effect;
+
+public sealed class EffectRuntimeContext : IDisposable
+{
+    private readonly ThreadLocal<Cache> caches = new(() => new(), true);
+    private readonly Lock lifetime = new();
+    private volatile bool disposed;
+
+    private sealed class Cache
+    {
+        public readonly Lock Gate = new();
+        public readonly Dictionary<string, IEffect> Effects = [];
+        public string Configuration = "";
+
+        public void Clear()
+        {
+            foreach (var effect in Effects.Values.OfType<IDisposable>()) effect.Dispose();
+            Effects.Clear();
+        }
+    }
+
+    public IDisposable Enter() => EffectRuntimeDefaults.Enter(this);
+
+    internal T Execute<T>(string key, string typeName, EffectImplementType type, EffectImplementType defaultType, Dictionary<string, object> parameters, Func<IEffect, T> execute)
+    {
+        Cache cache;
+        using (lifetime.EnterScope())
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            cache = caches.Value!;
+        }
+        using var scope = cache.Gate.EnterScope();
+        ObjectDisposedException.ThrowIf(disposed, this);
+        var registry = IPluginBase.EffectImplementations;
+        var configuration = $"{registry.Revision}/{EffectHelper.ConfigurationRevision}/{EffectHelper.ForcePreferToType}/{ClassicOverlayMixture.EnableApproximatePath}/" +
+            string.Join(";", registry.PreferredPlugins.OrderBy(x => x.Key.TypeName).ThenBy(x => x.Key.ImplementType).Select(x => $"{x.Key}:{x.Value}"));
+        if (cache.Configuration != configuration)
+        {
+            cache.Clear();
+            cache.Configuration = configuration;
+        }
+        if (!cache.Effects.TryGetValue(key, out var effect))
+            cache.Effects[key] = effect = registry.Create(typeName, type, defaultType, parameters);
+        return execute(effect);
+    }
+
+    public void Dispose()
+    {
+        Cache[] all;
+        using (lifetime.EnterScope())
+        {
+            if (disposed) return;
+            disposed = true;
+            all = caches.Values.ToArray();
+        }
+        foreach (var cache in all)
+        {
+            using var scope = cache.Gate.EnterScope();
+            cache.Clear();
+        }
+        caches.Dispose();
+    }
+}
+
+public static class EffectRuntimeDefaults
+{
+    private static readonly AsyncLocal<EffectRuntimeContext?> current = new();
+    public static IMixture Mixture { get; } = new DefaultMixture();
+
+    private sealed class Scope(EffectRuntimeContext? previous) : IDisposable
+    {
+        public void Dispose() => current.Value = previous;
+    }
+
+    internal static IDisposable Enter(EffectRuntimeContext context)
+    {
+        var previous = current.Value;
+        current.Value = context;
+        return new Scope(previous);
+    }
+
+    internal static T Execute<T>(string key, string typeName, EffectImplementType defaultType, Dictionary<string, object> parameters, Func<IEffect, T> execute, EffectImplementType requestedType = EffectImplementType.NotSpecified)
+    {
+        var type = requestedType == EffectImplementType.NotSpecified
+            ? EffectHelper.ForcePreferToType ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{Plugin.InternalPluginBase.InternalPluginBaseID}.{typeName}", defaultType)
+            : requestedType;
+        if (type == EffectImplementType.NotSpecified) type = defaultType;
+        key = $"{key}/{typeName}/{type}/{defaultType}";
+        if (current.Value is { } context) return context.Execute(key, typeName, type, defaultType, parameters, execute);
+        using var temporary = new EffectRuntimeContext();
+        return temporary.Execute(key, typeName, type, defaultType, parameters, execute);
+    }
+
+    public static IPicture Place(IPicture source, int width, int height, int x = 0, int y = 0)
+    {
+        using var blank = PictureFP16.GenerateSolidColor(width, height, Half.Zero, Half.Zero, Half.Zero, Half.Zero);
+        var result = EffectPictureProcessing.Mix(Mixture, blank, source, source.BitPerPixel, x, y, width, height);
+        if (HwAccelPictureScope.Current is not null || result is not IHwAccelPicture gpu) return result;
+        using (gpu) return gpu.Download();
+    }
+
+    public static IPicture ApplyOpacity(IPicture source, float opacity)
+    {
+        opacity = float.IsNaN(opacity) ? 1 : Math.Clamp(opacity, 0, 1);
+        if (opacity == 1) return source;
+        if (source is IHwAccelPicture gpu && gpu.Context is IHwAccelPictureGeometry geometry)
+            return geometry.Opacity(gpu, (Half)opacity);
+        using var downloaded = source is IHwAccelPicture hardware ? hardware.Download() : null;
+        var picture = downloaded ?? source;
+        return PictureEffectChannels.PreserveHdr(PictureCalculation<IPicture>.Opacity(picture, (Half)opacity), picture);
+    }
+
+    private sealed class DefaultMixture : ClassicOverlayMixture, IMixture
+    {
+        public bool AcceptsHwAccelPictures => true;
+
+        public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB) => Execute(
+            "Mixture", "ClassicOverlayMixture", EffectImplementType.HwAcceleration, [],
+            e =>
+            {
+                if (HwAccelPictureScope.Current is null) return ((IMixture)e).Mix(basePicture, topPicture, targetPPB);
+                using var resized = topPicture.Width != basePicture.Width || topPicture.Height != basePicture.Height
+                    ? EffectPictureProcessing.Resize(topPicture, basePicture.Width, basePicture.Height, false) : null;
+                var result = EffectPictureProcessing.Mix((IMixture)e, basePicture, resized ?? topPicture, targetPPB, 0, 0, basePicture.Width, basePicture.Height);
+                return ReferenceEquals(result, resized) ? EffectPictureProcessing.Copy(result) : result;
+            });
+
+        public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight) => Execute(
+            "Mixture", "ClassicOverlayMixture", EffectImplementType.HwAcceleration, [],
+            e => HwAccelPictureScope.Current is null
+                ? ((IMixture)e).Mix(basePicture, topPicture, targetPPB, topStartX, topStartY, targetWidth, targetHeight)
+                : EffectPictureProcessing.Mix((IMixture)e, basePicture, topPicture, targetPPB, topStartX, topStartY, targetWidth, targetHeight));
+    }
+}

@@ -10,7 +10,8 @@ public enum PluginTrustLevel
     Invalid,
     ChainValid,
     PublisherTrusted,
-    Revoked
+    Revoked,
+    Bypassed
 }
 
 public sealed record PluginTrustReport(
@@ -92,11 +93,10 @@ public enum ExternalPluginCapabilities
     AudioSources = 1 << 2,
     SoundTracks = 1 << 3,
     Transforms = 1 << 4,
-    Computers = 1 << 5,
     VideoWriters = 1 << 6,
     Clips = 1 << 7,
     VectorComponents = 1 << 8,
-    All = Effects | VideoSources | AudioSources | SoundTracks | Transforms | Computers | VideoWriters | Clips | VectorComponents,
+    All = Effects | VideoSources | AudioSources | SoundTracks | Transforms | VideoWriters | Clips | VectorComponents,
 }
 
 public sealed class PluginPackageManifest
@@ -229,7 +229,7 @@ public static class PluginTrustValidator
             return Invalid("The publisher CA certificate is missing the Certificate Signing key usage.", signingFingerprint);
         }
 
-        foreach (var certificate in packageCertificates.Cast<X509Certificate2>().Concat(trustedRoots))
+        foreach (var certificate in packageCertificates.Cast<X509Certificate2>())
         {
             if (UsesWeakSignatureAlgorithm(certificate))
             {
@@ -265,6 +265,11 @@ public static class PluginTrustValidator
         {
             var failures = string.Join(", ", chain.ChainStatus.Select(status => status.StatusInformation.Trim()).Where(message => message.Length > 0));
             return Invalid($"The plugin certificate chain is invalid{(failures.Length == 0 ? "." : $": {failures}")}", signingFingerprint);
+        }
+
+        if (chain.ChainElements.Cast<X509ChainElement>().Any(element => UsesWeakSignatureAlgorithm(element.Certificate)))
+        {
+            return Invalid("The certificate chain contains a certificate signed with a weak algorithm.", signingFingerprint);
         }
 
         var chainRoot = chain.ChainElements[^1].Certificate;

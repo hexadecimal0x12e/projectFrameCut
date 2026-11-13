@@ -7,8 +7,8 @@ namespace projectFrameCut.Render.Contracts;
 public static class RenderProtocol
 {
     public const string AdditionalPipePrefix = "projectFrameCut-rpc-";
-    public const int CurrentVersion = 1;
-    public const int MinimumSupportedVersion = 1;
+    public const int CurrentVersion = 2;
+    public const int MinimumSupportedVersion = 2;
     public const int PipeProtocolVersion = 1;
     public const int MaxPipeFrameBytes = 256 * 1024 * 1024;
 }
@@ -22,6 +22,7 @@ public sealed class RenderPipeHandshake
     [ProtoMember(4)] public bool Accepted { get; set; }
     [ProtoMember(5)] public string Error { get; set; } = string.Empty;
     [ProtoMember(6)] public RenderCapabilities? Capabilities { get; set; }
+    [ProtoMember(7)] public List<ExternalRpcClientAuthorization> PersistentAuthorizations { get; set; } = [];
 }
 
 [ProtoContract]
@@ -29,6 +30,7 @@ public enum RenderOperation
 {
     [ProtoEnum] Unknown = 0,
     [ProtoEnum] GetCapabilities = 1,
+
     [ProtoEnum] OpenProject = 2,
     [ProtoEnum] CloseProject = 3,
     [ProtoEnum] GetProjectSnapshot = 4,
@@ -56,6 +58,25 @@ public enum RenderOperation
     [ProtoEnum] ExternalVideoSourceInitialize = 26,
     [ProtoEnum] ExternalVideoSourceReadFrame = 27,
     [ProtoEnum] ExternalVideoSourceRelease = 28,
+    [ProtoEnum] ListProjectExternalSources = 43,
+    [ProtoEnum] SetProjectExternalSources = 44,
+    [ProtoEnum] ListExternalVideoSourceClients = 45,
+    [ProtoEnum] ManageExternalVideoSourceClient = 46,
+    [ProtoEnum] RegisterExternalAudioSources = 47,
+    [ProtoEnum] UnregisterExternalAudioSources = 48,
+    [ProtoEnum] ListExternalAudioSources = 49,
+    [ProtoEnum] ExternalAudioSourceCreate = 50,
+    [ProtoEnum] ExternalAudioSourceInitialize = 51,
+    [ProtoEnum] ExternalAudioSourceReadSamples = 52,
+    [ProtoEnum] ExternalAudioSourceRelease = 53,
+    [ProtoEnum] RegisterExternalMaskSources = 54,
+    [ProtoEnum] UnregisterExternalMaskSources = 55,
+    [ProtoEnum] ListExternalMaskSources = 56,
+    [ProtoEnum] ExternalMaskSourceProcess = 57,
+    [ProtoEnum] StartDynamicPreview = 58,
+    [ProtoEnum] StopDynamicPreview = 59,
+    [ProtoEnum] GenerateTimelineThumbnails = 60,
+    [ProtoEnum] RenderEffectBindingPreview = 61,
     [ProtoEnum] RegisterGuiProject = 30,
     [ProtoEnum] UnregisterGuiProject = 31,
     [ProtoEnum] GetGuiProjectWork = 32,
@@ -67,6 +88,8 @@ public enum RenderOperation
     [ProtoEnum] UndoProjectHistory = 38,
     [ProtoEnum] RedoProjectHistory = 39,
     [ProtoEnum] RestoreProjectHistory = 40,
+    [ProtoEnum] ControlPreviewAudio = 41,
+    [ProtoEnum] GetPreviewAudioClock = 42,
     [ProtoEnum] OpenHeadlessProject = 100,
     [ProtoEnum] GetHeadlessProjectSnapshot = 101,
     [ProtoEnum] ReloadHeadlessProject = 102,
@@ -83,6 +106,7 @@ public enum RenderOperation
     [ProtoEnum] RemoveHeadlessEffectProvider = 113,
     [ProtoEnum] SaveHeadlessProject = 114,
     [ProtoEnum] ApplyHeadlessProjectEdit = 115,
+
     [ProtoEnum] IsolationNegotiate = 2000,
     [ProtoEnum] IsolationLoadPlugin = 2001,
     [ProtoEnum] IsolationCreateProvider = 2002,
@@ -115,11 +139,6 @@ public enum RenderOperation
     [ProtoEnum] IsolationAppendVideoWriterFrame = 2029,
     [ProtoEnum] IsolationFinishVideoWriter = 2030,
     [ProtoEnum] IsolationVideoWriterSupportsCodec = 2031,
-    [ProtoEnum] IsolationCreateTransform = 2032,
-    [ProtoEnum] IsolationInitializeTransform = 2033,
-    [ProtoEnum] IsolationProcessTransform = 2034,
-    [ProtoEnum] IsolationCreateComputer = 2035,
-    [ProtoEnum] IsolationCompute = 2036,
     [ProtoEnum] IsolationCreateClip = 2037,
     [ProtoEnum] IsolationReadClipFrame = 2038,
     [ProtoEnum] IsolationReinitializeClip = 2039,
@@ -134,6 +153,21 @@ public enum RenderOperation
     [ProtoEnum] IsolationMapSpeedLength = 2048,
     [ProtoEnum] IsolationGetClipPosition = 2049,
     [ProtoEnum] IsolationGetEffectValue = 2050,
+    [ProtoEnum] IsolationCreateEffectImplementation = 2057,
+    [ProtoEnum] IsolationProcessVectorComponentEffect = 2058,
+    [ProtoEnum] IsolationAuthorizeProjectExternalSource = 2059,
+    [ProtoEnum] IsolationListProjectExternalSources = 2060,
+    [ProtoEnum] IsolationProcessTransformEffect = 2061,
+    [ProtoEnum] IsolationProcessVectorPictureEffect = 2062,
+    [ProtoEnum] IsolationComputeEffect = 2063,
+    [ProtoEnum] IsolationResolveFieldTypes = 2064,
+    [ProtoEnum] IsolationListProjectExternalAudioSources = 2065,
+    [ProtoEnum] IsolationListProjectExternalMaskSources = 2066,
+    [ProtoEnum] IsolationEditKeyFrames = 2067,
+    [ProtoEnum] IsolationFullDynamicEffect = 2068,
+
+    [ProtoEnum] TestingBackendCrash = int.MaxValue, 
+
 }
 
 [ProtoContract]
@@ -241,6 +275,9 @@ public sealed class RenderRequestEnvelope
     [ProtoMember(3)] public string ClientId { get; set; } = string.Empty;
     [ProtoMember(4)] public RenderOperation Operation { get; set; }
     [ProtoMember(5)] public byte[] Payload { get; set; } = [];
+    [ProtoMember(6)] public Guid CancelRequestId { get; set; }
+    // Assigned by the server transport, never accepted from the wire.
+    [ProtoIgnore] public Guid ConnectionId { get; set; }
 }
 
 [ProtoContract]
@@ -252,6 +289,7 @@ public sealed class RenderResponseEnvelope
     [ProtoMember(4)] public RemoteError? Error { get; set; }
     [ProtoMember(5)] public List<RemoteLogEntry> Logs { get; set; } = [];
     [ProtoMember(6)] public RenderRequestEnvelope? CallbackRequest { get; set; }
+    [ProtoMember(7)] public DynamicPreviewClock? DynamicPreviewClock { get; set; }
 }
 
 [ProtoContract]
@@ -298,6 +336,8 @@ public sealed class OpenProjectRequest
     [ProtoMember(8)] public int ProjectHeight { get; set; }
     [ProtoMember(9)] public int FrameRate { get; set; }
     [ProtoMember(10)] public string CacheNamespace { get; set; } = string.Empty;
+    [ProtoMember(11)] public List<ProjectExternalSourceApproval> AllowedExternalSources { get; set; } = [];
+    [ProtoMember(12)] public string CacheRoot { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -312,6 +352,8 @@ public sealed class RenderSession
     [ProtoMember(7)] public int ClipCount { get; set; }
     [ProtoMember(8)] public string SnapshotHash { get; set; } = string.Empty;
     [ProtoMember(9)] public FrameHashIndex HashIndex { get; set; } = new();
+    [ProtoMember(10)] public List<Guid> CacheableClipIds { get; set; } = [];
+    [ProtoMember(11)] public string CacheRoot { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -389,6 +431,8 @@ public sealed class RenderArtifact
     [ProtoMember(12)] public PreviewPixelFormat PixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
     [ProtoMember(13)] public int Stride { get; set; }
     [ProtoMember(14)] public string ColorSpace { get; set; } = string.Empty;
+    [ProtoMember(15)] public string PreviewContainer { get; set; } = string.Empty;
+    [ProtoMember(16)] public string PreviewEffectHash { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -396,6 +440,9 @@ public enum PreviewPixelFormat
 {
     [ProtoEnum] EncodedImage = 0,
     [ProtoEnum] Rgba16FloatScRgb = 1,
+    [ProtoEnum] VfdPicture = 2,
+    [ProtoEnum] PngImage = 3,
+    [ProtoEnum] PreviewFrame = 4,
 }
 
 [ProtoContract]
@@ -409,6 +456,26 @@ public sealed class TimelineFrameRequest
 }
 
 [ProtoContract]
+public sealed class TimelineThumbnailsRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public Guid ClipId { get; set; }
+    [ProtoMember(3)] public string SourcePath { get; set; } = string.Empty;
+    [ProtoMember(4)] public int TotalFrames { get; set; }
+    [ProtoMember(5)] public int IntervalFrames { get; set; } = 30;
+    [ProtoMember(6)] public int MaxCount { get; set; } = 60;
+    [ProtoMember(7)] public int Width { get; set; } = 320;
+    [ProtoMember(8)] public List<int> FrameIndices { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class TimelineThumbnailsResponse
+{
+    [ProtoMember(1)] public List<RenderArtifact> Artifacts { get; set; } = [];
+    [ProtoMember(2)] public List<RemoteError> Errors { get; set; } = [];
+}
+
+[ProtoContract]
 public sealed class ClipPreviewRequest
 {
     [ProtoMember(1)] public Guid SessionId { get; set; }
@@ -419,12 +486,23 @@ public sealed class ClipPreviewRequest
     [ProtoMember(6)] public int ProjectWidth { get; set; }
     [ProtoMember(7)] public int ProjectHeight { get; set; }
     [ProtoMember(8)] public PreviewPixelFormat PreferredPixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
+    [ProtoMember(9)] public string? VectorClipJson { get; set; }
+    [ProtoMember(10)] public bool BeforeLayout { get; set; }
+    [ProtoMember(12)] public bool UsePreviewMetadata { get; set; }
+    [ProtoMember(13)] public bool DisableSourceFrameCache { get; set; }
+    [ProtoMember(14)] public string PreviewPipeName { get; set; } = "";
+    [ProtoMember(15)] public string PreviewPipeToken { get; set; } = "";
+    [ProtoMember(16)] public bool DisableGpuBufferPoolLimit { get; set; }
+    [ProtoMember(17)] public long GpuBufferPoolMaxBytes { get; set; }
+
 }
 
 [ProtoContract]
 public sealed class ClipPreviewBatchRequest
 {
     [ProtoMember(1)] public List<ClipPreviewRequest> Requests { get; set; } = [];
+    [ProtoMember(2)] public bool UseRenderer { get; set; }
+    [ProtoMember(3)] public FrameSequenceRenderOptions? RenderOptions { get; set; }
 }
 
 [ProtoContract]
@@ -432,6 +510,85 @@ public sealed class ClipPreviewBatchResponse
 {
     [ProtoMember(1)] public List<RenderArtifact> Artifacts { get; set; } = [];
     [ProtoMember(2)] public List<RemoteError> Errors { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class StartDynamicPreviewRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public uint StartFrame { get; set; }
+    [ProtoMember(3)] public int CanvasWidth { get; set; }
+    [ProtoMember(4)] public int CanvasHeight { get; set; }
+    [ProtoMember(5)] public int ProjectWidth { get; set; }
+    [ProtoMember(6)] public int ProjectHeight { get; set; }
+    [ProtoMember(7)] public double FrameRate { get; set; }
+    [ProtoMember(8)] public PreviewPixelFormat PreferredPixelFormat { get; set; }
+    [ProtoMember(9)] public bool StartAudio { get; set; } = true;
+    [ProtoMember(10)] public Guid PlaybackId { get; set; }
+    [ProtoMember(12)] public int MaxParallelWorkers { get; set; } = 8;
+    [ProtoMember(13)] public bool AllowWorkerOversubscription { get; set; } = true;
+    [ProtoMember(14)] public int RenderAheadFrames { get; set; }
+    [ProtoMember(15)] public bool EnableThreadAffinity { get; set; } = true;
+    [ProtoMember(16)] public int[] WorkerCPUCoreIndexs { get; set; } = [];
+    [ProtoMember(17)] public bool EnableMemoryBudget { get; set; }
+    [ProtoMember(18)] public long MaxBufferedBytes { get; set; }
+    [ProtoMember(19)] public bool UsePreviewMetadata { get; set; }
+    [ProtoMember(20)] public bool DisableSourceFrameCache { get; set; }
+    [ProtoMember(21)] public string PreviewPipeName { get; set; } = "";
+    [ProtoMember(22)] public string PreviewPipeToken { get; set; } = "";
+    [ProtoMember(23)] public long PreviewClipPoolMaxBytes { get; set; }
+    [ProtoMember(24)] public int PreviewBufferSeconds { get; set; } = 5;
+    [ProtoMember(25)] public bool DisableGpuBufferPoolLimit { get; set; }
+    [ProtoMember(26)] public long GpuBufferPoolMaxBytes { get; set; }
+
+}
+
+[ProtoContract]
+public sealed class DynamicPreviewSession
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public Guid PlaybackId { get; set; }
+    [ProtoMember(3)] public string CacheDirectory { get; set; } = string.Empty;
+    [ProtoMember(4)] public uint StartFrame { get; set; }
+    [ProtoMember(5)] public double FrameRate { get; set; }
+    [ProtoMember(6)] public PreviewPixelFormat PixelFormat { get; set; }
+    [ProtoMember(7)] public DynamicPreviewClock Clock { get; set; } = new();
+}
+
+[ProtoContract]
+public sealed class StopDynamicPreviewRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public Guid PlaybackId { get; set; }
+    [ProtoMember(3)] public bool ClearCache { get; set; }
+}
+
+[ProtoContract]
+public sealed class DynamicPreviewClock
+{
+    [ProtoMember(1)] public long Timestamp { get; set; }
+    [ProtoMember(2)] public long Frequency { get; set; }
+    [ProtoMember(3)] public double Frame { get; set; }
+    [ProtoMember(4)] public bool IsRunning { get; set; }
+    [ProtoMember(5)] public bool IsCompleted { get; set; }
+    [ProtoMember(6)] public string? Error { get; set; }
+    [ProtoMember(7)] public Guid SessionId { get; set; }
+    [ProtoMember(8)] public Guid PlaybackId { get; set; }
+    [ProtoMember(9)] public double? BufferingProgress { get; set; }
+    [ProtoMember(10)] public double? BufferingFrameRate { get; set; }
+    [ProtoMember(11)] public int BufferFrames { get; set; }
+}
+
+public sealed class DynamicPreviewCachedClip
+{
+    public Guid ClipId { get; set; }
+    public uint FrameIndex { get; set; }
+    public string ProjectRelativePath { get; set; } = string.Empty;
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public bool IsPositionedClipPreview { get; set; }
+    public string PreviewContainer { get; set; } = string.Empty;
+    public string PreviewEffectHash { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -460,6 +617,46 @@ public sealed class AudioSegmentRequest
 }
 
 [ProtoContract]
+public enum PreviewAudioCommand
+{
+    [ProtoEnum] Start = 0,
+    [ProtoEnum] Pause = 1,
+    [ProtoEnum] Resume = 2,
+    [ProtoEnum] Seek = 3,
+    [ProtoEnum] Stop = 4,
+}
+
+[ProtoContract]
+public sealed class PreviewAudioCommandRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public PreviewAudioCommand Command { get; set; }
+    [ProtoMember(3)] public uint StartFrame { get; set; }
+    [ProtoMember(4)] public int FrameRate { get; set; }
+}
+
+[ProtoContract]
+public sealed class PreviewAudioClockRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public long Generation { get; set; }
+}
+
+[ProtoContract]
+public sealed class PreviewAudioClock
+{
+    [ProtoMember(1)] public long Generation { get; set; }
+    [ProtoMember(2)] public uint StartFrame { get; set; }
+    [ProtoMember(3)] public int SampleRate { get; set; } = 48000;
+    [ProtoMember(4)] public int Channels { get; set; } = 2;
+    [ProtoMember(5)] public long PlayedSamples { get; set; }
+    [ProtoMember(6)] public long BufferedSamples { get; set; }
+    [ProtoMember(7)] public bool IsRunning { get; set; }
+    [ProtoMember(8)] public bool IsPaused { get; set; }
+    [ProtoMember(9)] public bool HasAudio { get; set; }
+}
+
+[ProtoContract]
 public sealed class RenderProjectRequest
 {
     [ProtoMember(1)] public Guid SessionId { get; set; }
@@ -474,6 +671,10 @@ public sealed class RenderProjectRequest
     [ProtoMember(10)] public string ProjectName { get; set; } = string.Empty;
     [ProtoMember(11)] public string OutputPath { get; set; } = string.Empty;
     [ProtoMember(12)] public bool Background { get; set; }
+    [ProtoMember(13)] public bool ExportFrameSequence { get; set; }
+    [ProtoMember(14)] public uint StartFrame { get; set; }
+    [ProtoMember(15)] public uint FrameCount { get; set; }
+    [ProtoMember(16)] public FrameSequenceRenderOptions? FrameSequenceOptions { get; set; }
 }
 
 [ProtoContract]
@@ -494,6 +695,12 @@ public sealed class RenderJob
     [ProtoMember(13)] public bool Background { get; set; }
     [ProtoMember(14)] public double CurrentFps { get; set; }
     [ProtoMember(15)] public string Stage { get; set; } = string.Empty;
+    [ProtoMember(16)] public long HashPreparationCompleted { get; set; }
+    [ProtoMember(17)] public long HashPreparationTotal { get; set; }
+    [ProtoMember(18)] public List<RenderArtifact> FrameArtifacts { get; set; } = [];
+    [ProtoMember(19)] public long CompletedFrames { get; set; }
+    [ProtoMember(20)] public long TotalFrames { get; set; }
+    [ProtoMember(21)] public bool SuppressNotifications { get; set; }
 }
 
 [ProtoContract]
@@ -573,6 +780,7 @@ public sealed class OpenHeadlessProjectRequest
 {
     [ProtoMember(1)] public string ProjectRoot { get; set; } = string.Empty;
     [ProtoMember(2)] public Guid SessionId { get; set; }
+    [ProtoMember(3)] public List<ProjectExternalSourceApproval> AllowedExternalSources { get; set; } = [];
 }
 
 [ProtoContract]

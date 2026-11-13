@@ -11,12 +11,16 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
-    public interface ISoundTrack : IDisposable
+    public interface ISoundTrack : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
+        [JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages { get; }
+        [JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
         /// <summary>
         /// Mode of this track. Mostly for compatibility purpose.
         /// </summary>
@@ -24,12 +28,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// The type name of this track. You must override it when you're creating a new track type in plugin.
         /// </summary>
-        public virtual string TypeName => TrackType != TrackMode.ExtendTrack ? TrackType.ToString() : throw new InvalidOperationException("TrackType is ExtendTrack, and you must override it when you're creating a new track type in plugin.");
+        public new virtual string TypeName => TrackType != TrackMode.ExtendTrack ? TrackType.ToString() : throw new InvalidOperationException("TrackType is ExtendTrack, and you must override it when you're creating a new track type in plugin.");
 
         /// <summary>
         /// The unique identifier of this track.
         /// </summary>
-        public string Id { get; init; }
+        public new string Id { get; init; }
         /// <summary>
         /// The name of this track. Mostly used for display purpose.
         /// </summary>
@@ -39,6 +43,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Indicate which layer this track is in. Higher index means upper layer.
         /// </summary>
         public uint LayerIndex { get; init; }
+        public virtual uint SubLayerIndex => LayerIndex;
 
         /// <summary>
         /// Where this track starts in the whole draft, in frames.
@@ -88,6 +93,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Used in serialization and deserialization.
         /// </summary>
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public virtual EffectProviderJSONStructure[]? EffectProviders => null;
 
         [JsonIgnore]
         /// <summary>

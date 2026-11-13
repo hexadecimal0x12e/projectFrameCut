@@ -1,4 +1,3 @@
-﻿using projectFrameCut.Drawing.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +20,9 @@ namespace projectFrameCut.Shared
         MarkingClip,
         TransformClip,
         VectorCanvasClip,
+        VectorComponentClip,
+        MaskClip,
+        ProjectReferenceClip,
         Special = -1
     }
 
@@ -30,7 +32,9 @@ namespace projectFrameCut.Shared
         Audio,
         Image,
         Font,
-        Other
+        Other,
+        VectorComposition,
+        Subtitle
     }
 
     public enum TrackMode
@@ -42,22 +46,24 @@ namespace projectFrameCut.Shared
 
     public enum EffectType
     {
-        NormalEffect,
-        ContinuousEffect,
-        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
-        BindableEffect,
-        AudioNormalEffect,
-        AudioContinuousEffect,
-        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
-        AudioBindableEffect,
-        SpeedVarianceProvider,
-        ClipPositionProvider,
-        ContinuousClipPositionProvider,
-        MixtureProvider,
-        TextEffect,
-        ContinuousTextEffect,
-        SourceReplacement,
-        NonIPictureOutputValueProvider,
+        NormalEffect = 0,
+        ContinuousEffect = 1,
+        // DO NOT use 2 as it is reserved for deprecated BindableEffect effects.
+        AudioNormalEffect = 3,
+        AudioContinuousEffect = 4,
+        // DO NOT use 5 as it is reserved for deprecated BindableEffect effects.
+        SpeedVarianceProvider = 6,
+        ClipPositionProvider = 7,
+        ContinuousClipPositionProvider = 8,
+        MixtureProvider = 9,
+        TextEffect = 10,
+        ContinuousTextEffect = 11,
+        SourceReplacement = 12,
+        NonIPictureOutputValueProvider = 13,
+        VectorComponentEffect = 14,
+        Transform = 15,
+        VectorPictureEffect = 16,
+        FullDynamicValueProviderEffect = 17,
         NotSpecified = -1,
     }
 
@@ -73,6 +79,11 @@ namespace projectFrameCut.Shared
         Text = 64,
         SourceReplacement = 128,
         ValueProvider = 256,
+        VectorComponent = 512,
+        Transform = 1024,
+        VectorPicture = 2048,
+        Pipeline = 4096, 
+        ClipPosition = 8192,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,
@@ -80,16 +91,13 @@ namespace projectFrameCut.Shared
         InternalUse = 1 << 19,
     }
 
-    [Obsolete("All BindableEffect is deprecated, no longer be processed and will be removed in API V9, please use EffectProvider with a dynamic EffectParamField instead.")]
-    public enum BindableArgumentEffectType
+    public enum EffectStage
     {
-        ValueProvider,
-        NoInputValueProvider,
-        OneInputValueProcessor,
-        ManyInputValueProcessor,
-        OneInputResultGenerator,
-        ManyInputResultGenerator,
-        ContinuousResultGenerator,
+        Text = 100,
+        VectorContent,
+        SourceReplacement,
+        Render,
+        Composition,
     }
 
     /// <summary>
@@ -108,29 +116,31 @@ namespace projectFrameCut.Shared
         Custom3,
         Custom4,
         Custom5,
+        StaticOrHalfDynamicValueProvider,
+        FullDynamicValueProvider,
     }
 
-    public enum TransformType
+    [Flags]
+    public enum TransformDefinition
     {
         /// <summary>
-        /// Represents a transform with two input, 
-        /// and get only the last frame of left and first frame of right one.
+        /// Indicates that the transform supports one input clip. This flag is used to specify that the transform can operate with a single input source.
         /// </summary>
-        SingleFrameTransform,
+        SupportOneInput = 1 << 0,
         /// <summary>
-        /// Represents a transform with only one input, 
-        /// which usually is the last frame of binded clip.
+        /// Indicates that the transform supports two input clips. This flag is used to specify that the transform can operate with two input sources.
         /// </summary>
-        OneInputSingleFrameTransform,
+        SupportTwoInput = 1 << 1,
+
         /// <summary>
-        /// Represents a transform with two input, 
-        /// Continuously get the frame from two sources and render it by the progress.
+        /// Indicates that the transform is requires a clip(image) input.
         /// </summary>
-        ContinuousTransform,
+        Clip = 1 << 10,
         /// <summary>
-        /// To do in future.
+        /// Indicates that the transform is requires an audio input.
         /// </summary>
-        AudioTransform
+        Audio = 1 << 11,
+
     }
 
     public enum TextLanguage
@@ -156,7 +166,7 @@ namespace projectFrameCut.Shared
         System,
     }
 
-    [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead. TextClipEntry is kept for backward compatibility with serialized data.")]
+    [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead to define text field, or \"TextClipPreset\" for a more modern approach of saving user text clip configurations. TextClipEntry is kept for backward compatibility with serialized data.")]
     public record TextClipEntry
     {
         // Core text
@@ -268,6 +278,16 @@ namespace projectFrameCut.Shared
     /// <param name="TargetWidth">The width of the clip.</param>
     /// <param name="TargetHeight">The height of the clip.</param>
     /// <param name="IsDelta">Indicates whether the position is a delta relative to the previous position.</param>
-    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta);
+    /// <param name="Rotation">Clockwise rotation in degrees around the target rectangle's center.</param>
+    /// <param name="Opacity">Opacity from 0 to 1; multiplied with the previous opacity when IsDelta is true.</param>
+    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta, float Rotation = 0, float Opacity = 1)
+    {
+        public ClipPositionTuple() : this(0, 0, 0, 0, false) { }
+
+        public readonly ClipPositionTuple Apply(ClipPositionTuple value) => value.IsDelta
+            ? new(TargetX + value.TargetX, TargetY + value.TargetY, TargetWidth + value.TargetWidth,
+                TargetHeight + value.TargetHeight, false, Rotation + value.Rotation, Opacity * value.Opacity)
+            : value;
+    }
 
 }

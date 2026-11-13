@@ -47,6 +47,7 @@ internal static class TextLayoutModeResolver
             WordSpacing = pixelEntry.WordSpacing * scale,
             ExtraData = new Dictionary<string, object>(pixelEntry.ExtraData),
         };
+        TextLayoutPipeline.ScaleRichText(adjusted, scale);
 
         // If the entry has a wrapping width, the linear assumption breaks: the
         // bigger font wraps more, height grows, our scale undershoots. Refine
@@ -69,6 +70,7 @@ internal static class TextLayoutModeResolver
                         CharacterSpacing = adjusted.CharacterSpacing * refinementScale,
                         WordSpacing = adjusted.WordSpacing * refinementScale,
                     };
+                    TextLayoutPipeline.ScaleRichText(adjusted, refinementScale);
                 }
             }
         }

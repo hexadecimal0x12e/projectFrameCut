@@ -53,6 +53,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             if (v is T t) return t;
             try
             {
+                if (typeof(T) == typeof(Half) && EffectParamConvert.TryConvertToFloat(v, out var half))
+                    return (T)(object)(Half)half;
+                if (v is Half h) v = (float)h;
                 return (T)Convert.ChangeType(v, typeof(T), CultureInfo.InvariantCulture);
             }
             catch

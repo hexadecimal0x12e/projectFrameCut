@@ -1,5 +1,7 @@
 # Connected GUI project operations
 
+Before connecting, [locate and import the module](offline-projects.md#find-and-import-the-module). On Windows, prefer `<target application install directory>/Public/PowerShell/projectFrameCut.PowerShell.psd1`.
+
 ## Connect
 
 The target project must already be open in the projectFrameCut GUI. The ordinary flow asks the user to approve an external RPC request:
@@ -20,6 +22,29 @@ Connect-ProjectFrameCut -PipeName $connection.PipeName
 ```
 
 `PipeId` is a 64-character hexadecimal token. Treat it and the token as secrets.
+
+### Windows sandbox connection
+
+When the Agent runs in a Windows sandbox that needs additional pipe ACL entries, obtain its actual sandbox/restricted-token SIDs from the runtime configuration or process token. The current user SID alone may be insufficient. Pass the required SID array when requesting authorization:
+
+```powershell
+Connect-ProjectFrameCut -Name Agent -Author Agent -Purpose 'Edit the requested project' `
+  -AddSID $sandboxSid1,$sandboxSid2
+Get-ProjectInfo
+```
+
+`-AddSID` is an optional `string[]` in the one-time authorization parameter set. Each entry is forwarded as a separate `--addSID=<SID>` argument. The CLI validates and deduplicates the SIDs. Use the actual required SID list; do not guess values or substitute `Everyone`. They grant read/write access only to the requested pipe. Approval and token authentication still apply; this does not change global pipe permissions, filesystem access, or MCP transport permissions. `-AddSID` is not available with persistent authorization, `-PipeId`, or `-PipeName`.
+
+For direct CLI use or an older module without `-AddSID`, run `pjfc rpc_request --name=Agent --author=Agent --purpose='Edit the requested project' --wait "--addSID=$sandboxSid"`. Capture stdout and stderr separately without echoing them, and check the exit code. With `--wait`, the success JSON is on **stderr**, not stdout. Parse the response only after exit code `0` and `status=success`, then connect in the runspace used for editing:
+
+```powershell
+Connect-ProjectFrameCut -PipeName $response.connection.PipeName
+Get-ProjectInfo
+```
+
+Here `$response` is the parsed stderr JSON. Repeat `--addSID` for multiple SIDs and preserve `--requestDir=<path>` and the executable path when the target app requires them. If a previously approved pipe lacks the sandbox ACL, request a new pipe with the required SIDs; increasing the connection timeout does not change its ACL. The CLI also supports `--addSID` with one-time `--publicKey` requests; decrypt the response file's connection data with the matching private key.
+
+### Persistent authorization
 
 For persistent authorization:
 
@@ -55,13 +80,18 @@ Save-Project
 Disconnect-ProjectFrameCut
 ```
 
-`Add-ProjectClip` requires an existing `TrackId`. Its source can be `-FilePath`, `-AssetId`, or omitted for an empty clip. An omitted start defaults to frame 0; an empty clip defaults to 300 frames. Relative file paths resolve from the PowerShell current filesystem location. Importing an asset copies it into the project assets directory; removing the asset record does not delete the source file.
+`Add-ProjectClip` requires an existing `TrackId` and exactly one source: `-FilePath` or `-AssetId`. Source parameters reject null, empty, or whitespace-only values. An omitted start defaults to frame 0. Relative file paths resolve from the PowerShell current filesystem location. Asset import follows the application import mode; inspect the returned Path when portability matters. Removing the asset record does not delete the source file.
+
+## Batch editing
+
+For loops that create clips, subtitles, vector components, effects, or keyframes, prefer one batch per logical group of saved edits. Read [batch operations](batch-operations.md) for the `Start-ProjectBatch` / `Complete-ProjectBatch` / `Stop-ProjectBatch` workflow, restrictions, and timeout recovery. Finish a batch before taking previews or using history commands.
 
 ## Command catalog
 
 Inspection and persistence:
 
 - `Get-ProjectInfo`, `Save-Project`
+- `Start-ProjectBatch`, `Complete-ProjectBatch [-ChangeReason] [-TimeoutSeconds]`, `Stop-ProjectBatch`
 - `Get-ProjectTrack [-TrackId]`, `Add-ProjectTrack [-TrackId] [-PassThru]`
 - `Get-ProjectAsset [-AssetId] [-Name]`
 - `Get-ProjectClip [-ClipId] [-TrackId] [-Name]`
@@ -72,10 +102,39 @@ Clips and assets:
 
 - `Add-ProjectAsset -FilePath <path> [-Name] [-PassThru]`
 - `Remove-ProjectAsset -AssetId <id>`
-- `Add-ProjectClip -TrackId <id> [-FilePath] [-AssetId] [-Name] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-WidthPixels] [-HeightPixels] [-PassThru]`
-- `Set-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-FilePath] [-WidthPixels] [-HeightPixels] [-XPixels] [-YPixels] [-PassThru]`
+- `Add-ProjectClip -TrackId <id> -FilePath <path> [-Name] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-WidthPixels] [-HeightPixels] [-PassThru]`
+- `Add-ProjectClip -TrackId <id> -AssetId <id> [-Name] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-WidthPixels] [-HeightPixels] [-PassThru]`
+- `Set-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-FilePath] [-PassThru]`
 - `Copy-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-PassThru]`
 - `Remove-ProjectClip -ClipId <id>`
+
+Clip properties and geometry:
+
+- `Get-ProjectClipProperties -ClipId <id>`
+- `Set-ProjectClipProperties -ClipId <id> [-Name] [-ClipColor] [-AllowFreeScaleResize] [-ExtendToWholeDraft] [-TargetDecoder] [-HDRBrightnessOffset] [-AudioEnabled] [-AudioVolume] [-DetachAudio]`
+- Solid-color channels (`Red/Green/Blue/Alpha`), mask sources (`MaskSourceType/SourceArguments`), and `AntiAliasMode` also use `Set-ProjectClipProperties`.
+- `Get-ProjectClipGeometry -ClipId <id>`
+- `Set-ProjectClipGeometry -ClipId <id> [-WidthPixels] [-HeightPixels] [-XPixels] [-YPixels] [-RotationDegrees] [-CropEnabled] [-CropXPixels] [-CropYPixels] [-CropWidthPixels] [-CropHeightPixels] [-CropRotationDegrees]`
+
+Display geometry has moved from `Set-ProjectClip` and `Set-ProjectVectorClip` to `Set-ProjectClipGeometry`. Creation commands still accept initial dimensions. Setting static geometry clears the corresponding Clip-argument overrides and bindings. Crop rectangles use pixels; rotation uses degrees.
+
+Additional editing commands:
+
+- `Add-ProjectSolidColorClip`, `Add-ProjectEmptyVideoClip`, `Get-ProjectMaskSourceType`, `Add-ProjectMaskClip`
+- `Get-ProjectSubtitleClip`, `Add-ProjectSubtitleClip`, `Set-ProjectSubtitleClip`
+- `Get-ProjectSubtitleCue`, `Add-ProjectSubtitleCue`, `Set-ProjectSubtitleCue`, `Remove-ProjectSubtitleCue`
+- `Split-ProjectClip -ClipId <id> -FrameIndex <frame>`, `Join-ProjectClip -ClipIds <ids>`, `Split-ProjectClipGroup -ClipId <id>`
+- `Remove-ProjectTrack -TrackId <id>` removes its clips and reindexes tracks; query IDs again afterward.
+- `Get-ProjectExternalSource`, `Add-ProjectExternalSource -FilePath <folder-or-manifest>`, `Set-ProjectExternalSource`, `Remove-ProjectExternalSource`
+- `Add-ProjectExternalSourceClip -ImportId <id> -SourceId <source> -SourceKind Video|Audio|Mask -TrackId <id>`; RPC clients use `ClientId` instead of `ImportId`.
+- `Get-ProjectTransformType [-Audio]`, `Get-ProjectClipTransform`, `Set-ProjectClipTransform`, `Remove-ProjectClipTransform`, `Get-ProjectClipTransformPreview`
+- `Get-ProjectSettings`, `Set-ProjectSettings`
+
+Subtitle cue times and offsets use milliseconds relative to the subtitle source, independently of project-frame clip timing. Cue writes validate unique IDs, positive intervals and non-overlapping times. File imports support SRT/VTT/ASS/SSA and optional `EncodingName`; importing into an existing clip preserves its style.
+
+Transitions use `Side Left|Right`, `InputMode OneInput|TwoInput`, `DurationFrames`, `RenderOrder BeforeEffects|AfterEffects`, and provider `Fields`. Neighbor selection and shared ownership follow the GUI. Picture-transition previews return a video path. External-source loading is session state; import/removal updates the project index.
+
+Project settings include frame rate, resolution, HDR brightness, imported covers, cover-as-first-frame and `UserDefinedProperties` (null removes a key). Keep using the standard `ChangeReason/WhatIf/PassThru` workflow and persist with `Save-Project` or batch completion when finished.
 
 Text:
 
@@ -93,10 +152,100 @@ Effects/provider graphs:
 - `Set-ProjectClipEffectProvider -ClipId <id> -ProviderId <id> [-Name] [-Enabled] [-Fields <hashtable>] [-ResetToDefaults] [-InputProviderId] [-IsFinalOutput] [-PassThru]`
 - `Remove-ProjectClipEffectProvider -ClipId <id> -ProviderId <id>`
 
-All connected project commands accept `-TimeoutSeconds` (default 60). Write commands support `-WhatIf`, `-Confirm`, `-PassThru`, and `-ChangeReason`. By default write commands do not emit a result.
+Effect binding graphs:
+
+- `Get-ProjectClipEffectGraph -ClipId <id> [-AsMermaid]`
+- `Get-ProjectClipEffectBinding -ClipId <id> [-ProviderId] [-FieldId]`
+- `Get-ProjectClipEffectBindingSource -ClipId <id> [-ProviderId] [-FieldId] [-Pipeline Picture|NativeContent]`
+- `Set-ProjectClipEffectBinding -ClipId <id> [-ProviderId] -FieldId <field> -SourceId <source>`
+- `Remove-ProjectClipEffectBinding -ClipId <id> [-ProviderId] -FieldId <field>`
+- `Clear-ProjectClipEffectBinding -ClipId <id> [-ProviderId] [-OutputFieldId] [-Pipeline]`
+- `Set-ProjectClipEffectOutput -ClipId <id> [-ProviderId] [-OutputFieldId] [-Pipeline]`
+- `Get-ProjectClipArgument -ClipId <id> [-FieldId]`
+- `Set-ProjectClipArgument -ClipId <id> [-Fields <hashtable>] [-ResetToDefaults]`
+
+Provider snapshots include `InFields`, `OutFields`, `AnchorsBindingState`, `MetaData`, and `Pipeline`. `Add/Set-ProjectClipEffectProvider` also accept `-Pipeline` and `-Metadata`; metadata entries set to null are removed. `Add` accepts `-NoAutoConnect` for a disconnected node. Query the graph's `Diagnostics` while constructing it incrementally.
+
+Binding sources can also be selected with `-SourceProviderId [-SourceOutputFieldId]`, `-ClipInput`, or `-BuiltIn Frame|Progress`. Use a named output on multiple-output providers. Omitting `ProviderId` from binding/field-source commands targets Clip arguments; the argument node is created on the first write. `Get-ProjectClipArgument` returns a null `ProviderId` before that node exists. Setting static fields clears their bindings; resetting Clip arguments restores the Clip's own values.
+
+`Clear-ProjectClipEffectBinding` clears every binding when no provider is specified, all incoming/outgoing connections of one provider when `ProviderId` is given, or just outgoing connections when an `OutputFieldId` is given. `Set-ProjectClipEffectOutput` without a provider clears the chosen pipeline's output (default `Picture`). Final outputs are reported separately in the graph's `Outputs` array.
+
+Cross-Clip endpoints:
+
+- `Get-ProjectClipValueEndpoint -ClipId <id> [-EndpointId] [-Available] [-Pipeline]`
+- `Add-ProjectClipValueEndpoint -ClipId <id> [-Name] [-ValueType Numeric|Integer|UnsignedInteger|Long|UnsignedLong|Boolean|String|Color|Size|Position|SizeAndPosition|IPicture|VectorPicture] [-Pipeline]`
+- `Add-ProjectClipValueEndpoint -ClipId <id> -SourceClipId <id> -SourceEndpointId <id> [-Name] [-Pipeline]`
+- `Set-ProjectClipValueEndpoint -ClipId <id> -EndpointId <id> [-Name] [-Enabled] [-ValueType] [-SourceClipId] [-SourceEndpointId] [-Pipeline]`
+- `Remove-ProjectClipValueEndpoint -ClipId <id> -EndpointId <id>`
+
+Bind an export endpoint's `__Input__` to its value source, and bind consumer fields to the import endpoint's `ProviderId`. Discover sources with `-Available`, then inspect `Enabled` and `Status`. Cross-Clip sources must precede the consumer in layer order and use the same pipeline. Within one Clip, only non-content values may pass from `NativeContent` to `Picture`.
+
+Effect groups and templates:
+
+- `Get-ProjectClipEffectGroup -ClipId <id> [-GroupId]`
+- `Add-ProjectClipEffectGroup -ClipId <id> -Name <name> [-ProviderIds <guid[]>] [-ChildGroupIds <guid[]>] [-Ports <hashtable[]>] [-Collapsed] [-X] [-Y]`
+- `Set-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-Name] [-Ports] [-Collapsed] [-X] [-Y]`
+- `Remove-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-RemoveProviders]`
+- `Export-ProjectClipEffectGroup -ClipId <id> -GroupId <id>`
+- `Import-ProjectClipEffectGroup -ClipId <id> -TemplateMermaid <mermaid> [-X] [-Y]`
+- `Import-ProjectClipEffectGroup -ClipId <id> -Hash <hash> [-X] [-Y]`
+- `Get-ProjectEffectGroupTemplate [-Hash]`
+- `Save-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-ReplaceHash]`
+
+Group ports are ordered hashtables with `ProviderId`, `FieldId`, `Name`, and `IsInput`. Required boundary ports are added automatically. Group selected nodes with the same parent; Clip arguments, endpoints, and transitions cannot be grouped. Removing a group ungroups its members unless `-RemoveProviders` is used. Export returns Mermaid for `Set-Content` (use `.mmd` files); import assigns independent IDs and omits external project bindings. Saving a group writes the application's shared group library and does not replace `Save-Project`. Library queries return `TemplateMermaid`. For authoring files from scratch, read `docs/effect-group-mermaid.md` and `docs/examples/effect-group-sincos.mmd` at the repository root. Old JSON group templates are unsupported.
+
+All connected project commands accept `-TimeoutSeconds` (default 60). Write commands support `-WhatIf`, `-Confirm`, `-PassThru`, and `-ChangeReason`. By default ordinary write commands do not emit a result; batch lifecycle commands return status without `-PassThru`.
 
 ## IDs, fields, and history
 
 Never invent IDs. Use returned `TrackId`, `AssetId`, `ClipId`, `StyleId`, and `ProviderId`. Query provider/style fields first; send only fields supported by the returned schema. Provider graph edits should be read back with `Get-ProjectClipEffectProvider` before saving.
 
 `Copy-ProjectClip` places a copy at the source clip's end by default and creates independent effect instances. `Redo-ProjectHistory` chooses the most recently saved successor when multiple branches exist. History operations do not imply `Save-Project`.
+
+## Frame sequence previews
+
+Prefer `Export-ProjectFrameSequence -StartFrame 0 -FrameCount 30 -WidthPixels 960 -HeightPixels 540 -TimeoutSeconds 300` to review the composed project through the render backend. Choose a valid range: project frames are zero-based and `StartFrame + FrameCount` must not exceed project duration. Complete or cancel an active batch first.
+
+The command exports consecutive video-only PNGs and returns `Path`, `FrameIndex`, `WidthPixels`, `HeightPixels`, and `FrameRate` per frame, with PowerShell progress. Omit dimensions to use project size. Open returned PNGs to assess the result. Cover short projects in one request; split long projects by scene and inspect cuts, transitions, animation, and endpoints. Use lower dimensions for broad review and higher dimensions for detail. Use `Get-ProjectFramePreview -FrameIndex ...` for isolated composed frames and `Get-ProjectClipFramePreview -ClipId ... -FrameIndex ...` to diagnose an individual clip. Audio requires separate listening. Use these component preview interfaces for visual review; `pjfc render` is an internal command and must not be used by agents for previews or video delivery.
+
+To export mixed audio for listening, use `Export-ProjectAudioSamples -StartFrame 0 -FrameCount 300 -SampleRate 48000 -Channels 2 -TimeoutSeconds 300`. It uses the same project-frame range rules and batch restriction, returning a 16-bit PCM WAV `Path` with `StartFrame`, `FrameCount`, `FrameRate`, `SampleRate`, `Channels`, and `BitsPerSample`. Defaults are 96000 Hz and two channels; the project must contain an enabled audio source.
+
+## Video delivery
+
+After previews and persistence succeed, use the same installation's `pjfc gui --render {<target>|--continue} [options]`. Finish any active batch with `Complete-ProjectBatch`; ordinary edits require `Save-Project` first. Do not save the same completed batch again. Options override the page defaults for this launch without updating saved preferences; omitted options retain their defaults.
+
+```powershell
+$info = Get-ProjectInfo
+& $pjfc gui --render $info.WorkingPath
+```
+
+Here `$pjfc` is the verified executable path or command. Prefer an explicit project path. Use `pjfc gui --render --continue` only when the last opened project is known to be the intended target. Preserve relevant GUI options such as `--userData`; check `pjfc help gui` or `WriteGuiHelp` in `projectFrameCut/CLIProgram.cs` for current options.
+
+Use `--name=value` syntax for render options:
+
+| Option | Value |
+| --- | --- |
+| `--width`, `--height` | Positive integer output dimensions in pixels. |
+| `--fps` | Positive integer output frame rate. |
+| `--encoder` | `auto`, a codec family such as `h264/hevc/av1`, or an installed FFmpeg encoder such as `libx264/hevc_nvenc`. |
+| `--bitDepth` | `8`, `10`, or `12`; HDR projects require `10`. |
+| `--bitRate` | `auto` or a positive final video bitrate in Mbps. |
+| `--maxParallelThreads` | Render workers, from `1` to `64`. |
+| `--incrementalRendering` | `true` or `false`. |
+| `--output` | Target video file including extension; enables automatic rendering and exit after success. Relative paths resolve from the launch working directory; parent directories are created. |
+| `--overwrite` | `true` to replace an existing output file; defaults to `false`. |
+
+Without `--output`, the command only opens and prefills the page; let the user start rendering. With `--output`, the app skips the save dialog, starts the full-project render after page initialization, and exits after successful completion without a confirmation or countdown. Failed or canceled renders keep the app open and do not perform the saved post-render action. Project plugin and external-source authorization still apply. An active render job cannot have its options replaced by a new launch.
+
+Automatic rendering writes `[RenderStatus]` lines to stderr when status changes, including state, stage, percentage, FPS, completed/total video frames, and ETA; hash preparation also includes its completed/total count. Repeated lines are omitted, ordinary updates are limited to four per second, and stage changes and terminal states are emitted immediately. Numbers use invariant culture. Video frame counts can reach the total before overall progress reaches 100% because audio and final encoding remain. For example:
+
+```text
+[RenderStatus] state=Running stage=Render progress=45.00% fps=60.25 frame=500/1000 eta=00:00:08
+```
+
+```powershell
+& $pjfc gui --render $info.WorkingPath --width=1920 --height=1080 --fps=30 `
+    --encoder=libx264 --bitDepth=8 --bitRate=20 "--output=$outputPath"
+```
+
+Do not report GUI launch as a completed render. Inspect the actual output before reporting a video path as delivered.

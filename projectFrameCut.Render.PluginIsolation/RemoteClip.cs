@@ -18,6 +18,7 @@ internal sealed class RemoteClip : IClip
         _session = session;
         _objectId = descriptor.ObjectId;
         var state = descriptor.State;
+        SupportedStages = state.SupportedStages.Select(s => (EffectStage)s).ToArray();
         FromPlugin = state.FromPlugin;
         ClipType = (ClipMode)state.ClipType;
         TypeName = state.TypeName;
@@ -51,6 +52,8 @@ internal sealed class RemoteClip : IClip
     public int TargetHeight { get; set; }
     public int TargetX { get; set; }
     public int TargetY { get; set; }
+    public float Rotation { get; set; }
+    public float Opacity { get; set; } = 1;
     public int StartingX { get; set; }
     public int StartingY { get; set; }
     public float FrameTime { get; init; }
@@ -62,6 +65,10 @@ internal sealed class RemoteClip : IClip
     public EffectProviderJSONStructure[]? EffectProviders { get; init; }
     public IEffect[]? EffectsInstances { get; set; }
     public IEffectProvider[]? EffectProvidersInstances { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<EffectStage> SupportedStages { get; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IEffectStagePlan? EffectStagePlan { get; set; }
     public string? FilePath { get; set; }
     public bool NeedFilePath { get; }
     public Dictionary<string, object> ExtraData { get; set; }
@@ -103,6 +110,8 @@ internal sealed class RemoteClip : IClip
         TargetHeight = state.TargetHeight;
         TargetX = state.TargetX;
         TargetY = state.TargetY;
+        Rotation = state.Rotation;
+        Opacity = state.Opacity;
         StartingX = state.StartingX;
         StartingY = state.StartingY;
         ExtendToWholeDraft = state.ExtendToWholeDraft;

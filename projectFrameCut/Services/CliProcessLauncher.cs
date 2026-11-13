@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Services;
 
@@ -7,7 +8,12 @@ internal static class CliProcessLauncher
 {
     public static IReadOnlyList<string> GetExecutableCandidates()
     {
-#if WINDOWS
+#if HEADLESS
+        if (string.IsNullOrWhiteSpace(Environment.ProcessPath)) return [];
+        return Path.GetFileNameWithoutExtension(Environment.ProcessPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase)
+            ? [Assembly.GetExecutingAssembly().Location]
+            : [Environment.ProcessPath];
+#elif WINDOWS
         return
         [
             Path.Combine(AppContext.BaseDirectory, "pjfc-cli.exe"),
@@ -22,12 +28,23 @@ internal static class CliProcessLauncher
 #endif
     }
 
-    public static ProcessStartInfo CreateStartInfo(string executablePath, bool noConsole) => new()
+    public static ProcessStartInfo CreateStartInfo(string executablePath, bool noConsole)
     {
-        FileName = executablePath,
-        UseShellExecute = false,
-        CreateNoWindow = noConsole,
-        RedirectStandardError = noConsole,
-        RedirectStandardOutput = noConsole,
-    };
+        var info = new ProcessStartInfo(executablePath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = noConsole,
+            RedirectStandardError = noConsole,
+            RedirectStandardOutput = noConsole,
+        };
+        info.Environment[ProjectCachePaths.EnvironmentKey] = ProjectCachePaths.RedirectRoot;
+#if HEADLESS
+        if (Path.GetExtension(executablePath).Equals(".dll", StringComparison.OrdinalIgnoreCase))
+        {
+            info.FileName = Environment.ProcessPath ?? "dotnet";
+            info.ArgumentList.Add(executablePath);
+        }
+#endif
+        return info;
+    }
 }

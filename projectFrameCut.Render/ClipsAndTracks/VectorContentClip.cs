@@ -13,20 +13,16 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
-    /// <summary>
-    /// A mutable vector-content clip whose <see cref="VectorPicture"/> can be
-    /// animated per frame via an associated <see cref="Animation.vector animation"/>.
-    /// The vector animation defines keyframe-driven animation of element-level
-    /// properties (position, rotation) and segment-level appearance (fill/stroke
-    /// opacity).
-    /// </summary>
     public class VectorCanvasClip : IVectorContentClip
     {
+        [JsonIgnore]
+        public bool ProcessesVectorPictureEffects => true;
+
         // ── IClip required properties ──────────────────────
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
-        public ClipMode ClipType => ClipMode.VectorCanvasClip;
+        public virtual ClipMode ClipType => ClipMode.VectorCanvasClip;
 
         public required Guid Id { get; init; }
         public required string Name { get; init; }
@@ -40,6 +36,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public float FrameTime { get; init; }
@@ -59,9 +57,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Vector;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
 
         public string? FilePath { get; set; }
-        public bool NeedFilePath => true;
+        public virtual bool NeedFilePath => false;
 
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
@@ -70,127 +72,63 @@ namespace projectFrameCut.Render.ClipsAndTracks
         // ── Vector-specific state ──────────────────────────
 
         /// <summary>
-        /// The list of vector components that make up the vector canvas. Each component can have its own animation and properties.
+        /// The vector components that make up the canvas.
         /// </summary>
         [JsonIgnore]
         public List<IVectorComponent> Components { get; set; } = new();
 
         public ISourceReplacementEffect? AlternativeSource { get; set; }
 
-        // ── Static-content cache ───────────────────────────
-        //
-        // When no component in the hierarchy carries any animation keyframe
-        // (VectorAnimationKeyFrame), the vector picture is identical for every
-        // frame.  We cache the VectorPicture so that subsequent frames skip
-        // the (expensive) component traversal.
-        //
-        // NOTE: we do NOT cache the final rasterised IPicture — the rendering
-        // pipeline disposes / consumes each IPicture after compositing, so
-        // sharing one instance across frames causes "Pictures are invalid"
-        // errors in ClassicOverlayMixture.
-        //
-        // Cache is invalidated on ReInit().
-
-        private VectorPicture? _cachedVectorPicture;
-
-        /// <summary>
-        /// null = not yet computed, true = at least one component has keyframes,
-        /// false = all components are static.
-        /// </summary>
-        private bool? _hasAnimation;
-
-        /// <summary>
-        /// Returns true when any component (recursively) carries at least one
-        /// <see cref="VectorAnimationKeyFrame"/>, meaning the vector picture
-        /// changes per frame and caching is not possible.
-        /// </summary>
-        private bool HasAnyAnimation()
-        {
-            if (_hasAnimation.HasValue)
-                return _hasAnimation.Value;
-
-            foreach (var component in Components)
-            {
-                if (ComponentOrDescendantHasAnimation(component))
-                {
-                    _hasAnimation = true;
-                    return true;
-                }
-            }
-
-            _hasAnimation = false;
-            return false;
-        }
-
-        private static bool ComponentOrDescendantHasAnimation(IVectorComponent component)
-        {
-            if (component.AnimationFrames.Count > 0)
-                return true;
-
-            if (component is ComponentGroup group)
-            {
-                foreach (var child in group.Children)
-                {
-                    if (ComponentOrDescendantHasAnimation(child))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void InvalidateCache()
-        {
-            _cachedVectorPicture = null;
-            _hasAnimation = null;
-        }
-
-        // ── Core: animated vector picture per frame ─────────
-
-        /// <summary>
-        /// Produces a <see cref="VectorPicture"/> for the given <paramref name="frameIndex"/>
-        /// by evaluating the <see cref="AnimationPayload"/> (if SVG source present)
-        /// and/or composing <see cref="Components"/> with their per-component vector animations.
-        /// </summary>
-        public VectorPicture GetVectorPictureRelativeToStartPointOfSource(
+        public virtual VectorPicture GetVectorPictureRelativeToStartPointOfSource(
             uint frameIndex, int requiredWidth, int requiredHeight)
         {
-            // When no component has any animation keyframe the vector picture
-            // is frame-independent — compute once, cache, and reuse.
-            if (!HasAnyAnimation())
+            var picture = BuildVectorPicture(frameIndex);
+            int width = Math.Max(1, TargetWidth > 0 ? TargetWidth : requiredWidth);
+            int height = Math.Max(1, TargetHeight > 0 ? TargetHeight : requiredHeight);
+            // Resolve component coordinates in the clip's own canvas before output scaling.
+            return VectorPictureEffectProcessing.Process(this, new VectorPicture
             {
-                if (_cachedVectorPicture is not null)
-                    return _cachedVectorPicture;
-
-                _cachedVectorPicture = BuildVectorPicture(0f);
-                return _cachedVectorPicture;
-            }
-
-            return BuildVectorPicture(CalculateProgress(frameIndex));
+                Elements = picture.Elements.Select(e => (VectorCanvasElement)new VectorContent.VectorViewportElement(
+                    e, width, height, 0, 0, width, height)).ToList()
+            }, frameIndex, CalculateProgress(frameIndex), requiredWidth, requiredHeight);
         }
 
-        /// <summary>
-        /// Builds a <see cref="VectorPicture"/> by evaluating every component
-        /// at the given normalised <paramref name="progress"/>.
-        /// </summary>
-        private VectorPicture BuildVectorPicture(float progress)
+        private VectorPicture BuildVectorPicture(uint frameIndex)
         {
+            float progress = CalculateProgress(frameIndex);
             var result = new VectorPicture();
             foreach (var component in Components)
             {
-                result.Elements.AddRange(component.ComputeAll(progress));
+                result.Elements.AddRange(VectorContent.VectorComponentProcessing.Compute(component,
+                    (EffectsInstances ?? []).Where(e => e.Enabled).OrderBy(e => e.Index).OfType<IVectorComponentEffect>(),
+                    frameIndex, progress));
             }
+            EffectStagePlan?.Complete(this, EffectStage.VectorContent,
+                VectorPictureEffectProcessing.GetTargetFrame(this, frameIndex));
             return result;
         }
 
         // ── IClip frame methods ────────────────────────────
 
-        public IPicture GetFrameRelativeToStartPointOfSource(
+        public virtual IPicture GetFrameRelativeToStartPointOfSource(
             uint frameIndex, int requiredWidth, int requiredHeight,
             IPicture.PicturePixelMode targetPPB)
         {
+            requiredWidth = Math.Max(1, requiredWidth);
+            requiredHeight = Math.Max(1, requiredHeight);
             var vectorPicture = GetVectorPictureRelativeToStartPointOfSource(
                 frameIndex, requiredWidth, requiredHeight);
+
+            int sourceWidth = TargetWidth > 0 ? TargetWidth : requiredWidth;
+            int sourceHeight = TargetHeight > 0 ? TargetHeight : requiredHeight;
+            if (this is VectorComponentClip componentClip)
+            {
+                var viewport = componentClip.ReadViewport();
+                sourceWidth = viewport[2];
+                sourceHeight = viewport[3];
+            }
+            vectorPicture = VectorPictureRasterization.ScaleStrokes(vectorPicture,
+                Math.Min((float)requiredWidth / sourceWidth, (float)requiredHeight / sourceHeight));
 
             var aa = ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode;
             var rasterizer = IVectorContentClip.GlobalDefaultRasterizer;
@@ -202,24 +140,23 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 transparentBackground: true,
                 aaMode: aa);
 
-            return raster.ToBitPerPixel(targetPPB);
+            if (raster.BitPerPixel == targetPPB) return raster;
+            try { return raster.ToBitPerPixel(targetPPB); }
+            finally { raster.Dispose(); }
         }
 
         // ── Lifecycle ──────────────────────────────────────
 
-        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        public virtual void ReInit(IPicture.PicturePixelMode targetPPB)
         {
-            InvalidateCache();
+            ClipInitializationFailure.Clear(this);
             Components = DeserializeComponents();
 
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) =
-                EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            EffectHelper.ResolveClipEffects(this);
         }
 
-        public void Dispose()
-        {
-            InvalidateCache();
-        }
+        public virtual void Dispose() {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this); }
 
         // ── Progress calculation ───────────────────────────
 
@@ -240,60 +177,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         private const string ComponentsDataKey = "VectorCanvas.Components";
 
-        private static readonly JsonSerializerOptions _componentsJsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = null, // Preserve PascalCase to match C# property names
-        };
-
         private List<IVectorComponent> DeserializeComponents()
         {
-            if (ExtraData is null || !ExtraData.TryGetValue(ComponentsDataKey, out var raw))
-            {
-                Log($"No ExtraData found for {Name}/{Id}'s Components. Returning empty list.", "warn");
-                return new();
-            }
-
-            string? json = raw switch
-            {
-                string s when !string.IsNullOrEmpty(s) => s,
-                JsonElement { ValueKind: JsonValueKind.String } je => je.GetString(),
-                JsonElement je => je.GetRawText(),
-                _ => null,
-            };
-
-            if (string.IsNullOrEmpty(json))
-                return new();
-
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.ValueKind != JsonValueKind.Array)
-                {
-                    return new();
-                }
-
-                var result = new List<IVectorComponent>();
-                foreach (var element in doc.RootElement.EnumerateArray())
-                {
-                    var pluginId = element.TryGetProperty("FromPlugin", out var pluginElement)
-                        ? pluginElement.GetString()
-                        : Plugin.InternalPluginBase.InternalPluginBaseID;
-                    var resolvedPluginId = string.IsNullOrWhiteSpace(pluginId)
-                        ? InternalPluginBase.InternalPluginBaseID
-                        : pluginId;
-                    var plugin = PluginManager.LoadedPlugins.TryGetValue(resolvedPluginId, out var loaded)
-                        ? loaded
-                        : PluginManager.LoadedPlugins[InternalPluginBase.InternalPluginBaseID];
-                    result.Add(plugin.VectComponentCreator(element));
-                }
-
-                return result;
-            }
+            try { return VectorContent.VectorComponentSerializer.Read(ExtraData); }
             catch (Exception ex)
             {
-                Log(ex, $"deserialize Components from ExtraData", this);
-                return new();
+                Log(ex, $"Restore vector components of {Id}", this);
+                throw;
             }
         }
 
@@ -304,7 +194,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public void SerializeComponents(List<IVectorComponent> components)
         {
             ExtraData ??= new();
-            ExtraData[ComponentsDataKey] = JsonSerializer.Serialize(components, _componentsJsonOptions);
+            ExtraData[ComponentsDataKey] = VectorContent.VectorComponentSerializer.Serialize(components);
         }
 
     }
@@ -331,6 +221,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public float FrameTime { get; init; }
@@ -342,6 +234,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.VectorImage;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }
 
         public bool NeedFilePath => true;
@@ -354,6 +250,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             Picture = null;
         }
 
@@ -361,6 +258,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
             Picture = SVGToVectorElement.ImportFromFile(FilePath);
            EffectHelper.ResolveClipEffects(this);

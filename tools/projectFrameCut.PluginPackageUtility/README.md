@@ -71,3 +71,18 @@ and the v2 manifest/signature to its SHA-256 hash, matching the old MSBuild
 packager's compatibility file. `manifest.json` is canonicalized with
 `PluginTrustValidator.GetCanonicalManifestBytes`, so its signature is
 byte-for-byte compatible with the runtime verifier.
+
+## Unsigned development packages
+
+Omit both `--certificate` and `--chain` to create a package without signatures:
+
+```powershell
+dotnet run --project tools/projectFrameCut.PluginPackageUtility -- pack `
+  --input .\plugin-staging `
+  --output .\Example.Plugin.pjfc-plugin
+```
+
+Unsigned packages require the application's Debug setting `Debug_DisablePluginTrust`.
+They omit `publisher-chain.pem`, `manifest.sig`, and `<PluginID>.dll.sig`.
+Managed assemblies still use `.dll.enc` with a generated key in `metadata.json`,
+matching the development loader. Password options require signing certificates.

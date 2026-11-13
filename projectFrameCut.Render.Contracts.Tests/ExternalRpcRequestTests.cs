@@ -3,12 +3,16 @@ using System.Text.Json;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RPCProtocol;
+using projectFrameCut.Render.Sources;
 
 namespace projectFrameCut.Render.Contracts.Tests;
 
 [TestClass]
 public sealed class ExternalRpcRequestTests
 {
+    public ExternalRpcRequestTests() =>
+        ExternalRpcAuthorizationStore.SetEncryptionKey(new byte[32]);
+
     [TestMethod]
     public async Task PersistentAuthorizationUsesClientIdAndSignature()
     {
@@ -18,7 +22,7 @@ public sealed class ExternalRpcRequestTests
         using var rsa = RSA.Create(3072);
         var publicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
         var clientId = Guid.NewGuid();
-        ExternalRpcAuthorizationStore.Add(ExternalRpcAuthorizationStore.GetPath(directory), new()
+        var authorization = ExternalRpcAuthorizationStore.Add(ExternalRpcAuthorizationStore.GetPath(directory), new()
         {
             ClientId = clientId,
             AppName = "Persistent test",
@@ -32,7 +36,7 @@ public sealed class ExternalRpcRequestTests
             .RunAsync(pipe, "owner", cancellationToken: lifetime.Token);
         try
         {
-            await using var owner = new RenderClient(new NamedPipeRenderClientTransport(pipe, "owner", "test"));
+            await using var owner = new RenderClient(new NamedPipeRenderClientTransport(pipe, "owner", "test", [authorization]));
             var sessionId = Guid.NewGuid();
             await owner.RegisterGuiProjectAsync(new() { SessionId = sessionId }, lifetime.Token);
             var request = new ExternalRpcRequest
@@ -64,20 +68,97 @@ public sealed class ExternalRpcRequestTests
                 await Assert.ThrowsAsync<RenderPipeException>(async () => await impostor.GetCapabilitiesAsync(lifetime.Token));
 
             var provider = new TestVideoSourceProvider();
+            var audioProvider = new TestAudioSourceProvider();
+            var maskProvider = new TestMaskSourceProvider();
             await using var external = new RenderClient(
                 new NamedPipeRenderClientTransport(connection.PipeName, clientId.ToString("D")),
-                clientId.ToString("D"), provider);
+                clientId.ToString("D"), provider, audioProvider, maskProvider);
+            await external.RegisterExternalMaskSourcesAsync(new() { Sources = maskProvider.MaskSources.ToList() }, lifetime.Token);
+            var masks = await owner.ListExternalMaskSourcesAsync(lifetime.Token);
+            Assert.AreEqual(1, masks.Sources.Count);
+            Assert.AreEqual(clientId, masks.Sources[0].ClientId);
+            Assert.AreEqual(1, (await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().MaskSources.Count);
+            var mask = new RemoteRpcMaskSource(masks.Sources[0], owner.ProcessExternalMaskAsync);
+            using (var backdrop = new projectFrameCut.Drawing.Base.Picture.Picture8bpp(2, 1))
+            {
+                using (var frame = mask.Process(backdrop, new Dictionary<string, object> { ["Amount"] = 3f }, 0.5f, lifetime.Token))
+                    Assert.AreEqual((byte)3, ((projectFrameCut.Drawing.Base.IPicture<byte>)frame).r[0]);
+                Assert.AreEqual(0.5f, maskProvider.LastRequest!.Scale);
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Unload }, lifetime.Token);
+                Assert.AreEqual(0, (await owner.ListExternalMaskSourcesAsync(lifetime.Token)).Sources.Count);
+                Assert.Throws<IOException>(() => mask.Process(backdrop, new Dictionary<string, object>(), 1, lifetime.Token));
+                await external.RegisterExternalMaskSourcesAsync(new() { Sources = maskProvider.MaskSources.ToList() }, lifetime.Token);
+                Assert.IsFalse((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Load }, lifetime.Token);
+                using var restored = MaskSources.Create(mask.TypeName).Process(backdrop, new Dictionary<string, object>(), 1, lifetime.Token);
+                Assert.AreEqual((byte)2, ((projectFrameCut.Drawing.Base.IPicture<byte>)restored).r[0]);
+            }
+            await external.RegisterExternalAudioSourcesAsync(new() { Sources = audioProvider.AudioSources.ToList() }, lifetime.Token);
+            var audioCatalog = await owner.ListExternalAudioSourcesAsync(lifetime.Token);
+            Assert.AreEqual(1, audioCatalog.Sources.Count);
+            Assert.AreEqual(clientId, audioCatalog.Sources[0].ClientId);
+            Assert.AreEqual(0, (await owner.ListExternalVideoSourcesAsync(lifetime.Token)).Sources.Count);
+            using (var audio = RemoteRpcAudioSource.Open(RemoteRpcAudioSource.CreatePath(audioCatalog.Sources[0])))
+            {
+                audio.Initialize();
+                var samples = audio.GetSample(250, 3);
+                Assert.AreEqual(0.25f, samples.GetSamples(0)[0]);
+                Assert.AreEqual(-0.25f, samples.GetSamples(1)[0]);
+                Assert.AreEqual(0.25f, audio.GetSingleSample(250));
+                Assert.Throws<ArgumentOutOfRangeException>(() => audio.GetSample(0, -1));
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Unload }, lifetime.Token);
+                Assert.AreEqual(1, audioProvider.Released);
+                Assert.AreEqual(0, (await owner.ListExternalAudioSourcesAsync(lifetime.Token)).Sources.Count);
+                Assert.Throws<IOException>(() => audio.GetSample(250, 3));
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Load }, lifetime.Token);
+                Assert.AreEqual(0.25f, audio.GetSingleSample(250));
+            }
+            Assert.AreEqual(2, audioProvider.Released);
             await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
             var catalog = await owner.ListExternalVideoSourcesAsync(lifetime.Token);
             Assert.AreEqual(1, catalog.Sources.Count);
             Assert.AreEqual(clientId, catalog.Sources[0].ClientId);
+            Assert.IsTrue(catalog.Sources[0].AllowCachingResult);
             using (var source = new RemoteRpcVideoSource(RemoteRpcVideoSource.CreatePath(catalog.Sources[0])))
             {
                 source.Initialize();
+                Assert.IsFalse(source.AllowCachingResult);
                 using var frame = source.GetFrame(0);
                 Assert.AreEqual(2, frame.Width);
                 Assert.AreEqual(1, frame.Height);
             }
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await external.ManageExternalVideoSourceClientAsync(
+                new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Remove }, lifetime.Token));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await external.ListExternalVideoSourceClientsAsync(lifetime.Token));
+            using (var active = new RemoteRpcVideoSource(RemoteRpcVideoSource.CreatePath(catalog.Sources[0])))
+            {
+                active.Initialize();
+                var released = provider.Released;
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Unload }, lifetime.Token);
+                Assert.AreEqual(released + 1, provider.Released);
+                Assert.AreEqual(0, (await owner.ListExternalVideoSourcesAsync(lifetime.Token)).Sources.Count);
+                var unloaded = (await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single();
+                Assert.IsFalse(unloaded.Loaded);
+                Assert.AreEqual(1, unloaded.Sources.Count);
+                Assert.AreEqual(1, unloaded.AudioSources.Count);
+                Assert.AreEqual(1, unloaded.MaskSources.Count);
+                Assert.Throws<IOException>(() => active.GetFrame(0));
+                await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
+                Assert.IsFalse((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Load }, lifetime.Token);
+                using var reloaded = new RemoteRpcVideoSource(RemoteRpcVideoSource.CreatePath(catalog.Sources[0]));
+                reloaded.Initialize();
+                using var frame = reloaded.GetFrame(0);
+                Assert.AreEqual(2, frame.Width);
+            }
+            await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Remove }, lifetime.Token);
+            Assert.AreEqual(0, (await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Count);
+            Assert.IsFalse(ExternalRpcAuthorizationStore.Find(ExternalRpcAuthorizationStore.GetPath(directory), clientId)!.Revoked);
+            await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
+            await external.RegisterExternalAudioSourcesAsync(new() { Sources = audioProvider.AudioSources.ToList() }, lifetime.Token);
+            Assert.IsTrue((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
+            await external.RegisterExternalMaskSourcesAsync(new() { Sources = maskProvider.MaskSources.ToList() }, lifetime.Token);
 
             var second = new ExternalRpcRequest
             {
@@ -101,6 +182,8 @@ public sealed class ExternalRpcRequestTests
             ExternalRpcAuthorizationStore.Revoke(ExternalRpcAuthorizationStore.GetPath(directory), clientId);
             await Task.Delay(1100, lifetime.Token);
             Assert.AreEqual(0, (await owner.ListExternalVideoSourcesAsync(lifetime.Token)).Sources.Count);
+            Assert.AreEqual(0, (await owner.ListExternalAudioSourcesAsync(lifetime.Token)).Sources.Count);
+            Assert.AreEqual(0, (await owner.ListExternalMaskSourcesAsync(lifetime.Token)).Sources.Count);
         }
         finally
         {
@@ -177,7 +260,7 @@ public sealed class ExternalRpcRequestTests
 
     private sealed class TestVideoSourceProvider : IExternalVideoSourceProvider
     {
-        private readonly Guid _instanceId = Guid.NewGuid();
+        public int Released { get; private set; }
         private readonly ExternalVideoSourceDescriptor _source = new()
         {
             SourceId = "test-source",
@@ -195,10 +278,14 @@ public sealed class ExternalRpcRequestTests
         public IReadOnlyList<ExternalVideoSourceDescriptor> Sources => [_source];
 
         public ValueTask<ExternalVideoSourceInstance> CreateAsync(ExternalVideoSourceCreateRequest request, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(new ExternalVideoSourceInstance { InstanceId = _instanceId, Descriptor = _source });
+            ValueTask.FromResult(new ExternalVideoSourceInstance { InstanceId = Guid.NewGuid(), Descriptor = _source });
 
-        public ValueTask<ExternalVideoSourceInstance> InitializeAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(new ExternalVideoSourceInstance { InstanceId = request.InstanceId, Descriptor = _source });
+        public ValueTask<ExternalVideoSourceInstance> InitializeAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default)
+        {
+            var descriptor = RenderRpcSerializer.Clone(_source);
+            descriptor.AllowCachingResult = false;
+            return ValueTask.FromResult(new ExternalVideoSourceInstance { InstanceId = request.InstanceId, Descriptor = descriptor });
+        }
 
         public ValueTask<ExternalVideoFrame> ReadFrameAsync(ExternalVideoSourceReadRequest request, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(new ExternalVideoFrame
@@ -212,6 +299,10 @@ public sealed class ExternalRpcRequestTests
                 Alpha = new byte[8],
             });
 
-        public ValueTask ReleaseAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask ReleaseAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default)
+        {
+            Released++;
+            return ValueTask.CompletedTask;
+        }
     }
 }

@@ -113,15 +113,6 @@ public readonly record struct CustomHandleDescriptor(
     double Size,
     Func<View>? ViewFactory = null);
 
-/// <summary>Common handle descriptor. Kept under the historical name for plugin migration.</summary>
-public readonly record struct ShapeHandleDescriptor(
-    string Id,
-    float NormalizedX,
-    float NormalizedY,
-    Color FillColor,
-    double Size,
-    Func<View>? HandleGetter = null);
-
 /// <summary>Geometry context supplied while a custom handle is dragged.</summary>
 public readonly record struct CustomHandleDragContext(
     Guid ElementId,
@@ -166,13 +157,14 @@ public sealed class PreparedPreview
     private readonly Func<View>? _viewFactory;
     private View? _materializedView;
 
-    public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source, bool isCanvasPreview = false, Func<double, double, bool>? isTransparentAt = null)
+    public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source, bool isCanvasPreview = false, Func<double, double, bool>? isTransparentAt = null, bool isPositionedClipPreview = false)
     {
         ClipId = clipId;
         _viewFactory = viewFactory;
         ErrorMessage = errorMessage;
         Source = source;
         IsCanvasPreview = isCanvasPreview;
+        IsPositionedClipPreview = isPositionedClipPreview;
         IsTransparentAt = isTransparentAt;
     }
 
@@ -188,6 +180,7 @@ public sealed class PreparedPreview
     public IClip? Source { get; }
     /// <summary>Gets whether this preview paints the complete project canvas.</summary>
     public bool IsCanvasPreview { get; }
+    public bool IsPositionedClipPreview { get; }
     /// <summary>Gets whether a normalized preview coordinate is fully transparent.</summary>
     public Func<double, double, bool>? IsTransparentAt { get; }
 }

@@ -9,6 +9,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class JitterEffect : IContinuousClipPositionProvider
     {
+        public bool IsDeterministic => false;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Id { get; set; }
@@ -29,7 +31,6 @@ namespace projectFrameCut.Render.Effect
         public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => ImplementType == EffectImplementType.HwAcceleration ? "PlaceComputer" : null;
         public bool IsReorderable => true;
 
         public int StartPoint { get; set; }
@@ -132,6 +133,10 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class JitterEffectProvider : EffectProviderBase
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
+
+        public override bool IsDeterministic => false;
+
         public JitterEffectProvider()
         {
             Name = "Jitter";
@@ -162,23 +167,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
-            if (!parameters.ContainsKey("MaxOffsetY")) parameters["MaxOffsetY"] = 0;
-            if (!parameters.ContainsKey("Seed")) parameters["Seed"] = 0;
-            if (!parameters.ContainsKey("Direction")) parameters["Direction"] = JitterEffect.Direction_Both;
 
-            return
-            [
-                new JitterEffect
-                {
-                    MaxOffsetX = Convert.ToInt32(parameters["MaxOffsetX"]),
-                    MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
-                    Seed = Convert.ToInt32(parameters["Seed"]),
-                    Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
-                }
-            ];
-        }
     }
 }

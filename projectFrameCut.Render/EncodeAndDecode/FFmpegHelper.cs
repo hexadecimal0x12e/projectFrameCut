@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -18,6 +19,27 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private static int _ffmpegLogHooked = 0;
         private static av_log_set_callback_callback? _ffmpegLogCallback;
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ScaleFrameCallback(SwsContext* context, byte** source, int* sourceStride,
+            int sourceY, int sourceHeight, byte** target, int* targetStride);
+
+        private static readonly Lazy<ScaleFrameCallback> _scaleFrame = new([MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)] () =>
+        {
+            return Marshal.GetDelegateForFunctionPointer<ScaleFrameCallback>(
+                DynamicallyLoadedBindings.FunctionResolver.GetFunctionPointer("swscale", "sws_scale", true));
+        });
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        internal static int ScaleFrame(SwsContext* context, AVFrame* source, AVFrame* target)
+        {
+            if (context == null || source == null || target == null)
+                throw new ArgumentException("FFmpeg scale context and frames must be allocated.");
+
+            // Avoid the managed array marshaler, which can pass invalid plane/stride pointers on .NET 11.
+            return _scaleFrame.Value(context, (byte**)&source->data, (int*)&source->linesize, 0, source->height,
+                (byte**)&target->data, (int*)&target->linesize);
+        }
 
         public static bool IsPointerAddressesValid<TPointerType>(TPointerType* ptr) where TPointerType : unmanaged => ptr != null;
         public static bool IsPointerAddressesNotValid<TPointerType>(TPointerType* ptr) where TPointerType : unmanaged => ptr == null;
@@ -328,6 +350,47 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 // av_pix_fmt_desc_get not exported by this FFmpeg build.
             }
             return -1; // Unknown or unsupported pixel format
+        }
+
+        internal static bool IsHardwareVideoEncoder(string encoder)
+            => encoder.EndsWith("_nvenc", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_amf", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_qsv", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_vaapi", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_videotoolbox", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_mediacodec", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_mf", StringComparison.OrdinalIgnoreCase);
+
+        internal static string[] GetSoftwareVideoEncoders(string encoder)
+        {
+            AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(encoder);
+            string name = encoder.Trim().ToLowerInvariant();
+            AVCodecID id = codec != null ? codec->id : name switch
+            {
+                "h264" or "avc" or "avc1" or "x264" => AVCodecID.AV_CODEC_ID_H264,
+                "h265" or "hevc" or "h265/hevc" or "x265" => AVCodecID.AV_CODEC_ID_HEVC,
+                "av1" => AVCodecID.AV_CODEC_ID_AV1,
+                "vp9" => AVCodecID.AV_CODEC_ID_VP9,
+                "vp8" => AVCodecID.AV_CODEC_ID_VP8,
+                "mpeg4" => AVCodecID.AV_CODEC_ID_MPEG4,
+                _ when name.StartsWith("h264_") => AVCodecID.AV_CODEC_ID_H264,
+                _ when name.StartsWith("hevc_") || name.StartsWith("h265_") => AVCodecID.AV_CODEC_ID_HEVC,
+                _ when name.StartsWith("av1_") => AVCodecID.AV_CODEC_ID_AV1,
+                _ when name.StartsWith("vp9_") => AVCodecID.AV_CODEC_ID_VP9,
+                _ when name.StartsWith("vp8_") => AVCodecID.AV_CODEC_ID_VP8,
+                _ => AVCodecID.AV_CODEC_ID_NONE
+            };
+            string[] candidates = id switch
+            {
+                AVCodecID.AV_CODEC_ID_H264 => ["libx264", "libopenh264", "h264"],
+                AVCodecID.AV_CODEC_ID_HEVC => ["libx265", "hevc"],
+                AVCodecID.AV_CODEC_ID_AV1 => ["libaom-av1", "libsvtav1", "svtav1", "librav1e", "rav1e", "av1"],
+                AVCodecID.AV_CODEC_ID_VP9 => ["libvpx-vp9", "vp9"],
+                AVCodecID.AV_CODEC_ID_VP8 => ["libvpx", "vp8"],
+                AVCodecID.AV_CODEC_ID_MPEG4 => ["mpeg4"],
+                _ => []
+            };
+            return candidates.Where(candidate => ffmpeg.avcodec_find_encoder_by_name(candidate) != null).ToArray();
         }
 
         public static int DetectVideoBitDepth(string path)

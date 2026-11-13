@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -16,6 +16,7 @@ using System.Threading.Channels;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
+    [Obsolete("We no longer maintain this decoder. It will not be updated in the future, consider use \"clip referencing\" feature instead.")]
     public class DecoderContextPJFCProject : IVideoSource
     {
         public static Func<ConcurrentDictionary<string, AssetItem>>? GlobalAssetGetter = null;
@@ -25,6 +26,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public string TypeName => "DecoderContextPJFCProject";
 
         public int? ResultBitPerPixel { get; private set; } = null;
+        public bool AllowCachingResult => renderer is not null && renderer.Clips.All(Timeline.CanCacheClipSource);
 
         public string[] PreferredExtension => [".pjfc"];
 
@@ -38,11 +40,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public int Height => project?.RelativeHeight ?? 0;
 
+        public bool IsDeterministic => true;
+
         public bool Disposed { get; private set; } = false;
 
         public bool EnableLock { get; set; }
         public bool StrictMode { get; set; }
-        public bool EnableDiskCache { get; set; }
 
         public string ProjectRoot { get; private set; } = "";
 
@@ -53,7 +56,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new DecoderContextPJFCProject(source, length, leaveOpen);
 
         Renderer renderer;
-        public IPicture.PicturePixelMode TargetPPB = IPicture.PicturePixelMode.BytePicture;
+        public IPicture.PicturePixelMode TargetPPB = IPicture.PicturePixelMode.Float16Picture;
 
         private bool inited = false;
 
@@ -74,10 +77,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 switch (parts[1])
                 {
                     case "8":
-                        TargetPPB = IPicture.PicturePixelMode.BytePicture;
+                        TargetPPB = IPicture.PicturePixelMode.Float16Picture;
                         break;
                     case "16":
-                        TargetPPB = IPicture.PicturePixelMode.UShortPicture;
+                        TargetPPB = IPicture.PicturePixelMode.Float16Picture;
                         break;
                     default:
                         throw new ArgumentException($"The bit depth suffix {parts[1]} in source {newSource} is not recognized. It should be one of @8 or @16.");
@@ -153,7 +156,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     builder = new VideoBuilder(new BlackholeVideoWriter()) { StrictMode = false, AllowDuplicatedFrameWrite = true, EnablePreview = false, DisposeFrameAfterEachWrite = false, DoGCAfterEachWrite = false, BlockWrite = true },
                     Clips = JSONToIClips(timeline, assets, TargetPPB),
                     StartFrame = 0,
-                    Use16Bit = TargetPPB == IPicture.PicturePixelMode.UShortPicture,
+                    Use16Bit = TargetPPB == IPicture.PicturePixelMode.Float16Picture,
                     UseHDR = project.Properties.TryGetValue("EnableHDR", out var enableHDR) && bool.TryParse(enableHDR, out var enableHDRBool) && enableHDRBool,
                     ProjectRelativeHeight = project.RelativeHeight,
                     ProjectRelativeWidth = project.RelativeWidth,

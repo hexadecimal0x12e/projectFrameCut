@@ -2,15 +2,15 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<AssemblyVersion>3.1.0.0</AssemblyVersion>
-		<FileVersion>3.1.0.0</FileVersion>
+		<AssemblyVersion>4.0.0.0</AssemblyVersion>
+		<FileVersion>4.0.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut CRL</Product>
 		<Description>projectFrameCut's core render library</Description>
@@ -19,17 +19,20 @@
 		<Title>projectFrameCut's CRL</Title>
 		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
+		<Features>runtime-async=on</Features>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
 		<PackageReference Include="FFmpeg_droidFix.AutoGen" Version="8.1.0.2" />
+		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
+		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.PluginIsolation\projectFrameCut.Render.PluginIsolation.csproj" />
-		<ProjectReference Include="..\projectFrameCut.Render.HwAccelContracts\projectFrameCut.Render.HwAccelContracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
 
@@ -49,5 +52,6 @@
 	  <EmbeddedResource Include="Resource\Error_SourceFail.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceFail.png" />
 	  <EmbeddedResource Include="Resource\Error_BindingFail.png" LogicalName="projectFrameCut.Render.Resource.Error_BindingFail.png" />
 	  <EmbeddedResource Include="Resource\Error_SourceNotFound.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceNotFound.png" />
+	  <EmbeddedResource Include="Resource\Error_ExternalSource.png" LogicalName="projectFrameCut.Render.Resource.Error_ExternalSource.png" />
 	</ItemGroup>
 </Project>

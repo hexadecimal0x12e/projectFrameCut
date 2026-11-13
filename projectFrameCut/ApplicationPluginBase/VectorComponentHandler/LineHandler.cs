@@ -1,6 +1,7 @@
-﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent.Components;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
@@ -45,8 +46,14 @@ public class LineHandler : BaseVectorComponentHandler
     {
         switch (handleId)
         {
-            case "p1": component.Parameters["X1"] = newX; component.Parameters["Y1"] = newY; break;
-            case "p2": component.Parameters["X2"] = newX; component.Parameters["Y2"] = newY; break;
+            case "p1":
+                component.Parameters["X1"] = newX;
+                component.Parameters["Y1"] = newY;
+                break;
+            case "p2":
+                component.Parameters["X2"] = newX;
+                component.Parameters["Y2"] = newY;
+                break;
         }
     }
 }

@@ -7,6 +7,7 @@ using Silk.NET.Shaderc;
 using Silk.NET.Vulkan;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using static projectFrameCut.Render.HwAccelEngine.Platforms.Android.GLComputeView;
@@ -16,7 +17,7 @@ using VulkanDevice = Silk.NET.Vulkan.Device;
 
 namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
-    public unsafe class VulkanComputeView : AndroidView
+    public unsafe partial class VulkanComputeView : AndroidView
     {
         private const uint ComputeQueueFlag = 0x2;
         private const uint StorageBufferUsageFlag = 0x20;
@@ -52,6 +53,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         private OutputElementType _outputElementType;
         private ShaderKind _shaderKind;
         private bool _initialized;
+        private bool _halfEnabled;
         private bool _vulkanComputeDisabled;
         private string? _disableReason;
 
@@ -147,25 +149,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         public Task<Array> RunComputeAsync(OutputElementType outputElementType)
         {
             if (!_initialized)
-            {
-                // Return zero-filled array of correct type if not initialized
-                // Use parameter, not field, since field might not be set yet
-                if (_length <= 0)
-                {
-                    return Task.FromResult<Array>(
-                        outputElementType == OutputElementType.UInt32 
-                            ? Array.Empty<uint>() 
-                            : (Array)Array.Empty<float>()
-                    );
-                }
+                return Task.FromException<Array>(new InvalidOperationException($"Vulkan effect is not initialized: {_disableReason}"));
 
-                // Return array filled with zeros if not initialized
-                return Task.FromResult<Array>(
-                    outputElementType == OutputElementType.UInt32 
-                        ? new uint[_length] 
-                        : (Array)new float[_length]
-                );
-            }
 
             return Task.Run(() => RunCompute(outputElementType));
         }
@@ -188,10 +173,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 _shaderKind = shaderKind;
                 _outputElementType = outputElementType;
 
-                if (_vulkanComputeDisabled)
-                {
-                    return;
-                }
+                if (_vulkanComputeDisabled) throw new InvalidOperationException(_disableReason);
 
                 if (_initialized)
                 {
@@ -208,6 +190,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                             _initialized = false;
                             DisableVulkanCompute("Shader compiler native dependency is unavailable.", ex);
                         }
+                                            projectFrameCut.Shared.Logger.Log(ex, "Initialize Vulkan effect", this);
+                        throw;
                     }
                 }
                 else if (inputs.Length > 0)
@@ -232,6 +216,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                         {
                             DisableVulkanCompute("Shader compiler native dependency is unavailable.", ex);
                         }
+                                            projectFrameCut.Shared.Logger.Log(ex, "Initialize Vulkan effect", this);
+                        throw;
                     }
                 }
             }
@@ -247,9 +233,20 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
         private void InitializeVulkan()
         {
+            bool requiresHalf = _shaderSource.Contains("float16_t", StringComparison.Ordinal);
+            uint apiVersion = Vk.MakeVersion(1, 0, 0);
+            if (requiresHalf)
+            {
+                uint supportedVersion = 0;
+                Check(_vk.EnumerateInstanceVersion(&supportedVersion), "query Vulkan version");
+                if (supportedVersion < Vk.MakeVersion(1, 1, 0))
+                    throw new NotSupportedException("Half channels require Vulkan 1.1 or later.");
+                apiVersion = Math.Min(supportedVersion, (uint)Vk.MakeVersion(1, 2, 0));
+            }
             var applicationInfo = new ApplicationInfo
             {
                 SType = StructureType.ApplicationInfo,
+                ApiVersion = apiVersion,
             };
 
             var instanceCreateInfo = new InstanceCreateInfo
@@ -286,14 +283,45 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 PQueuePriorities = pQueuePriority,
             };
 
+            var storage16 = new PhysicalDevice16BitStorageFeatures { SType = StructureType.PhysicalDevice16BitStorageFeatures };
+            var float16 = new PhysicalDeviceShaderFloat16Int8Features { SType = StructureType.PhysicalDeviceShaderFloat16Int8Features };
+            nint halfExtension = 0;
+            if (requiresHalf)
+            {
+                storage16.PNext = &float16;
+                var features = new PhysicalDeviceFeatures2 { SType = StructureType.PhysicalDeviceFeatures2, PNext = &storage16 };
+                _vk.GetPhysicalDeviceFeatures2(_physicalDevice, &features);
+                if (!storage16.StorageBuffer16BitAccess || !float16.ShaderFloat16)
+                    throw new NotSupportedException("Vulkan requires shaderFloat16 and storageBuffer16BitAccess for Half channels.");
+                storage16 = new() { SType = StructureType.PhysicalDevice16BitStorageFeatures, PNext = &float16, StorageBuffer16BitAccess = true };
+                float16 = new() { SType = StructureType.PhysicalDeviceShaderFloat16Int8Features, ShaderFloat16 = true };
+                PhysicalDeviceProperties properties = default;
+                _vk.GetPhysicalDeviceProperties(_physicalDevice, &properties);
+                if (properties.ApiVersion < Vk.MakeVersion(1, 1, 0))
+                    throw new NotSupportedException("Half channels require a Vulkan 1.1 device or later.");
+                if (Math.Min(properties.ApiVersion, apiVersion) < Vk.MakeVersion(1, 2, 0))
+                    halfExtension = Marshal.StringToCoTaskMemUTF8("VK_KHR_shader_float16_int8");
+            }
+            byte* extensionName = (byte*)halfExtension;
             var deviceCreateInfo = new DeviceCreateInfo
             {
                 SType = StructureType.DeviceCreateInfo,
+                PNext = requiresHalf ? &storage16 : null,
+                EnabledExtensionCount = halfExtension != 0 ? 1u : 0u,
+                PpEnabledExtensionNames = halfExtension != 0 ? &extensionName : null,
                 QueueCreateInfoCount = 1,
                 PQueueCreateInfos = &queueCreateInfo,
             };
 
-            Check(_vk.CreateDevice(_physicalDevice, in deviceCreateInfo, null, out _device), "create logical device");
+            try
+            {
+                Check(_vk.CreateDevice(_physicalDevice, in deviceCreateInfo, null, out _device), "create logical device");
+                _halfEnabled = requiresHalf;
+            }
+            finally
+            {
+                if (halfExtension != 0) Marshal.FreeCoTaskMem(halfExtension);
+            }
 
             _vk.GetDeviceQueue(_device, _queueFamilyIndex, 0, out _queue);
 
@@ -606,6 +634,11 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 
             try
             {
+                if (_shaderSource.Contains("float16_t", StringComparison.Ordinal))
+                {
+                    if (!_halfEnabled) throw new NotSupportedException("Vulkan context was created without Half support.");
+                    _shaderc.CompileOptionsSetTargetEnv(options, TargetEnv.Vulkan, (uint)EnvVersion.Vulkan11);
+                }
                 var sourceSize = (nuint)Encoding.UTF8.GetByteCount(_shaderSource);
                 var result = _shaderc.CompileIntoSpv(compiler, _shaderSource, sourceSize, _shaderKind, "shader.glsl", "main", options);
                 if (result == null)
@@ -682,7 +715,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 System.Diagnostics.Debug.WriteLine($"Disable reason detail: {ex.GetType().Name}: {ex.Message}");
             }
 
-            _readyTcs.TrySetResult(true);
+            _readyTcs.TrySetException(ex ?? new InvalidOperationException(reason));
+            projectFrameCut.Shared.Logger.Log(ex ?? new InvalidOperationException(reason), "Initialize Vulkan effect", this);
         }
 
         private Array RunCompute(OutputElementType outputElementType)
@@ -920,19 +954,17 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         {
             if (handler.PlatformView is null)
             {
-                return;
+                throw new InvalidOperationException("Vulkan platform view is not attached.");
             }
 
             if (string.IsNullOrWhiteSpace(view.ShaderSource))
             {
-                System.Diagnostics.Debug.WriteLine("ERROR: shaderSource can't be null or whitespace.");
-                return;
+                throw new ArgumentException("Shader source cannot be empty.", nameof(view));
             }
 
             if (view.Inputs == null || view.Inputs.Length == 0 || view.Inputs.Length > 6)
             {
-                System.Diagnostics.Debug.WriteLine($"ERROR: Must provide between 1 and 6 input arrays. Got {view.Inputs?.Length ?? 0}");
-                return;
+                throw new ArgumentException($"Vulkan compute requires between 1 and 6 input arrays, got {view.Inputs?.Length ?? 0}.", nameof(view));
             }
 
             if (handler.PlatformView is VulkanComputeView platformView)
@@ -950,13 +982,13 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                         }
                         else if (platformView.IsVulkanComputeDisabled)
                         {
-                            System.Diagnostics.Debug.WriteLine("MapInputs: Vulkan compute unavailable on this device. Using fallback output.");
+                            throw new InvalidOperationException("Vulkan compute is unavailable on this device.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"ERROR: Failed to initialize Vulkan compute: {ex.GetType().Name}: {ex.Message}");
-                        System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+                        projectFrameCut.Shared.Logger.Log(ex, "Attach Vulkan effect", view);
+                        throw;
                     }
                 }
                 else
@@ -968,7 +1000,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"ERROR: Failed to update Vulkan inputs: {ex.GetType().Name}: {ex.Message}");
+                        projectFrameCut.Shared.Logger.Log(ex, "Update Vulkan effect", view);
+                        throw;
                     }
                 }
             }
@@ -999,13 +1032,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to create VulkanComputeView: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine(ex.StackTrace);
-                
-                // Return an empty placeholder view instead of throwing
-                // This prevents MAUI handler from failing completely
-                var placeholder = new AndroidView(Context);
-                return placeholder;
+                projectFrameCut.Shared.Logger.Log(ex, "Create Vulkan compute view", this);
+                throw;
             }
         }
 

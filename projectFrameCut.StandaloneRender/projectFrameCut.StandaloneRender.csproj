@@ -2,14 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
+    <DefineConstants>$(DefineConstants);HEADLESS</DefineConstants>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 		<AssemblyDescription>projectFrameCut's Windows/Linux standalone renderer</AssemblyDescription>
 		<AssemblyTitle>projectFrameCut standalone renderer</AssemblyTitle>
 		<Version>1.7.0.0</Version>
-		<DefineConstants>$(DefineConstants);WINNETCORE</DefineConstants>
-
 	</PropertyGroup>
 
   <ItemGroup>
@@ -17,12 +16,13 @@
 		<PackageReference Include="ILGPU" Version="1.5.3" />
 		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
 		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\**\*.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Effect\**\*.cs" Link="HwAccel\Effect\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\AcceleratorsManager.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
 		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\VectorRasterizer\**\*.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
   </ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.UserMarks" Version="18.7.37220.1" />
+		<PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.UserMarks" Version="*" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">

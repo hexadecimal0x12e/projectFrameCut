@@ -1,4 +1,6 @@
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
@@ -20,28 +22,7 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
     private readonly ConcurrentDictionary<string, object> _commitGates = new(StringComparer.OrdinalIgnoreCase);
 
     public string ResolveProjectPath(string projectRoot, string projectRelativePath)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
-        ArgumentException.ThrowIfNullOrWhiteSpace(projectRelativePath);
-
-        var canonicalRoot = Path.GetFullPath(projectRoot)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        var normalizedRelative = projectRelativePath.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(normalizedRelative))
-        {
-            throw new ArgumentException("Artifact paths must be relative to the project root.", nameof(projectRelativePath));
-        }
-
-        var fullPath = Path.GetFullPath(Path.Combine(canonicalRoot, normalizedRelative));
-        var pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (!fullPath.StartsWith(canonicalRoot, pathComparison))
-        {
-            throw new UnauthorizedAccessException("Artifact path escapes the project root.");
-        }
-
-        return fullPath;
-    }
+        => ProjectCachePaths.ResolvePath(projectRoot, projectRelativePath);
 
     public string CreateTemporaryPath(string finalPath)
     {
@@ -79,30 +60,33 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
     public RenderArtifact Register(Guid sessionId, string projectRoot, string projectRelativePath, string mediaType, bool cacheHit, bool isPreview, int width = 0, int height = 0, double frameRate = 0, PreviewPixelFormat pixelFormat = PreviewPixelFormat.EncodedImage, int stride = 0, string? colorSpace = null)
     {
         var fullPath = ResolveProjectPath(projectRoot, projectRelativePath);
-        if (!File.Exists(fullPath))
+        lock (PreviewFrameContainer.Gate(fullPath))
         {
-            throw new FileNotFoundException("Render artifact was not found.", fullPath);
-        }
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException("Render artifact was not found.", fullPath);
+            }
 
-        var artifact = new RenderArtifact
-        {
-            ArtifactId = Guid.NewGuid(),
-            SessionId = sessionId,
-            ProjectRelativePath = projectRelativePath.Replace(Path.DirectorySeparatorChar, '/'),
-            MediaType = mediaType,
-            Size = new FileInfo(fullPath).Length,
-            ContentHash = ComputeHash(fullPath),
-            Width = width,
-            Height = height,
-            FrameRate = frameRate,
-            CacheHit = cacheHit,
-            IsPreview = isPreview,
-            PixelFormat = pixelFormat,
-            Stride = stride,
-            ColorSpace = colorSpace ?? string.Empty,
-        };
-        _artifacts[artifact.ArtifactId] = new ArtifactRegistration(sessionId, fullPath, isPreview);
-        return artifact;
+            var artifact = new RenderArtifact
+            {
+                ArtifactId = Guid.NewGuid(),
+                SessionId = sessionId,
+                ProjectRelativePath = projectRelativePath.Replace(Path.DirectorySeparatorChar, '/'),
+                MediaType = mediaType,
+                Size = new FileInfo(fullPath).Length,
+                ContentHash = ComputeHash(fullPath),
+                Width = width,
+                Height = height,
+                FrameRate = frameRate,
+                CacheHit = cacheHit,
+                IsPreview = isPreview,
+                PixelFormat = pixelFormat,
+                Stride = stride,
+                ColorSpace = colorSpace ?? string.Empty,
+            };
+            _artifacts[artifact.ArtifactId] = new ArtifactRegistration(sessionId, fullPath, isPreview);
+            return artifact;
+        }
     }
 
     public bool Release(Guid sessionId, Guid artifactId)
@@ -135,7 +119,7 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
 
     private static string ComputeHash(string path)
     {
-        using var stream = File.OpenRead(path);
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         return Convert.ToHexString(SHA256.HashData(stream));
     }
 

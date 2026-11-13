@@ -24,6 +24,7 @@ namespace projectFrameCut.Converters
                     AssetType.Audio => Localized.AssetPage_AssetType_Audio,
                     AssetType.Image => Localized.AssetPage_AssetType_Image,
                     AssetType.Font => Localized.AssetPage_AssetType_Font,
+                    AssetType.VectorComposition => Localized.AssetPage_AssetType_VectorComposition,
                     AssetType.Other => Localized.AssetPage_AssetType_Other,
                     _ => "Unknown"
                 };
@@ -57,6 +58,7 @@ namespace projectFrameCut.Converters
                 AssetType.Audio => Localized.AssetPage_AssetType_Audio,
                 AssetType.Image => Localized.AssetPage_AssetType_Image,
                 AssetType.Font => Localized.AssetPage_AssetType_Font,
+                AssetType.VectorComposition => Localized.AssetPage_AssetType_VectorComposition,
                 AssetType.Other => Localized.AssetPage_AssetType_Other,
                 _ => "Unknown"
             };

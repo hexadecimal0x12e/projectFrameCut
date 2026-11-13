@@ -1,6 +1,7 @@
-﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent.Components;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
@@ -57,10 +58,22 @@ public class CubicBezierHandler : BaseVectorComponentHandler
     {
         switch (handleId)
         {
-            case "p1": component.Parameters["X1"] = newX; component.Parameters["Y1"] = newY; break;
-            case "p2": component.Parameters["X2"] = newX; component.Parameters["Y2"] = newY; break;
-            case "p3": component.Parameters["X3"] = newX; component.Parameters["Y3"] = newY; break;
-            case "p4": component.Parameters["X4"] = newX; component.Parameters["Y4"] = newY; break;
+            case "p1":
+                component.Parameters["X1"] = newX;
+                component.Parameters["Y1"] = newY;
+                break;
+            case "p2":
+                component.Parameters["X2"] = newX;
+                component.Parameters["Y2"] = newY;
+                break;
+            case "p3":
+                component.Parameters["X3"] = newX;
+                component.Parameters["Y3"] = newY;
+                break;
+            case "p4":
+                component.Parameters["X4"] = newX;
+                component.Parameters["Y4"] = newY;
+                break;
         }
     }
 }

@@ -25,7 +25,7 @@ public sealed class GetProjectClipCommand : ProjectCmdlet
     [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(0, int.MaxValue)] public int? TrackId { get; set; }
 }
 
-[Cmdlet("Add", "ProjectClip", SupportsShouldProcess = true)]
+[Cmdlet("Add", "ProjectClip", SupportsShouldProcess = true, DefaultParameterSetName = "File")]
 public sealed class AddProjectClipCommand : ProjectWriteCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.AddClip;
@@ -34,8 +34,8 @@ public sealed class AddProjectClipCommand : ProjectWriteCmdlet
     [Parameter] public uint? StartFrame { get; set; }
     [Parameter][ValidateRange(1, int.MaxValue)] public uint? DurationFrames { get; set; }
     [Parameter] public uint? SourceStartFrame { get; set; }
-    [Parameter] public string? FilePath { get; set; }
-    [Parameter(ValueFromPipelineByPropertyName = true)] public string? AssetId { get; set; }
+    [Parameter(Mandatory = true, ParameterSetName = "File")][ValidateNotNullOrWhiteSpace] public string FilePath { get; set; } = "";
+    [Parameter(Mandatory = true, ParameterSetName = "Asset", ValueFromPipelineByPropertyName = true)][ValidateNotNullOrWhiteSpace] public string AssetId { get; set; } = "";
     [Parameter][ValidateRange(1, int.MaxValue)] public int? WidthPixels { get; set; }
     [Parameter][ValidateRange(1, int.MaxValue)] public int? HeightPixels { get; set; }
 }
@@ -51,10 +51,6 @@ public sealed class SetProjectClipCommand : ProjectWriteCmdlet
     [Parameter] public uint? SourceStartFrame { get; set; }
     [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(0, int.MaxValue)] public int? TrackId { get; set; }
     [Parameter] public string? FilePath { get; set; }
-    [Parameter][ValidateRange(1, int.MaxValue)] public int? WidthPixels { get; set; }
-    [Parameter][ValidateRange(1, int.MaxValue)] public int? HeightPixels { get; set; }
-    [Parameter] public int? XPixels { get; set; }
-    [Parameter] public int? YPixels { get; set; }
 }
 
 [Cmdlet("Remove", "ProjectClip", SupportsShouldProcess = true)]
@@ -88,6 +84,7 @@ public sealed class AddProjectAssetCommand : ProjectWriteCmdlet
     protected override GuiProjectOperation Operation => GuiProjectOperation.AddAsset;
     [Parameter(Mandatory = true)][ValidateNotNullOrEmpty] public string FilePath { get; set; } = "";
     [Parameter] public string? Name { get; set; }
+    [Parameter] public bool? CopyToProject { get; set; }
 }
 
 [Cmdlet("Remove", "ProjectAsset", SupportsShouldProcess = true)]
@@ -108,7 +105,7 @@ public sealed class GetProjectTrackCommand : ProjectCmdlet
 public sealed class AddProjectTrackCommand : ProjectWriteCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.AddTrack;
-    [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(0, int.MaxValue)] public int? TrackId { get; set; }
+    [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(0, 9999)] public int? TrackId { get; set; }
 }
 
 [Cmdlet("Get", "ProjectTextStyle")]
@@ -178,6 +175,9 @@ public sealed class AddProjectClipEffectProviderCommand : ProjectWriteCmdlet
     [Parameter] public Hashtable? Fields { get; set; }
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? InputProviderId { get; set; }
     [Parameter] public bool? IsFinalOutput { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
+    [Parameter] public SwitchParameter NoAutoConnect { get; set; }
+    [Parameter] public Hashtable? Metadata { get; set; }
 }
 
 [Cmdlet("Set", "ProjectClipEffectProvider", SupportsShouldProcess = true)]
@@ -192,6 +192,8 @@ public sealed class SetProjectClipEffectProviderCommand : ProjectWriteCmdlet
     [Parameter] public SwitchParameter ResetToDefaults { get; set; }
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? InputProviderId { get; set; }
     [Parameter] public bool? IsFinalOutput { get; set; }
+    [Parameter][ValidateSet("Render", "Composition", "Text", "VectorContent", "SourceReplacement")] public string? Stage { get; set; }
+    [Parameter] public Hashtable? Metadata { get; set; }
 }
 
 [Cmdlet("Remove", "ProjectClipEffectProvider", SupportsShouldProcess = true)]

@@ -29,6 +29,12 @@ namespace projectFrameCut.Render.Effect
 
             if (clip.EffectProviders is { Length: > 0 })
             {
+                if (clip.EffectProviders.Any(p => p.Stage is null))
+                {
+                    var restored = MigrateToEffectProviders(clip.EffectProviders, null, out var diagnostics);
+                    if (diagnostics.Count == 0 && clip.EffectProviders.All(p => restored.ContainsKey(p.Id)))
+                        clip.EffectProviders = restored.Values.Select(SerializeProvider).ToArray();
+                }
                 clip.EffectBundles = null;
                 return;
             }
@@ -42,7 +48,7 @@ namespace projectFrameCut.Render.Effect
             clip.EffectBundles = null;
         }
 
-        private static EffectProviderJSONStructure SerializeProvider(IEffectProvider provider)
+        public static EffectProviderJSONStructure SerializeProvider(IEffectProvider provider)
             => new()
             {
                 Id = provider.Id,
@@ -50,10 +56,16 @@ namespace projectFrameCut.Render.Effect
                 TypeName = provider.TypeName,
                 Name = provider.Name,
                 Enabled = provider.Enabled,
+                Stage = provider.Stage,
                 AnchorsBindingState = new(provider.AnchorsBindingState ?? []),
-                StaticFields = provider.Fields
+                StaticFields = provider is ClipArgumentProvider clipArguments ? new(clipArguments.StaticValues) : provider.Fields
                     .Where(item => item.Value is StaticEffectArgumentField or DynamicEffectParamField)
-                    .ToDictionary(item => item.Key, item => EffectParamConvert.Normalize(GetFieldValue(item.Value)) ?? new object()),
+                    .Where(item => !item.Value.FieldType.IsContent() && item.Value.FieldType.BaseType() != EffectArgumentFieldType.AudioSample)
+                    .Where(item => GetFieldValue(item.Value) is not projectFrameCut.Drawing.Base.IPicture
+                        and not projectFrameCut.Drawing.Vector.VectorPicture and not IAudioSamples)
+                    .ToDictionary(item => item.Key, item => (item.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                        ? GetFieldValue(item.Value) : EffectParamConvert.Normalize(GetFieldValue(item.Value)))
+                        ?? (item.Value.TypeContract is null ? new object() : null!)),
                 MetaData = provider.MetaData is { Count: > 0 } ? new(provider.MetaData) : null,
             };
 
@@ -84,6 +96,13 @@ namespace projectFrameCut.Render.Effect
             EffectProviderJSONStructure[]? effectProviders,
             EffectBundleJSONStructure[]? effectBundles,
             out IReadOnlyList<BindingDiagnostic> diagnostics)
+            => MigrateToEffectProviders(effectProviders, effectBundles, out diagnostics, normalizeBindings: true);
+
+        public static Dictionary<Guid, IEffectProvider> MigrateToEffectProviders(
+            EffectProviderJSONStructure[]? effectProviders,
+            EffectBundleJSONStructure[]? effectBundles,
+            out IReadOnlyList<BindingDiagnostic> diagnostics,
+            bool normalizeBindings)
         {
             var result = new Dictionary<Guid, IEffectProvider>();
             var foundProblems = new List<BindingDiagnostic>();
@@ -93,7 +112,37 @@ namespace projectFrameCut.Render.Effect
             {
                 foreach (var p in effectProviders)
                 {
-                    if (!factories.TryGetValue(p.TypeName, out var factory))
+                    if (p.Stage is not { } declaredStage || !Enum.IsDefined(declaredStage))
+                    {
+                        foundProblems.Add(new(p.Id, "UnsupportedStage", $"Effect provider {p.Id} uses an unsupported effect stage. Recreate its effect configuration."));
+                        continue;
+                    }
+                    if (p.TypeName == RenderOutputProvider.ProviderTypeName)
+                    {
+                        var output = new RenderOutputProvider { Id = p.Id, Stage = declaredStage, Enabled = p.Enabled, Name = p.Name,
+                            AnchorsBindingState = p.AnchorsBindingState ?? new(), MetaData = p.MetaData ?? new() };
+                        RestoreStaticFields(output, p.StaticFields);
+                        result.Add(output.Id, output);
+                        continue;
+                    }
+                    if (p.TypeName == ClipArgumentProvider.ProviderTypeName)
+                    {
+                        var arguments = new ClipArgumentProvider
+                        {
+                            Id = p.Id,
+                            Enabled = p.Enabled,
+                            Name = p.Name,
+                            AnchorsBindingState = p.AnchorsBindingState ?? new(),
+                            MetaData = p.MetaData ?? new(),
+                        };
+                        arguments.RestoreStaticValues(p.StaticFields);
+                        arguments.Stage = declaredStage;
+                        if (!result.TryAdd(p.Id, arguments))
+                            foundProblems.Add(new(p.Id, "DuplicateProviderId", $"Multiple effect providers use id {p.Id}."));
+                        continue;
+                    }
+                    if (!factories.TryGetValue(p.TypeName, out var factory)
+                        && (p.TypeName != "OverlayBlend" || !factories.TryGetValue("BlendModeMixture", out factory)))
                     {
                         foundProblems.Add(new(p.Id, "UnknownProviderType",
                             $"Effect provider type '{p.TypeName}' from plugin '{p.FromPlugin}' is unavailable."));
@@ -103,11 +152,15 @@ namespace projectFrameCut.Render.Effect
                     try
                     {
                         var instance = factory();
+                        if (p.TypeName == "OverlayBlend" && instance.TypeName == "BlendModeMixture")
+                            Logger.LogDiagnostic($"Restored legacy OverlayBlend provider {p.Id} as BlendModeMixture.");
                         instance.Id = p.Id;
                         instance.Enabled = p.Enabled;
                         instance.Name = p.Name;
                         instance.AnchorsBindingState = p.AnchorsBindingState ?? new Dictionary<string, string>();
                         instance.MetaData = p.MetaData ?? new Dictionary<string, object>();
+                        instance.Stage = declaredStage;
+                        EffectStages.Validate(instance);
                         RestoreStaticFields(instance, p.StaticFields);
                         if (!result.TryAdd(instance.Id, instance))
                         {
@@ -117,12 +170,14 @@ namespace projectFrameCut.Render.Effect
                     }
                     catch (Exception ex)
                     {
+                        Logger.Log(ex, $"Restore effect provider {p.Id}", nameof(EffectBindingHelper));
                         foundProblems.Add(new(p.Id, "ProviderRestoreFailed",
                             $"Effect provider '{p.TypeName}' ({p.Id}) could not be restored: {ex.Message}"));
                     }
                 }
 
-                foundProblems.AddRange(NormalizeStoredBindings(result));
+
+                if (normalizeBindings) foundProblems.AddRange(NormalizeStoredBindings(result));
                 MaterializeFields(result.Values);
                 diagnostics = foundProblems;
                 return result;
@@ -136,7 +191,8 @@ namespace projectFrameCut.Render.Effect
 
             foreach (var b in effectBundles)
             {
-                if (!factories.TryGetValue(b.BundleTypeName, out var factory))
+                if (!factories.TryGetValue(b.BundleTypeName, out var factory)
+                    && (b.BundleTypeName != "OverlayBlend" || !factories.TryGetValue("BlendModeMixture", out factory)))
                 {
                     foundProblems.Add(new(b.Id, "UnknownProviderType",
                         $"Legacy effect provider type '{b.BundleTypeName}' from plugin '{b.FromPlugin}' is unavailable."));
@@ -155,7 +211,7 @@ namespace projectFrameCut.Render.Effect
                     else
                         instance.DisconnectMainInput();
                     instance.SetFinalOutputSource(
-                        instance.OutField.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
+                        instance.TryGetOutputField(null, out var legacyOutput) && legacyOutput.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
                         && b.BindedOutputId == IEffectProvider.OutputAnchorGUID);
                     var legacyFields = new Dictionary<string, IEffectArgumentField>();
                     foreach (var kvp in b.Parameters ?? new Dictionary<string, object>())
@@ -176,7 +232,7 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
-            foundProblems.AddRange(NormalizeStoredBindings(result));
+            if (normalizeBindings) foundProblems.AddRange(NormalizeStoredBindings(result));
             MaterializeFields(result.Values);
             diagnostics = foundProblems;
             return result;
@@ -207,7 +263,14 @@ namespace projectFrameCut.Render.Effect
                 {
                     Id = fieldId,
                     FieldType = descriptor.FieldType,
-                    Value = EffectParamConvert.Normalize(rawValue) ?? new object(),
+                    TypeContract = descriptor.TypeContract,
+                    DataFormat = descriptor.DataFormat,
+                    Value = (provider is EffectVariableProvider ? EffectVariableProvider.ConvertValue(descriptor.FieldType.BaseType(), rawValue)
+                        : provider is AdvancedMathEffectProvider && (fieldId is "A" or "B" or "C")
+                        ? AdvancedMathEffectProvider.ParseNumber(rawValue)
+                        : descriptor.TypeContract is not null ? EffectFieldTypes.ConvertInput(descriptor.FieldType, rawValue)
+                        : descriptor.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                        ? rawValue : EffectParamConvert.Normalize(rawValue)) ?? (descriptor.TypeContract is null ? new object() : null!),
                     DefaultValue = descriptor.DefaultValue,
                     MinValue = descriptor.MinValue,
                     MaxValue = descriptor.MaxValue,
@@ -227,13 +290,15 @@ namespace projectFrameCut.Render.Effect
         /// 每次调用都会重建值提供器并刷新注入字段，保证对源 provider 参数的修改能传播到消费者。
         /// 被内联的值提供器不再被 <see cref="RebuildAllEffects"/> 构建，从而不会进入渲染管线。
         /// </remarks>
-        private static HashSet<Guid> InlineValueProvidersIntoConsumers(IReadOnlyDictionary<Guid, IEffectProvider> providers)
+        private static HashSet<Guid> InlineValueProvidersIntoConsumers(IReadOnlyDictionary<Guid, IEffectProvider> providers,
+            bool dynamicGraph = false, InlineValueGraph? inlineValues = null, bool forward = false)
         {
             var inlinedIds = new HashSet<Guid>();
             if (providers.Count == 0) return inlinedIds;
 
-            foreach (var consumer in providers.Values)
+            foreach (var consumer in (forward ? providers.Values.ToList() : SortEffectProviders(providers)))
             {
+                if (consumer is CustomSpeedVarianceProvider or SpeedVarianceToCustomProvider || dynamicGraph && DynamicEffectBindings.IsGraphProvider(consumer)) continue;
                 if (consumer.Fields is null) continue;
                 Dictionary<string, IEffectArgumentField>? fields;
                 try
@@ -248,6 +313,18 @@ namespace projectFrameCut.Render.Effect
                 foreach (var fieldKey in fields.Keys.ToList())
                 {
                     var field = fields[fieldKey];
+                    if (inlineValues is not null)
+                    {
+                        if (!consumer.TryGetFieldBinding(fieldKey, out var binding)
+                            || !EffectProviderOutputExtensions.TryParseOutputSourceId(binding, out var id, out var outputId)
+                            || !providers.TryGetValue(id, out var p) || !p.TryGetOutputField(outputId, out var output)
+                            || !DynamicEffectBindings.CanInlineValue(p, providers, types: inlineValues.Types)) continue;
+                        inlineValues.GetEffects(id);
+                        fields[fieldKey] = inlineValues.CreateField(binding, fieldKey, output,
+                            field is DynamicEffectParamField dynamicField ? dynamicField.StaticFallbackValue : EffectFieldTypes.DefaultValue(field));
+                        inlinedIds.Add(id);
+                        continue;
+                    }
                     Guid sourceId;
                     if (field is DynamicEffectParamField df)
                     {
@@ -262,7 +339,8 @@ namespace projectFrameCut.Render.Effect
                         continue;
                     }
 
-                    if (!providers.TryGetValue(sourceId, out var source) || !source.Target.HasFlag(EffectTarget.ValueProvider)) continue;
+                    if (!providers.TryGetValue(sourceId, out var source) || !source.Enabled || !source.Target.HasFlag(EffectTarget.ValueProvider)
+                        || !DynamicEffectBindings.CanInlineValue(source, providers)) continue;
 
                     IValueProviderEffect? injected = null;
                     try
@@ -306,9 +384,16 @@ namespace projectFrameCut.Render.Effect
 
         public static Dictionary<string, IEffect>? RebuildAllEffects(
             IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders,
-            Dictionary<string, IEffect>? existingEffects)
+            Dictionary<string, IEffect>? existingEffects,
+            RenderAPIBase.ClipAndTrack.IClip? clip = null, object? inputDataFormat = null, IReadOnlyDictionary<string, object>? extraData = null)
         {
+            if (DynamicEffectCalculation.Enabled(extraData ?? clip?.ExtraData) && effectProviders is not null)
+                return FullDynamicEffectPipelineBuilder.Build(effectProviders, existingEffects, clip, inputDataFormat);
             var newEffects = new Dictionary<string, IEffect>();
+            bool dynamicGraph = DynamicEffectBindings.RequiresGraph(effectProviders);
+            InlineValueGraph? inlineValues = null;
+            EffectFieldTypeResolution? types = null;
+            var graphEffects = new Dictionary<Guid, IEffect[]>();
             int globalIndex = 0;
 
             // Preserve manually-added effects (those without a BindedEffectProvidingSystemID) from the current Effects.
@@ -316,7 +401,7 @@ namespace projectFrameCut.Render.Effect
             {
                 foreach (var kvp in existingEffects)
                 {
-                    if (string.IsNullOrWhiteSpace(kvp.Value.BindedEffectProvidingSystemID))
+                    if (!DynamicEffectBindings.IsGraphEffect(kvp.Value) && string.IsNullOrWhiteSpace(kvp.Value.BindedEffectProvidingSystemID))
                     {
                         newEffects[kvp.Key] = kvp.Value;
                         if (kvp.Value.Index >= globalIndex)
@@ -325,97 +410,186 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
-            if (effectProviders != null)
+            try
             {
-                MaterializeFields(effectProviders.Values);
-                var activePictureProviders = GetActivePictureProviderIds(effectProviders);
-                var inlinedProviderIds = InlineValueProvidersIntoConsumers(effectProviders);
-                var sortedProviders = SortEffectProviders(effectProviders);
-                if (!sortedProviders.ListAny()) return null;
-                foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
+                if (effectProviders != null)
                 {
-                    if (bundleData is not IEffectProvider provider)
+                    Rendering.TransformProcessing.ValidateProviders(effectProviders);
+                    MaterializeFields(effectProviders.Values);
+                    types = new(effectProviders, inputDataFormat: inputDataFormat);
+                    inlineValues = dynamicGraph ? new InlineValueGraph(effectProviders, types) : null;
+                    if (dynamicGraph && ValidateBindings(effectProviders, types, false) is { Count: > 0 } errors)
+                        throw new InvalidOperationException("Invalid effect graph: " + string.Join(" ", errors.Select(e => e.Message)));
+                    var activePictureProviders = GetActivePictureProviderIds(effectProviders, types);
+                    var inlinedProviderIds = InlineValueProvidersIntoConsumers(effectProviders, dynamicGraph, inlineValues);
+                    var sortedProviders = SortEffectProviders(effectProviders);
+                    foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
                     {
-                        throw new InvalidOperationException($"{bundleData.TypeName} is not IEffectProvider");
-                    }
-
-                    // 已被内联进某个消费者字段的值提供器：跳过构建，使其不再进入渲染管线。
-                    // 同时清除其可能残留的旧 effect 条目，避免渲染时仍执行它的值提取分支。
-                    if (inlinedProviderIds.Contains(bundleData.Id))
-                    {
-                        RemoveProviderEffects(newEffects, bundleData.Id);
-                        continue;
-                    }
-
-                    bool hadPersistedImplementType = provider.MetaData.TryGetValue(
-                        EffectProviderBase.ImplementTypeParameterKey,
-                        out object? persistedImplementTypeValue);
-                    EffectImplementType? persistedImplementType = persistedImplementTypeValue switch
-                    {
-                        EffectImplementType value => value,
-                        int value when Enum.IsDefined(typeof(EffectImplementType), value) => (EffectImplementType)value,
-                        long value when value is >= int.MinValue and <= int.MaxValue && Enum.IsDefined(typeof(EffectImplementType), (int)value) => (EffectImplementType)(int)value,
-                        string value when Enum.TryParse(value, ignoreCase: true, out EffectImplementType parsed) => parsed,
-                        JsonElement { ValueKind: JsonValueKind.Number } value when value.TryGetInt32(out int parsed) && Enum.IsDefined(typeof(EffectImplementType), parsed) => (EffectImplementType)parsed,
-                        JsonElement { ValueKind: JsonValueKind.String } value when Enum.TryParse(value.GetString(), ignoreCase: true, out EffectImplementType parsed) => parsed,
-                        _ => null,
-                    };
-                    var imp = EffectHelper.ForcePreferToType
-                        ?? persistedImplementType
-                        ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
-                    provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = imp;
-                    IEffect[] effects;
-                    try
-                    {
-                        effects = provider.Build();
-                    }
-                    finally
-                    {
-                        if (hadPersistedImplementType)
-                            provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = persistedImplementTypeValue!;
-                        else
-                            provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
-                    }
-
-                    for (int i = 0; i < effects.Length; i++)
-                    {
-                        var effect = effects[i];
-                        int subIdx = i;
-                        effect.Name = $"EffectProvider {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
-                        var detached = bundleData.Target.HasFlag(EffectTarget.ValueProvider)
-                            || bundleData.Target.HasFlag(EffectTarget.Mixture)
-                            || bundleData.Target.HasFlag(EffectTarget.SpeedVariance);
-                        effect.Enabled = detached
-                            ? bundleData.Enabled
-                            : bundleData.Enabled && activePictureProviders.Contains(bundleData.Id);
-                        effect.Index = globalIndex++;
-                        effect.BindedEffectProvidingSystemID = bundleData.Id.ToString();
-                        string key = $"{bundleData.Id}_{subIdx}";
-                        if (newEffects.TryGetValue(key, out var previousEffect))
+                        if (bundleData is ClipArgumentProvider or RenderOutputProvider
+                            || SpeedVarianceBindings.IsConversion(bundleData) || SpeedVarianceBindings.IsConsumed(bundleData, effectProviders)) continue;
+                        if (bundleData.Target.HasFlag(EffectTarget.ValueProvider) && !DynamicEffectBindings.IsGraphProvider(bundleData))
                         {
-                            if (effect.RelativeWidth <= 0 && previousEffect.RelativeWidth > 0)
-                            {
-                                effect.RelativeWidth = previousEffect.RelativeWidth;
-                            }
+                            RemoveProviderEffects(newEffects, bundleData.Id);
+                            continue;
+                        }
+                        if (bundleData is not IEffectProvider provider)
+                        {
+                            throw new InvalidOperationException($"{bundleData.TypeName} is not IEffectProvider");
+                        }
 
-                            if (effect.RelativeHeight <= 0 && previousEffect.RelativeHeight > 0)
+                        // 已被内联进某个消费者字段的值提供器：跳过构建，使其不再进入渲染管线。
+                        // 同时清除其可能残留的旧 effect 条目，避免渲染时仍执行它的值提取分支。
+                        if (inlinedProviderIds.Contains(bundleData.Id) && !(dynamicGraph && DynamicEffectBindings.IsGraphProvider(bundleData)))
+                        {
+                            RemoveProviderEffects(newEffects, bundleData.Id);
+                            continue;
+                        }
+
+                        var effects = provider is CustomSpeedVarianceProvider
+                            ? new IEffect[] { CustomSpeedVarianceProvider.BuildGraph(provider, effectProviders) }
+                            : inlineValues?.FindEffects(provider.Id) ?? BuildProviderEffects(provider, types);
+
+                        if (!provider.Target.HasFlag(EffectTarget.ValueProvider)
+                            && effects.Any(e => e.TypeOfEffect.GetStage() != provider.Stage))
+                        {
+                            foreach (var effect in effects.OfType<IDisposable>()) effect.Dispose();
+                            throw new InvalidOperationException($"Provider {provider.Id} built effects for another content stage.");
+                        }
+                        try { DynamicEffectBindings.ValidateMultipleOutputEffects(provider, effects); }
+                        catch
+                        {
+                            foreach (var effect in effects.OfType<IDisposable>()) effect.Dispose();
+                            throw;
+                        }
+                        if (provider.TypeOfEffect == EffectType.Transform)
+                        {
+                            var mode = Rendering.TransformProcessing.ReadEnum<RenderAPIBase.ClipAndTrack.TransformInputMode>(provider.MetaData,
+                                Rendering.TransformProcessing.ModeKey);
+                            var required = (provider.Target.HasFlag(EffectTarget.Audio) ? TransformDefinition.Audio : TransformDefinition.Clip) | (mode == RenderAPIBase.ClipAndTrack.TransformInputMode.OneInput
+                                ? TransformDefinition.SupportOneInput : TransformDefinition.SupportTwoInput);
+                            if (effects.Length != 1 || effects[0] is not RenderAPIBase.ClipAndTrack.ITransform transform || !transform.Definition.HasFlag(required))
                             {
-                                effect.RelativeHeight = previousEffect.RelativeHeight;
+                                foreach (var effect in effects) (effect as IDisposable)?.Dispose();
+                                throw new InvalidOperationException($"Provider {provider.Id} must build one transform supporting {mode}.");
                             }
                         }
-                        if (!Guid.TryParse(effect.Id, out _))
+
+                        for (int i = 0; i < effects.Length; i++)
                         {
-                            effect.Id = Guid.NewGuid().ToString();
+                            var effect = effects[i];
+                            int subIdx = i;
+                            effect.Name = $"EffectProvider {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
+                            var detached = bundleData.Stage is EffectStage.Composition or EffectStage.SourceReplacement or EffectStage.Render
+                                || dynamicGraph && DynamicEffectBindings.IsGraphProvider(bundleData)
+                                || bundleData.Target.HasFlag(EffectTarget.ValueProvider)
+                                || bundleData.TypeOfEffect == EffectType.Transform
+                                || bundleData.TypeOfEffect is EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect
+                                || bundleData.Target.HasFlag(EffectTarget.Mixture)
+                                || bundleData.Target.HasFlag(EffectTarget.SpeedVariance);
+                            effect.Enabled = detached
+                                ? bundleData.Enabled
+                                : bundleData.Enabled && activePictureProviders.Contains(bundleData.Id);
+                            effect.Index = globalIndex++;
+                            effect.BindedEffectProvidingSystemID = bundleData.Id.ToString();
+                            string key = $"{bundleData.Id}_{subIdx}";
+                            if (newEffects.TryGetValue(key, out var previousEffect))
+                            {
+                                if (effect.RelativeWidth <= 0 && previousEffect.RelativeWidth > 0)
+                                {
+                                    effect.RelativeWidth = previousEffect.RelativeWidth;
+                                }
+
+                                if (effect.RelativeHeight <= 0 && previousEffect.RelativeHeight > 0)
+                                {
+                                    effect.RelativeHeight = previousEffect.RelativeHeight;
+                                }
+                            }
+                            if (!Guid.TryParse(effect.Id, out _))
+                            {
+                                effect.Id = Guid.NewGuid().ToString();
+                            }
+                            newEffects[key] = effect;
                         }
-                        newEffects[key] = effect;
+                        if (dynamicGraph && DynamicEffectBindings.IsGraphProvider(provider)) graphEffects[provider.Id] = effects;
+                    }
+
+                }
+                var result = newEffects
+                    .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectProvidingSystemID)
+                               || (effectProviders?.ContainsKey(Guid.TryParse(e.Value.BindedEffectProvidingSystemID, out var g) ? g : Guid.Empty) ?? false))
+                    .ToDictionary();
+                var retained = result.Values.ToHashSet(ReferenceEqualityComparer.Instance);
+                foreach (var effect in (existingEffects?.Values.AsEnumerable() ?? []).Concat(newEffects.Values).Distinct(ReferenceEqualityComparer.Instance))
+                {
+                    if (!retained.Contains(effect) && effect is IDisposable disposable) disposable.Dispose();
+                }
+                if (dynamicGraph && effectProviders is not null)
+                {
+                    foreach (var id in graphEffects.Keys) RemoveProviderEffects(result, id);
+                    foreach (var stage in graphEffects.Keys.Select(id => effectProviders[id].Stage)
+                        .Concat(effectProviders.Values.OfType<RenderOutputProvider>().Select(p => p.Stage)).Distinct())
+                    {
+                        var graph = new DynamicEffectGraph(effectProviders, graphEffects, inlineValues, types, stage)
+                        {
+                            Index = graphEffects.Where(p => effectProviders[p.Key].Stage == stage)
+                                .SelectMany(p => p.Value).Select(e => e.Index).DefaultIfEmpty(globalIndex).Min(),
+                        };
+                        IEffect effect = stage switch
+                        {
+                            EffectStage.VectorContent => new NativeDynamicEffectGraph(graph),
+                            EffectStage.Composition => new DynamicMixtureGraph(graph),
+                            _ => graph,
+                        };
+                        result[effect.TypeName] = effect;
                     }
                 }
-
+                if (clip is not null && inlineValues is not null && effectProviders is not null)
+                {
+                    var plan = new ClipEffectStagePlan(clip, effectProviders, inlineValues);
+                    clip.EffectStagePlan?.Dispose();
+                    clip.EffectStagePlan = plan;
+                }
+                return result;
             }
-            return newEffects
-                .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectProvidingSystemID)
-                           || (effectProviders?.ContainsKey(Guid.TryParse(e.Value.BindedEffectProvidingSystemID, out var g) ? g : Guid.Empty) ?? false))
-                .ToDictionary();
+            catch
+            {
+                var previous = existingEffects?.Values.ToHashSet(ReferenceEqualityComparer.Instance) ?? [];
+                foreach (var effect in newEffects.Values.Concat(inlineValues?.Effects ?? []).Distinct(ReferenceEqualityComparer.Instance))
+                {
+                    if (!previous.Contains(effect) && effect is IDisposable disposable) disposable.Dispose();
+                }
+                throw;
+            }
+        }
+
+        internal static IEffect[] BuildProviderEffects(IEffectProvider provider, EffectFieldTypeResolution? types = null)
+        {
+            provider.ValidateOutputFields();
+            bool hadPersistedImplementType = provider.MetaData.TryGetValue(
+                EffectProviderBase.ImplementTypeParameterKey, out object? persistedImplementTypeValue);
+            EffectImplementType? persistedImplementType = persistedImplementTypeValue switch
+            {
+                EffectImplementType value => value,
+                int value when Enum.IsDefined(typeof(EffectImplementType), value) => (EffectImplementType)value,
+                long value when value is >= int.MinValue and <= int.MaxValue && Enum.IsDefined(typeof(EffectImplementType), (int)value) => (EffectImplementType)(int)value,
+                string value when Enum.TryParse(value, ignoreCase: true, out EffectImplementType parsed) => parsed,
+                JsonElement { ValueKind: JsonValueKind.Number } value when value.TryGetInt32(out int parsed) && Enum.IsDefined(typeof(EffectImplementType), parsed) => (EffectImplementType)parsed,
+                JsonElement { ValueKind: JsonValueKind.String } value when Enum.TryParse(value.GetString(), ignoreCase: true, out EffectImplementType parsed) => parsed,
+                _ => null,
+            };
+            provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] =
+                (provider.TypeOfEffect == EffectType.Transform ? persistedImplementType : null)
+                ?? EffectHelper.GetPicturePreference(provider.TypeName)
+                ?? persistedImplementType
+                ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
+            try { return provider.BuildForDataFormat(types?.GetBuildDataFormat(provider)); }
+            finally
+            {
+                if (hadPersistedImplementType)
+                    provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = persistedImplementTypeValue!;
+                else
+                    provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
+            }
         }
 
         /// <summary>
@@ -482,19 +656,22 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
-        public sealed record BindingDiagnostic(Guid? ProviderId, string Code, string Message);
+        public sealed record BindingDiagnostic(Guid? ProviderId, string Code, string Message)
+        {
+            public string? FieldId { get; init; }
+        }
 
         /// <summary>Returns provider dependencies declared by stored value-field bindings.</summary>
         public static IEnumerable<Guid> GetBoundProviderDependencyIds(IEffectProvider provider)
         {
             foreach (var binding in provider.EnumerateFieldBindings())
-                if (Guid.TryParse(binding.Value, out var id)) yield return id;
+                if (EffectProviderOutputExtensions.TryParseOutputSourceId(binding.Value, out var id, out _)) yield return id;
         }
 
         public static IEnumerable<Guid> GetInputDependencyIds(IEffectProvider provider)
         {
             var source = provider.GetMainInputSource();
-            if (Guid.TryParse(source, out var id) && IsProviderReference(id)) yield return id;
+            if (EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _) && IsProviderReference(id)) yield return id;
         }
 
         private static bool IsProviderReference(Guid id) =>
@@ -504,7 +681,8 @@ namespace projectFrameCut.Render.Effect
 
         private static string CanonicalizeSourceIdentifier(string sourceId)
         {
-            if (Guid.TryParse(sourceId, out var guid)) return guid.ToString();
+            if (EffectProviderOutputExtensions.TryParseOutputSourceId(sourceId, out var guid, out var outputId))
+                return outputId is null ? guid.ToString() : EffectProviderOutputExtensions.CreateOutputSourceId(guid, outputId);
             return sourceId switch
             {
                 "__Builtin_frame" => ValueProviderFrameContext.BuiltInFrameProviderId,
@@ -521,6 +699,7 @@ namespace projectFrameCut.Render.Effect
         {
             var diagnostics = new List<BindingDiagnostic>();
             if (providers is null) return diagnostics;
+            if (DynamicEffectBindings.RequiresGraph(providers.ToDictionary())) return DynamicEffectBindings.Normalize(providers);
             var legacyOutputs = new List<(Guid Source, Guid Target)>();
             var legacyFieldSources = new Dictionary<(Guid ProviderId, string FieldId), string>();
 
@@ -590,6 +769,7 @@ namespace projectFrameCut.Render.Effect
             }
 
             var duplicatedFieldBindings = providers.Values
+                .Where(provider => provider is not ClipArgumentProvider)
                 .SelectMany(provider => provider.EnumerateFieldBindings()
                     .Select(binding => (Provider: provider, binding.Key, binding.Value)))
                 .GroupBy(item => (item.Key, item.Value))
@@ -660,14 +840,28 @@ namespace projectFrameCut.Render.Effect
         }
 
         /// <summary>Validates stored bindings without mutating them.</summary>
-        public static IReadOnlyList<BindingDiagnostic> ValidateBindings(IReadOnlyDictionary<Guid, IEffectProvider>? providers)
+        public static IReadOnlyList<BindingDiagnostic> ValidateBindings(IReadOnlyDictionary<Guid, IEffectProvider>? providers, EffectFieldTypeResolution? types = null, bool forward = false)
         {
             var diagnostics = new List<BindingDiagnostic>();
             if (providers is null) return diagnostics;
+            if (forward || DynamicEffectBindings.RequiresGraph(providers)) return DynamicEffectBindings.Validate(providers, types, forward);
+
+            if (providers.Values.OfType<ClipArgumentProvider>().Count() > 1)
+                diagnostics.AddRange(providers.Values.OfType<ClipArgumentProvider>().Select(p => new BindingDiagnostic(p.Id, "MultipleClipArguments", "A clip can only have one argument provider.")));
+
+            foreach (var provider in providers.Values)
+            {
+                try { EffectStages.Validate(provider); }
+                catch (Exception ex) { diagnostics.Add(new(provider.Id, "UnsupportedStage", ex.Message)); }
+                foreach (var binding in provider.EnumerateFieldBindings())
+                    if (EffectProviderOutputExtensions.TryParseOutputSourceId(binding.Value, out var id, out _)
+                        && providers.TryGetValue(id, out var source) && source.Stage != provider.Stage)
+                        diagnostics.Add(new(provider.Id, "CrossStageBinding", $"Binding '{binding.Key}' must use a stage endpoint.") { FieldId = binding.Key });
+            }
 
             var finalProviders = providers.Values.Where(p => p.IsFinalOutputSource()).ToList();
-            if (finalProviders.Count > 1)
-                diagnostics.Add(new(null, "MultipleFinalOutputs", $"Multiple providers are connected to final output: {string.Join(", ", finalProviders.Select(p => p.Id))}."));
+            foreach (var group in finalProviders.GroupBy(p => p.Stage).Where(g => g.Count() > 1))
+                diagnostics.AddRange(group.Select(p => new BindingDiagnostic(p.Id, "MultipleFinalOutputs", $"Multiple providers are connected to {group.Key} output.")));
 
             foreach (var provider in providers.Values)
             {
@@ -678,6 +872,14 @@ namespace projectFrameCut.Render.Effect
                 if (pictureInputs.Count != 0 && !provider.HasMainPictureInput())
                     diagnostics.Add(new(provider.Id, "UnsupportedPictureInputs", $"Provider {provider.Id} must use '__Input__' as its only picture input."));
 
+                if (provider.TypeOfEffect == EffectType.Transform && (provider.IsFinalOutputSource() || pictureInputs.Count > 0))
+                    diagnostics.Add(new(provider.Id, "TransformPictureBinding", $"Transform {provider.Id} cannot join the picture chain."));
+                if (provider is ClipArgumentProvider && (provider.IsFinalOutputSource() || pictureInputs.Count > 0))
+                    diagnostics.Add(new(provider.Id, "ClipArgumentPictureBinding", $"Clip argument provider {provider.Id} cannot join the picture chain."));
+                if (provider is ClipArgumentProvider arguments)
+                    foreach (var key in arguments.StaticValues.Keys.Except(arguments.Fields.Keys))
+                        diagnostics.Add(new(provider.Id, "UnknownClipArgument", $"Clip argument '{key}' is unavailable on this clip.") { FieldId = key });
+
                 var input = provider.GetMainInputSource();
                 if (input == IEffectProvider.NoConnectionGUID.ToString() || input == IEffectProvider.InputAnchorGUID.ToString())
                     continue;
@@ -686,9 +888,11 @@ namespace projectFrameCut.Render.Effect
                     diagnostics.Add(new(provider.Id, "DanglingPictureInput", $"Provider {provider.Id} references missing picture source '{input}'."));
                     continue;
                 }
+                if (!source.CanConnectContent(provider))
+                    diagnostics.Add(new(provider.Id, "IncompatibleContentInput", $"Provider {sourceId} cannot feed the {provider.TypeOfEffect} input of {provider.Id}."));
                 if (sourceId == provider.Id)
                     diagnostics.Add(new(provider.Id, "SelfPictureBinding", $"Provider {provider.Id} uses itself as picture input."));
-                if (source.Target.HasFlag(EffectTarget.ValueProvider))
+                if (source.Target.HasFlag(EffectTarget.ValueProvider) || source.TypeOfEffect == EffectType.Transform)
                     diagnostics.Add(new(provider.Id, "InvalidPictureSource", $"Value provider {sourceId} cannot be used as a picture input."));
             }
 
@@ -714,24 +918,24 @@ namespace projectFrameCut.Render.Effect
                 foreach (var binding in provider.EnumerateFieldBindings())
                 {
                     if (!provider.Fields.ContainsKey(binding.Key))
-                        diagnostics.Add(new(provider.Id, "UnknownFieldBinding", $"Provider {provider.Id} does not own field '{binding.Key}'."));
+                        diagnostics.Add(new(provider.Id, "UnknownFieldBinding", $"Provider {provider.Id} does not own field '{binding.Key}'.") { FieldId = binding.Key });
                     if (binding.Value.StartsWith("builtin://", StringComparison.Ordinal)) continue;
                     if (Guid.TryParse(binding.Value, out var sourceId))
                     {
                         if (providers.TryGetValue(sourceId, out var fieldSource))
                         {
                             if (!fieldSource.Target.HasFlag(EffectTarget.ValueProvider))
-                                diagnostics.Add(new(provider.Id, "InvalidFieldSource", $"Field '{binding.Key}' references non-value provider {sourceId}."));
+                                diagnostics.Add(new(provider.Id, "InvalidFieldSource", $"Field '{binding.Key}' references non-value provider {sourceId}.") { FieldId = binding.Key });
                             continue;
                         }
                     }
-                    diagnostics.Add(new(provider.Id, "DanglingFieldBinding", $"Field '{binding.Key}' references missing source '{binding.Value}'."));
+                    diagnostics.Add(new(provider.Id, "DanglingFieldBinding", $"Field '{binding.Key}' references missing source '{binding.Value}'.") { FieldId = binding.Key });
                 }
             }
 
-            if (finalProviders.Count == 1)
+            foreach (var finalProvider in finalProviders)
             {
-                var current = finalProviders[0];
+                var current = finalProvider;
                 var seen = new HashSet<Guid>();
                 while (seen.Add(current.Id))
                 {
@@ -739,7 +943,7 @@ namespace projectFrameCut.Render.Effect
                     if (source == IEffectProvider.InputAnchorGUID.ToString()) break;
                     if (!Guid.TryParse(source, out var sourceId) || !providers.TryGetValue(sourceId, out var next))
                     {
-                        diagnostics.Add(new(finalProviders[0].Id, "BrokenActivePath", $"Final provider {finalProviders[0].Id} does not have a complete path to the source picture."));
+                        diagnostics.Add(new(finalProvider.Id, "BrokenActivePath", $"Final provider {finalProvider.Id} does not have a complete path to the source picture."));
                         break;
                     }
                     current = next;
@@ -749,25 +953,39 @@ namespace projectFrameCut.Render.Effect
             return diagnostics.Distinct().ToList();
         }
 
-        public static HashSet<Guid> GetActivePictureProviderIds(IReadOnlyDictionary<Guid, IEffectProvider>? providers)
+        public static HashSet<Guid> GetActivePictureProviderIds(IReadOnlyDictionary<Guid, IEffectProvider>? providers, EffectFieldTypeResolution? types = null)
         {
             if (providers is null || providers.Count == 0) return [];
-            var errors = ValidateBindings(providers);
+            var errors = ValidateBindings(providers, types);
             if (errors.Count != 0)
                 throw new InvalidOperationException("Invalid effect binding graph: " + string.Join(" ", errors.Select(e => e.Message)));
 
-            var finalProvider = providers.Values.SingleOrDefault(p => p.IsFinalOutputSource());
-            if (finalProvider is null) return [];
+            if (DynamicEffectBindings.RequiresGraph(providers))
+            {
+                var active = new HashSet<Guid>();
+                void Visit(Guid id)
+                {
+                    if (!providers.ContainsKey(id) || !active.Add(id)) return;
+                    foreach (var source in GetInputDependencyIds(providers[id]).Concat(GetBoundProviderDependencyIds(providers[id]))) Visit(source);
+                }
+                foreach (var p in providers.Values.Where(p => p.IsFinalOutputSource()
+                    || p is IClipValueEndpointProvider { IsExport: true, Enabled: true }
+                        && p.GetMainInputSource() != IEffectProvider.NoConnectionGUID.ToString())) Visit(p.Id);
+                return active;
+            }
 
             var result = new HashSet<Guid>();
-            var current = finalProvider;
-            while (result.Add(current.Id))
+            foreach (var finalProvider in providers.Values.Where(p => p.IsFinalOutputSource()))
             {
-                var source = current.GetMainInputSource();
-                if (source == IEffectProvider.InputAnchorGUID.ToString()) return result;
-                current = providers[Guid.Parse(source)];
+                var current = finalProvider;
+                while (result.Add(current.Id))
+                {
+                    var source = current.GetMainInputSource();
+                    if (source == IEffectProvider.InputAnchorGUID.ToString()) break;
+                    current = providers[Guid.Parse(source)];
+                }
             }
-            throw new InvalidOperationException($"Picture binding graph contains a cycle ending at provider {current.Id}.");
+            return result;
         }
 
         /// <summary>
@@ -777,29 +995,102 @@ namespace projectFrameCut.Render.Effect
             IDictionary<Guid, IEffectProvider>? effectProviders,
             IEffectProvider newProvider,
             EffectTarget effectTarget)
+            => AutoConnectProviderToOutput(effectProviders, newProvider, effectTarget, null);
+
+        public static void AutoConnectProviderToOutput(
+            IDictionary<Guid, IEffectProvider>? effectProviders,
+            IEffectProvider newProvider,
+            EffectTarget effectTarget,
+            EffectFieldTypeResolution? types)
         {
             if (effectProviders is null) throw new ArgumentNullException(nameof(effectProviders));
-            if (!newProvider.HasMainPictureInput())
+            if (newProvider.Stage == EffectStage.Render && newProvider.TypeOfEffect is EffectType.AudioNormalEffect
+                or EffectType.AudioContinuousEffect or EffectType.ClipPositionProvider or EffectType.ContinuousClipPositionProvider)
+            {
+                string field = newProvider.TypeOfEffect is EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect
+                    ? RenderOutputProvider.AudioKey : RenderOutputProvider.PositionKey;
+                var contentType = field == RenderOutputProvider.AudioKey
+                    ? EffectArgumentFieldType.AudioSample : EffectArgumentFieldType.SizeAndPosition;
+                types ??= new EffectFieldTypeResolution(effectProviders.ToDictionary());
+                var outputs = newProvider.GetOutputFields().Where(p =>
+                    EffectFieldTypes.AreCompatible(types.GetOutputType(newProvider, p.Key), contentType)).ToArray();
+                if (newProvider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)
+                    && EffectFieldTypes.AreCompatible(contentType, types.GetInputType(newProvider, EffectProviderAnchorExtensions.InputKey))
+                    && outputs.Length == 1)
+                {
+                    var output = RenderOutputProvider.Ensure(effectProviders);
+                    newProvider.SetMainInputSource(output.AnchorsBindingState.GetValueOrDefault(field)
+                        ?? (field == RenderOutputProvider.AudioKey ? ValueProviderFrameContext.ClipAudioProviderId : ValueProviderFrameContext.ClipPositionProviderId));
+                    output.SetFieldBinding(field, newProvider is IMultipleOutputEffectProvider
+                        ? EffectProviderOutputExtensions.CreateOutputSourceId(newProvider.Id, outputs[0].Key) : newProvider.Id.ToString());
+                    return;
+                }
+            }
+            if (newProvider.TypeOfEffect == EffectType.MixtureProvider)
+            {
+                Compose.MixtureBindings.EnsureSources(effectProviders);
+                var previous = effectProviders.Values.FirstOrDefault(p => p.Id != newProvider.Id && p.Stage == EffectStage.Composition && p.IsFinalOutputSource());
+                newProvider.SetFieldBinding(MixtureProviderBase.UpperInputKey, previous?.GetFinalOutputSourceId()
+                    ?? effectProviders.Values.OfType<Compose.MixtureSourceProvider>().First(p => !p.IsUnder).Id.ToString());
+                newProvider.SetFieldBinding(MixtureProviderBase.LowerInputKey,
+                    effectProviders.Values.OfType<Compose.MixtureSourceProvider>().First(p => p.IsUnder).Id.ToString());
+                SetFinalOutput(effectProviders, newProvider.Id, EffectStage.Composition);
+                return;
+            }
+            if (!newProvider.Target.HasFlag(EffectTarget.ValueProvider)
+                && newProvider.Stage is not (EffectStage.Render or EffectStage.VectorContent or EffectStage.Text))
             {
                 newProvider.DisconnectMainInput();
                 newProvider.SetFinalOutputSource(false);
                 return;
             }
-            var lastProvider = effectProviders.Values
-                .FirstOrDefault(b => b.IsFinalOutputSource()
-                                   && AreTargetsCompatible(b.Target, effectTarget)
-                                   && b.Id != newProvider.Id);
-
-            foreach (var provider in effectProviders.Values) provider.SetFinalOutputSource(false);
+            var stage = newProvider.Stage;
+            var lastProvider = effectProviders.Values.FirstOrDefault(p => p.Id != newProvider.Id && p.IsFinalOutputSource()
+                && p.Stage == stage);
+            var proposedSource = lastProvider?.GetFinalOutputSourceId() ?? IEffectProvider.InputAnchorGUID.ToString();
+            var all = effectProviders.ToDictionary();
+            all[newProvider.Id] = newProvider;
+            types ??= new EffectFieldTypeResolution(all, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+            {
+                [newProvider.Id] = new Dictionary<string, string>(newProvider.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = proposedSource },
+            });
+            bool pictureInput = newProvider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)
+                && EffectFieldTypes.AreCompatible(stage.GetContentType(), types.GetInputType(newProvider, EffectProviderAnchorExtensions.InputKey));
+            if (!pictureInput || !newProvider.TryGetOutputField(null, out _)
+                || !EffectFieldTypes.AreCompatible(types.GetOutputType(newProvider), stage.GetContentType()))
+            {
+                if (pictureInput)
+                    newProvider.SetMainInputSource(effectProviders.Values.FirstOrDefault(p => p.Id != newProvider.Id
+                        && p.IsFinalOutputSource() && p.CanConnectContent(newProvider, p.GetFinalOutputFieldId(), types))?.GetFinalOutputSourceId()
+                        ?? IEffectProvider.InputAnchorGUID.ToString());
+                else newProvider.DisconnectMainInput();
+                newProvider.SetFinalOutputSource(false);
+                return;
+            }
+            var lastSource = lastProvider?.GetFinalOutputSourceId();
+            if (lastProvider is not null && !lastProvider.CanConnectContent(newProvider, lastProvider.GetFinalOutputFieldId(), types))
+            {
+                // Specialized native effects must precede the evaluated VectorPicture effects.
+                var roots = effectProviders.Values.Where(p => p.Id != newProvider.Id
+                    && p.Stage == stage
+                    && p.GetMainInputSource() == IEffectProvider.InputAnchorGUID.ToString()).ToArray();
+                if (roots.Length == 0 || roots.Any(root => !newProvider.CanConnectContent(root)))
+                    throw new ArgumentException("Incompatible native content effect.");
+                newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+                foreach (var root in roots) root.SetMainInputSource(newProvider.Id);
+                newProvider.SetFinalOutputSource(false);
+                return;
+            }
+            foreach (var provider in effectProviders.Values.Where(p => p.Stage == stage)) provider.SetFinalOutputSource(false);
             if (lastProvider != null)
             {
-                newProvider.SetMainInputSource(lastProvider.Id);
+                newProvider.SetMainInputSource(lastSource!);
             }
             else
             {
                 newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
             }
-            newProvider.SetFinalOutputSource(true);
+            newProvider.SetFinalOutputSource(true, null, types);
         }
 
         /// <summary>Inserts a picture provider immediately after the source picture, preserving every fan-out branch.</summary>
@@ -807,17 +1098,30 @@ namespace projectFrameCut.Render.Effect
             IDictionary<Guid, IEffectProvider> effectProviders,
             IEffectProvider newProvider)
         {
-            if (!newProvider.HasMainPictureInput())
+            var stage = newProvider.Stage;
+            var all = effectProviders.ToDictionary();
+            all[newProvider.Id] = newProvider;
+            var types = new EffectFieldTypeResolution(all, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+            {
+                [newProvider.Id] = new Dictionary<string, string>(newProvider.AnchorsBindingState)
+                { [EffectProviderAnchorExtensions.InputKey] = IEffectProvider.InputAnchorGUID.ToString() },
+            });
+            if (!newProvider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)
+                || !EffectFieldTypes.AreCompatible(stage.GetContentType(), types.GetInputType(newProvider, EffectProviderAnchorExtensions.InputKey))
+                || !newProvider.TryGetOutputField(null, out _)
+                || !EffectFieldTypes.AreCompatible(types.GetOutputType(newProvider), stage.GetContentType()))
                 return;
 
             var roots = effectProviders.Values
                 .Where(provider => provider.Id != newProvider.Id
+                    && provider.Stage == newProvider.Stage
                     && provider.GetMainInputSource() == IEffectProvider.InputAnchorGUID.ToString())
                 .ToList();
             var hasFinalOutput = effectProviders.Values
-                .Any(provider => provider.Id != newProvider.Id && provider.IsFinalOutputSource());
+                .Any(provider => provider.Id != newProvider.Id && provider.Stage == newProvider.Stage && provider.IsFinalOutputSource());
+            if (roots.Any(root => !newProvider.CanConnectContent(root, null, types))) throw new ArgumentException("Incompatible content effect.");
             newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
-            newProvider.SetFinalOutputSource(!hasFinalOutput);
+            newProvider.SetFinalOutputSource(!hasFinalOutput, null, types);
             foreach (var root in roots) root.SetMainInputSource(newProvider.Id);
         }
 
@@ -838,7 +1142,14 @@ namespace projectFrameCut.Render.Effect
         {
             foreach (var provider in providers)
             {
+                if (provider is ClipArgumentProvider clipArguments)
+                {
+                    clipArguments.ClearRuntimeFields();
+                    continue;
+                }
                 var fields = provider.Fields ?? [];
+                foreach (var input in provider.InFields.Where(p => p.Key != EffectProviderAnchorExtensions.InputKey))
+                    if (!fields.ContainsKey(input.Key)) fields[input.Key] = input.Value;
                 foreach (var fieldKey in fields.Keys.ToList())
                 {
                     var field = fields[fieldKey];
@@ -846,7 +1157,7 @@ namespace projectFrameCut.Render.Effect
                     {
                         StaticEffectArgumentField staticField => staticField.Value,
                         DynamicEffectParamField dynamicField => dynamicField.StaticFallbackValue,
-                        _ => field.DefaultValue,
+                        _ => field.TypeContract is null ? field.DefaultValue : EffectFieldTypes.DefaultValue(field),
                     };
 
                     if (provider.TryGetFieldBinding(fieldKey, out var sourceId))
@@ -854,6 +1165,8 @@ namespace projectFrameCut.Render.Effect
                         {
                             Id = fieldKey,
                             FieldType = field.FieldType,
+                            TypeContract = field.TypeContract,
+                            DataFormat = field.DataFormat,
                             BoundProviderId = sourceId,
                             StaticFallbackValue = fallback,
                             DefaultValue = field.DefaultValue,
@@ -867,7 +1180,11 @@ namespace projectFrameCut.Render.Effect
                         {
                             Id = fieldKey,
                             FieldType = field.FieldType,
-                            Value = EffectParamConvert.Normalize(fallback) ?? new object(),
+                            TypeContract = field.TypeContract,
+                            DataFormat = field.DataFormat,
+                            Value = (field.TypeContract is not null ? EffectFieldTypes.ConvertInput(field.FieldType, fallback)
+                                : field.FieldType.HasFlag(EffectArgumentFieldType.Any) ? fallback : EffectParamConvert.Normalize(fallback))
+                                ?? (field.TypeContract is null ? new object() : null!),
                             DefaultValue = field.DefaultValue,
                             MinValue = field.MinValue,
                             MaxValue = field.MaxValue,
@@ -879,25 +1196,33 @@ namespace projectFrameCut.Render.Effect
             }
         }
 
-        public static void SetFinalOutput(IDictionary<Guid, IEffectProvider> providers, Guid? providerId)
+        public static void SetFinalOutput(IDictionary<Guid, IEffectProvider> providers, Guid? providerId,
+            EffectStage stage = EffectStage.Render, string? outputId = null, EffectFieldTypeResolution? types = null)
         {
+            if (providerId.HasValue) types ??= new EffectFieldTypeResolution(providers.ToDictionary());
             if (providerId.HasValue
                 && (!providers.TryGetValue(providerId.Value, out var selected)
-                    || !selected.OutField.FieldType.HasFlag(EffectArgumentFieldType.IPicture)))
+                    || !DynamicEffectBindings.CanBindOutput(selected)
+                    || !selected.TryGetOutputField(outputId, out _)
+                    || !EffectFieldTypes.AreCompatible(types!.GetOutputType(selected, outputId), selected.Stage.GetContentType())))
             {
                 throw new ArgumentException($"Provider '{providerId}' cannot be used as the final picture output.", nameof(providerId));
             }
 
-            foreach (var provider in providers.Values)
-                provider.SetFinalOutputSource(providerId.HasValue && provider.Id == providerId.Value);
+            if (providerId.HasValue) stage = providers[providerId.Value].Stage;
+            foreach (var provider in providers.Values.Where(p => p.Stage == stage))
+                provider.SetFinalOutputSource(providerId.HasValue && provider.Id == providerId.Value,
+                    providerId.HasValue && provider.Id == providerId.Value ? outputId : null, types);
         }
 
         public static void RemoveReferencesTo(IEnumerable<IEffectProvider> providers, string sourceId)
         {
+            bool Matches(string source) => source == sourceId || Guid.TryParse(sourceId, out var id)
+                && EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var sourceProvider, out _) && sourceProvider == id;
             foreach (var provider in providers)
             {
-                if (provider.GetMainInputSource() == sourceId) provider.DisconnectMainInput();
-                foreach (var binding in provider.EnumerateFieldBindings().Where(b => b.Value == sourceId).ToList())
+                if (Matches(provider.GetMainInputSource())) provider.DisconnectMainInput();
+                foreach (var binding in provider.EnumerateFieldBindings().Where(b => Matches(b.Value)).ToList())
                     provider.ClearFieldBinding(binding.Key);
             }
         }
@@ -909,14 +1234,11 @@ namespace projectFrameCut.Render.Effect
             return providers.Remove(providerId);
         }
 
-        private const string InputNodeId = "INPUT";
-        private const string OutputNodeId = "OUTPUT";
-
         /// <summary>
         /// 生成一张描述该 Clip 的 EffectProvider 渲染绑定关系的 Mermaid 图。
         /// 反映 <see cref="IEffectProvider.Build()"/> 实际构建 effect 时使用的 <see cref="IEffectProvider.Fields"/>
         /// 绑定关系（动态字段绑定 / 内联值提供器），以及 <see cref="IEffectProvider.AnchorsBindingState"/>
-        /// 中的输入/输出锚点连接。图中包含"输入（源画面）"与"输出（最终画面）"两个终端节点，
+        /// 中的输入/输出锚点连接。图中包含各阶段的输入和输出终端节点，
         /// 连接线上标注接收侧的锚点键 / 字段 Id。
         /// </summary>
         /// <remarks>
@@ -924,6 +1246,10 @@ namespace projectFrameCut.Render.Effect
         /// 因此能反映内联后的真实绑定状态，但无法表达渲染后实际子效果条目的顺序。
         /// </remarks>
         public static string GenerateRenderTimeMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+            => GenerateRenderTimeMermaidDiagram(effectProviders, null);
+
+        public static string GenerateRenderTimeMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders,
+            IReadOnlyList<EffectGroup>? groups)
         {
             if (effectProviders is null || effectProviders.Count == 0)
                 return "graph TD;\n    empty[\"无 EffectProvider 数据\"];";
@@ -937,8 +1263,8 @@ namespace projectFrameCut.Render.Effect
                 var flags = p.Target.HasFlag(EffectTarget.ValueProvider) ? " (值提供器)" : "";
                 if (!p.Enabled) flags += " (已禁用)";
                 return $"{p.TypeName}: {displayName}{flags}";
-            });
-            AppendTerminalNodes(sb);
+            }, groups);
+            AppendTerminalNodes(sb, effectProviders.Values);
             AppendAnchorEdges(sb, effectProviders, nodeByProvider);
             AppendFieldBindingEdges(sb, effectProviders, nodeByProvider, useRenderTimeFields: true);
             return sb.ToString();
@@ -948,12 +1274,16 @@ namespace projectFrameCut.Render.Effect
         /// 生成一张描述该 Clip 的 EffectProvider 存储绑定关系的 Mermaid 图。
         /// 直接反映规范化后的 <see cref="IEffectProvider.AnchorsBindingState"/>：
         /// 主图片输入、最终输出标记，以及以普通 field id 为 key 的值来源配置。
-        /// 同样包含"输入（源画面）"/"输出（最终画面）"终端节点，连接线上标注锚点键 / 字段 Id。
+        /// 包含各阶段的输入和输出终端节点，连接线上标注锚点键 / 字段 Id。
         /// </summary>
         /// <remarks>
         /// 该图表示磁盘/保存模型，不反映渲染时内联后的字段绑定状态。
         /// </remarks>
         public static string GenerateStoredMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+            => GenerateStoredMermaidDiagram(effectProviders, null);
+
+        public static string GenerateStoredMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders,
+            IReadOnlyList<EffectGroup>? groups)
         {
             if (effectProviders is null || effectProviders.Count == 0)
                 return "graph TD;\n    empty[\"无 EffectProvider 数据\"];";
@@ -961,8 +1291,8 @@ namespace projectFrameCut.Render.Effect
             var sb = new StringBuilder();
             sb.AppendLine("graph TD;");
 
-            var nodeByProvider = AssignNodes(sb, effectProviders.Values, p => p.TypeName);
-            AppendTerminalNodes(sb);
+            var nodeByProvider = AssignNodes(sb, effectProviders.Values, p => p.TypeName, groups);
+            AppendTerminalNodes(sb, effectProviders.Values);
             AppendAnchorEdges(sb, effectProviders, nodeByProvider);
             AppendFieldBindingEdges(sb, effectProviders, nodeByProvider, useRenderTimeFields: false);
             return sb.ToString();
@@ -971,25 +1301,62 @@ namespace projectFrameCut.Render.Effect
         /// <summary>
         /// 为每个 provider 生成节点定义，返回 <see cref="Guid"/> → Mermaid 节点 id 的映射。
         /// </summary>
-        private static Dictionary<Guid, string> AssignNodes(StringBuilder sb, IEnumerable<IEffectProvider> providers, Func<IEffectProvider, string> labelBuilder)
+        private static Dictionary<Guid, string> AssignNodes(StringBuilder sb, IEnumerable<IEffectProvider> providers,
+            Func<IEffectProvider, string> labelBuilder, IReadOnlyList<EffectGroup>? groups)
         {
             var nodeByProvider = new Dictionary<Guid, string>();
+            var labels = new Dictionary<Guid, string>();
             int counter = 0;
             foreach (var p in providers)
             {
                 nodeByProvider[p.Id] = "P" + counter++;
-                sb.AppendLine($"    {nodeByProvider[p.Id]}[\"{Escape(labelBuilder(p))}\"];");
+                labels[p.Id] = labelBuilder(p);
             }
+            AppendMermaidNodes(sb, nodeByProvider, labels, groups);
             return nodeByProvider;
         }
 
-        /// <summary>
-        /// 定义"输入（源画面）"与"输出（最终画面）"两个终端节点。
-        /// </summary>
-        private static void AppendTerminalNodes(StringBuilder sb)
+        /// <summary>按 Effect 组层级输出节点，未分组节点留在图的顶层。</summary>
+        public static void AppendMermaidNodes(StringBuilder sb, IReadOnlyDictionary<Guid, string> nodeIds,
+            IReadOnlyDictionary<Guid, string> labels, IReadOnlyList<EffectGroup>? groups = null)
         {
-            sb.AppendLine($"    {InputNodeId}[\"输入 (源画面)\"];");
-            sb.AppendLine($"    {OutputNodeId}[\"输出 (最终画面)\"];");
+            var written = new HashSet<Guid>();
+            void AppendNode(Guid id, string indent)
+            {
+                if (nodeIds.TryGetValue(id, out var nodeId) && written.Add(id))
+                    sb.AppendLine($"{indent}{nodeId}[\"{EscapeMermaidText(labels[id])}\"];");
+            }
+
+            if (groups is { Count: > 0 })
+            {
+                var groupById = groups.Where(g => EffectGroupHelper.Members(g, groups).Any(nodeIds.ContainsKey))
+                    .ToDictionary(g => g.Id);
+                var childIds = groups.SelectMany(g => g.ChildGroupIds).ToHashSet();
+                void AppendGroup(EffectGroup group, string indent)
+                {
+                    sb.AppendLine($"{indent}subgraph G{group.Id:N}[\"{EscapeMermaidText(string.IsNullOrWhiteSpace(group.Name) ? "Effect 组" : group.Name)}\"]");
+                    foreach (var id in group.ProviderIds) AppendNode(id, indent + "    ");
+                    foreach (var id in group.ChildGroupIds)
+                        if (groupById.TryGetValue(id, out var child)) AppendGroup(child, indent + "    ");
+                    sb.AppendLine($"{indent}end");
+                }
+                foreach (var group in groupById.Values.Where(g => !childIds.Contains(g.Id)))
+                    AppendGroup(group, "    ");
+            }
+
+            foreach (var id in nodeIds.Keys) AppendNode(id, "    ");
+        }
+
+        /// <summary>
+        /// 定义各阶段的输入和输出终端节点。
+        /// </summary>
+        private static void AppendTerminalNodes(StringBuilder sb, IEnumerable<IEffectProvider> providers)
+        {
+            foreach (var stage in providers.Select(p => p.Stage).Distinct())
+            {
+                sb.AppendLine($"    INPUT_{stage}[\"输入 ({stage})\"];");
+                sb.AppendLine($"    OUTPUT_{stage}[\"输出 ({stage})\"];");
+            }
         }
 
         /// <summary>
@@ -1005,21 +1372,24 @@ namespace projectFrameCut.Render.Effect
                 var input = p.GetMainInputSource();
                 if (input == IEffectProvider.InputAnchorGUID.ToString())
                 {
-                    anchorLines.Add($"    {InputNodeId} -->|\"{Escape(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
+                    anchorLines.Add($"    INPUT_{p.Stage} -->|\"{EscapeMermaidText(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
                 }
-                else if (Guid.TryParse(input, out var sourceId) && effectProviders.ContainsKey(sourceId))
+                else if (EffectProviderOutputExtensions.TryParseOutputSourceId(input, out var sourceId, out var outputId) && effectProviders.ContainsKey(sourceId))
                 {
-                    anchorLines.Add($"    {nodeByProvider[sourceId]} -->|\"{Escape(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
+                    anchorLines.Add($"    {nodeByProvider[sourceId]} -->|\"{EscapeMermaidText(outputId ?? EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
                 }
 
                 if (p.IsFinalOutputSource())
                 {
-                    anchorLines.Add($"    {nodeByProvider[p.Id]} -->|\"{Escape(EffectProviderAnchorExtensions.OutputKey)}\"| {OutputNodeId};");
+                    anchorLines.Add($"    {nodeByProvider[p.Id]} -->|\"{EscapeMermaidText(p.GetFinalOutputFieldId() ?? EffectProviderAnchorExtensions.OutputKey)}\"| OUTPUT_{p.Stage};");
                 }
             }
 
-            if (!effectProviders.Values.Any(p => p.IsFinalOutputSource()))
-                anchorLines.Add($"    {InputNodeId} -->|\"Picture\"| {OutputNodeId};");
+            foreach (var stage in effectProviders.Values.Select(p => p.Stage).Distinct())
+            {
+                if (!effectProviders.Values.Any(p => p.Stage == stage && p.IsFinalOutputSource()))
+                    anchorLines.Add($"    INPUT_{stage} --> OUTPUT_{stage};");
+            }
 
             foreach (var line in anchorLines.Distinct())
                 sb.AppendLine(line);
@@ -1058,11 +1428,11 @@ namespace projectFrameCut.Render.Effect
                             _ => null,
                         };
                         if (sourceIdString is null) continue;
-                        if (Guid.TryParse(sourceIdString, out var sourceId)
+                        if (EffectProviderOutputExtensions.TryParseOutputSourceId(sourceIdString, out var sourceId, out var outputId)
                             && effectProviders.TryGetValue(sourceId, out var source)
-                            && source.Target.HasFlag(EffectTarget.ValueProvider))
+                            && source is not ClipArgumentProvider)
                         {
-                            sourceIdAndFieldId.Add((sourceId, field.Id, field is IValueProviderEffect ? "内联" : "动态"));
+                            sourceIdAndFieldId.Add((sourceId, outputId is null ? field.Id : $"{outputId} → {field.Id}", field is IValueProviderEffect ? "内联" : "动态"));
                         }
                     }
                 }
@@ -1072,20 +1442,20 @@ namespace projectFrameCut.Render.Effect
                     foreach (var kvp in consumer.AnchorsBindingState)
                     {
                         if (kvp.Key == EffectProviderAnchorExtensions.InputKey
-                            || kvp.Key == EffectProviderAnchorExtensions.OutputKey)
+                            || EffectProviderAnchorExtensions.IsOutputBindingKey(kvp.Key))
                             continue;
-                        if (Guid.TryParse(kvp.Value, out var sourceId)
+                        if (EffectProviderOutputExtensions.TryParseOutputSourceId(kvp.Value, out var sourceId, out var outputId)
                             && effectProviders.TryGetValue(sourceId, out var source)
-                            && source.Target.HasFlag(EffectTarget.ValueProvider))
+                            && source is not ClipArgumentProvider)
                         {
-                            sourceIdAndFieldId.Add((sourceId, kvp.Key, "动态"));
+                            sourceIdAndFieldId.Add((sourceId, outputId is null ? kvp.Key : $"{outputId} → {kvp.Key}", "动态"));
                         }
                     }
                 }
 
                 foreach (var (sourceId, fieldId, mode) in sourceIdAndFieldId)
                 {
-                    fieldEdges.Add($"    {nodeByProvider[sourceId]} -->|\"{Escape(fieldId)} ({mode})\"| {nodeByProvider[consumer.Id]};");
+                    fieldEdges.Add($"    {nodeByProvider[sourceId]} -->|\"{EscapeMermaidText(fieldId)} ({mode})\"| {nodeByProvider[consumer.Id]};");
                 }
             }
 
@@ -1094,18 +1464,21 @@ namespace projectFrameCut.Render.Effect
         }
 
         /// <summary>
-        /// 转义 Mermaid 标签文本中需要转义的字符（引号、方括号、大括号）。
+        /// 转义 Mermaid 节点、连线与分组标题。
         /// </summary>
-        private static string Escape(string text)
+        public static string EscapeMermaidText(string text)
         {
             if (text is null) return "";
             return text
-                .Replace("\\", "\\\\")
-                .Replace("\"", "\\\"")
-                .Replace("[", "\\[")
-                .Replace("]", "\\]")
-                .Replace("{", "\\{")
-                .Replace("}", "\\}");
+                .Replace("#", "#35;")
+                .Replace("&", "#38;")
+                .Replace("\"", "#quot;")
+                .Replace("<", "#60;")
+                .Replace(">", "#62;")
+                .Replace("|", "#124;")
+                .Replace("\r\n", "<br/>")
+                .Replace("\r", "<br/>")
+                .Replace("\n", "<br/>");
         }
     }
 }

@@ -21,7 +21,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
     }
 
     /// <summary>
-    /// Flat 14-float representation of a render primitive for GPU upload.
+    /// Primitive data for GPU upload; alpha occupies the low half of its aligned slot.
     /// Layout: r,g,b,a, d0..d5, bboxMinX, bboxMinY, bboxMaxX, bboxMaxY.
     /// The bounding box is computed once on the CPU so the GPU kernel can
     /// cheaply cull primitives that do not cover the current pixel.
@@ -29,7 +29,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
     internal readonly record struct GpuPrimitive(
         int Type,
         int Layer,
-        float R, float G, float B, float A,
+        float R, float G, float B, Half A,
         float D0, float D1, float D2, float D3, float D4, float D5,
         float BBoxMinX, float BBoxMinY, float BBoxMaxX, float BBoxMaxY
     );
@@ -153,12 +153,30 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             }
         }
 
+        private static void AppendContourEdges(List<float> edges, Point[][]? contours,
+            float ox, float oy, float sx, float sy,
+            ref float bbMinX, ref float bbMinY, ref float bbMaxX, ref float bbMaxY)
+        {
+            if (contours is null) return;
+            Span<(float x, float y)> buffer = stackalloc (float, float)[256];
+            foreach (var contour in contours)
+            {
+                if (contour.Length < 3) continue;
+                Span<(float x, float y)> pts = contour.Length <= buffer.Length
+                    ? buffer[..contour.Length]
+                    : new (float, float)[contour.Length];
+                for (int i = 0; i < contour.Length; i++)
+                    pts[i] = (CX(contour[i].X, ox, sx), CY(contour[i].Y, oy, sy));
+                AppendContourEdges(edges, pts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
+            }
+        }
+
         /// <summary>Adds a PolygonFill primitive for a single contour (no holes).</summary>
         private static void AddPolygonFill(List<GpuPrimitive> primitives, List<float> edges,
             ReadOnlySpan<(float x, float y)> pts,
-            ushort r, ushort g, ushort b, float a, int layer)
+            ushort r, ushort g, ushort b, Half a, int layer)
         {
-            if (pts.Length < 3 || a <= 0f) return;
+            if (pts.Length < 3 || a <= Half.Zero) return;
 
             int edgeStart = edges.Count / 4;
             float bbMinX = float.MaxValue, bbMinY = float.MaxValue;
@@ -180,9 +198,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         private static void AddStrokeLine(List<GpuPrimitive> primitives,
             float x0, float y0, float x1, float y1,
             float thickness,
-            ushort r, ushort g, ushort b, float a, int layer)
+            ushort r, ushort g, ushort b, Half a, int layer)
         {
-            if (thickness <= 0f || a <= 0f) return;
+            if (thickness <= 0f || a <= Half.Zero) return;
             float halfT = thickness * 0.5f;
             // Stroke bbox = segment endpoints expanded by half thickness.
             float bbMinX = MathF.Min(x0, x1) - halfT;
@@ -203,7 +221,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         private static void AddLineStroke(List<GpuPrimitive> primitives, StraightLineVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
-            if (s.Thickness <= 0f || s.StrokeA <= 0f) return;
+            if (s.Thickness <= 0f || s.StrokeA <= Half.Zero) return;
             AddStrokeLine(primitives,
                 CX(s.X1, ox, sx), CY(s.Y1, oy, sy),
                 CX(s.X2, ox, sx), CY(s.Y2, oy, sy),
@@ -220,7 +238,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             float rh = s.Height * sy;
             float x0 = rx, y0 = ry, x1 = rx + rw, y1 = ry + rh;
 
-            if (s.FillA > 0f)
+            if (s.FillA > Half.Zero)
             {
                 Span<(float x, float y)> verts = stackalloc (float, float)[4]
                 {
@@ -229,7 +247,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                 AddPolygonFill(primitives, edges, verts, s.FillR, s.FillG, s.FillB, s.FillA, layer);
             }
 
-            if (s.Thickness > 0f && s.StrokeA > 0f)
+            if (s.Thickness > 0f && s.StrokeA > Half.Zero)
             {
                 float t = s.Thickness;
                 AddStrokeLine(primitives, x0, y0, x1, y0, t, s.StrokeR, s.StrokeG, s.StrokeB, s.StrokeA, layer);
@@ -292,10 +310,10 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             for (int i = 0; i < cornerSegs; i++)
             { float a = MathF.PI + MathF.PI * 0.5f * i / cornerSegs; pts[idx++] = (cx1 + radius * MathF.Cos(a), cy1 + radius * MathF.Sin(a)); }
 
-            if (s.FillA > 0f)
+            if (s.FillA > Half.Zero)
                 AddPolygonFill(primitives, edges, pts.AsSpan(), s.FillR, s.FillG, s.FillB, s.FillA, layer);
 
-            if (s.Thickness > 0f && s.StrokeA > 0f)
+            if (s.Thickness > 0f && s.StrokeA > Half.Zero)
             {
                 float t = s.Thickness;
                 for (int i = 0; i < totalVerts; i++)
@@ -319,7 +337,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 
             int segs = Math.Max(12, (int)(MathF.PI * MathF.Sqrt(rx + ry) * 0.5f));
 
-            if (s.FillA > 0f)
+            if (s.FillA > Half.Zero)
             {
                 var pts = new (float x, float y)[segs];
                 for (int i = 0; i < segs; i++)
@@ -330,7 +348,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                 AddPolygonFill(primitives, edges, pts.AsSpan(), s.FillR, s.FillG, s.FillB, s.FillA, layer);
             }
 
-            if (s.Thickness > 0f && s.StrokeA > 0f)
+            if (s.Thickness > 0f && s.StrokeA > Half.Zero)
             {
                 float t = s.Thickness;
                 float prevX = cx + rx, prevY = cy;
@@ -349,7 +367,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         private static void AddCubicBezier(List<GpuPrimitive> primitives, CubicBezierVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
-            if (s.Thickness <= 0f || s.StrokeA <= 0f) return;
+            if (s.Thickness <= 0f || s.StrokeA <= Half.Zero) return;
 
             float t = s.Thickness;
             var pts = new List<(float x, float y)>();
@@ -404,7 +422,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         private static void AddQuadraticBezier(List<GpuPrimitive> primitives, QuadraticBezierVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
-            if (s.Thickness <= 0f || s.StrokeA <= 0f) return;
+            if (s.Thickness <= 0f || s.StrokeA <= Half.Zero) return;
 
             float t = s.Thickness;
             var pts = new List<(float x, float y)>();
@@ -451,7 +469,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         private static void AddArc(List<GpuPrimitive> primitives, ArcVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
-            if (s.Thickness <= 0f || s.StrokeA <= 0f) return;
+            if (s.Thickness <= 0f || s.StrokeA <= Half.Zero) return;
 
             float cx = CX(s.X, ox, sx);
             float cy = CY(s.Y, oy, sy);
@@ -491,29 +509,18 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             for (int i = 0; i < pts.Length; i++)
                 canvasPts[i] = (CX(pts[i].X, ox, sx), CY(pts[i].Y, oy, sy));
 
-            if (s.FillA > 0f)
+            if (s.FillA > Half.Zero)
             {
-                // Single PolygonFill primitive: outer contour + hole contours
-                // in one edge range; the non-zero winding rule in the kernel
-                // carves the holes out (same rule as the CPU scanline filler).
+                // Keep all contours in one fill to preserve their original winding.
                 int edgeStart = edges.Count / 4;
                 float bbMinX = float.MaxValue, bbMinY = float.MaxValue;
                 float bbMaxX = float.MinValue, bbMaxY = float.MinValue;
                 AppendContourEdges(edges, canvasPts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
 
-                if (s.Holes is { Length: > 0 })
-                {
-                    foreach (var hole in s.Holes!)
-                    {
-                        if (hole.Length < 3) continue;
-                        Span<(float x, float y)> holePts = hole.Length <= 256
-                            ? stackalloc (float, float)[hole.Length]
-                            : new (float, float)[hole.Length];
-                        for (int i = 0; i < hole.Length; i++)
-                            holePts[i] = (CX(hole[i].X, ox, sx), CY(hole[i].Y, oy, sy));
-                        AppendContourEdges(edges, holePts, ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
-                    }
-                }
+                AppendContourEdges(edges, s.AdditionalContours, ox, oy, sx, sy,
+                    ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
+                AppendContourEdges(edges, s.Holes, ox, oy, sx, sy,
+                    ref bbMinX, ref bbMinY, ref bbMaxX, ref bbMaxY);
 
                 int edgeCount = edges.Count / 4 - edgeStart;
                 primitives.Add(new GpuPrimitive(
@@ -523,7 +530,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                     bbMinX, bbMinY, bbMaxX, bbMaxY));
             }
 
-            if (s.Thickness > 0f && s.StrokeA > 0f)
+            if (s.Thickness > 0f && s.StrokeA > Half.Zero)
             {
                 float t = s.Thickness;
                 for (int i = 0; i < pts.Length; i++)
@@ -539,7 +546,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
         private static void AddPolyline(List<GpuPrimitive> primitives, PolylineVectorSegment s,
             float ox, float oy, float sx, float sy, int layer, int seq)
         {
-            if (s.Thickness <= 0f || s.StrokeA <= 0f || s.Points.Length < 2) return;
+            if (s.Thickness <= 0f || s.StrokeA <= Half.Zero || s.Points.Length < 2) return;
 
             float t = s.Thickness;
             var pts = s.Points;
@@ -605,6 +612,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                     Points = Array.ConvertAll(s.Points, p => new Point(
                         p.X * cosA - p.Y * sinA,
                         p.X * sinA + p.Y * cosA)),
+                    AdditionalContours = s.AdditionalContours?.Select(contour => Array.ConvertAll(contour, p => new Point(
+                        p.X * cosA - p.Y * sinA,
+                        p.X * sinA + p.Y * cosA))).ToArray(),
                     Holes = s.Holes?.Select(h => Array.ConvertAll(h, p => new Point(
                         p.X * cosA - p.Y * sinA,
                         p.X * sinA + p.Y * cosA))).ToArray(),

@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -15,12 +15,12 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
-    public interface IClip : IDisposable
+    public interface IClip : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
         /// <summary>
         /// Mode of this clip. Mostly for compatibility purpose.
         /// </summary>
@@ -28,12 +28,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// The type name of this clip. You must override it when you're creating a new clip type in plugin.
         /// </summary>
-        public virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
+        public new virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
 
         /// <summary>
         /// The unique identifier of this clip.
         /// </summary>
-        public Guid Id { get; init; }
+        public new Guid Id { get; init; }
 
         /// <summary>
         /// The name of this clip. Mostly used for display purpose.
@@ -68,6 +68,17 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public uint Duration { get; set; }
 
+        /// <summary>Finite source length in native source frames; null for unbounded or unknown sources.</summary>
+        [JsonIgnore]
+        public virtual uint? SourceFrameCount => null;
+
+        public uint? GetAvailableSourceLength()
+        {
+            if (SourceFrameCount is not { } count) return null;
+            return ClipTiming.AvailableSourceLength(count, ClipType == ClipMode.VideoClip ? FrameTime : 0,
+                TryResolveProjectFrameRate(this, out var fps) ? fps : 0, RelativeStartFrame);
+        }
+
         /// <summary>
         /// The target width of this clip. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
         /// </summary>
@@ -84,6 +95,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The target Y-axis position of this clip in left-top corner. Related to <see cref="Project.ProjectJSONStructure.RelativeHeight"/>.
         /// </summary>
         public int TargetY { get; set; }
+        /// <summary>Clockwise rotation in degrees, applied by the compositor around the target rectangle's center.</summary>
+        public float Rotation { get; set; }
+        /// <summary>Opacity from 0 to 1, applied by the compositor.</summary>
+        public float Opacity { get; set; }
         /// <summary>
         /// The starting X-axis position of this clip in the source. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
         /// </summary>
@@ -146,6 +161,18 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public EffectProviderJSONStructure[]? EffectProviders { get; init; }
 
         /// <summary>
+        /// The stages that this clip supports.
+        /// </summary>
+        [JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages { get; }
+
+        /// <summary>
+        /// The effect stage plan for this clip. It defines the order and dependencies of the effects applied to this clip.
+        /// </summary>
+        [JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
+
+        /// <summary>
         /// The actual effects applied to this clip.
         /// </summary>
         [JsonIgnore]
@@ -156,6 +183,15 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         [JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+
+        [JsonIgnore]
+        public virtual IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields => ClipArgumentHandler.DefaultFields;
+
+        /// <summary>Creates a frame-local copy that borrows this clip's resources; do not dispose it separately.</summary>
+        public virtual IClip CopyForFrame() => ClipArgumentHandler.Copy(this);
+
+        /// <summary>Applies evaluated arguments to the clip used for the rest of this frame.</summary>
+        public virtual IClip HandleArguments(IReadOnlyDictionary<string, object> arguments) => ClipArgumentHandler.Handle(this, arguments);
 
         /// <summary>
         /// Get the path of the source file for this clip. May be null when <see cref="NeedFilePath"/> is false.
@@ -199,7 +235,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [DebuggerNonUserCode()]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
-            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, targetPPB);
+            => VectorPictureEffectProcessing.ReadFrameAtTarget(this, targetFrame, targetWidth, targetHeight, targetPPB);
 
         /// <summary>
         /// Gets the effective timeline duration for this clip after applying speed ratio/profile.
@@ -210,7 +246,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// Get a <see cref="ClipPositionTuple"/> of this clip.
         /// </summary>
-        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false);
+        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false, Rotation, Opacity);
 
         /// <summary>
         /// Returns true if the given draft-global frame is inside this clip's visible range.
@@ -390,100 +426,46 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
     internal sealed class SpeedVarianceProfile
     {
-        public required uint Duration { get; init; }
-        public required ISpeedVarianceProvider? Provider { get; init; }
-        public required uint EffectiveDurationFrames { get; init; }
+        public uint Duration { get; init; }
+        public ISpeedVarianceProvider? Provider { get; init; }
+        public uint EffectiveDurationFrames { get; init; }
+        public uint? SourceLength { get; init; }
+        public SpeedVarianceFrameMap? FrameMap { get; init; }
 
-        public ulong MapTimelineOffsetToSourceOffset(uint timelineOffset)
-        {
-            if (Duration == 0)
-            {
-                return 0;
-            }
-
-            if (Provider is null)
-            {
-                return Math.Min(timelineOffset, Duration - 1);
-            }
-
-            return MapTimelineOffsetWithProvider(timelineOffset);
-        }
-
-        private ulong MapTimelineOffsetWithProvider(uint timelineOffset)
-        {
-            ulong maxSourceOffset = Duration - 1;
-            ulong left = 0;
-            ulong right = maxSourceOffset;
-            ulong best = 0;
-
-            while (left <= right)
-            {
-                ulong mid = left + ((right - left) / 2);
-                uint mappedTarget = ResolveTargetFrameForSourceOffset((uint)mid);
-
-                if (mappedTarget <= timelineOffset)
-                {
-                    best = mid;
-                    if (mid == maxSourceOffset)
-                    {
-                        break;
-                    }
-
-                    left = mid + 1;
-                    continue;
-                }
-
-                if (mid == 0)
-                {
-                    break;
-                }
-
-                right = mid - 1;
-            }
-
-            return best;
-        }
-
-        private uint ResolveTargetFrameForSourceOffset(uint sourceOffset)
-        {
-            try
-            {
-                return Provider!.GetTargetFrame(sourceOffset);
-            }
-            catch
-            {
-                return sourceOffset;
-            }
-        }
+        public ulong MapTimelineOffsetToSourceOffset(uint timelineOffset) =>
+            FrameMap is { } map ? map.GetSourceFrame(timelineOffset)
+                : ClipTiming.SourceOffset(timelineOffset, Duration, Provider, EffectiveDurationFrames, SourceLength);
     }
 
     internal static class SpeedVarianceMapCache
     {
-        private static readonly ConditionalWeakTable<IClip, SpeedVarianceProfile> Cache = new();
-        private static readonly object CacheLock = new();
-
+        private sealed class CacheSlot { public SpeedVarianceProfile? Profile; }
+        private static readonly ConditionalWeakTable<IClip, CacheSlot> Cache = new();
         public static SpeedVarianceProfile GetOrBuild(IClip clip)
         {
-            lock (CacheLock)
+            var slot = Cache.GetValue(clip, _ => new CacheSlot());
+            lock (slot)
             {
-                if (Cache.TryGetValue(clip, out var cached)
-                    && cached.Duration == clip.Duration
-                    && ReferenceEquals(cached.Provider, clip.SpeedVarianceProviderInstance))
-                {
-                    return cached;
-                }
-
-                Cache.Remove(clip);
-                var rebuilt = Build(clip);
-                Cache.Add(clip, rebuilt);
-                return rebuilt;
+                uint? sourceLength = clip.SpeedVarianceProviderInstance is not null ? clip.GetAvailableSourceLength() : null;
+                if (slot.Profile is { } cached && cached.Provider == clip.SpeedVarianceProviderInstance
+                    && cached.Duration == clip.Duration && cached.SourceLength == sourceLength) return cached;
+                return slot.Profile = Build(clip, sourceLength);
             }
         }
 
-        private static SpeedVarianceProfile Build(IClip clip)
+        private static SpeedVarianceProfile Build(IClip clip, uint? sourceLength)
         {
             uint duration = clip.Duration;
             var provider = clip.SpeedVarianceProviderInstance;
+
+            if (provider is IDirectSpeedVarianceProvider direct)
+            {
+                var map = direct.GetFrameMap(duration, sourceLength);
+                return new SpeedVarianceProfile
+                {
+                    Duration = duration, Provider = provider, EffectiveDurationFrames = map.Length, FrameMap = map, SourceLength = sourceLength,
+                };
+            }
 
             if (duration == 0)
             {
@@ -505,30 +487,14 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
                 };
             }
 
-            uint effectiveDuration = ResolveEffectiveDuration(provider, duration);
+            uint effectiveDuration = ClipTiming.EffectiveDuration(duration, provider, sourceLength);
             return new SpeedVarianceProfile
             {
                 Duration = duration,
                 Provider = provider,
                 EffectiveDurationFrames = effectiveDuration,
+                SourceLength = sourceLength,
             };
-        }
-
-        private static uint ResolveEffectiveDuration(ISpeedVarianceProvider provider, uint duration)
-        {
-            try
-            {
-                uint effective = provider.GetEffectiveLength(duration);
-                if (effective > 0)
-                {
-                    return effective;
-                }
-            }
-            catch
-            {
-            }
-
-            return duration;
         }
     }
 

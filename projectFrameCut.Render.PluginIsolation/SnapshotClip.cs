@@ -11,6 +11,7 @@ internal sealed class SnapshotClip : IClip
 {
     public SnapshotClip(IsolationClipSnapshot source)
     {
+        SupportedStages = source.SupportedStages.Select(s => (EffectStage)s).ToArray();
         FromPlugin = source.FromPlugin;
         ClipType = (ClipMode)source.ClipType;
         TypeName = source.TypeName;
@@ -26,6 +27,8 @@ internal sealed class SnapshotClip : IClip
         TargetHeight = source.TargetHeight;
         TargetX = source.TargetX;
         TargetY = source.TargetY;
+        Rotation = source.Rotation;
+        Opacity = source.Opacity;
         StartingX = source.StartingX;
         StartingY = source.StartingY;
         FrameTime = source.FrameTime;
@@ -50,6 +53,8 @@ internal sealed class SnapshotClip : IClip
     public int TargetHeight { get; set; }
     public int TargetX { get; set; }
     public int TargetY { get; set; }
+    public float Rotation { get; set; }
+    public float Opacity { get; set; } = 1;
     public int StartingX { get; set; }
     public int StartingY { get; set; }
     public float FrameTime { get; init; }
@@ -61,6 +66,10 @@ internal sealed class SnapshotClip : IClip
     public EffectProviderJSONStructure[]? EffectProviders { get; init; }
     public IEffect[]? EffectsInstances { get; set; }
     public IEffectProvider[]? EffectProvidersInstances { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<EffectStage> SupportedStages { get; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IEffectStagePlan? EffectStagePlan { get; set; }
     public string? FilePath { get; set; }
     public bool NeedFilePath { get; }
     public Dictionary<string, object> ExtraData { get; set; }

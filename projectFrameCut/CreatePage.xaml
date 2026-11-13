@@ -2,7 +2,6 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.CreatePage"
-             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:l="clr-namespace:LocalizedResources"
              x:Name="CreateProjectPage"
              Title="{l:Localized Key=AppShell_CreateTab}">
@@ -24,7 +23,7 @@
                            FontAttributes="Bold" />
 
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto"
                           ColumnSpacing="12"
                           RowSpacing="10">
                         <Label Grid.Row="0"
@@ -37,36 +36,13 @@
                                ClearButtonVisibility="WhileEditing" />
 
                         <Label Grid.Row="1"
-                               Text="{l:Localized Key=CreatePage_TargetResolution}"
+                               Text="{l:Localized Key=CreatePage_AspectRatio}"
                                VerticalOptions="Center" />
-                        <Grid Grid.Row="1"
-                              Grid.Column="1"
-                              ColumnDefinitions="*,Auto"
-                              ColumnSpacing="8">
-                            <Picker Grid.Column="0"
-                                    ItemsSource="{Binding ResolutionOptions}"
-                                    SelectedItem="{Binding SelectedResolution}" 
-                                    IsVisible="{Binding IsCustomResolutionSelected, Converter={toolkit:InvertedBoolConverter}}"/>
-                            <HorizontalStackLayout 
-                                               Spacing="8"
-                                               IsVisible="{Binding IsCustomResolutionSelected}">
-                                <Entry WidthRequest="120"
-                                   Text="{Binding CustomRelativeWidthText}"
-                                   Keyboard="Numeric"
-                                   Placeholder="{l:Localized Key=CreatePage_CustomWidthPlaceholder}" />
-                                <Label Text="×"
-                                   VerticalTextAlignment="Center"
-                                   FontSize="18" />
-                                <Entry WidthRequest="120"
-                                   Text="{Binding CustomRelativeHeightText}"
-                                   Keyboard="Numeric"
-                                   Placeholder="{l:Localized Key=CreatePage_CustomHeightPlaceholder}" />
-                                <Button Text="{l:Localized Key=CreatePage_ResetCustomResolution}" Command="{Binding ResolutionResetCommand}"/>
-                            </HorizontalStackLayout>
-                            <Button Grid.Column="1"
-                                    Text="{l:Localized Key=CreatePage_SwapAspectRatio}"
-                                    Command="{Binding RotateResolutionCommand}" />
-                        </Grid>
+                        <Picker Grid.Row="1"
+                                Grid.Column="1"
+                                ItemsSource="{Binding ResolutionOptions}"
+                                ItemDisplayBinding="{Binding AspectRatio}"
+                                SelectedItem="{Binding SelectedResolution}" />
 
                         <Label Grid.Row="2"
                                Text="{l:Localized Key=CreatePage_TargetFrameRate}"
@@ -75,11 +51,6 @@
                                 Grid.Column="1"
                                 ItemsSource="{Binding FrameRateOptions}"
                                 SelectedItem="{Binding SelectedFrameRate}" />
-
-                        <Label Grid.Row="3"
-                               Text="{l:Localized Key=CreatePage_CustomResolution}"
-                               VerticalOptions="Center"
-                               IsVisible="{Binding IsCustomResolutionSelected}" />
                     </Grid>
 
                     <Label Text="{Binding StatusText}"

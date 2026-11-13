@@ -1,6 +1,9 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Storage;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -13,6 +16,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Sources;
 using projectFrameCut.Render.Transform;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
@@ -29,8 +33,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Input;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut.ViewModels;
 
@@ -42,13 +47,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         _draftPage = draftPage;
         RegisterCommands();
 
-        _ = Task.Run(async () => await Refresh());
-        _draftPage.SelectedClipChanged += async (s, e) => await Refresh();
+        _ = Task.Run(RefreshSafelyAsync);
+        _draftPage.SelectedClipChanged += async (s, e) => await RefreshSafelyAsync();
     }
 
     public readonly DraftPage _draftPage;
+    private int _filterVersion;
+    private int _rpcLoadVersion;
 
-    public bool TransformMenuActivatedViaHandleClick = false;
 
     private void EnsurePlacementTrackExists(bool useSubTrack)
     {
@@ -133,347 +139,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = false;
 
-    public string AIPrompt
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = "";
-
-    public string AIContentType
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = "Image"; // ??????
-
-    public int AIVideoDuration
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = 5; // ??5?
-
-    public string AIVideoRatio
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = "16:9"; // ??16:9??
-
-    public string AIImageStyle
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = Localized.DraftPage_AddClipView_AIGC_ImageStyle_Natural;
-
-    public bool IsGeneratingAIContent
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                _draftPage?.IsPopupClosableByTapBackground = !field;
-                IsRegenerateAvailable = true;
-                OnPropertyChanged();
-            }
-        }
-    } = false;
-
-    public string AITransitionPrompt
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = "";
-
-    public int AITransitionDuration
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = 2; // ??2?
-
-    public bool IsGeneratingAITransition
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                _draftPage?.IsPopupClosableByTapBackground = !field;
-                IsRegenerateAvailable = true;
-                OnPropertyChanged();
-            }
-        }
-    } = false;
-
-    // ?? Clip ????????
-    public bool CanGenerateAITransition
-    {
-        get
-        {
-            if (_draftPage?.SelectedClip == null) return false;
-            var (left, right) = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-            return left != null || right != null;
-        }
-    }
-
-    #region AI Generation Preview
-
-    private AssetItem? _pendingGeneratedAsset;
-    private string _pendingTransitionDirection = "";
-
-    public string PreviewResultPath
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsPreviewImageType));
-                OnPropertyChanged(nameof(IsPreviewVideoType));
-            }
-        }
-    } = "";
-
-    public string PreviewContentType
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsPreviewImageType));
-                OnPropertyChanged(nameof(IsPreviewVideoType));
-            }
-        }
-    } = "";
-
-    public bool IsPreviewImageType => PreviewContentType == "Image";
-    public bool IsPreviewVideoType => PreviewContentType == "Video";
-
-    public bool IsShowingPreview
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                if (_draftPage != null)
-                    _draftPage.IsPopupClosableByTapBackground = !value;
-                OnPropertyChanged();
-            }
-        }
-    } = false;
-
-    public bool IsFeedbackPanelVisible
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = false;
-
-    public bool IsSubmittingFeedback
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = false;
-
-    public bool HasFeedbackSubmitted
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = false;
-
-    public string FeedbackSelectedType
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsFeedbackGoodSelected));
-                OnPropertyChanged(nameof(IsFeedbackBadSelected));
-                OnPropertyChanged(nameof(IsFeedbackReportSelected));
-            }
-        }
-    } = "";
-
-    public bool IsRegenerateAvailable
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = false;
-
-    public bool IsFeedbackGoodSelected => FeedbackSelectedType == "Good";
-    public bool IsFeedbackBadSelected => FeedbackSelectedType == "Bad";
-    public bool IsFeedbackReportSelected => FeedbackSelectedType == "Report";
-
-    #endregion
-
     public bool IsDraftSelectedAnyClip
     {
         get => _draftPage.SelectedClip != null;
     }
 
-    public bool IsSideDetermined
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    public bool IsApplicableToLeft
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-    public bool IsApplicableToRight
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    public string TransformAddHint
-    {
-        get
-        {
-            var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-
-            if (IsSideDetermined)
-            {
-                return Localized.DraftPage_AddClipView_AddTransform_AddToTargetClipTipSideDetermined_WithNameHint(neighbors.left?.DisplayName ?? "Left", neighbors.right?.DisplayName ?? "Right");
-            }
-            else
-            {
-                return Localized.DraftPage_AddClipView_AddTransform_AddToTargetClipTip_WithNameHint(neighbors.left?.DisplayName ?? "Left", _draftPage?.SelectedClip?.DisplayName ?? "Center", neighbors.right?.DisplayName ?? "Right");
-
-            }
-        }
-    }
-
-    public string TransformAddHintText =>
-        IsDraftSelectedAnyClip
-            ? TransformAddHint
-            : Localized.DraftPage_AddClipView_AddTransform_NoTargetClip;
-
     // 文本样式支持
-    public TextStyleItemViewModel? SelectedTextStyle
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                TextClipInSubTrack = value?.ShouldInSubtrack ?? false;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(TextClipInSubTrack));
-            }
-        }
-    }
-
     public string TextToAdd
     {
         get;
@@ -483,9 +154,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 field = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HasTextToAdd));
+                UpdateTextStyleCommands();
             }
         }
     } = string.Empty;
+
+    public bool HasTextToAdd => !string.IsNullOrWhiteSpace(TextToAdd);
 
     public bool TextClipInSubTrack
     {
@@ -531,19 +206,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = 5f;
 
-    public TransformItemViewModel? SelectedTransformForPreview
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -559,49 +221,30 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<AssetItemViewModel> ReuseableAssets { get; } = new();
     public ObservableCollection<RpcVideoSourceItemViewModel> RpcVideoSources { get; } = new();
     public ObservableCollection<TemplateItemViewModel> AvailableTemplates { get; } = new();
-    public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
-    public ObservableCollection<TextStyleItemViewModel> AvailableTextStyles { get; } = new();
     public ObservableCollection<TextStyleProviderItemViewModel> AvailableTextStyleProviders { get; } = new();
 
-    public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
-    public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
+    public ObservableCollection<object> FilteredLocalAssets { get; } = new();
+    public ObservableCollection<object> FilteredSharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredReuseableAssets { get; } = new();
-    public ObservableCollection<RpcVideoSourceItemViewModel> FilteredRpcVideoSources { get; } = new();
+    public ObservableCollection<object> FilteredRpcVideoSources { get; } = new();
+    public bool HasNoExternalSources => FilteredRpcVideoSources.All(x => x is AddSourceCardViewModel);
     public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
-    public ObservableCollection<TransformItemViewModel> FilteredAvailableTransforms { get; } = new();
-    public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
     public ObservableCollection<TextStyleProviderItemViewModel> FilteredAvailableTextStyleProviders { get; } = new();
     #endregion
 
     #region command
     public ICommand AddTextClipCommand { get; set; } = null!;
     public ICommand AddSolidColorClipCommand { get; set; } = null!;
-    public ICommand AddTextClipWithStyleCommand { get; set; } = null!;
+    public ICommand AddEmptyVideoClipCommand { get; set; } = null!;
+    public ICommand AddPassthroughMaskClipCommand { get; set; } = null!;
     public ICommand GenerateTextPreviewCommand { get; set; } = null!;
     public ICommand AddSubTitleClipCommand { get; set; } = null!;
     public ICommand AddAlternativeSourceClipCommand { get; set; } = null!;
-    public ICommand AddVectorCompositionCommand { get; set; } = null!;
+    public ICommand ImportProjectReferenceCommand => _draftPage.ImportProjectReferenceCommand;
     public ICommand AddAssetClipCommand { get; set; } = null!;
     public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;
     public ICommand RefreshRpcVideoSourcesCommand { get; set; } = null!;
-    public ICommand AddTransformClipCommand { get; set; } = null!;
-    public ICommand AddTransformClipInLeftCommand { get; set; } = null!;
-    public ICommand AddTransformClipInRightCommand { get; set; } = null!;
-    public ICommand GenerateTransformPreviewCommand { get; set; } = null!;
-    public ICommand SelectTransformForPreviewCommand { get; set; } = null!;
-    public ICommand GenerateAIContentCommand { get; set; } = null!;
-
-    // AI ????????
-    public ICommand GenerateAITransitionCommand { get; set; } = null!;
-
-    // AI Preview
-    public ICommand ApplyAIPreviewCommand { get; set; } = null!;
-    public ICommand RegenerateAIContentCommand { get; set; } = null!;
-    public ICommand CancelAIPreviewCommand { get; set; } = null!;
-    public ICommand ToggleFeedbackPanelCommand { get; set; } = null!;
-    public ICommand SubmitAIFeedbackCommand { get; set; } = null!;
-
     public ICommand DrawingContentUndoCommand { get; set; } = null!;
     public ICommand DrawingContentRedoCommand { get; set; } = null!;
     public ICommand DrawingSelectPenColorCommand { get; set; } = null!;
@@ -609,35 +252,20 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     void RegisterCommands()
     {
+        InitializeSubtitleCommands();
         AddSolidColorClipCommand = new Command(async () => await AddSolidColorClip());
-        AddTextClipWithStyleCommand = new Command<TextStyleItemViewModel?>(async (style) => await AddTextClipWithStyle(style));
-        GenerateTextPreviewCommand = new Command(async () => InitializeTextStyles(string.IsNullOrWhiteSpace(TextToAdd) ? null : TextToAdd));
+        AddEmptyVideoClipCommand = new Command(AddEmptyVideoClip);
+        AddPassthroughMaskClipCommand = new Command(() => AddMaskSource("Passthrough", Localized.DraftPage_AddClipView_PassthroughMaskSource));
+        GenerateTextPreviewCommand = new Command(async () => await InitializeTextStyles());
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
         RefreshRpcVideoSourcesCommand = new Command(async () => await LoadRpcVideoSources());
         AddTemplateCommand = new Command<TemplateItemViewModel>(async (template) => await AddTemplate(template));
-        AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
-        AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
-        AddTransformClipInRightCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, true));
-        GenerateTransformPreviewCommand = new Command<TransformItemViewModel?>(async (t) => await GenerateTransformPreviewAsync(t ?? SelectedTransformForPreview));
-        SelectTransformForPreviewCommand = new Command<TransformItemViewModel?>(t => SelectedTransformForPreview = t);
-        AddVectorCompositionCommand = new Command(async () => await AddVectorComposition());
 
         DrawingContentUndoCommand = new Command(DrawingUndo);
         DrawingContentRedoCommand = new Command(DrawingRedo);
         DrawingSelectPenColorCommand = new Command(async () => await SelectDrawingPenColor());
         AddDrawingContentCommand = new Command(async () => await AddDrawingContent());
-        GenerateAIContentCommand = new Command(async () => await GenerateAIContent());
-
-        // AI ??????
-        GenerateAITransitionCommand = new Command(async (d) => await GenerateAITransition(d));
-
-        // AI Preview
-        ApplyAIPreviewCommand = new Command(async () => await ApplyAIPreview());
-        RegenerateAIContentCommand = new Command(async () => await RegenerateAIContent());
-        CancelAIPreviewCommand = new Command(async () => await CancelAIPreview());
-        ToggleFeedbackPanelCommand = new Command(ToggleFeedbackPanel);
-        SubmitAIFeedbackCommand = new Command<string>(async (type) => await SubmitAIFeedback(type));
     }
     #endregion
 
@@ -645,29 +273,36 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public event EventHandler? ClipAdded;
 
+    private async Task RefreshSafelyAsync()
+    {
+        try { await Refresh(); }
+        catch (Exception ex) { Log(ex, "Refresh clip source panel", this); }
+    }
+
     public async Task Refresh()
     {
+        if (!MainThread.IsMainThread)
+        {
+            await MainThread.InvokeOnMainThreadAsync(Refresh);
+            return;
+        }
         RegisterCommands();
         await LoadAssets();
         await LoadRpcVideoSources();
         LoadTemplates();
-        LoadTransforms();
-        InitializeTextStyles();
+        await InitializeTextStyles();
         await FilterAssets();
-        var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-        IsApplicableToLeft = neighbors.left != null;
-        IsApplicableToRight = neighbors.right != null;
         OnPropertyChanged(nameof(IsDraftSelectedAnyClip));
-        OnPropertyChanged(nameof(IsApplicableToLeft));
-        OnPropertyChanged(nameof(IsApplicableToRight));
-        OnPropertyChanged(nameof(CanGenerateAITransition));
-        OnPropertyChanged(nameof(TransformAddHint));
-        OnPropertyChanged(nameof(TransformAddHintText));
-        LoadTransforms();
     }
 
     public void LoadTemplates()
     {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(LoadTemplates);
+            return;
+        }
+        _filterVersion++;
         AvailableTemplates.Clear();
 
         foreach (var kv in TemplateStore.Templates)
@@ -677,7 +312,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 TemplateId = kv.Key,
                 Name = string.IsNullOrWhiteSpace(template.TemplateName) ? kv.Key.ToString() : template.TemplateName,
-                TemplateType = template is ScriptBasedTemplateStructure ? "Script (unsupported)" : template.TemplateType.ToString(),
+                TemplateType = template.TemplateType.ToString(),
                 Scope = template.Scope.ToString(),
                 Template = template
             };
@@ -706,9 +341,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private bool ShouldShowTemplateByScope(TemplateItemViewModel template)
+    private static bool ShouldShowTemplateByScope(TemplateItemViewModel template, bool showAllTemplates)
     {
-        if (ShowAllTemplates)
+        if (showAllTemplates)
             return true;
 
         return string.Equals(template.Scope, TemplateScope.Any.ToString(), StringComparison.OrdinalIgnoreCase)
@@ -717,6 +352,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task LoadAssets()
     {
+        if (!MainThread.IsMainThread)
+        {
+            await MainThread.InvokeOnMainThreadAsync(LoadAssets);
+            return;
+        }
+        _filterVersion++;
         LocalAssets.Clear();
         SharedAssets.Clear();
         ReuseableAssets.Clear();
@@ -791,20 +432,58 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task LoadRpcVideoSources()
     {
-        RpcVideoSources.Clear();
-        if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+        if (!MainThread.IsMainThread)
+        {
+            await MainThread.InvokeOnMainThreadAsync(LoadRpcVideoSources);
+            return;
+        }
+        int version = ++_rpcLoadVersion;
+        List<RpcVideoSourceItemViewModel> sources = new();
+        if (ProjectExternalSourceService.AllowAssemblySources)
+        {
+            try
+            {
+                var catalog = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.ListAsync(_draftPage.WorkingPath);
+                foreach (var asset in projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.Read(_draftPage.WorkingPath).Assets)
+                {
+                    var status = catalog.Sources.FirstOrDefault(x => x.ImportId == asset.ImportId);
+                    if (asset.Sources.Count == 0 && asset.AudioSources.Count == 0 && asset.MaskSources.Count == 0)
+                        sources.Add(new(this, new ExternalVideoSourceDescriptor { Name = asset.Manifest.Name }, asset, status));
+                    else
+                    {
+                        foreach (var source in status?.Sources ?? asset.Sources) sources.Add(new(this, source, asset, status));
+                        foreach (var source in status?.AudioSources ?? asset.AudioSources) sources.Add(new(this, source, asset, status));
+                        foreach (var source in status?.MaskSources ?? asset.MaskSources) sources.Add(new(this, source, asset, status));
+                    }
+                }
+            }
+            catch (Exception ex) { Log(ex, "Load project external sources", this); }
+        }
+        if (ProjectExternalSourceService.AllowRpcSources && RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
         {
             try
             {
                 foreach (var source in (await client.ListExternalVideoSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
-                    RpcVideoSources.Add(new(this, source));
+                    sources.Add(new(this, source));
+                foreach (var source in (await client.ListExternalAudioSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
+                    sources.Add(new(this, source));
+                foreach (var source in (await client.ListExternalMaskSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
+                    sources.Add(new(this, source));
             }
             catch (Exception ex)
             {
-                Log(ex, "Load external RPC video sources", this);
+                Log(ex, "Load external RPC sources", this);
             }
         }
-        await FilterAssets();
+        bool updated = await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            if (version != _rpcLoadVersion) return false;
+            _filterVersion++;
+            RpcVideoSources.Clear();
+            foreach (var source in sources) RpcVideoSources.Add(source);
+            return true;
+        });
+        if (updated) await FilterAssets();
     }
 
     #endregion
@@ -813,6 +492,28 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public async Task AddAssetClip(AssetItemViewModel? assetViewModel)
     {
         if (assetViewModel?.OriginalAsset == null) return;
+
+        if (assetViewModel.OriginalAsset.Path is string subtitlePath && projectFrameCut.Render.Subtitles.SubtitleImporter.Supports(subtitlePath))
+        {
+            if (_draftPage.IsReadonly) return;
+            try
+            {
+                var imported = await SubtitleServices.ReadAsync(subtitlePath, _draftPage);
+                if (imported is not null) AddSubtitle(imported.Data, assetViewModel.Name);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Add subtitle asset", _draftPage);
+                await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+            return;
+        }
+
+        if (assetViewModel.OriginalAsset.GetClipMode() == ClipMode.VectorComponentClip)
+        {
+            AddVectorComponent(VectorClipServices.Import(assetViewModel.OriginalAsset.Path!));
+            return;
+        }
 
         var sourcePath = _draftPage.Assets.ContainsKey(assetViewModel.Id) ? assetViewModel.SourcePath : null;
         BeginTimelineClipPlacement((trackIndex, startX) =>
@@ -834,20 +535,29 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task AddRpcVideoSource(RpcVideoSourceItemViewModel? item)
     {
-        if (item is null) return;
+        if (item is null || !item.CanAdd) return;
         try
         {
+            if (item.MaskSource is { } mask)
+            {
+                AddMaskSource(item.ProjectAsset is null ? RemoteRpcMaskSource.CreatePath(mask)
+                    : ProjectExternalMaskSource.CreatePath(item.ProjectAsset.ImportId, mask), mask.Name);
+                return;
+            }
             var source = item.Source;
-            var path = RemoteRpcVideoSource.CreatePath(source);
+            var audio = item.AudioSource;
+            var path = audio is not null
+                ? item.ProjectAsset is null ? RemoteRpcAudioSource.CreatePath(audio) : ProjectExternalAudioSource.CreatePath(item.ProjectAsset.ImportId, audio)
+                : item.ProjectAsset is null ? RemoteRpcVideoSource.CreatePath(source) : ProjectExternalVideoSource.CreatePath(item.ProjectAsset.ImportId, source);
             var asset = new AssetItem
             {
-                AssetId = $"rpc:{source.ClientId:N}:{source.SourceId}",
+                AssetId = $"rpc:{(audio is not null ? "audio:" : "")}{source.ClientId:N}:{source.SourceId}",
                 Name = source.Name,
                 Path = path,
-                AssetType = AssetType.Video,
-                ClipType = ClipMode.VideoClip,
-                Duration = source.TotalFrames,
-                SecondPerFrame = source.Fps > 0 ? (float)(1d / source.Fps) : -1,
+                AssetType = audio is not null ? AssetType.Audio : AssetType.Video,
+                ClipType = audio is not null ? ClipMode.AudioClip : ClipMode.VideoClip,
+                Duration = audio is not null ? audio.Duration : source.TotalFrames,
+                SecondPerFrame = audio is not null ? 1 : source.Fps > 0 ? (float)(1d / source.Fps) : -1,
                 Width = source.Width,
                 Height = source.Height,
                 BitPerPixel = source.HasKnownResultBitsPerPixel ? source.ResultBitsPerPixel : 0,
@@ -859,33 +569,85 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 _draftPage.RegisterClip(clip, true);
                 _draftPage.AddAClip(clip);
                 return clip;
-            }, name: source.Name);
+            }, name: source.Name, useSubTrack: audio is not null);
             ClipAdded?.Invoke(this, EventArgs.Empty);
-            Log($"Added external RPC video source {source.ClientId}/{source.SourceId} to the timeline.");
+            Log($"Added external source {source.ClientId}/{source.SourceId} to the timeline.");
         }
         catch (Exception ex)
         {
-            Log(ex, "Add external RPC video source", this);
+            Log(ex, "Add external source", this);
             await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
 
     public async Task AddTemplate(TemplateItemViewModel? templateViewModel)
     {
+        if (templateViewModel?.Template is null) return;
+        if (ScriptTemplateRunner.IsRunning(_draftPage)) return;
+        string? temp = null;
+        ScriptTemplateRunner? runner = null;
+        try
+        {
+            _draftPage.CancelPendingClipPlacement();
+            var template = templateViewModel.Template;
+            var package = Path.Combine(MauiProgram.DataPath, "My Templates", $"{template.TemplateID:N}.pjfcTemplate");
+            if (File.Exists(package))
+                (template, temp) = await TemplatePackageIO.ExtractStoredTemplateAsync(template.TemplateID, DraftPage.DraftJSONOption);
+            if (template is ScriptBasedTemplateStructure && (_draftPage.IsReadonly || _draftPage.IsRemoteProject || _draftPage.IsClosed))
+                throw new InvalidOperationException("Script templates require an open, writable local project.");
+            var values = await PromptTemplateValuesWithViewAsync(template, templateViewModel.Name);
+            if (values is null) return;
+            if (template is ScriptBasedTemplateStructure script)
+            {
+                runner = await ScriptTemplateRunner.PrepareWithUiAsync(_draftPage, script, values);
+                if (runner is null) return;
+                template = new JSONBasedTemplateStructure
+                {
+                    Project = script.Project, Draft = script.Draft, Variables = script.Variables,
+                    VariableDefinitions = script.VariableDefinitions, AssetHashTable = script.AssetHashTable,
+                    HaveAsset = script.HaveAsset
+                };
+            }
+            if (_draftPage.IsClosed) return;
+            if (template is JSONBasedTemplateStructure json)
+                await AddTemplateCoreAsync(templateViewModel, json, values, runner);
+        }
+        catch (OperationCanceledException) when (_draftPage.ScriptTemplateLifetime.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            Log(ex, "Prepare template", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            TemplatePackageIO.TryCleanupExtractDir(temp);
+            if (runner is not null && !ReferenceEquals(_draftPage.PendingScriptTemplate, runner)) await runner.DisposeAsync();
+        }
+    }
+
+    private async Task RunTemplateScriptAsync(ScriptTemplateRunner runner, Task? grouping)
+    {
+        _draftPage.PendingScriptTemplate = null;
+        await using (runner)
+        {
+            try
+            {
+                if (grouping is not null) await grouping;
+                await runner.RunWithUiAsync(_draftPage);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Apply template script after placement", this);
+                if (!_draftPage.IsClosed) await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+        }
+    }
+
+    private async Task AddTemplateCoreAsync(TemplateItemViewModel templateViewModel, JSONBasedTemplateStructure jsonTemplate,
+        Dictionary<string, string?> inputValues, ScriptTemplateRunner? runner)
+    {
         if (templateViewModel?.Template is null)
         {
-            return;
-        }
-
-        if (templateViewModel.Template is ScriptBasedTemplateStructure)
-        {
-            await _draftPage.DisplayAlertAsync(Localized._Error, "Script templates are no longer supported.", Localized._OK);
-            return;
-        }
-
-        if (templateViewModel.Template is not JSONBasedTemplateStructure jsonTemplate)
-        {
-            await _draftPage.DisplayAlertAsync(Localized._Info, "This template does not support timeline insertion.", Localized._OK);
             return;
         }
 
@@ -905,15 +667,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             var templateDefaults = jsonTemplate.Variables ?? new Dictionary<string, string?>();
             var templateDefinitions = jsonTemplate.VariableDefinitions ?? new Dictionary<string, TemplateVariableDefinition>();
 
-            var inputValues = await PromptTemplateValuesWithViewAsync(jsonTemplate, templateViewModel.Name);
-            if (inputValues is null)
-            {
-                return;
-            }
-
             ReplaceTemplatePlaceholders(draftNode, inputValues, templateDefaults, templateDefinitions);
             RemapAllTemplateIds(draftNode);
-            EnsurePackagedTemplateAssetsInProject(draftNode, jsonTemplate);
+            if (!await EnsurePackagedTemplateAssetsInProjectAsync(draftNode, jsonTemplate)) return;
 
             var remappedDraft = draftNode.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption);
             if (remappedDraft is null)
@@ -928,6 +684,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             if (clipDtos.Count == 0 && soundtrackDtos.Count == 0)
             {
+                if (runner is not null)
+                {
+                    await runner.RunWithUiAsync(_draftPage);
+                    return;
+                }
                 await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no clip/track data.", Localized._OK);
                 return;
             }
@@ -1018,6 +779,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
 
             bool hasPlacedTemplate = false;
+            Task? grouping = null;
+            _draftPage.PendingScriptTemplate = runner;
             _draftPage.BeginClipPlacement((targetTrack, targetStartX) =>
             {
                 if (hasPlacedTemplate)
@@ -1109,12 +872,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
                 if (!NotAddTemplateAsGroup && placedTemplateClips.Count > 1)
                 {
-                    _ = _draftPage.CombineClipsAsGroupAsync(placedTemplateClips);
+                    grouping = _draftPage.CombineClipsAsGroupAsync(placedTemplateClips);
                 }
 
                 _ = _draftPage.UpdateAdjacencyForTrack();
                 return firstClip ?? throw new InvalidOperationException("No clip could be placed from template.");
-            }, trackFilter, templateViewModel.Name);
+            }, trackFilter, templateViewModel.Name, runner is null ? null : () => _ = RunTemplateScriptAsync(runner, grouping));
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
@@ -1131,7 +894,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         var inputView = new TemplateCreatePage();
         var originPopupClosable = _draftPage.IsPopupClosableByTapBackground;
-        EventHandler closeRequestedHandler = async (_, _) => await _draftPage.HidePopup(true);
+        Func<Task> closeRequestedHandler = async () => await _draftPage.HidePopup(true);
         inputView.CloseRequested += closeRequestedHandler;
 
         try
@@ -1321,26 +1084,26 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         return !string.IsNullOrWhiteSpace(key);
     }
 
-    private void EnsurePackagedTemplateAssetsInProject(JsonNode draftNode, JSONBasedTemplateStructure template)
+    private async Task<bool> EnsurePackagedTemplateAssetsInProjectAsync(JsonNode draftNode, JSONBasedTemplateStructure template)
     {
         if (template.AssetHashTable is not { Count: > 0 })
         {
-            return;
+            return true;
         }
 
         if (string.IsNullOrWhiteSpace(_draftPage.WorkingPath))
         {
-            return;
+            return true;
         }
 
         var referencedAssetIds = CollectTemplateReferencedAssetIds(draftNode);
         if (referencedAssetIds.Count == 0)
         {
-            return;
+            return true;
         }
 
         var projectAssetsDir = Path.Combine(_draftPage.WorkingPath, "assets");
-        Directory.CreateDirectory(projectAssetsDir);
+        bool? copyToProject = null;
 
         var resolvedAssetPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1367,8 +1130,15 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 extension = ".bin";
             }
 
-            var copiedPath = Path.Combine(projectAssetsDir, assetId + extension);
-            File.Copy(packagedSourcePath, copiedPath, overwrite: true);
+            copyToProject ??= await AssetDatabase.PickImportModeAsync(_draftPage);
+            if (copyToProject is null) return false;
+            var assetPath = Path.GetFullPath(packagedSourcePath);
+            if (copyToProject.Value)
+            {
+                Directory.CreateDirectory(projectAssetsDir);
+                assetPath = Path.Combine(projectAssetsDir, assetId + extension);
+                await Task.Run(() => File.Copy(packagedSourcePath, assetPath, overwrite: true));
+            }
 
             var projectAsset = AssetDatabase.Assets.TryGetValue(assetId, out var sharedAsset)
                 ? JsonSerializer.Deserialize<AssetItem>(
@@ -1378,11 +1148,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             projectAsset ??= new AssetItem();
             projectAsset.AssetId = assetId;
-            projectAsset.Path = copiedPath;
+            projectAsset.Path = assetPath;
+            projectAsset.IsReference = !copyToProject.Value;
             if (projectAsset.AssetType == AssetType.Other)
             {
-                projectAsset.AssetType = AssetItem.GetAssetType(copiedPath);
+                projectAsset.AssetType = AssetItem.GetAssetType(assetPath);
             }
+            if (projectAsset.AssetType == AssetType.Image) projectAsset.ThumbnailPath = assetPath;
 
             if (string.IsNullOrWhiteSpace(projectAsset.Name))
             {
@@ -1399,10 +1171,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
 
             _draftPage.Assets[assetId] = projectAsset;
-            resolvedAssetPaths[assetId] = copiedPath;
+            resolvedAssetPaths[assetId] = assetPath;
         }
 
         ReplaceTemplateAssetReferencesWithPaths(draftNode, resolvedAssetPaths);
+        return true;
     }
 
     private static HashSet<string> CollectTemplateReferencedAssetIds(JsonNode? node)
@@ -1595,315 +1368,22 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region text
 
-    public async Task AddTextClipWithStyle(TextStyleItemViewModel? styleOverride = null)
-    {
-        var style = styleOverride ?? SelectedTextStyle;
-        if (style is null) return;
-        var text = TextToAdd;
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        var textLang = DetectTextLanguage(text);
-        var fontOverride = style.ActualTemplate.fontFamily;
-        if (style.ActualTemplate.fontFamily == "Arial")
-        {
-            if (textLang != TextLanguage.English)
-            {
-                fontOverride = textLang switch
-                {
-                    TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC" : "Noto Sans SC",
-                    TextLanguage.Japanese => "Noto Sans JP",
-                    TextLanguage.Korean => "Noto Sans KR",
-                    TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic",
-                    _ => "Noto Sans"
-                };
-            }
-        }
-
-        BeginTimelineClipPlacement((trackIndex, startX) =>
-        {
-            var element = _draftPage.CreateAndAddClip(
-                startX: startX,
-                width: _draftPage.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: text,
-                background: new SolidColorBrush(Colors.MediumPurple),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: 0
-            );
-
-            element.ClipType = ClipMode.TextClip;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = true;
-            element.maxFrameCount = 0;
-            element.ExtraData = new();
-            element.ExtraData["TextEntries"] = new List<TextClipEntry>
-            {
-                style.ActualTemplate with { text = text, fontFamily = fontOverride }
-            };
-
-            return element;
-        }, TextClipInSubTrack, name: "Text");
-
-        ClipAdded?.Invoke(this, EventArgs.Empty);
-        TextToAdd = "";
-    }
-
-    public async Task AddTextClipWithStyleProvider(TextStyleProviderItemViewModel? providerOverride = null)
-    {
-        var providerItem = providerOverride;
-        if (providerItem is null) return;
-        var text = TextToAdd;
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.Id, providerItem.Parameters)
-            ?? providerItem.Provider;
-        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
-        provider.BasicText = text;
-
-        var entries = provider.BuildEntries();
-        var textLang = DetectTextLanguage(text);
-        if (textLang != TextLanguage.English)
-        {
-            var fontOverride = textLang switch
-            {
-                TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC Regular" : "Noto Sans SC Regular",
-                TextLanguage.Japanese => "Noto Sans JP Regular",
-                TextLanguage.Korean => "Noto Sans KR Regular",
-                TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic Medium",
-                _ => "Noto Sans"
-            };
-            entries = entries
-                .Select(e => e.FontName == "Arial" ? e with { FontName = fontOverride } : e)
-                .ToArray();
-        }
-
-        BeginTimelineClipPlacement((trackIndex, startX) =>
-        {
-            var element = _draftPage.CreateAndAddClip(
-                startX: startX,
-                width: _draftPage.FrameToPixel(SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: text,
-                background: new SolidColorBrush(Colors.MediumPurple),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: 0
-            );
-
-            element.ClipType = ClipMode.TextClip;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = true;
-            element.maxFrameCount = 0;
-            element.ExtraData = new();
-            element.ExtraData["TextEntries"] = entries.ToList();
-            element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
-            element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
-            element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
-
-            return element;
-        }, TextClipInSubTrack, name: "Text");
-
-        ClipAdded?.Invoke(this, EventArgs.Empty);
-        TextToAdd = "";
-    }
-
-    public void InitializeTextStyles(string? previewText = null)
-    {
-
-        AvailableTextStyles.Clear();
-        try
-        {
-            Dictionary<string, TextClipEntry> template = new();
-            EditSettingPage.LoadTextTemplates(ref template);
-            foreach (var item in template)
-            {
-                AvailableTextStyles.Add(new TextStyleItemViewModel(this)
-                {
-                    Id = item.Key,
-                    Name = item.Key,
-                    SampleText = previewText ?? item.Value.SampleText ?? item.Key,
-                    ActualTemplate = item.Value
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "Load user text templates", this);
-            AvailableTextStyles.Add(new TextStyleItemViewModel(this)
-            {
-                Id = "default",
-                Name = "Default",
-                SampleText = "Normal",
-                ActualTemplate = new TextClipEntry
-                {
-                    r = 65535,
-                    g = 65535,
-                    b = 65535,
-                    a = null,
-                    fontFamily = "Arial",
-                    fontSize = 36
-                }
-            });
-            AvailableTextStyles.Add(new TextStyleItemViewModel(this)
-            {
-                Id = "title",
-                Name = "Title",
-                SampleText = "Title",
-                ActualTemplate = new TextClipEntry
-                {
-                    r = 65535,
-                    g = 65535,
-                    b = 65535,
-                    a = null,
-                    fontFamily = "Arial",
-                    fontSize = 64
-                }
-            });
-            AvailableTextStyles.Add(new TextStyleItemViewModel(this)
-            {
-                Id = "subtitle",
-                Name = "Subtitle",
-                SampleText = "Subtitle",
-                ShouldInSubtrack = true,
-                ActualTemplate = new TextClipEntry
-                {
-                    r = 65535,
-                    g = 65535,
-                    b = 65535,
-                    a = null,
-                    fontFamily = "Arial",
-                    fontSize = 32,
-                    ShouldInSubtrack = true,
-                }
-            });
-        }
-
-
-
-        SelectedTextStyle = AvailableTextStyles.FirstOrDefault();
-
-        // ????
-        FilteredAvailableTextStyles.Clear();
-        var searchLower = SearchText?.ToLower() ?? "";
-        foreach (var s in AvailableTextStyles)
-        {
-            if (string.IsNullOrWhiteSpace(searchLower) ||
-                s.Name.ToLower().Contains(searchLower) ||
-                s.SampleText.ToLower().Contains(searchLower))
-            {
-                FilteredAvailableTextStyles.Add(s);
-            }
-        }
-
-        InitializeTextStyleProviders(previewText);
-    }
-
-    public void InitializeTextStyleProviders(string? previewText = null)
-    {
-        AvailableTextStyleProviders.Clear();
-        try
-        {
-            foreach (var kvp in TextStyleServices.GetAvailableTextStyleProviders())
-            {
-                var provider = kvp.Value();
-                if (!string.IsNullOrWhiteSpace(previewText))
-                {
-                    provider.BasicText = previewText;
-                }
-
-                AvailableTextStyleProviders.Add(new TextStyleProviderItemViewModel(this)
-                {
-                    Id = provider.TypeName,
-                    Name = provider.TypeName,
-                    Provider = provider,
-                    FromPlugin = provider.FromPlugin,
-                    Parameters = new Dictionary<string, string>(provider.Parameters),
-                    BasicText = provider.BasicText
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "Load text style providers", this);
-        }
-
-        FilteredAvailableTextStyleProviders.Clear();
-        var searchLower = SearchText?.ToLower() ?? "";
-        foreach (var s in AvailableTextStyleProviders)
-        {
-            if (string.IsNullOrWhiteSpace(searchLower) ||
-                s.Name.ToLower().Contains(searchLower) ||
-                s.BasicText.ToLower().Contains(searchLower))
-            {
-                FilteredAvailableTextStyleProviders.Add(s);
-            }
-        }
-    }
-
     #endregion
 
-    #region transform    
+    #region transform
 
-    public void LoadTransforms()
-    {
-        AvailableTransforms.Clear();
-        var localizedNames = TransformServices.GetLocalizedTransformNames();
-        IsSideDetermined = _draftPage._transformMenuActivatedHandle == "left" || _draftPage._transformMenuActivatedHandle == "right";
-        var applicableToLeft = _draftPage?.SelectedClip != null && _draftPage.FindNeighbors(_draftPage.SelectedClip).left is not null;
-        var applicableToRight = _draftPage?.SelectedClip != null && _draftPage.FindNeighbors(_draftPage.SelectedClip).right is not null;
-        foreach (var kvp in localizedNames)
-        {
-            AvailableTransforms.Add(new TransformItemViewModel(this)
-            {
-                TypeKey = kvp.Key,
-                DisplayName = kvp.Value,
-                IsSideDetermined = IsSideDetermined,
-                IsApplicableToLeft = applicableToLeft,
-                IsApplicableToRight = applicableToRight,
-                IsDraftSelectedAnyClip = IsDraftSelectedAnyClip
-            });
-        }
-
-        // ????
-        FilteredAvailableTransforms.Clear();
-        var searchLower = SearchText?.ToLower() ?? "";
-        foreach (var t in AvailableTransforms)
-        {
-            if (string.IsNullOrWhiteSpace(searchLower) ||
-                t.DisplayName.ToLower().Contains(searchLower) ||
-                t.TypeKey.ToLower().Contains(searchLower))
-            {
-                FilteredAvailableTransforms.Add(t);
-            }
-        }
-    }
-
-    public async Task AddTransformClip(TransformItemViewModel? transform, bool left, bool right)
-    {
-        if (transform is null) return;
-        if (transform.IsSideDetermined) _draftPage.AddTransformToNeighbors(transform.TypeKey);
-        else
-        {
-            _draftPage.AddTransformBetweenSelected(transform.TypeKey, _draftPage.SelectedClip, left, right);
-        }
-        ClipAdded?.Invoke(this, EventArgs.Empty);
-    }
-
-    public async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform)
+    public async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform, TransformInputMode inputMode = TransformInputMode.TwoInput, TransformSide side = TransformSide.Right, IEffectProvider? configured = null)
     {
         if (transform is null || transform.IsGeneratingPreview) return;
         transform.IsGeneratingPreview = true;
         try
         {
             var factories = TransformServices.GetAvailableTransforms();
-            if (!factories.TryGetValue(transform.TypeKey, out var factory)) return;
+            if (!factories.TryGetValue(transform.TypeKey, out var factory) && configured is null) return;
 
             var previewDir = Path.Combine(MauiProgram.CachePath, "TransformPreviews");
             Directory.CreateDirectory(previewDir);
-            var videoPath = Path.Combine(previewDir, $"{transform.TypeKey}.mp4");
+            var videoPath = Path.Combine(previewDir, $"{Guid.NewGuid():N}.mp4");
 
             if (File.Exists(videoPath)) File.Delete(videoPath);
 
@@ -1913,18 +1393,17 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 // Detect a suitable encoder
                 string codec;
-                if (VideoWriter.DetectCodec("libx264")) codec = "libx264";
-                else if (VideoWriter.DetectCodec("mpeg4")) codec = "mpeg4";
+                if (VideoWriterFP16.DetectCodec("libx264")) codec = "libx264";
+                else if (VideoWriterFP16.DetectCodec("mpeg4")) codec = "mpeg4";
                 else return; // No encoder available
 
-                // Create two solid-color stub clips so ITransform.Previous / Next are never null.
-                // Previous: dark blue (left/outgoing clip), Next: dark red (right/incoming clip).
                 var prevId = Guid.NewGuid();
                 var nextId = Guid.NewGuid();
                 var prevClip = new SolidColorClip
                 {
                     Id = prevId,
                     Name = "_preview_prev",
+                    UseFixedOutputSize = false,
                     StartFrame = 0,
                     Duration = (uint)frameCount,
                     FrameTime = 1f / fps,
@@ -1937,6 +1416,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 {
                     Id = nextId,
                     Name = "_preview_next",
+                    UseFixedOutputSize = false,
                     StartFrame = (uint)frameCount,
                     Duration = (uint)frameCount,
                     FrameTime = 1f / fps,
@@ -1946,12 +1426,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     B = 0x2A00,
                 };
 
-                var t = factory(prevId, nextId);
+                projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform? t = null;
                 try
                 {
-                    t.Init();
-
-                    using var writer = new VideoWriter
+                    t = TransformServices.Create(configured ?? factory!());
+                    using var writer = new VideoWriterFP16
                     {
                         Width = previewW,
                         Height = previewH,
@@ -1964,8 +1443,16 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
                     for (uint i = 0; i < frameCount; i++)
                     {
-                        double progress = (double)i / Math.Max(1, frameCount - 1);
-                        using var frame = TransformProcessing.ProcessTransform(prevClip, nextClip, t, previewW, previewH, i, 8);
+                        float progress = (float)i / Math.Max(1, frameCount - 1);
+                        using var context = ValueProviderFrameContext.PushFrame(i, progress);
+                        using var leftFrame = ((IClip)prevClip).GetFrame(0, previewW, previewH, IPicture.PicturePixelMode.Float16Picture);
+                        using var rightFrame = inputMode == TransformInputMode.TwoInput ? ((IClip)nextClip).GetFrame(nextClip.StartFrame, previewW, previewH, IPicture.PicturePixelMode.Float16Picture) : null;
+                        leftFrame.CanBeDisposed = true;
+                        if (rightFrame is not null) rightFrame.CanBeDisposed = true;
+                        var result = TransformProcessing.ProcessFrames(leftFrame, rightFrame, t, inputMode, progress, side, previewW, previewH);
+                        using var frame = ReferenceEquals(result, leftFrame) || ReferenceEquals(result, rightFrame) ? result.Clone() : result;
+                        if (frame.Width != previewW || frame.Height != previewH)
+                            throw new InvalidOperationException($"Transform preview {t.TypeName} returned {frame.Width}x{frame.Height}; expected {previewW}x{previewH}.");
                         writer.Append(frame);
                     }
 
@@ -2003,11 +1490,17 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task FilterAssets()
     {
-        FilteredLocalAssets.Clear();
-        FilteredSharedAssets.Clear();
-        FilteredReuseableAssets.Clear();
-        FilteredRpcVideoSources.Clear();
-        FilteredAvailableTemplates.Clear();
+        var state = await MainThread.InvokeOnMainThreadAsync(() => (
+            Version: ++_filterVersion,
+            Search: SearchText ?? "",
+            Order: OrderOption,
+            ShowAll: ShowAllTemplates,
+            Local: LocalAssets.ToArray(),
+            Shared: SharedAssets.ToArray(),
+            Reuseable: ReuseableAssets.ToArray(),
+            Rpc: RpcVideoSources.ToArray(),
+            Templates: AvailableTemplates.ToArray(),
+            Providers: AvailableTextStyleProviders.ToArray()));
 
         List<AssetItemViewModel> localFiltered = new();
         List<AssetItemViewModel> sharedFiltered = new();
@@ -2015,55 +1508,56 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         List<RpcVideoSourceItemViewModel> rpcFiltered = new();
         List<TemplateItemViewModel> templateFiltered = new();
 
-        if (string.IsNullOrWhiteSpace(SearchText))
+        if (string.IsNullOrWhiteSpace(state.Search))
         {
             // ????????????????
-            localFiltered.AddRange(LocalAssets);
-            sharedFiltered.AddRange(SharedAssets);
-            reuseableFiltered.AddRange(ReuseableAssets);
-            rpcFiltered.AddRange(RpcVideoSources);
-            templateFiltered.AddRange(AvailableTemplates.Where(ShouldShowTemplateByScope));
+            localFiltered.AddRange(state.Local);
+            sharedFiltered.AddRange(state.Shared);
+            reuseableFiltered.AddRange(state.Reuseable);
+            rpcFiltered.AddRange(state.Rpc);
+            templateFiltered.AddRange(state.Templates.Where(x => ShouldShowTemplateByScope(x, state.ShowAll)));
         }
         else
         {
-            var inputPron = (await TextServices.GetHowToPronuce(SearchText, default)).ToLower();
-            var inputPronInLocate = ((await TextServices.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+            var inputPron = (await TextServices.GetHowToPronuce(state.Search, default)).ToLower();
+            var inputPronInLocate = ((await TextServices.GetHowToPronuce(state.Search, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
             // ????
-            var searchLower = SearchText.ToLower();
-            foreach (var asset in LocalAssets)
+            var searchLower = state.Search.ToLower();
+            foreach (var asset in state.Local)
             {
                 var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
                 var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(state.Search) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(state.Search) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     localFiltered.Add(asset);
                 }
             }
-            foreach (var asset in SharedAssets)
+            foreach (var asset in state.Shared)
             {
                 var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
                 var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(state.Search) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(state.Search) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     sharedFiltered.Add(asset);
                 }
             }
-            foreach (var asset in ReuseableAssets)
+            foreach (var asset in state.Reuseable)
             {
                 var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
                 var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(state.Search) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(state.Search) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     reuseableFiltered.Add(asset);
                 }
             }
-            rpcFiltered.AddRange(RpcVideoSources.Where(x => x.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+            rpcFiltered.AddRange(state.Rpc.Where(x => x.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
                 || x.ClientName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+                || x.Status.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
                 || x.DecoderName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)));
 
-            foreach (var template in AvailableTemplates)
+            foreach (var template in state.Templates)
             {
-                if (!ShouldShowTemplateByScope(template))
+                if (!ShouldShowTemplateByScope(template, state.ShowAll))
                 {
                     continue;
                 }
@@ -2078,14 +1572,15 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
 
         // ????
-        if (OrderOption == 0)
+        if (state.Order == 0)
         {
             // By add date - ???????????
             localFiltered = localFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
             sharedFiltered = sharedFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
             reuseableFiltered = reuseableFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
+            rpcFiltered = rpcFiltered.OrderByDescending(x => x.ProjectAsset?.CreatedAt ?? DateTime.MinValue).ToList();
         }
-        else if (OrderOption == 1)
+        else if (state.Order == 1)
         {
             // By name - ??????
             localFiltered = (await localFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
@@ -2095,62 +1590,41 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             templateFiltered = (await templateFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
         }
 
-        foreach (var asset in localFiltered)
+        await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            FilteredLocalAssets.Add(asset);
-        }
-        foreach (var asset in sharedFiltered)
-        {
-            FilteredSharedAssets.Add(asset);
-        }
-        foreach (var asset in reuseableFiltered)
-        {
-            FilteredReuseableAssets.Add(asset);
-        }
-        foreach (var source in rpcFiltered) FilteredRpcVideoSources.Add(source);
+            if (state.Version != _filterVersion || state.Search != (SearchText ?? "")
+                || state.Order != OrderOption || state.ShowAll != ShowAllTemplates) return;
+            FilterVectorComponents();
+            _ = LoadMaskSources();
+            FilteredLocalAssets.Clear();
+            FilteredSharedAssets.Clear();
+            FilteredRpcVideoSources.Clear();
+            FilteredReuseableAssets.Clear();
+            FilteredAvailableTemplates.Clear();
+            FilteredAvailableTextStyleProviders.Clear();
+            foreach (var asset in localFiltered) FilteredLocalAssets.Add(asset);
+            foreach (var asset in sharedFiltered) FilteredSharedAssets.Add(asset);
+            var externalSources = ExternalSourceSettings.Load(MauiProgram.BasicDataPath);
+            foreach (var source in rpcFiltered.Where(x => x.ProjectAsset is null ? externalSources.AllowRpcSources : externalSources.AllowAssemblySources))
+                FilteredRpcVideoSources.Add(source);
+            FilteredLocalAssets.Add(new AddSourceCardViewModel("LocalAssets", Localized.AssetPage_AddAAsset));
+            FilteredSharedAssets.Add(new AddSourceCardViewModel("SharedAssets", Localized.AssetPage_AddAAsset));
+            if (externalSources.AllowAssemblySources)
+                FilteredRpcVideoSources.Add(new AddSourceCardViewModel("RpcSources", Localized.ProjectExternalSource_Add));
+            OnPropertyChanged(nameof(HasNoExternalSources));
+            foreach (var asset in reuseableFiltered) FilteredReuseableAssets.Add(asset);
+            foreach (var template in templateFiltered) FilteredAvailableTemplates.Add(template);
 
-        foreach (var template in templateFiltered)
-        {
-            FilteredAvailableTemplates.Add(template);
-        }
-
-        // ????
-        FilteredAvailableTransforms.Clear();
-        var transformSearch = SearchText?.ToLower() ?? "";
-        foreach (var t in AvailableTransforms)
-        {
-            if (string.IsNullOrWhiteSpace(transformSearch) ||
-                t.DisplayName.ToLower().Contains(transformSearch) ||
-                t.TypeKey.ToLower().Contains(transformSearch))
+            var searchLower = state.Search.ToLower();
+            foreach (var p in state.Providers)
             {
-                FilteredAvailableTransforms.Add(t);
+                if (!MatchesTextStyleFilter(p)) continue;
+                if (string.IsNullOrWhiteSpace(searchLower) ||
+                    p.Name.ToLower().Contains(searchLower) ||
+                    p.BasicText.ToLower().Contains(searchLower))
+                    FilteredAvailableTextStyleProviders.Add(p);
             }
-        }
-
-        // ??????
-        FilteredAvailableTextStyles.Clear();
-        var styleSearch = SearchText?.ToLower() ?? "";
-        foreach (var s in AvailableTextStyles)
-        {
-            if (string.IsNullOrWhiteSpace(styleSearch) ||
-                s.Name.ToLower().Contains(styleSearch) ||
-                s.SampleText.ToLower().Contains(styleSearch))
-            {
-                FilteredAvailableTextStyles.Add(s);
-            }
-        }
-
-        FilteredAvailableTextStyleProviders.Clear();
-        var providerSearch = SearchText?.ToLower() ?? "";
-        foreach (var p in AvailableTextStyleProviders)
-        {
-            if (string.IsNullOrWhiteSpace(providerSearch) ||
-                p.Name.ToLower().Contains(providerSearch) ||
-                p.BasicText.ToLower().Contains(providerSearch))
-            {
-                FilteredAvailableTextStyleProviders.Add(p);
-            }
-        }
+        });
     }
 
 
@@ -2367,6 +1841,29 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     }
 
 
+    public void AddEmptyVideoClip()
+    {
+        BeginTimelineClipPlacement((track, start) =>
+        {
+            var clip = _draftPage.CreateAndAddClip(start,
+                _draftPage.FrameToPixel(Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate) * 3),
+                track, null, Localized.DraftPage_AddClipView_EmptyVideoSource,
+                new SolidColorBrush(Colors.CornflowerBlue), resolveOverlap: true);
+            clip.ClipType = ClipMode.VideoClip;
+            clip.TypeName = nameof(VideoClip);
+            clip.FromPlugin = InternalPluginBase.InternalPluginBaseID;
+            clip.isInfiniteLength = true;
+            clip.maxFrameCount = 0;
+            clip.sourceSecondPerFrame = 1f / Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate);
+            clip.TargetWidth = Math.Max(1, _draftPage.ProjectInfo.RelativeWidth);
+            clip.TargetHeight = Math.Max(1, _draftPage.ProjectInfo.RelativeHeight);
+            clip.SourcePath = EmptyVideoSource.CreatePath(clip.TargetWidth, clip.TargetHeight);
+            Log($"Created empty video clip {clip.Id}, source {clip.SourcePath}.");
+            return clip;
+        }, name: Localized.DraftPage_AddClipView_EmptyVideoSource);
+        ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
+
     public async Task AddAlternativeSourceClip()
     {
         var path = await _draftPage.DisplayPromptAsync("Add", "Input source path", placeholder: "#<provider>,<stream id>");
@@ -2405,40 +1902,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>
-    /// Creates an empty vector composition clip — no SVG file, user adds
-    /// shapes manually through the Vector Editor.
-    /// </summary>
-    private async Task AddVectorComposition()
-    {
-        BeginTimelineClipPlacement((trackIndex, startX) =>
-        {
-            var targetFps = Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate);
-
-            var element = _draftPage.CreateAndAddClip(
-                startX: startX,
-                width: _draftPage.FrameToPixel(1000),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: "Vector Composition",
-                background: new SolidColorBrush(Colors.CornflowerBlue),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: 0
-            );
-
-            element.ClipType = ClipMode.VectorCanvasClip;
-            element.SourcePath = null; // No SVG — composition only
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = true;
-            element.sourceSecondPerFrame = 1;
-            element.ExtraData = new();
-            return element;
-        }, name: "Vector Composition");
-
-        await _draftPage.HidePopup(true);
-    }
-
     private static uint ResolveTimelineFrameCount(uint sourceFrames, double sourceSecondPerFrame, uint targetFrameRate)
     {
         if (sourceFrames == 0)
@@ -2464,802 +1927,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
 
         return (uint)Math.Round(timelineFrames, MidpointRounding.AwayFromZero);
-    }
-
-    #endregion
-
-    #region AI Content Generation
-
-    public async Task GenerateAIContent()
-    {
-        if (string.IsNullOrWhiteSpace(AIPrompt))
-        {
-            await _draftPage.DisplayAlertAsync(
-                Localized._Error,
-                Localized.DraftPage_AddClipView_AIGC_InputPlaceholder,
-                Localized._OK);
-            return;
-        }
-
-        if (IsGeneratingAIContent)
-        {
-            return; // ??????
-        }
-
-        IsGeneratingAIContent = true;
-
-        try
-        {
-            if (AIContentType == "Image")
-            {
-                await GenerateAIImage();
-            }
-            else if (AIContentType == "Video")
-            {
-                await GenerateAIVideo();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Generate AI content", this);
-            await _draftPage.DisplayAlertAsync(
-                Localized._Error,
-                $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}({Localized._ExceptionTemplate(ex)})",
-                Localized._OK);
-        }
-        finally
-        {
-            IsGeneratingAIContent = false;
-        }
-    }
-
-    public async Task GenerateAIImage()
-    {
-        try
-        {
-            // ??????????
-            var (width, height) = ParseVideoRatio(AIVideoRatio);
-
-            // ? UI ???????? ImageStyle ??
-            var imageStyle = AIImageStyle switch
-            {
-                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Natural => ImageStyle.Natural,
-                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Vivid => ImageStyle.Vivid,
-                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Anime => ImageStyle.Anime,
-                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Photography => ImageStyle.Photography,
-                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_TradidtionalPainting => ImageStyle.TradidtionalPainting,
-                _ => ImageStyle.Natural
-            };
-
-            // ????????
-            var options = new ImageGenerationOptions
-            {
-                Width = width,
-                Height = height,
-                Style = imageStyle,
-                Quality = ImageQuality.Standard
-            };
-
-            // ?? AI ????
-            var result = await AIHelper.GenerateImageAsync(AIPrompt, options);
-
-            if (!result.Success)
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    result.ErrorMessage ?? SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
-                    Localized._OK);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(result.ImageUrl))
-            {
-                Log("No image URL returned from AI generation.", "error");
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
-                    Localized._OK);
-                return;
-            }
-
-            // ??????????????
-            var asset = await DownloadRemoteResourcesToLocal(_draftPage, result.ImageUrl, "png", "AIGenerated-{0}");
-            if (asset == null)
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result.)",
-                    Localized._OK);
-                return;
-            }
-
-            // Show preview in dialog
-            _pendingGeneratedAsset = asset;
-            PreviewResultPath = asset.Path;
-            PreviewContentType = "Image";
-            ShowPreviewDialog();
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Generate AI image", this);
-            throw;
-        }
-    }
-
-
-    public async Task AddAIGeneratedImageToTimeline(string imagePath, string prompt)
-    {
-        try
-        {
-            const uint defaultFrames = 90u;
-            BeginTimelineClipPlacement((trackIndex, startX) =>
-            {
-                var element = _draftPage.CreateAndAddClip(
-                    startX: startX,
-                    width: _draftPage.FrameToPixel(defaultFrames),
-                    trackIndex: trackIndex,
-                    id: null,
-                    labelText: $"AI: {string.Join("", prompt.Take(20).ToArray())}",
-                    background: new SolidColorBrush(Colors.Orange),
-                    resolveOverlap: true,
-                    relativeStart: 0,
-                    maxFrames: defaultFrames
-                );
-
-                element.ClipType = ClipMode.PhotoClip;
-                element.SourcePath = imagePath;
-                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-                element.isInfiniteLength = false;
-                element.maxFrameCount = defaultFrames;
-                element.ExtraData = new Dictionary<string, object>
-                {
-                    ["IsAI"] = true,
-                    ["AIPrompt"] = prompt,
-                    ["GeneratedAt"] = DateTime.Now,
-                    ["ImageRatio"] = AIVideoRatio,
-                    ["ImageStyle"] = AIImageStyle
-                };
-                return element;
-            }, name: $"AI: {string.Join("", prompt.Take(20).ToArray())}");
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Add AI generated image to timeline", this);
-            throw;
-        }
-    }
-
-    public async Task GenerateAIVideo()
-    {
-        try
-        {
-            var (width, height) = ParseVideoRatio(AIVideoRatio);
-
-            var options = new VideoGenerationOptions
-            {
-                Width = width,
-                Height = height,
-                Duration = AIVideoDuration,
-                PromptExtend = true,
-                Watermark = false
-            };
-
-            var result = await AIHelper.GenerateVideoAsync(AIPrompt, options);
-
-            if (!result.Success)
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    result.ErrorMessage ?? SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
-                    Localized._OK);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(result.VideoUrl))
-            {
-                Log("No VideoUri provided.", "error");
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
-                    Localized._OK);
-                return;
-            }
-
-            var asset = await DownloadRemoteResourcesToLocal(_draftPage, result.VideoUrl, "mp4", "AIGenerated-{0}");
-            if (asset == null)
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result.)",
-                    Localized._OK);
-                return;
-            }
-
-            // Show preview in dialog
-            _pendingGeneratedAsset = asset;
-            PreviewResultPath = asset.Path;
-            PreviewContentType = "Video";
-            ShowPreviewDialog();
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Generate AI video", this);
-            throw;
-        }
-    }
-
-    public (int width, int height) ParseVideoRatio(string ratio)
-    {
-        return ratio switch
-        {
-            "16:9" => (1280, 720),
-            "9:16" => (720, 1280),
-            "1:1" => (1024, 1024),
-            "4:3" => (1024, 768),
-            "3:4" => (768, 1024),
-            _ => (1280, 720) // ??16:9
-        };
-    }
-
-
-    public async Task AddAIGeneratedVideoToTimeline(string videoPath, string prompt)
-    {
-        try
-        {
-            var frameRate = 30;
-            var totalFrames = (uint)(AIVideoDuration * frameRate);
-            try
-            {
-                var src = PluginManager.CreateVideoSource(videoPath);
-                frameRate = (int)src.Fps;
-                totalFrames = (uint)(src.TotalFrames);
-            }
-            catch { }
-
-            BeginTimelineClipPlacement((trackIndex, startX) =>
-            {
-                var element = _draftPage.CreateAndAddClip(
-                    startX: startX,
-                    width: _draftPage.FrameToPixel(totalFrames),
-                    trackIndex: trackIndex,
-                    id: null,
-                    labelText: $"AI Video: {string.Join("", prompt.Take(20).ToArray())}",
-                    background: new SolidColorBrush(Colors.Purple),
-                    resolveOverlap: true,
-                    relativeStart: 0,
-                    maxFrames: totalFrames
-                );
-
-                element.ClipType = ClipMode.VideoClip;
-                element.SourcePath = videoPath;
-                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-                element.isInfiniteLength = false;
-                element.maxFrameCount = totalFrames;
-                element.ExtraData = new Dictionary<string, object>
-                {
-                    ["IsAI"] = true,
-                    ["AIPrompt"] = prompt,
-                    ["GeneratedAt"] = DateTime.Now,
-                    ["VideoDuration"] = AIVideoDuration,
-                    ["VideoRatio"] = AIVideoRatio
-                };
-                return element;
-            }, name: $"AI: {string.Join("", prompt.Take(20).ToArray())}");
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Add AI generated video to timeline", this);
-            throw;
-        }
-    }
-
-    #endregion
-
-    #region AI Transition Generation
-
-    public async Task GenerateAITransition(object direction)
-    {
-        if (direction is not string directionStr) directionStr = "";
-
-        bool left = directionStr == "left";
-        bool right = directionStr == "right";
-        if (!left && !right && !string.IsNullOrWhiteSpace(_draftPage._transformMenuActivatedHandle))
-        {
-            left = _draftPage._transformMenuActivatedHandle == "left";
-            right = _draftPage._transformMenuActivatedHandle == "right";
-        }
-        if (!left && !right)
-        {
-            await _draftPage.DisplayAlertAsync(
-                Localized._Error,
-                Localized.DraftPage_AddClipView_AddTransform_AddInSelectedDirection,
-                Localized._OK);
-            return;
-        }
-
-        // ???????? Clip ??? Clip
-        var selectedClip = _draftPage?.SelectedClip;
-        var (leftClip, rightClip) = _draftPage!.FindNeighbors(selectedClip);
-
-        if (selectedClip == null)
-        {
-            await _draftPage!.DisplayAlertAsync(
-                Localized._Error,
-                Localized.DraftPage_PropertyPanel_SelectToContinue,
-                Localized._OK);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(AITransitionPrompt))
-        {
-            await _draftPage.DisplayAlertAsync(
-                Localized._Error,
-                Localized.DraftPage_AddClipView_AIGC_InputPlaceholder,
-                Localized._OK);
-            return;
-        }
-
-        if (IsGeneratingAITransition)
-        {
-            return;
-        }
-
-        IsGeneratingAITransition = true;
-
-        try
-        {
-            var durationInSeconds = AITransitionDuration switch
-            {
-                0 => 1,  // 1?
-                1 => 2,  // 2?
-                2 => 3,  // 3?
-                3 => 5,  // 5?
-                _ => 2   // ??2?
-            };
-            IPicture? firstFrame = null!, lastFrame = null!;
-
-            if (left && !right)
-            {
-                if (leftClip is null || selectedClip is null) return;
-                firstFrame = await GetClipLastFrame(leftClip);
-                lastFrame = await GetClipFirstFrame(selectedClip);
-            }
-            else if (!left && right)
-            {
-                if (rightClip is null || selectedClip is null) return;
-                firstFrame = await GetClipLastFrame(selectedClip);
-                lastFrame = await GetClipFirstFrame(rightClip);
-
-            }
-            else
-            {
-                await _draftPage.DisplayAlertAsync(
-                Localized._Error,
-                Localized.DraftPage_AddClipView_AddTransform_AddInSelectedDirection,
-                Localized._OK);
-                return;
-            }
-
-            if (firstFrame == null || lastFrame == null)
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    "Cannot read frames.",
-                    Localized._OK);
-                return;
-            }
-
-            var options = new VideoGenerationOptions
-            {
-                Width = 1280,
-                Height = 720,
-                Duration = durationInSeconds,
-                PromptExtend = true,
-                Watermark = false
-            };
-
-            var result = await AIHelper.GenerateVideoFromFramesAsync(
-                firstFrame,
-                lastFrame,
-                AITransitionPrompt,
-                options);
-
-            if (!result.Success)
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    result.ErrorMessage ?? SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
-                    Localized._OK);
-                return;
-            }
-
-            if (string.IsNullOrEmpty(result.VideoUrl))
-            {
-                Log("No video provided.", "Error");
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                   SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
-                    Localized._OK);
-                return;
-            }
-
-            var asset = await DownloadRemoteResourcesToLocal(_draftPage, result.VideoUrl, "mp4", "AIGeneratedTransform-{0}");
-            if (asset == null)
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result)",
-                    Localized._OK);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(asset.Path))
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    $"Asset downloaded but Path is empty! AssetId={asset.AssetId}",
-                    Localized._OK);
-                return;
-            }
-
-            var sourcePath = asset.Path; // ????????
-
-            // Show preview in dialog
-            _pendingGeneratedAsset = asset;
-            _pendingTransitionDirection = directionStr;
-            PreviewResultPath = asset.Path;
-            PreviewContentType = "Video";
-            ShowPreviewDialog();
-            LoadTransforms();
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Generate AI transition", this);
-            await _draftPage.DisplayAlertAsync(
-                Localized._Error,
-                $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}({Localized._ExceptionTemplate(ex)})",
-                Localized._OK);
-        }
-        finally
-        {
-            IsGeneratingAITransition = false;
-        }
-    }
-
-    public async Task<IPicture?> GetClipLastFrame(ClipElementUI clipElement)
-    {
-        try
-        {
-            // ? ClipElementUI ??? IClip ??????
-            var clipData = ConvertClipElementToIClip(clipElement);
-            if (clipData == null) return null;
-
-            // ?????????
-            var lastFrameIndex = clipData.Duration > 0 ? clipData.Duration - 1 : 0;
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(lastFrameIndex, 1280, 720, 8);
-
-            return frame;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Get clip last frame", this);
-            return null;
-        }
-    }
-
-    public async Task<IPicture?> GetClipFirstFrame(ClipElementUI clipElement)
-    {
-        try
-        {
-            var clipData = ConvertClipElementToIClip(clipElement);
-            if (clipData == null) return null;
-
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(0, 1280, 720, 8);
-
-            return frame;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Get clip first frame", this);
-            return null;
-        }
-    }
-
-    public Render.RenderAPIBase.ClipAndTrack.IClip? ConvertClipElementToIClip(ClipElementUI clipElement)
-    {
-        try
-        {
-            // ???? Clip ???
-            var draftData = DraftImportAndExportHelper.ExportFromDraftPage(_draftPage, true, false);
-            var clips = DraftImportAndExportHelper.JSONToIClips(draftData, true, 8);
-
-            // ?? ID ????? IClip
-            return clips.FirstOrDefault(c => c.Id == clipElement.Id);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Convert ClipElementUI to IClip", this);
-            return null;
-        }
-    }
-
-    public static async Task<AssetItem?> DownloadRemoteResourcesToLocal(DraftPage workingPage, string videoUrl, string extension, string prompt)
-    {
-        try
-        {
-            var aiVideosDir = Path.Combine(workingPage.WorkingPath, "assets");
-            Directory.CreateDirectory(aiVideosDir);
-            var id = Guid.NewGuid();
-            var safeFileName = Path.ChangeExtension($"AIGenerated-{id}.mp4", extension);
-            var localPath = Path.Combine(aiVideosDir, safeFileName);
-
-            using var client = new HttpClient();
-            var videoBytes = await client.GetByteArrayAsync(videoUrl);
-            await File.WriteAllBytesAsync(localPath, videoBytes);
-
-            var assetType = AssetItem.GetAssetType(localPath);
-            var item = new AssetItem
-            {
-                AssetId = id.ToString(),
-                Name = Path.GetFileNameWithoutExtension(safeFileName),
-                AssetType = assetType,
-                Path = localPath,
-                CreatedAt = DateTime.Now,
-                SecondPerFrame = -1,
-                Duration = 0,
-                IsAIGenerated = true
-            };
-
-            // ?????
-            var thumbnailsDir = Path.Combine(workingPage.WorkingPath, "assets", ".thumbnails");
-            Directory.CreateDirectory(thumbnailsDir);
-            var thumbnailPath = Path.Combine(thumbnailsDir, id.ToString() + ".png");
-
-            try
-            {
-                switch (assetType)
-                {
-                    case AssetType.Video:
-                        {
-                            var vid = PluginManager.CreateVideoSource(localPath);
-                            item.Duration = vid.TotalFrames;
-                            item.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U).SaveToPng(thumbnailPath);
-                            item.ThumbnailPath = thumbnailPath;
-                            break;
-                        }
-                    case AssetType.Image:
-                        {
-                            // ??????????????
-                            item.ThumbnailPath = localPath;
-                            break;
-                        }
-
-                    default:
-                        item.ThumbnailPath = null;
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex, $"Generate thumbnail for {safeFileName}");
-                item.ThumbnailPath = null;
-            }
-
-            workingPage.Assets.AddOrUpdate(id.ToString(), item, (key, existing) => item);
-
-            return item;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Download remote stuff");
-            return null;
-        }
-    }
-
-
-    #endregion
-
-    #region AI Generation Preview Actions
-
-    private async void ShowPreviewDialog()
-    {
-        await _draftPage.HidePopup(true);
-        _draftPage.IsPopupClosableByTapBackground = true;
-        ResetPreviewFeedbackState();
-        var previewView = new AIPreviewDialogView { BindingContext = this };
-        await _draftPage.ShowAPopup(previewView, mode: "dialog");
-    }
-
-    private void ResetPreviewFeedbackState()
-    {
-        FeedbackSelectedType = "";
-        IsFeedbackPanelVisible = false;
-        HasFeedbackSubmitted = false;
-        IsSubmittingFeedback = false;
-    }
-
-    private async Task ApplyAIPreview()
-    {
-        if (_pendingGeneratedAsset == null) return;
-
-        await _draftPage.HidePopup(true);
-
-        try
-        {
-            if (PreviewContentType == "Image")
-            {
-                await AddAIGeneratedImageToTimeline(_pendingGeneratedAsset.Path, AIPrompt);
-            }
-            else if (!string.IsNullOrWhiteSpace(_pendingTransitionDirection))
-            {
-                AddAITransitionToTimeline(_pendingGeneratedAsset.Path);
-            }
-            else
-            {
-                await AddAIGeneratedVideoToTimeline(_pendingGeneratedAsset.Path, AIPrompt);
-            }
-
-            AIPrompt = "";
-            AITransitionPrompt = "";
-            _pendingTransitionDirection = "";
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-            await _draftPage.HidePopup(true);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Apply AI preview", this);
-            await _draftPage.DisplayAlertAsync(Localized._Error, ex.Message, Localized._OK);
-        }
-        finally
-        {
-            CleanupPreviewState();
-        }
-    }
-
-    private void AddAITransitionToTimeline(string sourcePath)
-    {
-        var directionStr = _pendingTransitionDirection;
-        bool left = directionStr == "left";
-        bool right = directionStr == "right";
-        if (!left && !right && !string.IsNullOrWhiteSpace(_draftPage._transformMenuActivatedHandle))
-        {
-            left = _draftPage._transformMenuActivatedHandle == "left";
-            right = _draftPage._transformMenuActivatedHandle == "right";
-        }
-
-        var selectedClip = _draftPage?.SelectedClip;
-        if (selectedClip == null) return;
-
-        _draftPage!.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
-        {
-            Name = "AITransform",
-            BindedLeftClip = a,
-            BindedRightClip = b,
-            SourcePath = sourcePath
-        }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
-    }
-
-    private async Task RegenerateAIContent()
-    {
-        IsRegenerateAvailable = false;
-        var wasTransition = !string.IsNullOrWhiteSpace(_pendingTransitionDirection);
-        var savedDirection = _pendingTransitionDirection;
-
-        //await _draftPage.HidePopup(true);
-        CleanupPreviewState();
-
-        if (wasTransition)
-        {
-            await GenerateAITransition(savedDirection);
-        }
-        else
-        {
-            await GenerateAIContent();
-        }
-    }
-
-    private async Task CancelAIPreview()
-    {
-        await _draftPage.HidePopup(true);
-        CleanupPreviewState();
-    }
-
-    private void CleanupPreviewState()
-    {
-        _pendingGeneratedAsset = null;
-        _pendingTransitionDirection = "";
-        PreviewResultPath = "";
-        PreviewContentType = "";
-        ResetPreviewFeedbackState();
-    }
-
-    private void ToggleFeedbackPanel()
-    {
-        IsFeedbackPanelVisible = !IsFeedbackPanelVisible;
-        if (!IsFeedbackPanelVisible)
-        {
-            FeedbackSelectedType = "";
-        }
-    }
-
-    private async Task SubmitAIFeedback(string feedbackTypeStr)
-    {
-        if (!Enum.TryParse<AssistanceChatView.ChatReplyFeedbackType>(feedbackTypeStr, out var feedbackType))
-            return;
-
-        FeedbackSelectedType = feedbackType switch
-        {
-            AssistanceChatView.ChatReplyFeedbackType.Good => "Good",
-            AssistanceChatView.ChatReplyFeedbackType.Bad => "Bad",
-            AssistanceChatView.ChatReplyFeedbackType.Report => "Report",
-            _ => ""
-        };
-
-        string reasonCode = "";
-        string reasonText = "";
-
-        if (feedbackType == AssistanceChatView.ChatReplyFeedbackType.Report)
-        {
-            var harmful = Localized.AIAssistant_ChatView_Feedback_ReportReason_Harmful;
-            var hate = Localized.AIAssistant_ChatView_Feedback_ReportReason_Hate;
-            var incorrect = Localized.AIAssistant_ChatView_Feedback_ReportReason_Incorrect;
-            var irrelevant = Localized.AIAssistant_ChatView_Feedback_ReportReason_Irrelevant;
-            var other = Localized.AIAssistant_ChatView_Feedback_ReportReason_Other;
-
-            string? selectedReason;
-            if (Application.Current?.Windows?[0]?.Page is Page page)
-            {
-                selectedReason = await page.DisplayActionSheetAsync(
-                    Localized.AIAssistant_ChatView_Feedback_ReportReason_Title,
-                    Localized._Cancel,
-                    null,
-                    harmful, hate, incorrect, irrelevant, other);
-            }
-            else
-            {
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(selectedReason) || selectedReason == Localized._Cancel)
-            {
-                FeedbackSelectedType = "";
-                return;
-            }
-
-            reasonCode = selectedReason switch
-            {
-                var x when x == harmful => "harmful_or_dangerous",
-                var x when x == hate => "hateful_or_harassing",
-                var x when x == incorrect => "factually_incorrect",
-                var x when x == irrelevant => "irrelevant",
-                _ => "other",
-            };
-            reasonText = selectedReason;
-        }
-
-        IsSubmittingFeedback = true;
-        try
-        {
-            var prompt = string.IsNullOrWhiteSpace(AIPrompt) ? AITransitionPrompt : AIPrompt;
-            var payload = new
-            {
-                ContentType = PreviewContentType,
-                Prompt = prompt,
-                FeedbackType = feedbackType.ToString(),
-                ReasonCode = reasonCode,
-                ReasonText = reasonText,
-                CreatedAt = DateTimeOffset.Now,
-            };
-            await Task.Delay(5000);
-            Logger.Log($"AI Preview Feedback submitted: {JsonSerializer.Serialize(payload)}", "Info");
-            HasFeedbackSubmitted = true;
-            IsFeedbackPanelVisible = false;
-        }
-        finally
-        {
-            IsSubmittingFeedback = false;
-        }
     }
 
     #endregion
@@ -3308,22 +1975,55 @@ public class AssetItemViewModel
 
 public sealed class RpcVideoSourceItemViewModel
 {
-    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalVideoSourceDescriptor source)
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalMaskSourceDescriptor source,
+        ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
+        : this(parent, new ExternalVideoSourceDescriptor { ClientId = source.ClientId, ClientName = source.ClientName,
+            SourceId = source.SourceId, Name = source.Name }, projectAsset, status)
+    {
+        MaskSource = source;
+    }
+
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalAudioSourceDescriptor source,
+        ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
+        : this(parent, new ExternalVideoSourceDescriptor { ClientId = source.ClientId, ClientName = source.ClientName,
+            SourceId = source.SourceId, Name = source.Name, DecoderName = source.DecoderName }, projectAsset, status)
+    {
+        AudioSource = source;
+    }
+
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalVideoSourceDescriptor source,
+        ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
     {
         Source = source;
+        ProjectAsset = projectAsset;
+        LoadStatus = status;
         AddCommand = new Command(async () => await parent.AddRpcVideoSource(this));
     }
 
     public ExternalVideoSourceDescriptor Source { get; }
+    public ExternalAudioSourceDescriptor? AudioSource { get; }
+    public ExternalMaskSourceDescriptor? MaskSource { get; }
+    public bool IsMediaSource => MaskSource is null;
+    public ProjectExternalSourceAsset? ProjectAsset { get; }
+    private ProjectExternalSourceStatus? LoadStatus { get; }
+    public bool CanAdd => !string.IsNullOrWhiteSpace(Source.SourceId)
+        && (ProjectAsset is null ? ProjectExternalSourceService.AllowRpcSources : ProjectExternalSourceService.AllowAssemblySources);
+    public string Status => ProjectAsset is null ? string.Empty : !string.IsNullOrWhiteSpace(LoadStatus?.Error)
+        ? $"{Localized.ProjectExternalSource_Failed}: {LoadStatus.Error}"
+        : LoadStatus?.Loaded == true ? Localized.ProjectExternalSource_Loaded : Localized.ProjectExternalSource_NotLoaded;
     public string Name => Source.Name;
-    public string ClientName => string.IsNullOrWhiteSpace(Source.ClientName) ? Source.ClientId.ToString("D") : Source.ClientName;
+    public string ClientName => ProjectAsset is null ? (string.IsNullOrWhiteSpace(Source.ClientName) ? Source.ClientId.ToString("D") : Source.ClientName)
+        : $"{ProjectAsset.Manifest.Name} · {ProjectAsset.Manifest.Author} · {ProjectAsset.Manifest.Version}";
     public string DecoderName => Source.DecoderName;
     public string Resolution => Source.Width > 0 && Source.Height > 0 ? $"{Source.Width}×{Source.Height}" : "?";
     public string FrameRate => Source.Fps > 0 ? $"{Source.Fps:0.###} FPS" : "? FPS";
-    public string Duration => Source.TotalFrames > 0 && Source.Fps > 0 ? TimeSpan.FromSeconds(Source.TotalFrames / Source.Fps).ToString("hh\\:mm\\:ss") : "--:--:--";
+    public string Duration => AudioSource is not null ? TimeSpan.FromSeconds(AudioSource.Duration).ToString("hh\\:mm\\:ss")
+        : Source.TotalFrames > 0 && Source.Fps > 0 ? TimeSpan.FromSeconds(Source.TotalFrames / Source.Fps).ToString("hh\\:mm\\:ss") : "--:--:--";
 
-    public string Capabilities => $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")} RGB{(Source.SupportsAlpha ? "A" : "")}{(Source.SupportsHdr ? " (HDR)" : "")}";
-    public string SourceInfoDisplay => $"{Resolution} {FrameRate} ({Duration})";
+    public string Capabilities => AudioSource is not null ? $"{AudioSource.ChannelCount} ch · {AudioSource.SamplePerSecond} Hz"
+        : $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")} RGB{(Source.SupportsAlpha ? "A" : "")}{(Source.SupportsHdr ? " (HDR)" : "")}";
+    public string SourceInfoDisplay => MaskSource is not null ? Localized.Mask_Title
+        : AudioSource is not null ? $"{Capabilities} ({Duration})" : $"{Resolution} {FrameRate} ({Duration})";
     public Command AddCommand { get; }
 }
 
@@ -3355,10 +2055,6 @@ public class TransformItemViewModel : INotifyPropertyChanged
 
     public string TypeKey { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
-    public bool IsApplicableToLeft { get; set; } = false;
-    public bool IsApplicableToRight { get; set; } = false;
-    public bool IsSideDetermined { get; set; } = false;
-    public bool IsDraftSelectedAnyClip { get; set; } = false;
 
     public string? _previewVideoPath;
     /// <summary>Path to the locally-cached preview MP4 for this transform.</summary>
@@ -3394,244 +2090,8 @@ public class TransformItemViewModel : INotifyPropertyChanged
         }
     }
 
-    public Command AddTransformClipCommand { get; set; }
-    public Command AddTransformClipInLeftCommand { get; set; }
-    public Command AddTransformClipInRightCommand { get; set; }
 
-    public TransformItemViewModel(ProjectAddClipViewModel parent)
-    {
-        AddTransformClipCommand = new Command(async () => await parent.AddTransformClip(this, false, false));
-        AddTransformClipInLeftCommand = new Command(async () => await parent.AddTransformClip(this, true, false));
-        AddTransformClipInRightCommand = new Command(async () => await parent.AddTransformClip(this, false, true));
-    }
-}
-
-public class TextStyleItemViewModel
-{
-    public required string Id { get; set; } = string.Empty;
-    public required string Name { get; set; } = string.Empty;
-    public required string SampleText { get; set; } = string.Empty;
-    public required TextClipEntry ActualTemplate { get; set; } = default!;
-    private ImageSource? _previewSource;
-
-    private static string PreviewCacheDir => Path.Combine(MauiProgram.CachePath, "TextStylePreviews");
-
-    private string ComputeCacheKey()
-    {
-        var t = ActualTemplate;
-        var sb = new StringBuilder();
-        sb.Append(Id).Append('|');
-        sb.Append(SampleText ?? "AaBbYyZz").Append('|');
-        sb.Append(t.fontFamily ?? "").Append('|');
-        sb.Append(t.fontSize).Append('|');
-        sb.Append(t.fontStyle).Append('|');
-        sb.Append(t.r).Append('|');
-        sb.Append(t.g).Append('|');
-        sb.Append(t.b).Append('|');
-        sb.Append(t.a).Append('|');
-        sb.Append(t.horizontalAlignment).Append('|');
-        sb.Append(t.verticalAlignment).Append('|');
-        sb.Append(t.wrappingWidth).Append('|');
-        sb.Append(t.applyKerning).Append('|');
-        sb.Append(t.lineSpacing).Append('|');
-        sb.Append(t.rotation).Append('|');
-        sb.Append(t.strokeWidth).Append('|');
-        sb.Append(t.strokeR).Append('|');
-        sb.Append(t.strokeG).Append('|');
-        sb.Append(t.strokeB).Append('|');
-        sb.Append(t.dpi).Append('|');
-        sb.Append(t.ScaleWithTarget).Append('|');
-        sb.Append(t.UseVerticalLayout).Append('|');
-        sb.Append(t.KeepNonCJKTextAsHorizontal).Append('|');
-        sb.Append(t.x).Append('|');
-        sb.Append(t.y);
-
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
-        return Convert.ToHexString(hash);
-    }
-
-    private string? TryLoadFromDiskCache()
-    {
-        var dir = PreviewCacheDir;
-        Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, ComputeCacheKey() + ".png");
-        return File.Exists(path) ? path : null;
-    }
-
-    private void SaveToDiskCache(byte[] pngBytes)
-    {
-        try
-        {
-            var dir = PreviewCacheDir;
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, ComputeCacheKey() + ".png");
-            File.WriteAllBytes(path, pngBytes);
-        }
-        catch
-        {
-            // disk cache is best-effort
-        }
-    }
-
-    public ImageSource PreviewSource
-    {
-        get
-        {
-            if (_previewSource != null)
-                return _previewSource;
-
-            try
-            {
-                // Try disk cache first
-                var cachedPath = TryLoadFromDiskCache();
-                if (cachedPath != null)
-                {
-                    var cachedBytes = File.ReadAllBytes(cachedPath);
-                    _previewSource = ImageSource.FromStream(() => new MemoryStream(cachedBytes));
-                    return _previewSource;
-                }
-
-                var sample = SampleText ?? "AaBbYyZz";
-                TextClip t = new TextClip
-                {
-                    Id = Guid.Parse(Id),
-                    Name = Id,
-                    TextEntries = TextEntryMigration.MigrateFromTextClipEntries(new List<TextClipEntry>
-                    {
-                        ActualTemplate with { text = sample }
-                    })
-                };
-
-                var fs = ActualTemplate.fontSize > 0 ? ActualTemplate.fontSize : 36;
-                var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
-                var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
-
-                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, 8);
-
-                // Encode to PNG once, share between disk cache and ImageSource
-                var bpp8 = img.ToBitPerPixel(8);
-                using var ms = new MemoryStream();
-                bpp8.SaveToPng(ms);
-                var pngBytes = ms.ToArray();
-
-                SaveToDiskCache(pngBytes);
-                _previewSource = ImageSource.FromStream(() => new MemoryStream(pngBytes));
-                return _previewSource;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-    }
-    public bool ShouldInSubtrack { get; set; } = false;
-
-    public Command AddTextClipWithStyleCommand { get; set; }
-    public TextStyleItemViewModel(ProjectAddClipViewModel parent)
-    {
-        AddTextClipWithStyleCommand = new Command(async () => parent.AddTextClipWithStyle(this));
-    }
-}
-
-public class TextStyleProviderItemViewModel
-{
-    public required string Id { get; set; } = string.Empty;
-    public required string Name { get; set; } = string.Empty;
-    public required ITextClipStyleProvider Provider { get; set; } = default!;
-    public required string FromPlugin { get; set; } = string.Empty;
-    public required Dictionary<string, string> Parameters { get; set; } = new();
-    public required string BasicText { get; set; } = string.Empty;
-
-    private ImageSource? _previewSource;
-
-    private static string PreviewCacheDir => Path.Combine(MauiProgram.CachePath, "TextStylePreviews");
-
-    private string ComputeCacheKey()
-    {
-        var sb = new StringBuilder();
-        sb.Append(Id).Append('|');
-        sb.Append(BasicText ?? "").Append('|');
-        foreach (var kvp in Parameters.OrderBy(k => k.Key))
-        {
-            sb.Append(kvp.Key).Append('=').Append(kvp.Value).Append('|');
-        }
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
-        return Convert.ToHexString(hash);
-    }
-
-    public ImageSource PreviewSource
-    {
-        get
-        {
-            if (_previewSource != null)
-                return _previewSource;
-
-            try
-            {
-                // Try disk cache first
-                var dir = PreviewCacheDir;
-                Directory.CreateDirectory(dir);
-                var cachePath = Path.Combine(dir, ComputeCacheKey() + ".png");
-                if (File.Exists(cachePath))
-                {
-                    var cachedBytes = File.ReadAllBytes(cachePath);
-                    _previewSource = ImageSource.FromStream(() => new MemoryStream(cachedBytes));
-                    return _previewSource;
-                }
-
-                var entries = Provider.BuildEntries();
-                if (entries.Length == 0)
-                {
-                    return null!;
-                }
-
-                TextClip t = new TextClip
-                {
-                    Id = Guid.Parse(Id),
-                    Name = Id,
-                    TextEntries = entries.ToList()
-                };
-
-                var maxFontSize = entries.Max(e => e.FontSize > 0 ? e.FontSize : 36f);
-                var sample = entries.OrderByDescending(e => e.Text?.Length ?? 0).FirstOrDefault()?.Text ?? BasicText ?? "AaBbYyZz";
-                var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
-                var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
-
-                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, 8);
-
-                // Encode to PNG once, share between disk cache and ImageSource
-                var bpp8 = img.ToBitPerPixel(8);
-                using var ms = new MemoryStream();
-                bpp8.SaveToPng(ms);
-                var pngBytes = ms.ToArray();
-
-                // Save to disk cache (best-effort)
-                try
-                {
-                    Directory.CreateDirectory(dir);
-                    File.WriteAllBytes(cachePath, pngBytes);
-                }
-                catch
-                {
-                    // disk cache is best-effort
-                }
-
-                _previewSource = ImageSource.FromStream(() => new MemoryStream(pngBytes));
-                return _previewSource;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-    }
-
-    public Command AddTextClipWithStyleProviderCommand { get; set; }
-
-    public TextStyleProviderItemViewModel(ProjectAddClipViewModel parent)
-    {
-        AddTextClipWithStyleProviderCommand = new Command(async () => await parent.AddTextClipWithStyleProvider(this));
-    }
+    public TransformItemViewModel() { }
 }
 
 #endregion

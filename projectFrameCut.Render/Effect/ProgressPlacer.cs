@@ -1,6 +1,7 @@
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,6 +12,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class ProgressPlacer : IContinuousClipPositionProvider
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         public string TypeName => "ProgressPlacer";
@@ -53,7 +56,7 @@ namespace projectFrameCut.Render.Effect
             };
         }
 
-        void IEffect.Initialize()
+        void IExtensibleObject.Initialize()
         {
             if (ProgressList is null || ProgressList.Count <= 1)
             {
@@ -131,7 +134,8 @@ namespace projectFrameCut.Render.Effect
             int w = (int)Math.Round(from.TargetWidth + (to.TargetWidth - from.TargetWidth) * t);
             int h = (int)Math.Round(from.TargetHeight + (to.TargetHeight - from.TargetHeight) * t);
             bool isDelta = from.IsDelta == to.IsDelta && from.IsDelta;
-            return new ClipPositionTuple(x, y, w, h, isDelta);
+            return new ClipPositionTuple(x, y, w, h, isDelta, (float)(from.Rotation + (to.Rotation - from.Rotation) * t),
+                (float)(from.Opacity + (to.Opacity - from.Opacity) * t));
         }
 
         private ClipPositionTuple NormalizePosition(ClipPositionTuple position, IClip source)
@@ -140,7 +144,7 @@ namespace projectFrameCut.Render.Effect
             {
                 int width = position.TargetWidth <= 0 ? source.TargetWidth : position.TargetWidth;
                 int height = position.TargetHeight <= 0 ? source.TargetHeight : position.TargetHeight;
-                return new ClipPositionTuple(position.TargetX, position.TargetY, width, height, false);
+                return position with { TargetWidth = width, TargetHeight = height };
             }
 
             return position;
@@ -157,7 +161,7 @@ namespace projectFrameCut.Render.Effect
             int y = (int)Math.Round((double)position.TargetY * targetHeight / RelativeHeight);
             int w = (int)Math.Round((double)position.TargetWidth * targetWidth / RelativeWidth);
             int h = (int)Math.Round((double)position.TargetHeight * targetHeight / RelativeHeight);
-            return new ClipPositionTuple(x, y, w, h, position.IsDelta);
+            return position with { TargetX = x, TargetY = y, TargetWidth = w, TargetHeight = h };
         }
 
         private static List<ProgressData> ParseProgressList(object? value)
@@ -208,8 +212,12 @@ namespace projectFrameCut.Render.Effect
     /// <summary>
     /// The Render-side provider of the ProgressPlacer keyframed clip-position provider.
     /// </summary>
-    public class ProgressPlacerProvider : EffectProviderBase
+    public class ProgressPlacerProvider : KeyFramedEffectProviderBase<ProgressData>
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
+
+        public override bool IsDeterministic => true;
+
         public ProgressPlacerProvider()
         {
             Name = "ProgressPlacer";
@@ -228,20 +236,48 @@ namespace projectFrameCut.Render.Effect
         {
             return
             [
-                Field("ProgressList", EffectArgumentFieldType.String, "[]", remarks: "Serialized ProgressData array as JSON string")
+                Field("ProgressList", EffectArgumentFieldType.String | EffectArgumentFieldType.NotVisibleInEffectPanel | EffectArgumentFieldType.CannotBeDynamic, "[]", remarks: "Serialized ProgressData array as JSON string")
             ];
         }
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (!parameters.ContainsKey("ProgressList"))
-            {
-                parameters["ProgressList"] = "[]";
-            }
+        protected override string StepListFieldId => "ProgressList";
 
-            return [new ProgressPlacer().WithParameters(parameters)];
+        public override IKeyFrameStep CreateStep(double progress) => ReadStep(new ProgressData(progress,
+            new ClipPositionTuple(0, 0, 1920, 1080, false)));
+
+        protected override IKeyFrameStep ReadStep(ProgressData item)
+        {
+            var step = new KeyFrameStep(item.Index);
+            step.Fields["TargetX"] = KeyFrameStep.Field("TargetX", EffectArgumentFieldType.Integer, item.Position.TargetX);
+            step.Fields["TargetY"] = KeyFrameStep.Field("TargetY", EffectArgumentFieldType.Integer, item.Position.TargetY);
+            step.Fields["TargetWidth"] = KeyFrameStep.Field("TargetWidth", EffectArgumentFieldType.Integer, item.Position.TargetWidth, "1");
+            step.Fields["TargetHeight"] = KeyFrameStep.Field("TargetHeight", EffectArgumentFieldType.Integer, item.Position.TargetHeight, "1");
+            step.Fields["Rotation"] = KeyFrameStep.Field("Rotation", EffectArgumentFieldType.Numeric, item.Position.Rotation);
+            step.Fields["Opacity"] = KeyFrameStep.Field("Opacity", EffectArgumentFieldType.Numeric, item.Position.Opacity, "0", "1");
+            step.Fields["IsDelta"] = KeyFrameStep.Field("IsDelta", EffectArgumentFieldType.Boolean, item.Position.IsDelta);
+            return step;
         }
+
+        protected override ProgressData WriteStep(IKeyFrameStep step) => new(step.Progress, new ClipPositionTuple(
+            Convert.ToInt32(step.Fields["TargetX"].GetGetter()()), Convert.ToInt32(step.Fields["TargetY"].GetGetter()()),
+            Convert.ToInt32(step.Fields["TargetWidth"].GetGetter()()), Convert.ToInt32(step.Fields["TargetHeight"].GetGetter()()),
+            Convert.ToBoolean(step.Fields["IsDelta"].GetGetter()()), Convert.ToSingle(step.Fields["Rotation"].GetGetter()()),
+            Convert.ToSingle(step.Fields["Opacity"].GetGetter()())));
+
+        public void UpsertStep(double progress, ClipPositionTuple position)
+        {
+            progress = Math.Clamp(progress, 0, 1);
+            var step = ReadStep(new ProgressData(progress, position with
+            {
+                TargetWidth = Math.Max(1, position.TargetWidth), TargetHeight = Math.Max(1, position.TargetHeight), IsDelta = false,
+            }));
+            int index = Steps.ToList().FindIndex(s => Math.Abs(s.Progress - progress) <= 0.000001d);
+            if (index >= 0) UpdateStep(index, step);
+            else AddStep(step);
+        }
+
+
     }
 }

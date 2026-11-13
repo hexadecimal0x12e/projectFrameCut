@@ -27,19 +27,26 @@ internal static class ExternalRpcSourceClient
             };
 
             var provider = new TestVideoSourceProvider(options);
+            var masks = new projectFrameCut.ExternalSourceExample.ExampleMaskSourceProvider();
             await using var client = new RenderClient(
                 new NamedPipeRenderClientTransport(options.PipeName, options.ClientId.ToString("D")),
                 options.ClientId.ToString("D"),
-                provider);
+                provider, provider, masks);
 
             var capabilities = await client.GetCapabilitiesAsync(lifetime.Token);
             Console.WriteLine($"Connected: protocol={capabilities.ProtocolVersion}, backend={capabilities.BackendVersion}");
             await client.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
+            await client.RegisterExternalAudioSourcesAsync(new() { Sources = provider.AudioSources.ToList() }, lifetime.Token);
+            await client.RegisterExternalMaskSourcesAsync(new() { Sources = masks.MaskSources.ToList() }, lifetime.Token);
             Console.WriteLine(JsonSerializer.Serialize(provider.Sources, new JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine(JsonSerializer.Serialize(provider.AudioSources, new JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine(JsonSerializer.Serialize(masks.MaskSources, new JsonSerializerOptions { WriteIndented = true }));
             Console.WriteLine("External source registered. Add it from the project UI; press Ctrl+C to stop.");
 
             await Task.Delay(options.Duration, lifetime.Token);
             await client.UnregisterExternalVideoSourcesAsync(CancellationToken.None);
+            await client.UnregisterExternalAudioSourcesAsync(CancellationToken.None);
+            await client.UnregisterExternalMaskSourcesAsync(CancellationToken.None);
             return 0;
         }
         catch (OperationCanceledException)
@@ -129,9 +136,13 @@ internal static class ExternalRpcSourceClient
     private sealed record Options(string PipeName, Guid ClientId, string SourceId, string Name,
         int Width, int Height, long Frames, double Fps, int Bits, bool Hdr, bool Alpha, TimeSpan Duration);
 
-    private sealed class TestVideoSourceProvider(Options options) : IExternalVideoSourceProvider
+    private sealed class TestVideoSourceProvider(Options options) : IExternalVideoSourceProvider, IExternalAudioSourceProvider
     {
         private readonly ConcurrentDictionary<Guid, string> _instances = new();
+        private readonly ConcurrentDictionary<Guid, byte> _audioInstances = new();
+        public IReadOnlyList<ExternalAudioSourceDescriptor> AudioSources { get; } = [new() { SourceId = options.SourceId + "/audio",
+            Name = options.Name + " Audio", DecoderName = "ExternalRpcTestAudio", ChannelCount = 2, SamplePerSecond = 48000,
+            Duration = (uint)Math.Clamp(Math.Ceiling(options.Frames / options.Fps), 1d, uint.MaxValue) }];
         private readonly ExternalVideoSourceDescriptor _source = new()
         {
             SourceId = options.SourceId,
@@ -146,10 +157,44 @@ internal static class ExternalRpcSourceClient
             HasKnownResultBitsPerPixel = true,
             SupportsHdr = options.Hdr,
             SupportsAlpha = options.Alpha,
+            AllowCachingResult = true,
             Metadata = new() { ["generator"] = "projectFrameCut.ExternalRpcSourceClient" },
         };
 
         public IReadOnlyList<ExternalVideoSourceDescriptor> Sources => [_source];
+
+        public ValueTask<ExternalAudioSourceInstance> CreateAudioAsync(ExternalAudioSourceCreateRequest request, CancellationToken cancellationToken = default)
+        {
+            var descriptor = AudioSources.Single(x => x.SourceId == request.Source.SourceId);
+            var id = Guid.NewGuid();
+            _audioInstances[id] = 0;
+            return ValueTask.FromResult(new ExternalAudioSourceInstance { InstanceId = id, Descriptor = descriptor });
+        }
+        public ValueTask<ExternalAudioSourceInstance> InitializeAudioAsync(ExternalAudioSourceStateRequest request, CancellationToken cancellationToken = default)
+        {
+            if (!_audioInstances.ContainsKey(request.InstanceId)) throw new InvalidOperationException("Unknown audio instance.");
+            return ValueTask.FromResult(new ExternalAudioSourceInstance { InstanceId = request.InstanceId, Descriptor = AudioSources[0] });
+        }
+        public ValueTask<ExternalAudioSamples> ReadSamplesAsync(ExternalAudioSourceReadRequest request, CancellationToken cancellationToken = default)
+        {
+            if (!_audioInstances.ContainsKey(request.State.InstanceId)) throw new InvalidOperationException("Unknown audio instance.");
+            request.Validate();
+            int count = (int)Math.Min(request.Count, Math.Max(0L, (long)AudioSources[0].Duration * 48000 - request.StartIndex));
+            var samples = new ExternalAudioSamples { ChannelCount = 2, SamplePerSecond = 48000, SampleCount = count, Samples = new byte[checked(count * 8)] };
+            for (int i = 0; i < count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var value = 0.2f * (float)Math.Sin(2 * Math.PI * 440 * (request.StartIndex + (long)i) / 48000);
+                BinaryPrimitives.WriteSingleLittleEndian(samples.Samples.AsSpan(i * 4), value);
+                BinaryPrimitives.WriteSingleLittleEndian(samples.Samples.AsSpan((count + i) * 4), value);
+            }
+            return ValueTask.FromResult(samples);
+        }
+        public ValueTask ReleaseAudioAsync(ExternalAudioSourceStateRequest request, CancellationToken cancellationToken = default)
+        {
+            _audioInstances.TryRemove(request.InstanceId, out _);
+            return ValueTask.CompletedTask;
+        }
 
         public ValueTask<ExternalVideoSourceInstance> CreateAsync(ExternalVideoSourceCreateRequest request, CancellationToken cancellationToken = default)
         {
@@ -201,15 +246,15 @@ internal static class ExternalRpcSourceClient
                     BinaryPrimitives.WriteUInt16LittleEndian(frame.Blue.AsSpan(offset), (ushort)(((value + 170) % 256) * 257));
                 }
             }
-            if (alpha) frame.Alpha = CreateFloatPlane(pixels, 1f);
-            if (hdr) { frame.Brightness = CreateFloatPlane(pixels, 1f); frame.MaximumBrightness = 1000; }
+            if (alpha) frame.Alpha = CreateHalfPlane(pixels, Half.One);
+            if (hdr) { frame.Brightness = CreateHalfPlane(pixels, Half.One); frame.MaximumBrightness = (Half)1000; }
             return frame;
         }
 
-        private static byte[] CreateFloatPlane(int length, float value)
+        private static byte[] CreateHalfPlane(int length, Half value)
         {
-            var result = new byte[length * sizeof(float)];
-            for (var i = 0; i < length; i++) BitConverter.TryWriteBytes(result.AsSpan(i * sizeof(float)), value);
+            var result = new byte[length * sizeof(ushort)];
+            for (var i = 0; i < length; i++) BitConverter.TryWriteBytes(result.AsSpan(i * sizeof(ushort)), value);
             return result;
         }
     }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Converters;
@@ -55,8 +55,105 @@ namespace projectFrameCut.DraftStuff
         public bool CanSnapWhileResizing { get; set; } = true;
         public bool AllowFreeScaleResize { get; set; } = false;
         public bool ShowDefaultBorder { get; set; } = true;
+        [JsonIgnore]
+        public bool ShowDefaultHandles { get; set; } = true;
 
-        public uint lengthInFrame { get; set; } = 0;
+        private uint _lengthInFrame;
+        public uint lengthInFrame
+        {
+            get => _lengthInFrame;
+            set
+            {
+                if (_lengthInFrame == value) return;
+                _lengthInFrame = value;
+                TimingPage?.InvalidateTimelineTiming(this);
+            }
+        }
+        internal uint? TimelineStartFrame { get; set; }
+        internal DraftPage? TimingPage { get; private set; }
+        private bool _projectingTiming;
+        internal ISpeedVarianceProvider? SpeedProvider => ExtraData.ContainsKey(projectFrameCut.Render.RenderAPIBase.Project.ProjectReferencePart.MetadataKey)
+            ? null : Effects?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
+        internal uint? AvailableSourceLength => GetAvailableSourceLength(relativeStartFrame);
+        internal uint? GetAvailableSourceLength(uint start) => !isInfiniteLength && maxFrameCount > 0
+            ? ClipTiming.AvailableSourceLength(maxFrameCount, ClipType == ClipMode.VideoClip ? sourceSecondPerFrame : 0,
+                TimingPage?.ProjectInfo.TargetFrameRate ?? 0, start) : null;
+        private Task<SpeedVarianceFrameMap>? customSpeedTask;
+        internal uint TimelineDuration
+        {
+            get
+            {
+                if (SpeedProvider is not CustomSpeedVarianceEffect speed)
+                    return ClipTiming.EffectiveDuration(lengthInFrame, SpeedProvider, AvailableSourceLength);
+                var task = speed.GetFrameMapAsync(lengthInFrame, AvailableSourceLength);
+                if (task.IsCompletedSuccessfully) return task.Result.Length;
+                if (!ReferenceEquals(customSpeedTask, task))
+                {
+                    customSpeedTask = task;
+                    _ = RefreshCustomSpeedAsync(task);
+                }
+                return lengthInFrame;
+            }
+        }
+
+        private async Task RefreshCustomSpeedAsync(Task<SpeedVarianceFrameMap> task)
+        {
+            try
+            {
+                await task;
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (!ReferenceEquals(customSpeedTask, task)) return;
+                    TimingPage?.InvalidateTimelineTiming(this);
+                    ProjectTiming();
+                });
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception) { } // The speed provider logs failures; the property panel displays them.
+        }
+        internal ulong TimelineEnd => (ulong)(TimelineStartFrame ?? 0) + TimelineDuration;
+
+        internal void AttachTiming(DraftPage page)
+        {
+            if (TimingPage == page) return;
+            Clip.PropertyChanged -= OnTimelineLayoutChanged;
+            TimelineStartFrame ??= page.EditPixelToFrame(Math.Max(0, origX));
+            if (lengthInFrame == 0) lengthInFrame = Math.Max(1u, page.EditPixelToFrame(Math.Max(0, origLength)));
+            TimingPage = page;
+            Clip.PropertyChanged += OnTimelineLayoutChanged;
+            ProjectTiming();
+        }
+
+        private void OnTimelineLayoutChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_projectingTiming || TimingPage is null || IsExtraDataOptionIsTrue("ExtendToWholeDraft")
+                || e.PropertyName != nameof(Clip.TranslationX)) return;
+            TimelineStartFrame = TimingPage.EditPixelToFrame(Math.Max(0, Clip.TranslationX));
+            TimingPage.InvalidateTimelineTiming(this);
+            ProjectTiming();
+        }
+
+        internal void SetTimelineStart(uint frame)
+        {
+            TimelineStartFrame = frame;
+            TimingPage?.InvalidateTimelineTiming(this);
+            ProjectTiming();
+        }
+
+        internal void ProjectTiming()
+        {
+            if (TimingPage is null) return;
+            _projectingTiming = true;
+            try
+            {
+                origX = TimingPage.FrameToPixel(TimelineStartFrame ?? 0);
+                origLength = TimingPage.FrameToPixel(lengthInFrame);
+                var range = TimingPage.GetClipFrameRange(this);
+                Clip.TranslationX = TimingPage.FrameToPixel(range.Start);
+                Clip.WidthRequest = TimingPage.FrameToPixel(range.Duration);
+            }
+            finally { _projectingTiming = false; }
+        }
         /// <summary>
         /// Indicates whether a clip's <b>SOURCE</b> is infinite length.
         /// <b>NOT MEANS The Clip itself is infinite length</b> when this prop is true.
@@ -73,10 +170,13 @@ namespace projectFrameCut.DraftStuff
         public string FromPlugin { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;
         public string? SourcePath { get; set; } = null;
+        public string BindedSoundTrack { get; set; } = string.Empty;
         public int TargetWidth { get; set; } = 0;
         public int TargetHeight { get; set; } = 0;
         public int TargetX { get; set; } = 0;
         public int TargetY { get; set; } = 0;
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; } = 0;
         public int StartingY { get; set; } = 0;
         public int SubLayerIndex { get; set; } = 0;
@@ -86,7 +186,16 @@ namespace projectFrameCut.DraftStuff
             set => SubLayerIndex = value;
         }
 
-        public string? ClipColor { get; set; } = null;
+        public string? ClipColor
+        {
+            get => ExtraData?.GetValueOrDefault("ClipColor")?.ToString();
+            set
+            {
+                ExtraData ??= new();
+                if (string.IsNullOrWhiteSpace(value)) ExtraData.Remove("ClipColor");
+                else ExtraData["ClipColor"] = value;
+            }
+        }
 
         /// <summary>
         /// Indicates whether this clip is a temporary "ghost" overlay used during drag-and-drop operations.
@@ -108,41 +217,22 @@ namespace projectFrameCut.DraftStuff
 
         public float GetAverageSpeedRatio()
         {
-            float ratio = 0;
-
-            var spvProvider = Effects?.FirstOrDefault(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider);
-            if (spvProvider?.Value is ISpeedVarianceProvider pvd)
-            {
-                uint sourceLength = maxFrameCount;
-                if (sourceLength == 0)
-                {
-                    sourceLength = 1;
-                }
-
-                try
-                {
-                    uint effectiveLength = pvd.GetEffectiveLength(sourceLength);
-                    ratio = (float)effectiveLength / sourceLength;
-                }
-                catch
-                {
-                    ratio = 1f;
-                }
-            }
-            return ratio > 0 ? ratio : 1;
+            return lengthInFrame > 0 ? (float)TimelineDuration / lengthInFrame : 1f;
         }
 
         public void UpdateSourceDuration()
         {
+            if (ClipType == ClipMode.ProjectReferenceClip) return;
             if (ClipType != ClipMode.VideoClip && ClipType != ClipMode.AudioClip && ClipType != ClipMode.ExtendClip)
             {
                 isInfiniteLength = true;
                 return;
             }
             if (string.IsNullOrWhiteSpace(SourcePath)) return;
+            if (ClipType == ClipMode.AudioClip && projectFrameCut.Render.EncodeAndDecode.RemoteRpcAudioSource.IsExternalPath(SourcePath)) return;
             try
             {
-                var src = PluginManager.CreateVideoSource(SourcePath, 8);
+                using var src = PluginManager.CreateVideoSource(SourcePath, 8);
                 maxFrameCount = (uint)src.TotalFrames;
 
             }
@@ -154,8 +244,15 @@ namespace projectFrameCut.DraftStuff
 
         public void ApplySpeedRatio()
         {
-            Clip.WidthRequest = origLength * GetAverageSpeedRatio();
-
+            if (TimingPage is not null)
+            {
+                TimingPage.InvalidateTimelineTiming(this);
+                ProjectTiming();
+            }
+            else
+            {
+                Clip.WidthRequest = origLength * GetAverageSpeedRatio();
+            }
         }
 
         public void ApplyClipColor()
@@ -184,10 +281,13 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
+        internal bool HasInitializationFailureIndicator { get; private set; }
+
         public void ApplyInitializationFailureIndicator()
         {
             if (!ClipInitializationFailure.IsMarked(ExtraData)) return;
 
+            HasInitializationFailureIndicator = true;
             var description = ClipInitializationFailure.GetDescription(ExtraData);
             Clip.Stroke = new SolidColorBrush(Color.FromArgb("#FFFF00FF"));
             Clip.StrokeThickness = 4;
@@ -216,6 +316,7 @@ namespace projectFrameCut.DraftStuff
         public void ClearInitializationFailureIndicator()
         {
             ClipInitializationFailure.Clear(ExtraData);
+            HasInitializationFailureIndicator = false;
             Clip.Stroke = Colors.Gray;
             Clip.StrokeThickness = 2;
             ToolTipProperties.SetText(Clip, DisplayName);
@@ -242,29 +343,9 @@ namespace projectFrameCut.DraftStuff
                 return extend;
             }
 
-            double startPx = (Clip is not null) ? Clip.TranslationX : layoutX;
-            if (double.IsNaN(startPx) || double.IsInfinity(startPx))
-            {
-                startPx = layoutX;
-            }
-            startPx = Math.Max(0d, startPx);
-
-            uint startFrame = workingPage.PixelToFrame(startPx);
-
-            uint effectiveLength = lengthInFrame;
-            if (effectiveLength == 0)
-            {
-                double widthPx = origLength;
-                if (Clip is not null)
-                {
-                    widthPx = Clip.WidthRequest > 0 ? Clip.WidthRequest : Clip.Width;
-                }
-
-                effectiveLength = Math.Max(1u, workingPage.PixelToFrame(Math.Max(0d, widthPx)));
-            }
-
-            ulong start = startFrame;
-            ulong endExclusive = start + Math.Max(1u, effectiveLength);
+            if (workingPage is DraftPage page) AttachTiming(page);
+            ulong start = TimelineStartFrame ?? workingPage.PixelToFrame(Math.Max(0, Clip.TranslationX));
+            ulong endExclusive = start + TimelineDuration;
             ulong frame = targetFrame;
 
             return frame >= start && frame < endExclusive;
@@ -279,13 +360,37 @@ namespace projectFrameCut.DraftStuff
             return false;
         }
 
+        public bool SupportsNativeEffects => ClipType is ClipMode.TextClip or ClipMode.SubtitleClip or ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip
+            || ClipType == ClipMode.PhotoClip && (TypeName == nameof(VectorPhotoClip) || string.Equals(Path.GetExtension(SourcePath), ".svg", StringComparison.OrdinalIgnoreCase));
+
+        public IReadOnlyList<EffectStage>? DeclaredStages { get; set; }
+        public IReadOnlyList<EffectStage> SupportedStages => DeclaredStages ?? (ClipType == ClipMode.AudioClip ? EffectStages.Audio
+            : ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectStages.Text
+            : ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip ? EffectStages.Vector
+            : SupportsNativeEffects ? EffectStages.VectorImage : EffectStages.Picture);
+
+        public EffectTarget GetEffectSelectionTarget(EffectStage stage) => stage switch
+        {
+            EffectStage.Text => EffectTarget.Text | EffectTarget.ValueProvider,
+            EffectStage.VectorContent => EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.ValueProvider,
+            EffectStage.Composition => EffectTarget.SpeedVariance | EffectTarget.Transform | EffectTarget.ValueProvider
+                | (ClipType == ClipMode.AudioClip ? 0 : EffectTarget.Mixture),
+            EffectStage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
+            EffectStage.Render => EffectTarget.ValueProvider | (ClipType == ClipMode.AudioClip ? EffectTarget.Audio
+                : EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ClipPosition | (!string.IsNullOrWhiteSpace(BindedSoundTrack) ? EffectTarget.Audio : 0)),
+            _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ClipPosition | EffectTarget.ValueProvider,
+        };
+
         public EffectTarget GetEffectTarget() => ClipType switch
         {
             ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
             ClipMode.AudioClip => EffectTarget.Audio,
-            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text,
-            _ => EffectTarget.Video
+            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video | EffectTarget.VectorPicture | EffectTarget.ClipPosition,
+            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.ClipPosition,
+            _ => EffectTarget.Video | EffectTarget.ClipPosition | (SupportsNativeEffects ? EffectTarget.VectorPicture : 0)
         };
+
+        public EffectTarget GetEffectSelectionTarget() => GetEffectTarget();
 
         public void UpdateContent(View? content)
         {
@@ -296,7 +401,9 @@ namespace projectFrameCut.DraftStuff
                 {
                     new Label
                     {
-                        Text = string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id.ToString()[^4..]}" : DisplayName,
+                        Text = ClipType == ClipMode.ProjectReferenceClip
+                            ? $"▣ {DisplayName} · {(projectFrameCut.Render.RenderAPIBase.Project.ProjectReference.Read(ExtraData)?.Mode == projectFrameCut.Render.RenderAPIBase.Project.ProjectReferenceMode.Linked ? Localized.ProjectReference_Linked : Localized.ProjectReference_Snapshot)}"
+                            : string.IsNullOrWhiteSpace(DisplayName) ? $"Unnamed clip {Id.ToString()[^4..]}" : DisplayName,
                         LineBreakMode = LineBreakMode.TailTruncation,
                         MaxLines = 1,
                         HorizontalOptions = LayoutOptions.Center,
@@ -428,7 +535,8 @@ namespace projectFrameCut.DraftStuff
                 Background = background ?? prototype?.Background ?? new SolidColorBrush(Colors.CornflowerBlue),
                 WidthRequest = width,
                 HeightRequest = prototype?.HeightRequest > 0 ? prototype!.HeightRequest : _defaultClipHeight,
-                StrokeShape = prototype?.StrokeShape ?? new RoundRectangle
+                StrokeShape = prototype?.StrokeShape is RoundRectangle r ? new RoundRectangle { CornerRadius = r.CornerRadius }
+                    : prototype?.StrokeShape ?? new RoundRectangle
                 {
                     CornerRadius = 20,
                     BackgroundColor = Colors.White,
@@ -625,6 +733,12 @@ namespace projectFrameCut.DraftStuff
         {
             var palette = GetPalette();
             return palette[Random.Shared.Next(palette.Length)];
+        }
+
+        internal static Color GetPaletteColor(int index)
+        {
+            var palette = GetPalette();
+            return palette[index % palette.Length] is SolidColorBrush brush ? brush.Color : Colors.Gray;
         }
 
     }

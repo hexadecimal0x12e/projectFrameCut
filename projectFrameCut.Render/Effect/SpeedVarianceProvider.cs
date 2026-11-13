@@ -6,11 +6,30 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.Render.Effect
 {
+    public sealed class ReverseSpeedVarianceProviderEffectProvider : EffectProviderBase
+    {
+        public ReverseSpeedVarianceProviderEffectProvider() => Name = "Reverse";
+        public override string TypeName => "ReverseSpeedVarianceProvider";
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public override EffectType TypeOfEffect => EffectType.SpeedVarianceProvider;
+        public override EffectTarget Target => EffectTarget.SpeedVariance;
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Composition];
+        public override bool IsDeterministic => true;
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
+            => new Dictionary<string, EffectArgumentFieldDescriptor>();
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+    }
+
     /// <summary>
     /// The Render-side provider of the ClassicSpeedVarianceProvider.
     /// </summary>
     public class ClassicSpeedVarianceProviderEffectProvider : EffectProviderBase
     {
+        public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Composition];
+
+        public override bool IsDeterministic => true;
+
         public ClassicSpeedVarianceProviderEffectProvider()
         {
             Name = "Classic Speed";
@@ -25,22 +44,19 @@ namespace projectFrameCut.Render.Effect
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>();
+
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
             return
             [
-                Field("Ratio", EffectArgumentFieldType.Numeric, "1", min: "0.05", max: "8")
+                Field("Ratio", EffectArgumentFieldType.Numeric | EffectArgumentFieldType.CannotBeDynamic, "1", min: "0.05", max: "8")
             ];
         }
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (!parameters.ContainsKey("Ratio")) parameters["Ratio"] = 1f;
-            var effect = new ClassicSpeedVarianceProvider { Parameters = parameters };
-            effect.Initialize();
-            return [effect];
-        }
+
     }
 }

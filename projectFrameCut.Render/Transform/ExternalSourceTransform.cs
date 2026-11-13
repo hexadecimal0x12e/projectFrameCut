@@ -1,38 +1,77 @@
-﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
+using projectFrameCut.Shared;
 
-namespace projectFrameCut.Render.Transform
+namespace projectFrameCut.Render.Transform;
+
+public class ExternalSourceTransform : TransformEffectBase, IDisposable
 {
-    public class ExternalSourceTransform : IContinuousTransform
+    private readonly Lock sync = new();
+    private IVideoSource? source;
+    private string? sourcePath;
+    private bool disposed;
+    public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+    public override string TypeName => "ExternalSourceTransform";
+    public override TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportTwoInput;
+    public IEffect WithPictureType<TPicture>() where TPicture : IPicture => new ExternalSourceTransform<TPicture>();
+    public override IEffect WithParameters(Dictionary<string, object> parameters) => new ExternalSourceTransform { Parameters = parameters };
+
+    public override IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int targetWidth, int targetHeight) => RenderSource<IPicture>(progress, targetWidth, targetHeight);
+
+    protected IPicture RenderSource<TPicture>(float progress, int targetWidth, int targetHeight) where TPicture : IPicture
     {
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
-
-        public string TypeName => "ExternalSourceTransform";
-
-        public string Name { get; init; }
-        public Guid BindedLeftClip { get; set; }
-        public Guid BindedRightClip { get; set; }
-        public uint Duration { get; set; }
-
-        public string? NeedComputer => null;
-
-        public string SourcePath { get; set; }
-        [JsonIgnore]
-        public IVideoSource source { get; set; }
-
-        void ITransform.Init()
+        using var scope = sync.EnterScope();
+        ObjectDisposedException.ThrowIf(disposed, this);
+        string path = DynamicParam.Resolve(Parameters.GetValueOrDefault("SourcePath"), "");
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        if (source is null || sourcePath != path)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(SourcePath, nameof(SourcePath));
-            source = PluginManager.CreateVideoSource(SourcePath);
+            source?.Dispose();
+            source = null;
+            sourcePath = null;
+            var next = PluginManager.CreateVideoSource(path);
+            try { next.Initialize(); }
+            catch { next.Dispose(); throw; }
+            source = next;
+            sourcePath = path;
+            Logger.Log($"Initialized external transform source {path}.", nameof(ExternalSourceTransform));
         }
-
-        public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight) => source.GetFrame((uint)(progress * source.TotalFrames)).Resize(targetWidth, targetHeight, true);
+        using var frame = source.GetFrame((uint)(Math.Clamp(progress, 0, 1) * Math.Max(0, source.TotalFrames - 1)));
+        using var input = new PictureInput<TPicture>(frame);
+        var result = PictureCalculation<TPicture>.Resize(input.Picture, targetWidth, targetHeight, false);
+        return ReferenceEquals(result, input.Picture) ? result.Clone() : result;
     }
+
+    public void Dispose()
+    {
+        using var scope = sync.EnterScope();
+        if (disposed) return;
+        disposed = true;
+        source?.Dispose();
+        source = null;
+        sourcePath = null;
+    }
+}
+
+public class ExternalSourceTransform<TPicture> : ExternalSourceTransform, ITransform<TPicture> where TPicture : IPicture
+{
+    public override IEffect WithParameters(Dictionary<string, object> parameters) => new ExternalSourceTransform<TPicture> { Parameters = parameters };
+    public override IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int width, int height) =>
+        RenderSource<TPicture>(progress, width, height);
+    public IPicture Render(TPicture left, TPicture? right, float progress, TransformSide side, int width, int height) =>
+        RenderSource<TPicture>(progress, width, height);
+}
+
+public sealed class ExternalSourceTransformProvider : TransformEffectProviderBase
+{
+    public override string TypeName => "ExternalSourceTransform";
+    public override object? ResolveDataFormat(string fieldId, bool isInput, EffectFieldTypeContext context) => null;
+    protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() =>
+        [Field("SourcePath", EffectArgumentFieldType.String, "")];
+    protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 }

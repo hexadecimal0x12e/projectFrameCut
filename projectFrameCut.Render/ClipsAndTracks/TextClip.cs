@@ -8,11 +8,16 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.Render.Text;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class TextClip : IVectorContentClip
     {
+        [JsonIgnore]
+        public bool ProcessesVectorPictureEffects => true;
+
         public static bool DiagMode = false;
 
         public required Guid Id { get; init; }
@@ -26,7 +31,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? filePath { get; } = null;
-        public ClipMode ClipType => ClipMode.TextClip;
+        public virtual ClipMode ClipType => ClipMode.TextClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
@@ -34,8 +39,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Text;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public bool NeedFilePath => false;
-        public Dictionary<string, object> ExtraData { get; set; }
+        public Dictionary<string, object> ExtraData { get; set; } = new();
         public bool ExtendToWholeDraft { get; set; }
 
         public string BindedSoundTrack { get; init; } = "";
@@ -80,8 +89,66 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public string FontPath { get; set; } = string.Empty;
+        private ITextClipStyleProvider? textStyle;
+        private bool textStyleLoaded;
+
+        [JsonIgnore]
+        public virtual IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields
+        {
+            get
+            {
+                var fields = new Dictionary<string, ClipArgumentFieldDescriptor>(ClipArgumentHandler.DefaultFields);
+                if (ClipType != ClipMode.TextClip || GetTextStyle() is not { } style) return fields;
+                foreach (var (key, descriptor) in style.SettableFields)
+                {
+                    if (descriptor.FieldType.HasFlag(EffectArgumentFieldType.InternalUseOnly)) continue;
+                    fields.Add(TextClipStyles.ArgumentPrefix + key, new()
+                    {
+                        Id = TextClipStyles.ArgumentPrefix + key, FieldType = descriptor.FieldType,
+                        DefaultValue = descriptor.DefaultValue, MinValue = descriptor.MinValue, MaxValue = descriptor.MaxValue,
+                        PresetOptions = descriptor.PresetOptions, Remarks = descriptor.Remarks,
+                        ReadValue = c => TextClipStyles.ReadValue(((TextClip)c).GetTextStyle()!, key),
+                    });
+                }
+                return fields;
+            }
+        }
+
+        private ITextClipStyleProvider? GetTextStyle()
+        {
+            if (textStyleLoaded) return textStyle;
+            try { textStyle = TextClipStyles.Restore(ExtraData); }
+            catch (Exception ex) { Logger.Log(ex, $"Restore text style for clip {Id}", typeof(TextClip)); }
+            textStyleLoaded = true;
+            return textStyle;
+        }
+
+        public virtual IClip HandleArguments(IReadOnlyDictionary<string, object> arguments)
+        {
+            var copy = (TextClip)ClipArgumentHandler.Handle(this,
+                arguments.Where(p => !p.Key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)).ToDictionary());
+            if (GetTextStyle() is not { } style || ClipType != ClipMode.TextClip) return copy;
+            copy.textStyle = TextClipStyles.Copy(style);
+            copy.textStyleLoaded = true;
+            foreach (var (key, value) in arguments.Where(p => p.Key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)))
+            {
+                string id = key[TextClipStyles.ArgumentPrefix.Length..];
+                var descriptor = copy.textStyle.SettableFields[id];
+                if (!copy.textStyle.HandleSettableFieldsChange(descriptor, value, out _))
+                    copy.textStyle.Fields[id] = new StaticEffectArgumentField(TextClipStyles.ReadValue(style, id), descriptor.FieldType) { Id = id };
+            }
+            if (copy.textStyle.LayoutMode != TextClipLayoutMode.FillClip)
+            {
+                using var clipScope = ValueProviderFrameContext.PushClip(copy);
+                var rect = copy.textStyle.GetViewRect(Math.Max(1, copy.TargetWidth), Math.Max(1, copy.TargetHeight));
+                copy.TargetWidth = Math.Max(1, rect.TargetWidth);
+                copy.TargetHeight = Math.Max(1, rect.TargetHeight);
+            }
+            return copy;
+        }
+
         private const int MaxTextFrameCacheEntries = 1024;
-        private readonly object textFrameCacheLock = new();
+        private readonly Lock textFrameCacheLock = new();
         private readonly Dictionary<long, IPicture> textFrameCache = new();
 
         /// <summary>
@@ -92,9 +159,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// </summary>
         public VectorPicture GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight)
         {
-            var entriesToRender = ResolveTextEntriesForRender(frameIndex);
+            using var context = ValueProviderFrameContext.PushFrame(VectorPictureEffectProcessing.GetTargetFrame(this, frameIndex),
+                Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
+            return LayoutEntries(ResolveTextEntriesForRender(frameIndex), frameIndex, targetWidth, targetHeight);
+        }
+
+        private VectorPicture LayoutEntries(IReadOnlyList<TextEntry> entriesToRender, uint frameIndex, int targetWidth, int targetHeight)
+        {
             if (entriesToRender.Count == 0)
-                return new VectorPicture();
+                return VectorPictureEffectProcessing.Process(this, new VectorPicture(), frameIndex, width: targetWidth, height: targetHeight);
 
             // The layout canvas is the clip's own bounding box. This way the
             // pixel values stored in each TextEntry (FontSize, X, Y, WrappingWidth, ...)
@@ -108,41 +181,28 @@ namespace projectFrameCut.Render.ClipsAndTracks
             if (canvasH <= 0) canvasH = 1f;
 
             var ctx = TextLayoutContext.FromCanvas(canvasW, canvasH);
-            return TextLayoutPipeline.LayoutForRender(entriesToRender, ctx, targetWidth, targetHeight);
+            return VectorPictureEffectProcessing.Process(this,
+                TextLayoutPipeline.LayoutForRender(entriesToRender, ctx, targetWidth, targetHeight), frameIndex, width: targetWidth, height: targetHeight);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
-            // Guard against unreasonable render dimensions
-            if (targetWidth > 0 && targetHeight > 0)
-            {
-                const int maxRatio = 10;
-                if (targetWidth / targetHeight > maxRatio)
-                {
-                    Log($"TextClip {Name}: targetWidth {targetWidth} is {targetWidth / (float)targetHeight:F1}x targetHeight {targetHeight}. Clamping width to {targetHeight * maxRatio}.", "warn");
-                    targetWidth = targetHeight * maxRatio;
-                }
-                else if (targetHeight / targetWidth > maxRatio)
-                {
-                    Log($"TextClip {Name}: targetHeight {targetHeight} is {targetHeight / (float)targetWidth:F1}x targetWidth {targetWidth}. Clamping height to {targetWidth * maxRatio}.", "warn");
-                    targetHeight = targetWidth * maxRatio;
-                }
-            }
-
+            using var context = ValueProviderFrameContext.PushFrame(ClipValueFrameContext.Current?.FrameIndex ?? (ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) is float current ? (uint)current : StartFrame + frameIndex),
+                Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
             var rawEntries = ResolveTextEntriesForRender(frameIndex);
             long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, targetPPB, rawEntries);
+            bool cacheable = !PreviewSourceFrameContext.ReadingRaw && !(EffectsInstances ?? []).Any(e => e.Enabled && e is IVectorPictureEffect);
 
-            if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
+            if (cacheable && TryGetFrameFromCache(cacheKey, out var cachedFrame))
             {
                 if (cachedFrame.BitPerPixel != targetPPB)
                     return cachedFrame.ToBitPerPixel(targetPPB);
                 return cachedFrame;
             }
 
-            var vectorCanvas = GetVectorPictureRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight);
+            var vectorCanvas = LayoutEntries(rawEntries, frameIndex, targetWidth, targetHeight);
 
             var sourcePicture = IVectorContentClip.GlobalDefaultRasterizer.Convert(vectorCanvas, targetWidth, targetHeight, transparentBackground: true, aaMode: ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode);
-            sourcePicture.CanBeDisposed = false;
             sourcePicture.ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -160,9 +220,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
             var resultPicture = sourcePicture.BitPerPixel != targetPPB
                 ? sourcePicture.ToBitPerPixel(targetPPB)
                 : sourcePicture;
-            resultPicture.CanBeDisposed = false;
-            CacheRenderedFrame(cacheKey, resultPicture);
-            return resultPicture;
+            if (!ReferenceEquals(sourcePicture, resultPicture)) sourcePicture.Dispose();
+            resultPicture.CanBeDisposed = true;
+            if (!cacheable) return resultPicture;
+            try { return CacheRenderedFrame(cacheKey, resultPicture); }
+            finally { resultPicture.Dispose(); }
         }
 
         public TextClip()
@@ -170,8 +232,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
            EffectHelper.ResolveClipEffects(this);
         }
 
-        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        public virtual void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
+            textStyle = null;
+            textStyleLoaded = false;
             ClearFrameCache();
             if (!string.IsNullOrWhiteSpace(FontPath))
                 TextClipFontRegistry.AddFont(FontPath);
@@ -180,6 +245,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             ClearFrameCache();
         }
 
@@ -189,6 +255,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get => 0; set { if (value != 0) Log("Cannot modify StartingX for a TextClip.", "warn"); } }
         public int StartingY { get => 0; set { if (value != 0) Log("Cannot modify StartingY for a TextClip.", "warn"); } }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -210,6 +278,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             hash.Add(targetHeight);
             hash.Add(targetPPB.Value);
             hash.Add(FontPath);
+            hash.Add(ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode);
             hash.Add(TargetWidth);
             hash.Add(TargetHeight);
             foreach (var e in entries)
@@ -222,8 +291,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 hash.Add(e.X);
                 hash.Add(e.Y);
                 hash.Add(e.Rotation);
-                hash.Add(e.FillR); hash.Add(e.FillG); hash.Add(e.FillB); hash.Add(e.FillA);
-                hash.Add(e.StrokeR); hash.Add(e.StrokeG); hash.Add(e.StrokeB); hash.Add(e.StrokeA);
+                hash.Add(e.FillR); hash.Add(e.FillG); hash.Add(e.FillB); hash.Add((float)e.FillA);
+                hash.Add(e.StrokeR); hash.Add(e.StrokeG); hash.Add(e.StrokeB); hash.Add((float)e.StrokeA);
                 hash.Add(e.StrokeThickness);
                 hash.Add(e.CharacterSpacing);
                 hash.Add(e.WordSpacing);
@@ -237,6 +306,32 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 hash.Add(e.GetFixedHeightValue() ?? float.NaN);
                 hash.Add(e.GetUseVerticalLayout());
                 hash.Add(e.GetKeepNonCJKTextAsHorizontal());
+                foreach (var font in e.FallbackFonts) hash.Add(font);
+                foreach (var axis in e.VariationAxes.OrderBy(a => a.Key))
+                {
+                    hash.Add(axis.Key);
+                    hash.Add(axis.Value);
+                }
+                if (e is RichTextEntry rich)
+                    foreach (var range in rich.StyledRanges)
+                    {
+                        hash.Add(range.Start);
+                        hash.Add(range.Length);
+                        hash.Add(range.Style.FontName);
+                        hash.Add(range.Style.FontStyle);
+                        hash.Add(range.Style.FontSize);
+                        hash.Add(range.Style.FillR); hash.Add(range.Style.FillG); hash.Add(range.Style.FillB); hash.Add(range.Style.FillA);
+                        hash.Add(range.Style.StrokeR); hash.Add(range.Style.StrokeG); hash.Add(range.Style.StrokeB); hash.Add(range.Style.StrokeA);
+                        hash.Add(range.Style.StrokeThickness);
+                        hash.Add(range.Style.CharacterSpacing); hash.Add(range.Style.WordSpacing); hash.Add(range.Style.LineSpacing);
+                        hash.Add(range.Style.Alignment); hash.Add(range.Style.Decoration);
+                        foreach (var font in range.Style.FallbackFonts ?? []) hash.Add(font);
+                        foreach (var axis in (range.Style.VariationAxes ?? []).OrderBy(a => a.Key))
+                        {
+                            hash.Add(axis.Key);
+                            hash.Add(axis.Value);
+                        }
+                    }
             }
             return hash.ToHashCode();
         }
@@ -249,7 +344,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 {
                     if (!cachedFrame.Disposed)
                     {
-                        picture = cachedFrame.Clone();
+                        picture = EffectPictureProcessing.Copy(cachedFrame);
                         return true;
                     }
                     textFrameCache.Remove(cacheKey);
@@ -260,20 +355,20 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return false;
         }
 
-        private void CacheRenderedFrame(long cacheKey, IPicture picture)
+        private IPicture CacheRenderedFrame(long cacheKey, IPicture picture)
         {
             lock (textFrameCacheLock)
             {
-                if (!textFrameCache.ContainsKey(cacheKey) && textFrameCache.Count >= MaxTextFrameCacheEntries)
-                    ClearFrameCacheUnsafe();
-
-                if (textFrameCache.TryGetValue(cacheKey, out var oldFrame))
+                if (textFrameCache.TryGetValue(cacheKey, out var existing))
                 {
-                    try { oldFrame.Dispose(force: false); } catch { }
+                    if (!existing.Disposed) return EffectPictureProcessing.Copy(existing);
+                    textFrameCache.Remove(cacheKey);
+                    try { existing.Dispose(); } catch { }
                 }
-
-                picture.CanBeDisposed = false;
-                textFrameCache[cacheKey] = picture;
+                if (textFrameCache.Count >= MaxTextFrameCacheEntries) ClearFrameCacheUnsafe();
+                var snapshot = EffectPictureProcessing.Copy(picture);
+                textFrameCache[cacheKey] = snapshot;
+                return EffectPictureProcessing.Copy(snapshot);
             }
         }
 
@@ -296,8 +391,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         private IReadOnlyList<TextEntry> ResolveTextEntriesForRender(uint targetFrame)
         {
-            var raw = GetRawEntries();
-            foreach (var item in EffectsInstances?.Where(c => c is ITextEffect or IContinuousTextEffect) ?? [])
+            using var clipScope = ValueProviderFrameContext.PushClip(this);
+            var raw = GetRawEntries(targetFrame);
+            if (PreviewSourceFrameContext.ReadingRaw) return raw;
+            uint frame = VectorPictureEffectProcessing.GetTargetFrame(this, targetFrame);
+            foreach (var item in (EffectsInstances ?? []).Where(e => e.Enabled && (e is ITextEffect or IContinuousTextEffect)).OrderBy(e => e.Index))
             {
                 if (item is ITextEffect textEffect)
                 {
@@ -307,17 +405,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 {
                     if (cte.IsScoped)
                     {
-                        if (targetFrame < cte.StartPoint || targetFrame > cte.EndPoint)
+                        if (frame < cte.StartPoint || frame >= cte.EndPoint)
                             continue;
                     }
-                    raw = cte.Process(raw.ToArray(), targetFrame / ((IClip)this).GetEffectiveDuration());
+                    raw = cte.Process(raw.ToArray(), cte.IsScoped
+                        ? (float)EffectHelper.GetContinuesEffectProgress(frame, cte.StartPoint, cte.EndPoint)
+                        : Duration <= 1 ? 0 : Math.Clamp(targetFrame / (float)(Duration - 1), 0, 1));
                 }
             }
+            EffectStagePlan?.Complete(this, EffectStage.Text, frame);
             return raw;
         }
 
-        private IReadOnlyList<TextEntry> GetRawEntries()
+        protected virtual IReadOnlyList<TextEntry> GetRawEntries(uint frameIndex)
         {
+            if (GetTextStyle() is { } style) return style.BuildEntries();
             if (ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
             {
                 // Try new format (TextEntry) first

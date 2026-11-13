@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
@@ -14,12 +14,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
     /// <summary>
     /// The interface for video source (decoder) implementations.
     /// </summary>
-    public interface IVideoSource : IDisposable
+    public interface IVideoSource : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
+        public bool IsDeterministic { get; }
+
         /// <summary>
         /// Get the type name of this decoder. Should be the same as the class name.
         /// </summary>
-        public string TypeName { get; }
+        public new string TypeName { get; }
 
         /// <summary>
         /// Initialize the video source. This method should prepare the video source for frame extraction.
@@ -28,7 +30,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// If the file path is null, please just return without doing anything. 
         /// This is because <see cref="IPluginBase.VideoSourceCreator"/> need an instance of this to get <see cref="PreferredExtension"/> to determine which plugin to use.
         /// </remarks>
-        public abstract void Initialize();
+        public new abstract void Initialize();
         /// <summary>
         /// Try to initialize the video source. Returns true if successful, false otherwise.
         /// </summary>
@@ -120,6 +122,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// </summary>
         public int? ResultBitPerPixel { get; }
         /// <summary>
+        /// Whether repeated reads of the same frame produce identical content and may be cached.
+        /// Live or otherwise changing sources must return false.
+        /// </summary>
+        public virtual bool AllowCachingResult => true;
+        /// <summary>
         /// The preferred file extensions for this video source.
         /// </summary>
         /// <remarks>
@@ -165,11 +172,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Note this is not available for all type of IVideoSource.
         /// </remarks>
         public bool StrictMode { get; set; }
-
-        /// <summary>
-        /// Enable or disable disk-based frame caching. When enabled, decoded frames are written to disk for faster re-access across sessions.
-        /// </summary>
-        public static bool EnableDiskCache { get; set; }
 
     }
 
@@ -229,8 +231,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
 
     public interface IHDRVideoSource : IVideoSource
     {
-        HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false);
-        HDRPicture16bpp GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false);
+        bool HasHdrContent => true;
+        HDRPictureFP16 GetHDRFrame(uint targetFrame, bool hasAlpha = false);
+        HDRPictureFP16 GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false);
     }
 
 }

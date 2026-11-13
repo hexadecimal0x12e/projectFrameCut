@@ -1,18 +1,19 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 
 namespace projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 
-public interface IVectorComponentHandler
+public interface IVectorComponentHandler : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
 {
     /// <summary>
     /// Define the type name of the component. This is used to identify the component type in serialization and deserialization processes.
     /// </summary>
-    public string TypeName { get; }
+    public new string TypeName { get; }
     /// <summary>
     /// Indicates which plugin this component handler comes from. 
     /// </summary>
-    public string FromPlugin { get; }
+    public new string FromPlugin { get; }
     /// <summary>
     /// Get a user-friendly display name for this component type
     /// </summary>
@@ -21,6 +22,11 @@ public interface IVectorComponentHandler
     /// A icon in Google Material Icons codepoint.
     /// </summary>
     public string Icon { get; }
+
+    /// <summary>
+    /// Indicates whether this component type is hidden from the add-component selector.
+    /// </summary>
+    public bool IsNotVisibleInNewComponentSelector => false;
 
     /// <summary>
     /// Indicates whether this component type has default handles in the UI that can be used for user interaction. 
@@ -48,6 +54,8 @@ public interface IVectorComponentHandler
     /// <param name="newY">the new Y position of the handle</param>
     /// <param name="isLive">indicates whether the drag is in live(dragging) or final(completed) state.</param>
     public void ApplyHandleDrag(IVectorComponent component, string handleId, float newX, float newY, bool isLive);
+    /// <summary>Creates or updates a handle-drag preview on the UI thread, reusing currentView when possible. Return null to use the backend preview.</summary>
+    public View? GetHandlePreview(IVectorComponent component, VectorHandlePreviewContext context, View? currentView = null) => null;
     /// <summary>
     /// Creates a property panel UI for the given vector component. This UI allows users to view and edit the properties of the component.
     /// </summary>

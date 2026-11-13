@@ -1,12 +1,18 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
+#if WINDOWS || LINUX || HEADLESS
+using projectFrameCut.Render.HwAccelEngine;
+#endif
 #if ANDROID
 using projectFrameCut.Platforms.Android;
 #endif
@@ -25,6 +31,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     private bool _independentWorker;
     private string _projectName = "UnnamedProject";
     private Process? _process;
+    private Task? _workerExitTask;
     private IRenderTransport? _transport;
     private IRenderClient? _client;
     private RenderServiceHost? _directHost;
@@ -48,6 +55,18 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     public bool IsIndependentWorker => _independentWorker;
     public Guid? JobId => _jobId;
     public string? CliPreviewPath { get; private set; }
+    public Task? WorkerExitTask
+    {
+        get
+        {
+            if (_independentWorker) return null;
+#if ANDROID
+            return _androidWorker?.Disconnected;
+#else
+            return _workerExitTask;
+#endif
+        }
+    }
 
     /// <summary>
     /// Requests a CLI render worker to stop and gives it a bounded grace period
@@ -82,7 +101,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     {
         get
         {
-#if WINDOWS || LINUX || MACOS || ANDROID
+#if WINDOWS || LINUX || MACOS || ANDROID || HEADLESS
             return !SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport");
 #else
             return false;
@@ -97,39 +116,44 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     /// <param name="projectName">
     /// The name of the project. This is used to identify the project in the UI.
     /// </param>
-    public void Start(string? projectRoot = null, bool independentWorker = false, string? projectName = null)
+    public void Start(string? projectRoot = null, bool independentWorker = false, string? projectName = null, CancellationToken cancellationToken = default)
     {
         if (_client is not null) return;
+        cancellationToken.ThrowIfCancellationRequested();
         _projectRoot = string.IsNullOrWhiteSpace(projectRoot) ? null : Path.GetFullPath(projectRoot);
         _independentWorker = independentWorker;
         _projectName = string.IsNullOrWhiteSpace(projectName) ? Localized._Unknown : projectName;
 
         if (!SupportsCliRenderProcess)
         {
-            _directHost = new RenderServiceHost(_clientId);
+            _directHost = new RenderServiceHost(_clientId, previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
             _client = _directHost.Client;
             return;
         }
 
 #if ANDROID
-        StartAndroidEditorWorker();
+        StartAndroidEditorWorker(cancellationToken);
 #else
         if (_independentWorker && TryConnectRegisteredWorker()) return;
         var enableHttp = SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp");
-#if WINDOWS || MACOS || LINUX
+#if WINDOWS || MACOS || LINUX || HEADLESS
         List<Exception> failures = [];
         foreach (var executable in CliProcessLauncher.GetExecutableCandidates())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 StartProcess(executable, enableHttp);
                 return;
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 failures.Add(ex);
             }
         }
+        if (failures.Any(ex => ex is RenderWorkerExitedException))
+            throw new RenderWorkerExitedException("The render RPC backend exited during startup.", new AggregateException(failures));
 #if WINDOWS
         throw new InvalidOperationException("Unable to start RPC server. Please ensure that the longer App alias is enabled in the Settings->Apps->Advanced->App execution alias.", new AggregateException(failures));
 #else
@@ -158,12 +182,12 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 startInfo.ArgumentList.Add($"--projectRoot={_projectRoot}");
             }
             startInfo.ArgumentList.Add($"--ffmpegRoot={ffmpeg.RootPath}");
+#if WINDOWS || LINUX || HEADLESS
+            startInfo.ArgumentList.Add($"--previewAcceleratorDeviceName={AcceleratorsManager.GetConfiguration().MainAcceleratorName}");
+#endif
             startInfo.ArgumentList.Add($"--locale={Localized._LocaleId_}");
             startInfo.ArgumentList.Add($"--preferHwAccelDecoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true)}");
             startInfo.ArgumentList.Add($"--preferHwAccelEncoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true)}");
-            if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add($"--logDiagnostic");
-            if (!noConsole) startInfo.ArgumentList.Add($"--consoleLog");
-
             if (withHttp)
             {
                 var portSetting = SettingsManager.GetSetting("render_RpcServerHttpPort", "");
@@ -176,16 +200,25 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Log($"Starting RPC server with HTTP endpoint on port {port} (token: {httpToken})");
             }
 
+            if (Environment.GetCommandLineArgs().Contains("--disablePlugins")) startInfo.ArgumentList.Add("--disablePlugins");
             startInfo.ArgumentList.Add("--consoleLog");
             if (MyLoggerExtensions.LoggingDiagnosticInfo)
             {
                 startInfo.ArgumentList.Add("--logDiagnostic");
             }
-
+            startInfo.EnvironmentVariables["DOTNET_gcServer"] = "1";
+            startInfo.EnvironmentVariables["DOTNET_GCHeapCount"] = Environment.ProcessorCount.ToString("x");
+            ApplyAdditionalBackendOptions(startInfo);
             try
             {
+                LogDiagnostic($"Starting worker {startInfo.FileName} with args: {JsonSerializer.Serialize(startInfo.ArgumentList)}");
                 _process = Process.Start(startInfo)
                     ?? throw new InvalidOperationException("Unable to start pjfc-cli.exe RPC server.");
+                ProcessPriorityBoost.RaiseToHighest(_process);
+                var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _process.Exited += (_, _) => exited.TrySetResult();
+                _process.EnableRaisingEvents = true;
+                _workerExitTask = exited.Task;
                 if (noConsole)
                 {
                     _process.ErrorDataReceived += (_, e) =>
@@ -203,21 +236,28 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
                 }
 
-                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
                 var client = new RenderClient(transport, _clientId);
                 _transport = transport;
                 _client = client;
-                WaitForServer(client, _process);
+                WaitForServer(client, _process, cancellationToken);
                 if (_independentWorker) SaveRegistration();
             }
             catch (Exception ex)
             {
+                Log(ex, $"Start RPC worker '{execPath}'", this);
+#if WINDOWS && DEBUG
+                if (ex is TimeoutException)
+                    CaptureThreadStacksBeforeRestart();
+#endif
                 try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
                 try { _process?.Kill(entireProcessTree: true); } catch { }
                 _process?.Dispose();
                 _process = null;
+                _workerExitTask = null;
                 _client = null;
                 _transport = null;
+                cancellationToken.ThrowIfCancellationRequested();
                 if (withHttp)
                 {
                     // A failing optional HTTP endpoint (for example the port is
@@ -249,7 +289,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 #endif
     }
 
-    public bool TryReconnectCliRender(string projectRoot)
+    public bool TryReconnectCliRender(string? projectRoot)
     {
         if (_client is not null || !SupportsCliRenderProcess) return false;
 #if ANDROID
@@ -261,17 +301,17 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             var registration = System.Text.Json.JsonSerializer.Deserialize<WorkerRegistration>(File.ReadAllText(RegistrationPath));
             if (registration is null || !string.Equals(registration.Kind, "cli-render", StringComparison.Ordinal)) return false;
             if (registration.JobId == Guid.Empty || string.IsNullOrWhiteSpace(registration.ProjectRoot)) return false;
-            if (!SamePath(registration.ProjectRoot, projectRoot)) return false;
+            if (projectRoot is not null && !SamePath(registration.ProjectRoot, projectRoot)) return false;
             using var process = Process.GetProcessById(registration.ProcessId);
             if (process.HasExited) return false;
 
-            _projectRoot = Path.GetFullPath(projectRoot);
+            _projectRoot = Path.GetFullPath(registration.ProjectRoot);
             _independentWorker = true;
             _jobId = registration.JobId;
             CliPreviewPath = registration.PreviewPath;
             _pipeName = registration.PipeName;
             _token = registration.Token;
-            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
             var client = new RenderClient(transport, _clientId);
             _transport = transport;
             _client = client;
@@ -290,7 +330,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     }
 
 #if ANDROID
-    private void StartAndroidEditorWorker()
+    private void StartAndroidEditorWorker(CancellationToken cancellationToken)
     {
         _pipeName = AndroidRenderWorkerController.CreateSocketPath();
         var dataRoot = MauiProgram.BasicDataPath;
@@ -303,7 +343,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _projectRoot,
                 _projectName,
                 ffmpeg.RootPath);
-            ConnectAndroidTransport();
+            ConnectAndroidTransport(cancellationToken);
         }
         catch
         {
@@ -341,7 +381,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         }
     }
 
-    private bool TryReconnectAndroidRenderTask(string projectRoot)
+    private bool TryReconnectAndroidRenderTask(string? projectRoot)
     {
         try
         {
@@ -351,11 +391,12 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             if (registration.JobId == Guid.Empty || string.IsNullOrWhiteSpace(registration.ProjectRoot)) return false;
             if (string.IsNullOrWhiteSpace(registration.PipeName) || string.IsNullOrWhiteSpace(registration.Token)) return false;
             if (!File.Exists(registration.PipeName)) return false;
-            if (!SamePath(registration.ProjectRoot, projectRoot)) return false;
+            if (projectRoot is not null && !SamePath(registration.ProjectRoot, projectRoot)) return false;
 
-            _projectRoot = Path.GetFullPath(projectRoot);
+            _projectRoot = Path.GetFullPath(registration.ProjectRoot);
             _independentWorker = true;
             _jobId = registration.JobId;
+            CliPreviewPath = registration.PreviewPath;
             _pipeName = registration.PipeName;
             _token = registration.Token;
             ConnectAndroidTransport();
@@ -371,13 +412,13 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         }
     }
 
-    private void ConnectAndroidTransport()
+    private void ConnectAndroidTransport(CancellationToken cancellationToken = default)
     {
-        var transport = new UnixSocketRenderClientTransport(_pipeName, _token, _clientId);
+        var transport = new UnixSocketRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
         var client = new RenderClient(transport, _clientId);
         _transport = transport;
         _client = client;
-        WaitForServer(client, null);
+        WaitForServer(client, null, cancellationToken, _androidWorker?.Disconnected);
     }
 
 #endif
@@ -392,24 +433,38 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 var startInfo = CliProcessLauncher.CreateStartInfo(executable, true);
                 startInfo.ArgumentList.Add("render");
                 Add("project", options.ProjectRoot);
+                Add("projectCacheDirectory", string.IsNullOrWhiteSpace(options.CacheRoot) ? ProjectCachePaths.Initialize(options.ProjectRoot, options.ProjectName) : options.CacheRoot);
+                Add("externalSourceApprovals", Convert.ToBase64String(RenderRpcSerializer.Serialize(new SetProjectExternalSourcesRequest { AllowedSources = options.AllowedExternalSources })));
                 Add("output", options.OutputPath);
                 Add("output_options", $"{options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}");
+                if (options.FinalVideoBitRate is long bitRate) Add("finalVideoBitRate", bitRate.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 Add("target", options.WriteToVoid ? "void" : "all");
                 Add("assetDbFile", options.AssetDatabasePath);
                 Add("dataRoot", MauiProgram.BasicDataPath);
+#if WINDOWS || LINUX || HEADLESS
+                var accelerators = AcceleratorsManager.GetConfiguration();
+                Add("acceleratorDeviceName", accelerators.MainAcceleratorName);
+                Add("acceleratorDeviceNames", string.Join(",", accelerators.RenderingAcceleratorNames));
+                Add("multiAccelerator", accelerators.EnableMultiAccel.ToString());
+#endif
                 Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
                 Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
-                Add("oneByOneRender", options.OneByOneRender.ToString());
+                Add("allowWorkerOversubscription", options.AllowWorkerOversubscription.ToString());
+                Add("renderAheadFrames", options.RenderAheadFrames.ToString());
+                Add("enableMemoryBudget", options.EnableMemoryBudget.ToString());
+                Add("maxBufferedBytes", options.MaxBufferedBytes.ToString());
+                Add("enableGpuBufferPoolLimit", options.EnableGpuBufferPoolLimit.ToString());
+                Add("gpuBufferPoolMaxBytes", options.GpuBufferPoolMaxBytes.ToString());
                 Add("GCOptions", Math.Clamp(options.GcOption, 0, 2).ToString());
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
-                Add("prepareInWorker", options.PrepareInWorker.ToString());
-                Add("renderByLayer", options.RenderByLayer.ToString());
+                Add("coreAffinityOverride", string.Join(",", options.WorkerCPUCoreIndexs));
+                Add("reuseDynamicPreviewCache", options.ReuseDynamicPreviewCache.ToString());
+                Add("incrementalRendering", options.EnableDeferredComposition.ToString());
                 Add("preferHwAccelDecoder", options.UseHwAccelDecoder.ToString());
                 Add("preferHwAccelEncoder", options.UseHwAccelEncoder.ToString());
                 Add("chunkRender", options.ChunkRender.ToString());
                 if (options.ChunkFrames is uint chunkFrames) Add("chunkFrames", chunkFrames.ToString());
                 if (options.ChunkSeconds is double chunkSeconds) Add("chunkSeconds", chunkSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                Add("chunkParallelism", Math.Max(1, options.ChunkParallelism).ToString());
                 Add("chunkResume", options.ChunkResume.ToString());
                 Add("chunkKeepFiles", options.ChunkKeepFiles.ToString());
                 Add("rpcPipe", _pipeName);
@@ -421,10 +476,13 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 if (!string.IsNullOrWhiteSpace(options.PreviewPath)) Add("preview_path", options.PreviewPath);
                 startInfo.ArgumentList.Add("--consoleLog");
                 if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add("--logDiagnostic");
+                ApplyAdditionalBackendOptions(startInfo);
+                Add("timelineSource", options.TimelineSource);
 
                 _process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the CLI renderer.");
+                ProcessPriorityBoost.RaiseToHighest(_process);
                 AttachProcessLogging(_process);
-                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
                 var client = new RenderClient(transport, _clientId);
                 _transport = transport;
                 _client = client;
@@ -448,6 +506,32 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         throw new InvalidOperationException("Unable to start pjfc-cli in render mode.", firstError);
     }
 
+    private static void ApplyAdditionalBackendOptions(ProcessStartInfo startInfo)
+    {
+        ApplyAdditionalBackendOption(startInfo, "render_RpcServerExtraArguments", SettingsManager.GetSetting("render_RpcServerExtraArguments"));
+        ApplyAdditionalBackendOption(startInfo, "render_RpcServerEnvironmentVariables", SettingsManager.GetSetting("render_RpcServerEnvironmentVariables"));
+    }
+
+    internal static void ApplyAdditionalBackendOption(ProcessStartInfo startInfo, string id, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        switch (id)
+        {
+            case "render_RpcServerExtraArguments":
+                var args = JsonSerializer.Deserialize<string[]>(value) ?? throw new JsonException("Expected a JSON string array.");
+                if (args.Any(a => a is null || a.Contains('\0')))
+                    throw new ArgumentException("Backend arguments must be strings without null characters.");
+                foreach (var arg in args) startInfo.ArgumentList.Add(arg);
+                break;
+            case "render_RpcServerEnvironmentVariables":
+                var env = JsonSerializer.Deserialize<Dictionary<string, string>>(value) ?? throw new JsonException("Expected a JSON object.");
+                if (env.Any(e => string.IsNullOrWhiteSpace(e.Key) || e.Key.Contains('=') || e.Key.Contains('\0') || e.Value is null || e.Value.Contains('\0')))
+                    throw new ArgumentException("Backend environment variables require valid names and string values without null characters.");
+                foreach (var e in env) startInfo.Environment[e.Key] = e.Value;
+                break;
+        }
+    }
+
     private static void AttachProcessLogging(Process process)
     {
         process.ErrorDataReceived += (_, e) =>
@@ -461,6 +545,10 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         process.BeginErrorReadLine();
         process.BeginOutputReadLine();
     }
+
+    private static IReadOnlyList<ExternalRpcClientAuthorization> GetPersistentAuthorizations() =>
+        ExternalRpcAuthorizationStore.Read(
+            ExternalRpcAuthorizationStore.GetPath(Path.Combine(MauiProgram.BasicDataPath, "RpcRequest"))).ToList();
 
     private string RegistrationPath => Path.Combine(MauiProgram.BasicDataPath, "RenderJobs", "worker.json");
 
@@ -485,7 +573,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             }
             _pipeName = registration.PipeName;
             _token = registration.Token;
-            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
             var client = new RenderClient(transport, _clientId);
             _transport = transport;
             _client = client;
@@ -553,18 +641,35 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             comparison);
     }
 
-    private static void WaitForServer(IRenderClient client, Process? serverProcess)
+    internal static async Task ProbeAsync(IRenderClient client, CancellationToken cancellationToken)
+    {
+        var request = client.GetCapabilitiesAsync(cancellationToken).AsTask();
+        try { await request.WaitAsync(cancellationToken).ConfigureAwait(false); }
+        catch
+        {
+            _ = request.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            throw;
+        }
+    }
+
+    private static void WaitForServer(IRenderClient client, Process? serverProcess, CancellationToken cancellationToken = default, Task? disconnected = null)
     {
         var deadline = Stopwatch.GetTimestamp() + (long)(Stopwatch.Frequency * 20);
         Exception? lastError = null;
         while (Stopwatch.GetTimestamp() < deadline)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (disconnected?.IsCompletedSuccessfully == true)
+                throw new RenderWorkerExitedException("The projectFrameCut Render RPC service disconnected before connecting.", lastError);
             if (serverProcess?.HasExited == true)
-                throw new InvalidOperationException($"The projectFrameCut Render RPC server exited before connecting (exit code {serverProcess.ExitCode}). See log.", lastError);
+                throw new RenderWorkerExitedException($"The projectFrameCut Render RPC server exited before connecting (exit code {serverProcess.ExitCode}). See log.", lastError);
 
             try
             {
-                _ = client.GetCapabilitiesAsync().AsTask().GetAwaiter().GetResult();
+                using var probe = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                probe.CancelAfter(TimeSpan.FromSeconds(2));
+                ProbeAsync(client, probe.Token).GetAwaiter().GetResult();
                 return;
             }
             catch (Exception ex) when (ex is IOException or SocketException or TimeoutException or OperationCanceledException)
@@ -619,10 +724,37 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             _process.Dispose();
             _process = null;
         }
+        _workerExitTask = null;
         _projectRoot = null;
         _independentWorker = false;
         _jobId = null;
     }
+
+#if WINDOWS && DEBUG
+    internal void CaptureThreadStacksBeforeRestart()
+    {
+        var process = _process;
+        if (process is null) return;
+
+        try
+        {
+            if (process.HasExited)
+            {
+                Log($"RPC process {process.Id} has already exited; thread stacks are unavailable.", "warning");
+                return;
+            }
+
+            Log($"Capturing RPC timeout thread stacks before restart. PID={process.Id}.", "warning");
+            var stacks = ProcessThreadStackCapture.Capture(process, "RPC timeout");
+            string path = ProcessThreadStackCapture.SaveToLogDirectory(process.Id, "rpc-timeout", stacks.AllStacks);
+            Log($"All RPC thread stacks for this timeout saved to {path}", "warning");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "capture RPC thread stacks before restart", this);
+        }
+    }
+#endif
 
     /// <summary>
     /// Immediately terminates an external backend process or Android RPC
@@ -692,10 +824,15 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     }
 }
 
+internal sealed class RenderWorkerExitedException(string message, Exception? innerException = null) : InvalidOperationException(message, innerException) { }
+
 internal sealed record CliRenderProcessOptions
 {
+    public List<ProjectExternalSourceApproval> AllowedExternalSources { get; init; } = [];
     public Guid JobId { get; init; } = Guid.NewGuid();
     public required string ProjectRoot { get; init; }
+    public string TimelineSource { get; init; } = "timeline";
+    public string CacheRoot { get; init; } = string.Empty;
     public required string ProjectName { get; init; }
     public required string OutputPath { get; init; }
     public required string AssetDatabasePath { get; init; }
@@ -705,16 +842,23 @@ internal sealed record CliRenderProcessOptions
     public required int FrameRate { get; init; }
     public required string PixelFormat { get; init; }
     public required string Encoder { get; init; }
+    public long? FinalVideoBitRate { get; init; }
     public int MaxParallelThreads { get; init; } = Environment.ProcessorCount;
-    public bool OneByOneRender { get; init; }
+    public bool AllowWorkerOversubscription { get; init; } = true;
+    public int RenderAheadFrames { get; init; }
+    public bool EnableMemoryBudget { get; init; }
+    public long MaxBufferedBytes { get; init; }
+    public bool EnableGpuBufferPoolLimit { get; init; } = true;
+    public long GpuBufferPoolMaxBytes { get; init; } = HwAccelPictureSession.DefaultBufferPoolBytes;
     public int GcOption { get; init; }
     public bool EnableThreadAffinity { get; init; } = true;
-    public bool PrepareInWorker { get; init; } = true;
-    public bool RenderByLayer { get; init; } = true;
+    public int[] WorkerCPUCoreIndexs { get; init; } = [];
+
+    public bool ReuseDynamicPreviewCache { get; init; }
+    public bool EnableDeferredComposition { get; init; }
     public bool ChunkRender { get; init; }
     public uint? ChunkFrames { get; init; }
     public double? ChunkSeconds { get; init; }
-    public int ChunkParallelism { get; init; } = 1;
     public bool ChunkResume { get; init; } = true;
     public bool ChunkKeepFiles { get; init; }
     public bool Background { get; init; }

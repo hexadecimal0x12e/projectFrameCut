@@ -7,9 +7,11 @@ namespace SomePublisher;
 
 public sealed class ExampleInvertEffect : INormalEffect
 {
+    public bool IsDeterministic => true;
+
     private readonly float _amount;
 
-    public ExampleInvertEffect(float amount)
+    public ExampleInvertEffect(float amount = 1f)
     {
         _amount = Math.Clamp(amount, 0, 1);
         Parameters = new Dictionary<string, object> { ["Amount"] = _amount };
@@ -24,7 +26,6 @@ public sealed class ExampleInvertEffect : INormalEffect
     public bool Enabled { get; set; } = true;
     public int Index { get; set; }
     public bool IsReorderable => true;
-    public string? NeedComputer => null;
     public int RelativeWidth { get; set; }
     public int RelativeHeight { get; set; }
     public string? BindedEffectProvidingSystemID { get; set; }
@@ -36,14 +37,29 @@ public sealed class ExampleInvertEffect : INormalEffect
         return new ExampleInvertEffect(Convert.ToSingle(value));
     }
 
-    public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+    public IPicture Render(IPicture source, int targetWidth, int targetHeight)
     {
+        if (source is IPicture<Half> fpSource)
+        {
+            PictureFP16 result = fpSource is IHDRPicture<Half> ? new HDRPictureFP16(fpSource) : new PictureFP16(fpSource);
+            var red = result.r;
+            var green = result.g;
+            var blue = result.b;
+            for (int i = 0; i < result.Pixels; i++)
+            {
+                red[i] = Mix(red[i]);
+                green[i] = Mix(green[i]);
+                blue[i] = Mix(blue[i]);
+            }
+            return result;
+        }
+
         if (source is IPicture<byte> byteSource)
         {
             var result = new Picture8bpp(byteSource.Width, byteSource.Height)
             {
                 HasAlphaChannel = byteSource.HasAlphaChannel,
-                a = byteSource.a is null ? null : (float[])byteSource.a.Clone()
+                a = byteSource.a is null ? null : (Half[])byteSource.a.Clone()
             };
             for (int i = 0; i < result.Pixels; i++)
             {
@@ -59,7 +75,7 @@ public sealed class ExampleInvertEffect : INormalEffect
             var result = new Picture16bpp(ushortSource.Width, ushortSource.Height)
             {
                 HasAlphaChannel = ushortSource.HasAlphaChannel,
-                a = ushortSource.a is null ? null : (float[])ushortSource.a.Clone()
+                a = ushortSource.a is null ? null : (Half[])ushortSource.a.Clone()
             };
             for (int i = 0; i < result.Pixels; i++)
             {
@@ -73,6 +89,8 @@ public sealed class ExampleInvertEffect : INormalEffect
         throw new NotSupportedException($"Unsupported picture type '{source.GetType().Name}'.");
     }
 
+    private Half Mix(Half value) => (Half)((float)value * (1 - _amount) + (1 - (float)value) * _amount);
     private byte Mix(byte value, byte max) => (byte)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, byte.MaxValue);
     private ushort Mix(ushort value, ushort max) => (ushort)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, ushort.MaxValue);
 }
+

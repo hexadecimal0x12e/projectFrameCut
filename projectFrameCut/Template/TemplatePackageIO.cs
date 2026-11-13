@@ -133,6 +133,8 @@ internal static class TemplatePackageIO
 
             // ---- 脚本模板特殊处理 ----
             // 将脚本内容写入 script.ps1，不存入 template.json
+            if (templateClone is ScriptBasedTemplateStructure && string.IsNullOrWhiteSpace(scriptContent))
+                throw new InvalidDataException(Localized.ScriptTemplateCreatePage_NoScript);
             if (!string.IsNullOrEmpty(scriptContent))
             {
                 var scriptPath = Path.Combine(packageDir, ScriptFileName);
@@ -276,10 +278,22 @@ internal static class TemplatePackageIO
         JsonSerializerOptions jsonOptions)
     {
         var scriptFilePath = Path.Combine(extractDir, ScriptFileName);
-        if (File.Exists(scriptFilePath))
+        using var document = JsonDocument.Parse(templateJson);
+        var isScript = document.RootElement.TryGetProperty("TemplateType", out var type)
+            && (type.ValueKind == JsonValueKind.Number && type.GetInt32() == (int)TemplateType.Script
+                || type.ValueKind == JsonValueKind.String && type.GetString() == nameof(TemplateType.Script));
+        if (File.Exists(scriptFilePath) || isScript)
         {
-            return JsonSerializer.Deserialize<ScriptBasedTemplateStructure>(templateJson, jsonOptions)
+            var template = JsonSerializer.Deserialize<ScriptBasedTemplateStructure>(templateJson, jsonOptions)
                 ?? throw new InvalidOperationException("Invalid script template package.");
+            if (!File.Exists(scriptFilePath)) throw new FileNotFoundException(Localized.ScriptTemplateCreatePage_NoScript);
+            // The extraction directory may be deleted while the template remains in the library.
+            var bytes = File.ReadAllBytes(scriptFilePath);
+            var cache = Path.Combine(MauiProgram.CachePath, "template-scripts");
+            Directory.CreateDirectory(cache);
+            template.ScriptPath = Path.Combine(cache, Convert.ToHexString(SHA256.HashData(bytes)) + ".ps1");
+            File.WriteAllBytes(template.ScriptPath, bytes);
+            return template;
         }
 
         return JsonSerializer.Deserialize<JSONBasedTemplateStructure>(templateJson, jsonOptions)
@@ -678,6 +692,7 @@ internal static class TemplatePackageIO
                 }
             }
 
+            PersistPackagedAssetsForTemplate(extractDir, template, jsonOptions);
             return (template, extractDir);
         }
         catch

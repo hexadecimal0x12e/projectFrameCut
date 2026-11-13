@@ -4,6 +4,7 @@
              x:Class="projectFrameCut.InteractableEditor.InteractableEditor"
              BackgroundColor="Transparent"
              xmlns:local="clr-namespace:projectFrameCut"
+             xmlns:controls="clr-namespace:projectFrameCut.Controls"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:l="clr-namespace:LocalizedResources"
              x:DataType="local:InteractableEditor.InteractableEditor"
@@ -22,13 +23,20 @@
               AnchorY="0"
               BackgroundColor="Transparent"
               InputTransparent="False">
-            <Image x:Name="PreviewOverlayImage"
-                   x:FieldModifier="public"
-                   Aspect="AspectFit"
-                   InputTransparent="True"
-                   IsVisible="True"
-                   HorizontalOptions="Fill"
-                   VerticalOptions="Fill" />
+            <Grid x:Name="StaticPreviewHost" InputTransparent="True">
+                <controls:PreviewImage x:Name="PreviewOverlayImage"
+                       x:FieldModifier="public"
+                       Aspect="AspectFit"
+                       InputTransparent="True"
+                       IsVisible="True"
+                       HorizontalOptions="Fill"
+                       VerticalOptions="Fill" />
+                <ContentView x:Name="StaticNativePreviewHost"
+                             IsVisible="False"
+                             HorizontalOptions="Fill"
+                             VerticalOptions="Fill"
+                             InputTransparent="True" />
+            </Grid>
 
             <ContentView x:Name="LivePreviewerHost"
                          x:FieldModifier="public"
@@ -52,7 +60,7 @@
                               InputTransparent="True" />
             </Border>
 
-            <AbsoluteLayout x:Name="ClipStatesHost"
+            <controls:PreviewClipLayout x:Name="ClipStatesHost"
                     BackgroundColor="Transparent"
                     InputTransparent="False"
                     ZIndex="101"
@@ -79,13 +87,22 @@
                 <Label x:Name="DebugInfoLabel"
                     TextColor="White"
                     FontSize="11"
-                    FontFamily="MarkdownCodeBlock"
+                    FontFamily="Font_CodeBlock"
                     LineBreakMode="WordWrap"
                     MaxLines="20" />
             </Border>
 
             </AbsoluteLayout>
         </Grid>
+        <ActivityIndicator IsVisible="{Binding IsPreviewBusy}"
+                           IsRunning="{Binding IsPreviewBusy}"
+                           WidthRequest="40"
+                           HeightRequest="40"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           InputTransparent="True"
+                           ZIndex="10001" />
+
         <VerticalStackLayout x:Name="LeftControlsHost"
                              HorizontalOptions="Start"
                              VerticalOptions="End"
@@ -129,6 +146,10 @@
                         FontFamily="Icons"
                         Clicked="ZoomInButton_Clicked"
                         ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" />
+                <Button x:Name="FullScreenButton"
+                        Text="{l:Localized Key=DraftPage_Preview_FullScreen}"
+                        IsVisible="False"
+                        Clicked="FullScreenButton_Clicked" />
             </HorizontalStackLayout>
 
             <Border x:Name="OverviewHost"
@@ -242,6 +263,11 @@
                         <Label Text="{l:Localized Key=InteractableEditor_PreviewMode}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />
                         <Picker x:Name="PreviewResolutionPicker" MinimumWidthRequest="180" HorizontalOptions="Fill"
                                 SelectedIndexChanged="PreviewResolutionPicker_SelectedIndexChanged" />
+                        <VerticalStackLayout x:Name="DynamicPreviewResolutionOptions" IsVisible="False" Spacing="10">
+                            <Label x:Name="DynamicPreviewTargetResolutionLabel" FontAttributes="Bold" FontSize="16" />
+                            <Picker x:Name="DynamicPreviewTargetResolutionPicker" MinimumWidthRequest="180" HorizontalOptions="Fill"
+                                    SelectedIndexChanged="DynamicPreviewTargetResolutionPicker_SelectedIndexChanged" />
+                        </VerticalStackLayout>
                         <BoxView HeightRequest="1" BackgroundColor="#555555" />
                         <Label Text="{l:Localized Key=InteractableEditor_ReferenceLine}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />
                         <HorizontalStackLayout Spacing="12">

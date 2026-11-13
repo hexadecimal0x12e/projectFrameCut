@@ -5,12 +5,11 @@
 
 ## 系统要求
 独立渲染器支持Windows和Linux操作系统。最低系统要求如下：
-- .NET 10 运行时
+- .NET 11 运行时
 - **8.1.x**的FFmpeg 库
 - CUDA 或 OpenCL 支持的 GPU，用于硬件加速
 
 独立渲染器**不支持MacOS**，因为没有很好的方法在命令行程序里调用Metal API。你可以考虑使用主程序的自动渲染功能。
-
 
 ## 使用方法
 
@@ -49,6 +48,28 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 ### bench
 运行渲染管线的性能基准测试，**无需外部项目文件**。
+
+#### 渲染调度检测
+
+```powershell
+projectFrameCut.StandaloneRender bench schedule -reportDirectory=D:\bench-results
+# 指定编码器、候选数量和随机种子
+projectFrameCut.StandaloneRender bench schedule -encoder=h264_nvenc -scheduleCandidates=120 -scheduleSeed=42
+```
+
+`bench schedule` 使用完整渲染管线，逐轮生成并实际编码 1920×1080、30fps、300 帧的内置项目。默认优先选择硬件 H.264，不可用时回退软件编码；指定 `-encoder` 时严格使用该编码器。预热后固定实际编码器，编码条件在整个搜索期间保持一致。`-pixelFormat` 默认为 `AV_PIX_FMT_YUV420P`。
+
+默认最多 256 轮：完整预热一次、120 个候选各测两次，再对前五名各追加三轮确认。先完成最多 40 个直接合成候选（包含默认基线及固定种子抽样），再按原顺序仅切换延迟合成开关，使用完全相同的其他参数做配对比较。候选预算较小时，初始直接合成阶段最多使用一半预算，至少测一个候选。
+
+如果连续 3 组延迟合成的平均 FPS 都低于对应的直接合成，就跳过剩余延迟合成候选及其确认轮次，继续探索直接合成领先组合的单参数邻域。否则后续邻域探索仍先测直接合成，再测相同参数的延迟合成，沿用相同的提前跳过规则。`scheduleCandidates` 包含两种模式的候选总数；候选空间耗尽时提前结束，候选顺序同时受实测排名影响。报告中的 `DeferredCompositionSkipped` 记录是否提前跳过延迟合成。
+
+搜索线程数、软并发、预渲染窗口、线程亲和性、内存预算，以及直接编码/延迟合成。每轮使用独立项目和缓存，关闭预览复用、断点恢复、效果自动重试及详细诊断。VideoBuilder 的写入队列缓存不参与搜索，因为完整渲染管线直接调用视频写入器。
+
+评分为有效重复轮次的总输出帧数除以总耗时，包含写入器初始化、渲染准备、渲染、编码 flush 和封装关闭。结果是本机、当前编码条件和已测组合中的最佳值。内存峰值按 100ms 采样整个进程的工作集。
+
+每次检测在报告目录下建立独立的 `schedule-*` 子目录，逐轮更新 `report.json` 和 `runs.csv`。JSON 包含运行环境、逐轮结果、排名、`BestConfirmed`、相对基线提升及 `RecommendedArguments`。将推荐参数附加到正常 `render` 命令，并提供项目与输出路径即可复用；不会自动改变默认配置。生成的视频和延迟缓存逐轮清理，仅保留报告。Ctrl+C 会停止检测、清理当前轮并保存已有结果；失败过的组合不参与推荐。
+
+正常渲染新增 `-renderAheadFrames=<帧数>`、`-enableMemoryBudget=<true|false>` 和 `-maxBufferedBytes=<字节数>`；窗口和预算的 `0` 使用渲染器原默认值。
 
 bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种渲染场景的复杂测试项目，覆盖以下内容：
 
@@ -125,6 +146,9 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
 
 #### 可选参数
 
+- **`--timelineSource=timeline|latest|snapshot:<id>`**
+  时间线来源。默认 `timeline`，读取项目根目录的 `timeline.json`；`latest` 使用磁盘上当前最新的已保存状态；`snapshot:<id>` 使用指定快照及其素材列表。快照 ID 为 GUID。`latest` 无法确认当前状态或指定快照不可用时会报错。
+
 - **`-target=<video|audio|all>`**  
   渲染目标。默认：`all`
   - `video`: 仅渲染视频
@@ -151,31 +175,35 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
   渲染工作线程的手动 CPU 亲和性设置。支持逗号分隔的 CPU 索引或范围，例如 `0-3,5,7`。  
   启用此参数后会自动设置 `enableThreadAffinity=true`。
 
-- **`-oneByOneRender=<true|false>`**  
-  是否逐帧渲染，并且在每一帧的结果产生之后同步写入输出视频，而不是计划写入。默认：`false`
-  设置此参数为`true`会覆盖参数 **`-maxParallelThreads`** 为1。
+- **`--incrementalRendering=<true|false>`**
+  启用增量渲染。默认：`false`。渲染前计算全部帧的哈希，复用已有的确定性片段帧和完整画布帧，重新计算不确定性、缺失或损坏的帧，再按时间线顺序编码视频。与分块渲染互斥，原 `-deferredComposition` 参数仍然有效。
+  每次生成的 VFD 缓存、帧哈希和 SQLite 索引保留在 `<项目目录>/incrementalRendering/`，完成或中断后均保留。`-chunkResume=true` 允许继续相同项目和渲染参数下未完成的任务。
+
+- **`-vfdCompression=<None|Deflate|GZip|Brotli|Zstandard|Lzma2>`**
+  帧缓存使用的 VFD 压缩格式，默认 `Zstandard`。名称不区分大小写。
+
+- **`-vfdCompressionLevel=<level>`**
+  `Zstandard` 接受整数 `-131072` 至 `22`，默认 `1`；`Lzma2` 接受整数 `1` 至 `10`，默认 `6`。
+  `Deflate`、`GZip`、`Brotli` 接受 `Fastest`、`Optimal`、`SmallestSize` 或 `NoCompression`，默认 `Fastest`。
+  `None` 不接受级别参数。例如：`--incrementalRendering=true -vfdCompression=Zstandard -vfdCompressionLevel=3`。
+  修改压缩配置不影响已有有效缓存的复用；新生成的帧使用当前配置。
+
+- **`-reuseDynamicPreviewCache=<true|false>`**
+  复用项目`thumbs/perClip/<片段ID>/dynamic/`下的有效动态预览缓存。默认：`false`。
 
 - **`-chunkRender=<true|false>`**
   启用分块渲染。默认：`false`。分块缓存保存在`<项目目录>/thumbs/render-chunks/<任务指纹>/`。
-  分块使用高码率、速度优先的中间编码；全部完成后由内置视频解码器逐帧读取，并写入目标配置的VideoWriter。
+  分块按顺序渲染并复用片段资源；全部完成后通过 FFmpeg 合并编码数据包，按需同时合成音频。
 
 - **`-chunkFrames=<number>`** / **`-chunkSeconds=<number>`**
   按帧数或秒数设置分块大小，两者只能指定一个。启用分块但均未指定时默认每块60秒。
 
-- **`-chunkParallelism=<number>`**
-  同时渲染的分块数量。默认：`1`（串行）。
-
 - **`-chunkResume=<true|false>`**
-  校验并复用已经完成的分块。默认：`true`。
+  校验并复用已经完成的分块，同时控制延迟合成的断点续渲。默认：`true`，不要求开启分块渲染。
+  项目、素材和画面配置未变化时，恢复已保存的片段帧与合成帧，只补齐缺失部分；视频编码从头写入。
 
 - **`-chunkKeepFiles=<true|false>`**
   成功生成最终输出后保留manifest和分块文件。默认：`false`；失败或取消时始终保留。
-
-- **`-renderByLayer=<true|false>`**  
-  是否为每个图层分别渲染（而不是合并所有图层）。默认：`false`
-
-- **`-prepareInWorker=<true|false>`**  
-  是否在工作线程中准备帧（而不是在渲染线程中准备）。默认：`false`
 
 - **`-multiAccelerator=<true|false>`**  
   是否使用多个加速器设备。默认：`false`
@@ -216,10 +244,6 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
 - **`-PictureResizer=<cpu|hwaccel>`**
   选择要使用的硬件加速图片缩放器。默认：`hwaccel`
 
-- **`-VideoFrameDiskCacheRoot=<path to video frame disk cache root>`**
-  指定磁盘缓存的根目录。默认位于projectFrameCut缓存目录下的`VideoFrameDiskCache`文件夹中。
-  不定义此参数代表禁用磁盘缓存。
-
 - **`-VideoFrameMemoryCache=<true|false>`**
   是否启用内存缓存。默认：`false`
 
@@ -249,21 +273,8 @@ bench 模式不需要 `-project`、`-output` 等渲染参数，它会使用 `Ben
   是否写入空设备（BlackholeVideoWriter）。默认：`true`  
   为 `true` 时渲染结果直接丢弃，消除 I/O 对性能测试的影响；为 `false` 时不创建视频写入器，仅测试渲染管线的帧准备和渲染阶段。
 
-- **`-boostMode=<true|false>`**  
-  是否启用 Boost 压力测试模式。默认：`false`  
-  启用后使用最大并行线程数（等于总帧数）、禁用渲染节流、阻塞准备阶段直到渲染开始，以获得最高吞吐量数据。
-
 - **`-maxParallelThreads=<number>`**  
   最大并行渲染线程数。默认：`8`
-
-- **`-oneByOneRender=<true|false>`**  
-  是否逐帧渲染。默认：`false`
-
-- **`-renderByLayer=<true|false>`**  
-  是否为每个图层分别渲染。默认：`false`
-
-- **`-prepareInWorker=<true|false>`**  
-  是否在工作线程中准备帧。默认：`false`
 
 - **`-enableThreadAffinity=<true|false>`**  
   是否启用线程亲和性。默认：`true`
@@ -371,12 +382,11 @@ projectFrameCut.StandaloneRender bench \
   -acceleratorDeviceId=2
 ```
 
-### 示例 9: 压力测试模式（Boost Mode）
+### 示例 9: 渲染管线基准测试
 
 ```bash
 projectFrameCut.StandaloneRender bench \
   -acceleratorType=cuda \
-  -boostMode=true \
   -writeToNull=true
 ```
 

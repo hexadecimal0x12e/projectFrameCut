@@ -4,6 +4,8 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
+using projectFrameCut.Asset;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -21,6 +23,7 @@ public partial class GeneralSettingPage : ContentPage
     public PropertyPanelBuilder rootPPB;
     private string[] locates;
     private Dictionary<string, string> overrideOpts, themeOpts;
+    private Dictionary<string, string> assetImportModeOpts = new();
     private Dictionary<string, string> locateDisplayNameMapping = new(), FFmpegProviderDisplayNameMapping = new(), OrderOptionStringMapping = new();
     public GeneralSettingPage()
     {
@@ -60,6 +63,12 @@ public partial class GeneralSettingPage : ContentPage
             { Localized.AssetPage_OrderBy_Name, "name" },
 
         };
+        assetImportModeOpts = new Dictionary<string, string>
+        {
+            { "ask", SettingLocalizedResources.General_AssetImportMode_Ask },
+            { "copy", Localized.DraftPage_AssetPanel_ImportCopy },
+            { "reference", Localized.DraftPage_AssetPanel_ImportReference }
+        };
         if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
         {
 #if ANDROID || IOS //oled screen, avoid burn-in
@@ -78,24 +87,28 @@ public partial class GeneralSettingPage : ContentPage
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, -10, 10, PropertyPanelBuilder.DefaultWidthOfContent)
             .AddPicker("Edit_AddView_DefaultOrderOption", SettingLocalizedResources.Edit_AddView_DefaultOrderOption, OrderOptionStringMapping.Keys.ToArray(), OrderOptionStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_AddView_DefaultOrderOption", "date"), new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Key, null)
+            .AddPicker(AssetDatabase.ImportModeSetting, SettingLocalizedResources.General_AssetImportMode, assetImportModeOpts.Values.ToArray(), assetImportModeOpts.GetValueOrDefault(GetSetting(AssetDatabase.ImportModeSetting, "ask"), assetImportModeOpts["ask"]))
             .AddCheckbox("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
 #if WINDOWS
             .AddCheckbox("General_NoRebootAfterCrash", SettingLocalizedResources.General_NoRebootAfterCrash(), IsBoolSettingTrue("General_NoRebootAfterCrash"), null)
 #endif
+            .AddCheckbox("Edit_BetterAccessibility", SettingLocalizedResources.Edit_BetterAccessibility, IsBoolSettingTrue("Edit_BetterAccessibility"))
             .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
             .AddCheckbox("codec_PreferredHWAccelDecoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelDecoding, IsBoolSettingTrue("codec_PreferredHWAccelDecoding"))
             .AddCheckbox("codec_PreferredHWAccelEncoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding, IsBoolSettingTrue("codec_PreferredHWAccelEncoding"))
-            .AddCheckbox("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
-            .AddButton(SettingLocalizedResources.GeneralCodec_ManageDiskCache, async (s, e) => await Navigation.PushAsync(new VideoCacheManagePage()))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
 #endif
             .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_ProjectCache_Title, SettingLocalizedResources.General_ProjectCache_Description, 20, 12))
+            .AddText(new Label { Text = $"{SettingLocalizedResources.General_ProjectCache_Path}: {(GetSetting(ProjectCachePaths.SettingKey, string.Empty) is { Length: > 0 } cacheRoot ? cacheRoot : SettingLocalizedResources.General_ProjectCache_Default)}", FontSize = 12 })
+            .AddButton("selectProjectCache", SettingLocalizedResources.General_ProjectCache_Select)
+            .AddButton("resetProjectCache", SettingLocalizedResources.General_ProjectCache_Reset)
             .AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage()))
             .ListenToChanges(SettingInvoker);
         Content = rootPPB.BuildWithScrollView();
@@ -108,6 +121,20 @@ public partial class GeneralSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "selectProjectCache":
+                    var cachePath = await FileSystemService.PickFolderAsync();
+                    if (string.IsNullOrWhiteSpace(cachePath)) return;
+                    cachePath = Path.GetFullPath(cachePath);
+                    await Task.Run(() => ProjectCachePaths.VerifyWritable(cachePath));
+                    WriteSetting(ProjectCachePaths.SettingKey, cachePath);
+                    Log($"Project cache redirection set to '{cachePath}'; applies after restart.");
+                    needReboot = true;
+                    goto done;
+                case "resetProjectCache":
+                    WriteSetting(ProjectCachePaths.SettingKey, string.Empty);
+                    Log("Project cache redirection reset; applies after restart.");
+                    needReboot = true;
+                    goto done;
 #if WINDOWS
                 case "userDataSelectButton":
                     {
@@ -310,6 +337,21 @@ public partial class GeneralSettingPage : ContentPage
                         await Navigation.PushAsync(page);
                     });
                     break;
+                case "Edit_BetterAccessibility":
+                    {
+                        if (Convert.ToBoolean(args.Value))
+                        {
+                            if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Edit_BetterAccessibility_Warn, Localized._OK, Localized._Cancel))
+                            {
+                                WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                            }
+                        }
+                        else
+                        {
+                            WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                        }
+                        break;
+                    }
                 case "locate":
                     {
                         var locateDispName = args.Value?.ToString() ?? "default";
@@ -332,6 +374,9 @@ public partial class GeneralSettingPage : ContentPage
                         WriteSetting("Edit_AddView_DefaultOrderOption", mode);
                         return;
                     }
+                case AssetDatabase.ImportModeSetting:
+                    WriteSetting(args.Id, assetImportModeOpts.FirstOrDefault(x => x.Value == args.Value as string).Key ?? "ask");
+                    return;
                 case "ui_defaultWidthOfContent":
                     if (args.Value is double d)
                         PropertyPanelBuilder.DefaultWidthOfContent = d;
@@ -422,7 +467,6 @@ public partial class GeneralSettingPage : ContentPage
                     needReboot = true;
                     break;
 
-                case "codec_EnableDiskCache":
                 case "codec_defaultResizeProvider":
                     WriteSetting(args.Id, args.Value?.ToString() ?? "");
                     return;
@@ -441,6 +485,7 @@ public partial class GeneralSettingPage : ContentPage
         }
         catch (Exception ex)
         {
+            Log(ex, "Update general settings", this);
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

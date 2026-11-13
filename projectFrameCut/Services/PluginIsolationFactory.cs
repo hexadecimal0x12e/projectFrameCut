@@ -1,4 +1,7 @@
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Plugins;
+#endif
+
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -10,28 +13,28 @@ namespace projectFrameCut.Services;
 internal static class PluginIsolationFactory
 {
     public static async ValueTask<IPluginBase> CreateExternalAsync(
-        PluginPackageVerificationResult verification,
+        PluginMetadata metadata,
         string pluginRoot,
         Dictionary<string, string> configuration,
         CancellationToken cancellationToken = default)
     {
-        var launch = verification.Metadata.ExternalBackend?.GetCurrentPlatform()
+        var launch = metadata.ExternalBackend?.GetCurrentPlatform()
             ?? throw new PlatformNotSupportedException("The external plugin package does not declare an entry point for this platform.");
         var session = await new ExternalPluginBackendPlatform(launch).StartAsync(new PluginIsolationLaunchContext
         {
-            PluginId = verification.Metadata.PluginID,
+            PluginId = metadata.PluginID,
             PluginRoot = pluginRoot,
             SessionRoot = Path.Combine(ExternalPluginBackendPlatform.SessionDirectory, Guid.NewGuid().ToString("N")),
             AuthenticationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
             PluginEncryptionKey = string.Empty,
             InstancePackageName = ExternalPluginBackendPlatform.InstanceName,
-            Transport = new() { TerminateOnRemoteError = true },
+            Transport = new(),
         }, cancellationToken).ConfigureAwait(false);
         try
         {
             var client = new PluginIsolationClient(session);
             await client.LoadAsync(Render.Plugin.PluginManager.CurrentLocale, configuration, cancellationToken).ConfigureAwait(false);
-            return new ExternalPluginProxy(verification.Metadata, client);
+            return new ExternalPluginProxy(metadata, client);
         }
         catch
         {
@@ -42,10 +45,9 @@ internal static class PluginIsolationFactory
 
     public static async ValueTask<IPluginBase> CreateAsync(IPluginBase local, PluginPackageVerificationResult verification, string pluginRoot, PluginIsolationMode mode, CancellationToken cancellationToken = default)
     {
-        bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement);
+        bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.VectorPictureEffect or EffectType.Transform);
         bool hasIsolatableCapabilities = hasPictureProviders || local.VideoSourceProvider.Count > 0 ||
             local.AudioSourceProvider.Count > 0 || local.VideoWriterProvider.Count > 0 ||
-            local.TransformProvider.Count > 0 || local.ComputerProvider.Count > 0 ||
             local.SoundTrackProvider.Count > 0 ||
             HasCustomImplementation(local, nameof(IPluginBase.ClipCreator)) ||
             HasCustomImplementation(local, nameof(IPluginBase.VectComponentCreator));
@@ -54,7 +56,9 @@ internal static class PluginIsolationFactory
         switch (mode)
         {
             case PluginIsolationMode.Containerized:
-#if WINDOWS
+#if HEADLESS
+                throw new PlatformNotSupportedException("AppContainer plugin isolation is unavailable in the headless client.");
+#elif WINDOWS
                 client = await StartClientAsync(
                     new Platforms.Windows.WindowsPluginIsolationPlatform(),
                     local.PluginID,
@@ -69,7 +73,10 @@ internal static class PluginIsolationFactory
                 return local;
 #endif
             case PluginIsolationMode.ProcessIsolation:
-                if (!DesktopPluginIsolationPlatform.IsSupported) return local;
+                if (!DesktopPluginIsolationPlatform.IsSupported)
+                {
+                    return local;
+                }
                 client = await StartClientAsync(
                     new DesktopPluginIsolationPlatform(),
                     local.PluginID,
@@ -85,8 +92,12 @@ internal static class PluginIsolationFactory
         }
         try
         {
-            Logger.Log($"Plugin '{local.PluginID}' picture providers are running in {mode} isolation mode.");
+            Logger.Log($"Plugin '{local.PluginID}' isolated providers are running in {mode} isolation mode.");
+#if HEADLESS
+            return new IsolatedPluginProxy(local, client);
+#else
             return local is IApplicationPluginBase app ? new IsolatedApplicationPluginProxy(app, client) : new IsolatedPluginProxy(local, client);
+#endif
         }
         catch
         {
@@ -148,7 +159,7 @@ internal static class PluginIsolationFactory
             PluginRoot = pluginRoot,
             SessionRoot = sessionRoot,
             AuthenticationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
-            PluginEncryptionKey = PluginTrustValidator.DerivePluginEncryptionKey(verification.SigningCertificate),
+            PluginEncryptionKey = verification.PluginEncryptionKey,
             InstancePackageName = instanceName,
         }, cancellationToken).ConfigureAwait(false);
         try

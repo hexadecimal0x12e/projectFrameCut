@@ -11,7 +11,7 @@ namespace projectFrameCut.Services
     /// UI线程看门狗服务 - 检测UI主线程是否卡死
     /// 通过定期向UI线程发送任务并测量响应时间来检测卡死情况
     /// </summary>
-    public class UIThreadWatchdogService : IDisposable
+    public partial class UIThreadWatchdogService : IDisposable
     {
         private readonly ILogger<UIThreadWatchdogService> _logger;
         private CancellationTokenSource? _cancellationTokenSource;
@@ -79,6 +79,10 @@ namespace projectFrameCut.Services
             }
 
             _cancellationTokenSource = new CancellationTokenSource();
+#if WINDOWS && DEBUG
+            if (MainThread.IsMainThread)
+                _uiThreadId = GetCurrentThreadId();
+#endif
             _watchdogTask = Task.Run(() => WatchdogLoop(_cancellationTokenSource.Token));
             Logger.Log($"UIThreadWatchdogService started.");
         }
@@ -126,6 +130,9 @@ namespace projectFrameCut.Services
                         // 向UI线程发送一个轻量级任务
                         MainThread.BeginInvokeOnMainThread(() =>
                         {
+#if WINDOWS && DEBUG
+                            _uiThreadId = GetCurrentThreadId();
+#endif
                             stopwatch.Stop();
                             _lastResponseTime = DateTime.UtcNow;
                             responseReceived.TrySetResult(true);
@@ -136,6 +143,7 @@ namespace projectFrameCut.Services
                         var delayTask = Task.Delay(_responseTimeoutMs, cancellationToken);
 
                         var completedTask = await Task.WhenAny(responseTask, delayTask);
+                        cancellationToken.ThrowIfCancellationRequested();
 
                         if (completedTask == responseTask)
                         {
@@ -162,6 +170,9 @@ namespace projectFrameCut.Services
                             if (_consecutiveFreezeCount >= _maxFreezeCount && !_isThreadFrozen)
                             {
                                 _isThreadFrozen = true;
+#if WINDOWS && DEBUG
+                                CaptureThreadStacks();
+#endif
                                 OnThreadFrozen(_consecutiveFreezeCount);
                                 Logger.Log($"UI frozen! Timeout {_consecutiveFreezeCount} times.", "warning");
                             }

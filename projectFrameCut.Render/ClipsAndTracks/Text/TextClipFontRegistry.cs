@@ -16,14 +16,14 @@ public static class TextClipFontRegistry
     // ── 已完整加载的 FontFace ──────────────────────────────────────
     private static readonly ConcurrentDictionary<string, FontFace> LoadedFonts = new(StringComparer.OrdinalIgnoreCase);
 
-    // ── 已扫描但尚未加载的字体（key → 文件路径 + 家族名） ──────────
+    // ── 已扫描但尚未加载的字体（key → 文件路径 + 集合索引 + 家族名） ──
     private static readonly ConcurrentDictionary<string, PendingFontInfo> PendingFonts = new(StringComparer.OrdinalIgnoreCase);
 
     // ── 已扫描过的路径（防重复） ─────────────────────────────────────
     private static readonly ConcurrentDictionary<string, byte> ScannedPaths = new(StringComparer.OrdinalIgnoreCase);
 
     private static bool _scanned;
-    private static readonly object ScanLock = new();
+    private static readonly Lock ScanLock = new();
     private static string? _fallbackFamilyName;
 
     /// <summary>
@@ -32,13 +32,14 @@ public static class TextClipFontRegistry
     public static List<FontFace> FallbackFonts { get; private set; } = [];
 
     /// <summary>
-    /// 待加载字体的轻量元信息 —— 仅包含能将字体完整加载所需的文件路径
-    /// 和用于模糊查找的家族名，不持有 <see cref="FontFace"/> 对象。
+    /// 待加载字体的路径、集合索引及名称，不持有 <see cref="FontFace"/> 对象。
     /// </summary>
-    private readonly struct PendingFontInfo(string filePath, string familyName, Dictionary<string, string> localizedNames)
+    private readonly struct PendingFontInfo(string filePath, string familyName, Dictionary<string, string> localizedNames, string subfamilyName = "", int collectionIndex = -1)
     {
         public readonly string FilePath = filePath;
+        public readonly int CollectionIndex = collectionIndex;
         public readonly string FamilyName = familyName;
+        public readonly string SubfamilyName = subfamilyName;
         public readonly Dictionary<string, string> LocalizedNames = localizedNames;
     }
 
@@ -64,29 +65,12 @@ public static class TextClipFontRegistry
             }
         }
 
-        // 从已加载字体中尝试填充后备列表（原有语义，仅填充一次）
-        if (FallbackFonts.Count == 0)
-        {
-            if (LoadedFonts.TryGetValue("HarmonyOS Sans SC Medium Version 1.0", out var f1))
-                FallbackFonts.Add(f1);
-            if (LoadedFonts.TryGetValue("HarmonyOS Sans SC Medium", out var f2))
-                FallbackFonts.Add(f2);
-            if (LoadedFonts.TryGetValue("Arial Regular", out var f3))
-                FallbackFonts.Add(f3);
-
-            // 懒加载模式下 LoadedFonts 可能为空，尝试从 PendingFonts 加载后备字体
-            if (FallbackFonts.Count == 0)
-            {
-                var fallback = LoadPendingFont("HarmonyOS Sans SC Medium Version 1.0")
-                            ?? LoadPendingFont("HarmonyOS Sans SC Medium")
-                            ?? LoadPendingFont("Arial Regular");
-                if (fallback is not null)
-                    FallbackFonts.Add(fallback);
-            }
-        }
-
         // 目录扫描仅一次
-        if (_scanned) return;
+        if (_scanned)
+        {
+            InitializeFallbackFonts();
+            return;
+        }
         lock (ScanLock)
         {
             if (_scanned) return;
@@ -94,24 +78,47 @@ public static class TextClipFontRegistry
             var baseDir = AppContext.BaseDirectory;
             if (Directory.Exists(baseDir))
             {
-                foreach (var ttf in Directory.GetFiles(baseDir, "*.ttf"))
+                foreach (var path in new[] { "*.ttf", "*.otf", "*.ttc" }.SelectMany(ext => Directory.GetFiles(baseDir, ext)))
                 {
-                    RegisterPendingFont(ttf);
+                    RegisterPendingFont(path);
                 }
             }
 
             _scanned = true;
         }
+        InitializeFallbackFonts();
         SVGToVectorElement.TextImportHandler = SvgTextImport.CreateHandler(name =>
         {
             if (TryGetFont(name, out var f)) return f;
             if (LoadedFonts.FirstOrDefault(c => c.Value.LocalizedNames.Any(n => n.Value == name), new KeyValuePair<string, FontFace>(null!, null!)).Value is FontFace font) return font;
-            if (PendingFonts.FirstOrDefault(c => c.Value.LocalizedNames.Any(n => n.Value == name), new KeyValuePair<string, PendingFontInfo>(null!, new(null!, null!, null!))).Value is PendingFontInfo info && !string.IsNullOrWhiteSpace(info.FilePath))
+            var pending = PendingFonts.FirstOrDefault(c => c.Value.LocalizedNames.Any(n => n.Value == name));
+            if (pending.Key is not null)
             {
-                return LoadPendingFont(info.FilePath);
+                return LoadPendingFont(pending.Key);
             }
             return FallbackFonts.FirstOrDefault() ?? null;
         });
+    }
+
+    private static void InitializeFallbackFonts()
+    {
+        if (FallbackFonts.Count > 0) return;
+        lock (ScanLock)
+        {
+            if (FallbackFonts.Count > 0) return;
+            foreach (string family in new[] { "HarmonyOS Sans SC", "HarmonyOS Sans TC", "Arial" })
+            {
+                var font = LoadedFonts.Values.FirstOrDefault(f => string.Equals(f.FamilyName, family, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(f.SubfamilyName, "Regular", StringComparison.OrdinalIgnoreCase));
+                if (font is null)
+                {
+                    var pending = PendingFonts.FirstOrDefault(p => string.Equals(p.Value.FamilyName, family, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(p.Value.SubfamilyName, "Regular", StringComparison.OrdinalIgnoreCase));
+                    if (pending.Key is not null) font = LoadPendingFont(pending.Key);
+                }
+                if (font is not null) FallbackFonts.Add(font);
+            }
+        }
     }
 
     /// <summary>
@@ -192,6 +199,21 @@ public static class TextClipFontRegistry
         return false;
     }
 
+    public static FontFace? ResolveFont(string name, string style)
+    {
+        if (!TryGetFont(name, out var font) || font is null) return null;
+        string Normalize(string value) => value.Replace(" ", "").Replace("-", "").ToLowerInvariant();
+        string requested = Normalize(style);
+        if (requested == "regular" && LoadedFonts.ContainsKey(name)) return font;
+        var variant = LoadedFonts.Values.FirstOrDefault(f =>
+            string.Equals(f.FamilyName, font.FamilyName, StringComparison.OrdinalIgnoreCase) && Normalize(f.SubfamilyName) == requested);
+        if (variant is not null) return variant;
+        foreach (var kv in PendingFonts)
+            if (string.Equals(kv.Value.FamilyName, font.FamilyName, StringComparison.OrdinalIgnoreCase) && Normalize(kv.Value.SubfamilyName) == requested)
+                return LoadPendingFont(kv.Key) ?? font;
+        return font;
+    }
+
     /// <summary>
     /// 后备字体家族名 —— 在扫描时已确定，无需触发加载。
     /// </summary>
@@ -250,25 +272,30 @@ public static class TextClipFontRegistry
     {
         try
         {
-            ReadFontNameTable(path, out var uniqueName, out var familyName, out var subfamilyName);
+            var fonts = ReadFontNameTable(path, out var isCollection);
+            for (int i = 0; i < fonts.Length; i++)
+            {
+                var meta = fonts[i];
+                var fontKey = meta.UniqueName ?? $"{meta.FamilyName} {meta.SubfamilyName}";
+                if (string.IsNullOrWhiteSpace(fontKey)) continue;
 
-            var fontKey = uniqueName ?? $"{familyName} {subfamilyName}";
-            if (string.IsNullOrWhiteSpace(fontKey)) return;
+                // 如果已通过其他途径加载过同名字体，跳过
+                if (LoadedFonts.ContainsKey(fontKey)) continue;
 
-            // 如果已通过其他途径加载过同名字体，跳过
-            if (LoadedFonts.ContainsKey(fontKey)) return;
+                PendingFonts.TryAdd(fontKey, new PendingFontInfo(path, meta.FamilyName ?? string.Empty,
+                    GetLocalizedFontNames(path, i), meta.SubfamilyName ?? "", isCollection ? i : -1));
 
-            PendingFonts.TryAdd(fontKey, new PendingFontInfo(path, familyName ?? string.Empty, GetLocalizedFontNames(path)));
-
-            // 记录后备字体家族名（与旧版 RegisterFont 逻辑一致但无需加载）
-            if (_fallbackFamilyName is null)
-                _fallbackFamilyName = fontKey;
-            else if (familyName?.Contains("HarmonyOS_Sans_SC", StringComparison.OrdinalIgnoreCase) == true)
-                _fallbackFamilyName = fontKey;
+                // 记录后备字体家族名（与旧版 RegisterFont 逻辑一致但无需加载）
+                if (_fallbackFamilyName is null)
+                    _fallbackFamilyName = fontKey;
+                else if (string.Equals(meta.FamilyName, "HarmonyOS Sans SC", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(meta.SubfamilyName, "Regular", StringComparison.OrdinalIgnoreCase))
+                    _fallbackFamilyName = fontKey;
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // 无法读取的字体文件直接跳过
+            Log($"Failed to load font {path}, skipping... ({ex.Message})", "warn");
         }
     }
 
@@ -283,7 +310,9 @@ public static class TextClipFontRegistry
 
         try
         {
-            var fontFace = FontFace.Load(info.FilePath);
+            var fontFace = info.CollectionIndex >= 0
+                ? FontFace.OpenTtcCollection(info.FilePath)[info.CollectionIndex].Load()
+                : FontFace.Load(info.FilePath);
             return LoadedFonts.AddOrUpdate(fontKey,
                 _ => fontFace,
                 (_, existing) =>
@@ -292,122 +321,34 @@ public static class TextClipFontRegistry
                     return fontFace;
                 });
         }
-        catch
+        catch (Exception ex)
         {
+            projectFrameCut.Shared.Logger.Log(ex, $"Load text font {fontKey} from {info.FilePath}");
             return null;
         }
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  TTF / OTF 名称表轻量解析器
+    //  TTF / OTF / TTC 名称表轻量解析器
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 从 TTF / OTF 文件中仅读取 'name' 表，提取字体标识信息。
+    /// 从 TTF / OTF / TTC 文件中仅读取 'name' 表，提取所有子字体的标识信息。
     /// 不调用 <see cref="FontFace.Load(string)"/>，因此不加载完整的
     /// 字形数据、度量信息等，仅为构建查找索引的最小开销。
     /// </summary>
-    private static void ReadFontNameTable(
-        string path,
-        out string? uniqueName,
-        out string? familyName,
-        out string? subfamilyName)
+    private static FontFaceMetadata[] ReadFontNameTable(string path, out bool isCollection)
     {
-        uniqueName = null;
-        familyName = null;
-        subfamilyName = null;
-
-        var bytes = File.ReadAllBytes(path);
-        if (bytes.Length < 12) return;
-
-        // ── 解析 Offset Table ──────────────────────────────────
-        // 偏移  大小  字段
-        //   0    4   sfVersion (uint32)
-        //   4    2   numTables (uint16)
-        //   6    2   searchRange
-        //   8    2   entrySelector
-        //  10    2   rangeShift
-        //  12      → Table Directory 开始
-
-        var numTables = (ushort)((bytes[4] << 8) | bytes[5]);
-        var dirPos = 12;
-
-        uint nameOffset = 0;
-        for (var i = 0; i < numTables && dirPos + 16 <= bytes.Length; i++)
-        {
-            // tag (4) | checksum (4) | offset (4) | length (4)
-            if (bytes[dirPos] == 0x6E &&  // 'n'
-                bytes[dirPos + 1] == 0x61 &&  // 'a'
-                bytes[dirPos + 2] == 0x6D &&  // 'm'
-                bytes[dirPos + 3] == 0x65)    // 'e'
-            {
-                nameOffset = ReadU32BE(bytes, dirPos + 8);
-                break;
-            }
-            dirPos += 16;
-        }
-
-        if (nameOffset == 0 || nameOffset >= (uint)bytes.Length) return;
-
-        // ── 解析 Name Table ────────────────────────────────────
-        // uint16 format | uint16 count | uint16 stringOffset
-        var nameBase = (int)nameOffset;
-        if (nameBase + 6 > bytes.Length) return;
-
-        var count = (ushort)((bytes[nameBase + 2] << 8) | bytes[nameBase + 3]);
-        var stringOffset = (ushort)((bytes[nameBase + 4] << 8) | bytes[nameBase + 5]);
-        var stringsBase = nameBase + stringOffset;
-        var recordPos = nameBase + 6;
-
-        for (var i = 0; i < count && recordPos + 12 <= bytes.Length; i++)
-        {
-            var platformId = ReadU16BE(bytes, recordPos);
-            var /*encodingId*/ _ = ReadU16BE(bytes, recordPos + 2);
-            var /*languageId*/ __ = ReadU16BE(bytes, recordPos + 4);
-            var nameId = ReadU16BE(bytes, recordPos + 6);
-            var len = ReadU16BE(bytes, recordPos + 8);
-            var off = ReadU16BE(bytes, recordPos + 10);
-
-            var strStart = stringsBase + off;
-            if (strStart < 0 || strStart + len > bytes.Length)
-            {
-                recordPos += 12;
-                continue;
-            }
-
-            string? value = null;
-            if (platformId == 3) // Windows: UTF-16BE
-            {
-                value = Encoding.BigEndianUnicode.GetString(bytes, strStart, len);
-            }
-            else if (platformId == 1 && value is null) // Mac: ASCII
-            {
-                value = Encoding.ASCII.GetString(bytes, strStart, len);
-            }
-
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                recordPos += 12;
-                continue;
-            }
-
-            switch (nameId)
-            {
-                case 1: familyName ??= value; break;
-                case 2: subfamilyName ??= value; break;
-                case 3: uniqueName ??= value; break; // Unique identifier (与 FontFace.UniqueName 一致)
-                case 6: uniqueName ??= value; break; // PostScript name
-            }
-
-            recordPos += 12;
-        }
-
-        familyName ??= string.Empty;
-        subfamilyName ??= string.Empty;
+        using var reader = new BinaryReader(File.OpenRead(path));
+        isCollection = ReadUInt32BE(reader) == 0x74746366u;
+        return isCollection ? FontMetadataReader.ReadFromTtc(path) : [FontMetadataReader.ReadFromFile(path)];
     }
 
 
     public static Dictionary<string, string> GetLocalizedFontNames(string fontPath)
+        => GetLocalizedFontNames(fontPath, 0);
+
+    private static Dictionary<string, string> GetLocalizedFontNames(string fontPath, int fontIndex)
     {
         if (string.IsNullOrEmpty(fontPath) || !File.Exists(fontPath))
         {
@@ -420,17 +361,17 @@ public static class TextClipFontRegistry
             using var fs = File.OpenRead(fontPath);
             using var reader = new BinaryReader(fs, Encoding.UTF8, leaveOpen: false);
 
-            // ── 0. 解析文件头，处理 TTC 集合（取第一个字体）──────────────
-            uint sfVersion = ReadUInt32BE(reader);
-            if (sfVersion == 0x74746366u) // 'ttcf' = TrueType Collection
+            // ── 0. 解析文件头，定位 TTC 集合中指定的字体 ────────────────
+            if (ReadUInt32BE(reader) == 0x74746366u) // 'ttcf' = TrueType Collection
             {
-                // TTC 头：TTCTag(4) + Version(4) + numFonts(4) + OffsetTable[0](4...)
-                // 已读走 TTCTag(4 字节)，还需跳过 Version(4) + numFonts(4) = 8 字节，
-                // 然后读 OffsetTable[0] 得到第一个字体的 sfnt 头偏移。
-                reader.BaseStream.Seek(12, SeekOrigin.Begin);  // 跳过 TTCTag+Version+numFonts
-                uint firstOffset = ReadUInt32BE(reader);
-                reader.BaseStream.Seek(firstOffset, SeekOrigin.Begin);
-                sfVersion = ReadUInt32BE(reader);
+                reader.BaseStream.Seek(8, SeekOrigin.Begin);
+                uint fontCount = ReadUInt32BE(reader);
+                if ((uint)fontIndex >= fontCount)
+                    throw new InvalidDataException("Invalid font index in TTC header.");
+                reader.BaseStream.Seek(12L + fontIndex * 4L, SeekOrigin.Begin);
+                uint fontOffset = ReadUInt32BE(reader);
+                reader.BaseStream.Seek(fontOffset, SeekOrigin.Begin);
+                ReadUInt32BE(reader);
             }
 
             ushort numTables = ReadUInt16BE(reader);
@@ -617,11 +558,4 @@ public static class TextClipFontRegistry
     private static ushort ReadUInt16BE(BinaryReader r) { var b = r.ReadBytes(2); return (ushort)(b[0] << 8 | b[1]); }
 
 
-    // ── 大端读取辅助 ───────────────────────────────────────────────
-
-    private static ushort ReadU16BE(byte[] buffer, int offset)
-        => (ushort)((buffer[offset] << 8) | buffer[offset + 1]);
-
-    private static uint ReadU32BE(byte[] buffer, int offset)
-        => (uint)((buffer[offset] << 24) | (buffer[offset + 1] << 16) | (buffer[offset + 2] << 8) | buffer[offset + 3]);
 }

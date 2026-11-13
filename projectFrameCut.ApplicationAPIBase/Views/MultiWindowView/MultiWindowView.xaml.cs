@@ -375,6 +375,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             foreach (var item in Windows)
             {
+                if (item.IsMaximized) continue;
                 if (!_snapStates.ContainsKey(item) && !_relativeSnapStates.ContainsKey(item))
                     ConstrainFloatingWindowToMdiArea(item);
             }
@@ -382,6 +383,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void ConstrainFloatingWindowToMdiArea(MultiWindowItem item)
         {
+            if (item.IsMaximized) return;
             var area = GetWindowMovementArea();
             if (area.Width <= 0 || area.Height <= 0) return;
 
@@ -761,7 +763,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             return new Rect(0, 0, Math.Max(0, Width), GetEffectiveMdiHeight());
         }
 
-        private Rect GetMdiArea() => GetWindowMovementArea();
+        internal Rect GetMdiArea() => GetWindowMovementArea();
+
+        internal WindowSnapZone GetSnapZone(MultiWindowItem item)
+            => _snapStates.GetValueOrDefault(item);
+
+        internal Rect? GetRelativeSnapBounds(MultiWindowItem item)
+            => _relativeSnapStates.TryGetValue(item, out var bounds) ? bounds : null;
+
+        internal void RestoreFloatingBounds(MultiWindowItem item, Rect bounds)
+        {
+            SetWindowBounds(item, bounds, clearSnapState: true);
+            ConstrainFloatingWindowToMdiArea(item);
+        }
 
         private void OnChildAdded(object? sender, ElementEventArgs e)
         {
@@ -1007,7 +1021,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             item.TranslationX = bounds.X;
             item.TranslationY = bounds.Y;
             item.WidthRequest = item.ConstrainWindowWidth(bounds.Width);
-            item.HeightRequest = item.ConstrainWindowHeight(bounds.Height);
+            item.SetLayoutHeight(bounds.Height);
 
             if (clearSnapState)
             {
@@ -1034,6 +1048,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private void ApplySnap(MultiWindowItem item, WindowSnapZone zone, bool rememberState, bool bringToFront)
         {
             if (zone == WindowSnapZone.None) return;
+            if (item.IsMaximized) return;
 
             var bounds = GetSnapBounds(zone);
             if (bounds.Width <= 0 || bounds.Height <= 0) return;
@@ -1064,6 +1079,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void ApplyRelativeSnap(MultiWindowItem item, Rect relativeBounds, bool rememberState, bool bringToFront)
         {
+            if (item.IsMaximized) return;
             var area = GetMdiArea();
             var bounds = new Rect(
                 area.X + (area.Width * relativeBounds.X),

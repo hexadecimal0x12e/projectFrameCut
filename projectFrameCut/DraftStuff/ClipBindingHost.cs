@@ -1,4 +1,5 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
@@ -15,12 +16,13 @@ namespace projectFrameCut.DraftStuff
     /// (not the node editor specifically). It is used to inject the bind button into property panels built outside
     /// the node binding view (e.g. the effect list tab).
     /// </summary>
-    public class ClipBindingHost : IEffectBindingHost
+    public class ClipBindingHost : IEffectBindingHost, ICustomEffectPortEditorHost
     {
         private readonly ClipElementUI _clip;
         private readonly IEffectProvider _provider;
         private readonly DraftPage? _page;
         private readonly Action? _onChanged;
+        private readonly Dictionary<string, int> _bindingVersions = new();
 
         public ClipBindingHost(ClipElementUI clip, IEffectProvider provider, DraftPage? page = null, Action? onChanged = null)
         {
@@ -30,6 +32,10 @@ namespace projectFrameCut.DraftStuff
             _onChanged = onChanged;
         }
 
+        public bool CanOpenExternalEditor(string fieldId) => CustomEffectPortEditorService.IsAvailable(_page, _clip, _provider, fieldId);
+
+        public Task OpenExternalEditorAsync(string fieldId) => CustomEffectPortEditorService.OpenAsync(_page, _clip, _provider, fieldId);
+
         public IReadOnlyList<ValueBindingSource> GetBindingSources()
         {
             var sources = new List<ValueBindingSource>
@@ -38,16 +44,32 @@ namespace projectFrameCut.DraftStuff
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex),
                 new(ValueProviderFrameContext.BuiltInProgressProviderId,
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Progress),
+                new(ValueProviderFrameContext.BuiltInClipFrameProviderId, Localized.Effect_ClipCurrentFrame),
+                new(ValueProviderFrameContext.BuiltInProjectProgressProviderId, Localized.Effect_ProjectProgress),
+                new(IEffectProvider.InputAnchorGUID.ToString(),
+                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_SourcePicture, "IPicture"),
             };
+            if (_provider.Stage == EffectStage.Render)
+            {
+                sources.Add(new(ValueProviderFrameContext.ClipPositionProviderId, Localized.Effect_RenderSourcePosition, "SizeAndPosition"));
+                if (_clip.ClipType == ClipMode.AudioClip || !string.IsNullOrWhiteSpace(_clip.BindedSoundTrack))
+                    sources.Add(new(ValueProviderFrameContext.ClipAudioProviderId, Localized.Effect_RenderSourceAudio, "AudioSample"));
+            }
+            if (ValueProviderFrameContext.SupportsAudioSample(_provider.Stage))
+                sources.Add(new(ValueProviderFrameContext.BuiltInAudioSampleProviderId,
+                    Localized.Effect_GlobalMix, "AudioSample"));
             if (_clip.EffectProviders is { } bundles)
             {
                 foreach (var (id, bundle) in bundles)
                 {
-                    if (id == _provider.Id) continue;
-                    if (bundle is IEffectProvider p && p.Target.HasFlag(EffectTarget.ValueProvider))
+                    if (id == _provider.Id || bundle.Stage != _provider.Stage) continue;
+                    if (DynamicEffectBindings.CanBindOutput(bundle))
                     {
-                        var outName = bundle.OutField?.TypeName;
-                        sources.Add(new ValueBindingSource(id.ToString(), bundle.Name ?? bundle.TypeName, outName));
+                        foreach (var output in bundle.GetOutputFields().Values)
+                            sources.Add(new ValueBindingSource(bundle is IMultipleOutputEffectProvider
+                                ? EffectProviderOutputExtensions.CreateOutputSourceId(id, output.Id) : id.ToString(),
+                                bundle.Name ?? bundle.TypeName, EffectProviderUIHelper.FieldName(bundle, output.Id, false,
+                                    bundle is IMultipleOutputEffectProvider ? output.Id : output.TypeName)));
                     }
                 }
             }
@@ -56,11 +78,27 @@ namespace projectFrameCut.DraftStuff
 
         public string? GetSourceDisplayName(string sourceId)
         {
-            foreach (var s in GetBindingSources())
+            switch (sourceId)
             {
-                if (s.Id == sourceId) return s.DisplayName;
+                case ValueProviderFrameContext.ClipAudioProviderId: return Localized.Effect_RenderSourceAudio;
+                case ValueProviderFrameContext.ClipPositionProviderId: return Localized.Effect_RenderSourcePosition;
+                case ValueProviderFrameContext.BuiltInClipFrameProviderId: return Localized.Effect_ClipCurrentFrame;
+                case ValueProviderFrameContext.BuiltInProjectProgressProviderId: return Localized.Effect_ProjectProgress;
+                case ValueProviderFrameContext.BuiltInAudioSampleProviderId: return Localized.Effect_GlobalMix;
+                case ValueProviderFrameContext.BuiltInFrameProviderId:
+                    return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex;
+                case ValueProviderFrameContext.BuiltInProgressProviderId:
+                    return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Progress;
+                case var id when id == IEffectProvider.InputAnchorGUID.ToString():
+                    return $"{LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_SourcePicture} (IPicture)";
             }
-            return null;
+            if (!EffectProviderOutputExtensions.TryParseOutputSourceId(sourceId, out var providerId, out var outputId)
+                || providerId == _provider.Id || _clip.EffectProviders?.GetValueOrDefault(providerId) is not { } provider
+                || !DynamicEffectBindings.CanBindOutput(provider)
+                || !provider.TryGetOutputField(outputId, out var output)) return null;
+            var anchor = EffectProviderUIHelper.FieldName(provider, output.Id, false,
+                provider is IMultipleOutputEffectProvider ? output.Id : output.TypeName);
+            return string.IsNullOrEmpty(anchor) ? provider.Name ?? provider.TypeName : $"{provider.Name ?? provider.TypeName} ({anchor})";
         }
 
         public string? AddValueProvider(string providerTypeName)
@@ -81,14 +119,60 @@ namespace projectFrameCut.DraftStuff
 
         public void ApplyBinding(string fieldId, string sourceId)
         {
-            if (!_provider.Fields.ContainsKey(fieldId)) return;
-            _provider.SetFieldBinding(fieldId, sourceId);
+            if (!_provider.Fields.ContainsKey(fieldId) && !_provider.InFields.ContainsKey(fieldId)) return;
+            _bindingVersions[fieldId] = _bindingVersions.GetValueOrDefault(fieldId) + 1;
+            ApplyBindingCore(fieldId, sourceId, _clip.EffectProviders is { } providers
+                ? new EffectFieldTypeResolution(providers, BindingOverride(fieldId, sourceId)) : null);
+        }
+
+        private Dictionary<Guid, IReadOnlyDictionary<string, string>> BindingOverride(string fieldId, string sourceId) => new()
+        {
+            [_provider.Id] = new Dictionary<string, string>(_provider.AnchorsBindingState) { [fieldId] = sourceId },
+        };
+
+        private void ApplyBindingCore(string fieldId, string sourceId, EffectFieldTypeResolution? types)
+        {
+            if (types is not null && (!types.AreInputsCompatible(_provider) || types.Diagnostics.Count != 0))
+                throw new InvalidOperationException($"Source '{sourceId}' is incompatible with '{fieldId}' on provider {_provider.Id}.");
+            var state = new Dictionary<string, string>(_provider.AnchorsBindingState);
+            try
+            {
+                _provider.SetFieldBinding(fieldId, sourceId);
+                EffectGroupBindingGuard.Synchronize(_clip);
+            }
+            catch
+            {
+                _provider.AnchorsBindingState = state;
+                throw;
+            }
             EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
         }
 
+        private async Task ApplyBindingAsync(string fieldId, string sourceId)
+        {
+            if (!_provider.Fields.ContainsKey(fieldId) && !_provider.InFields.ContainsKey(fieldId)) return;
+            int version = _bindingVersions[fieldId] = _bindingVersions.GetValueOrDefault(fieldId) + 1;
+            try
+            {
+                EffectFieldTypeResolution? types = null;
+                if (_clip.EffectProviders is { } providers)
+                {
+                    types = await EffectFieldTypeResolution.ResolveAsync(providers, bindingOverrides: BindingOverride(fieldId, sourceId));
+                    if (!ReferenceEquals(_clip.EffectProviders, providers) || version != _bindingVersions[fieldId]) return;
+                }
+                ApplyBindingCore(fieldId, sourceId, types);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, $"Bind '{fieldId}' on provider {_provider.Id}", this);
+                _page?.SetStatusText(ex.Message);
+            }
+        }
+
         public void Unbind(string fieldId)
         {
+            _bindingVersions[fieldId] = _bindingVersions.GetValueOrDefault(fieldId) + 1;
             _provider.ClearFieldBinding(fieldId);
             EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
@@ -108,19 +192,36 @@ namespace projectFrameCut.DraftStuff
             }
 
             AddOption(string.Empty, LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Disconnect);
-            foreach (var s in GetBindingSources())
+            var sources = GetBindingSources();
+            HashSet<string>? compatible = null;
+            if (_clip.EffectProviders is { } providers)
             {
+                var types = await EffectFieldTypeResolution.ResolveAsync(providers);
+                compatible = await Task.Run(() =>
+                {
+                    var ids = new HashSet<string>();
+                    foreach (var source in sources)
+                    {
+                        var candidate = types.ResolveBindingCandidate(_provider, fieldId, source.Id, DynamicEffectCalculation.Enabled(_clip.ExtraData));
+                        if (candidate is not null && candidate.AreInputsCompatible(_provider) && !DynamicEffectCalculation.HasTypeErrors(candidate, _clip.ExtraData)) ids.Add(source.Id);
+                    }
+                    return ids;
+                });
+            }
+            foreach (var s in sources)
+            {
+                if (compatible is not null && !compatible.Contains(s.Id)) continue;
                 var suffix = s.OutputAnchorName is { Length: > 0 } ? $" ({s.OutputAnchorName})" : string.Empty;
                 AddOption(s.Id, $"{s.DisplayName}{suffix}");
             }
 
-            var pick = await _page.DisplayActionSheetAsync($"Bind {fieldId}", "Cancel", null, options.ToArray());
+            var pick = await _page.DisplayActionSheetAsync($"Bind {EffectProviderUIHelper.FieldName(_provider, fieldId, true)}", "Cancel", null, options.ToArray());
             if (string.IsNullOrEmpty(pick) || pick == "Cancel") return;
 
             if (sourceByOption.TryGetValue(pick, out var chosen))
             {
                 if (string.IsNullOrEmpty(chosen)) Unbind(fieldId);
-                else ApplyBinding(fieldId, chosen);
+                else await ApplyBindingAsync(fieldId, chosen);
             }
         }
     }

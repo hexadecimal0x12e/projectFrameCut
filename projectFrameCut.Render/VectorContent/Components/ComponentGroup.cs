@@ -40,9 +40,7 @@ public class ComponentGroup : IVectorComponent
 
     public int Index { get; set; }
 
-    public List<VectorAnimationKeyFrame> AnimationFrames { get; set; } = new();
 
-    public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
     /// <summary>
     /// Whether this group was imported from an SVG file.
@@ -75,15 +73,6 @@ public class ComponentGroup : IVectorComponent
     public ComponentGroup()
     {
         EnsureDefaultParameters();
-
-        AnimatableFields = new Dictionary<string, AnimatableField>
-        {
-            ["RelativeX"] = AnimatableFieldMap.CommonFields["RelativeX"],
-            ["RelativeY"] = AnimatableFieldMap.CommonFields["RelativeY"],
-            ["Width"] = AnimatableFieldMap.ShapeFields["Width"],
-            ["Height"] = AnimatableFieldMap.ShapeFields["Height"],
-            ["Rotation"] = AnimatableFieldMap.CommonFields["Rotation"],
-        };
     }
 
     /// <summary>
@@ -134,20 +123,20 @@ public class ComponentGroup : IVectorComponent
     /// <summary>
     /// A group does not produce a single element. Use <see cref="ComputeAll"/> instead.
     /// </summary>
-    public VectorCanvasElement Compute(float index) =>
+    public VectorCanvasElement Compute() =>
         throw new InvalidOperationException($"{nameof(ComponentGroup)} does not produce a single element. Use {nameof(ComputeAll)}.");
 
     /// <summary>
     /// Computes all child elements with the group's position, scale and rotation applied.
     /// Uses separate X/Y scales to support non-uniform resizing from the interactive editor.
     /// </summary>
-    public IEnumerable<VectorCanvasElement> ComputeAll(float progress)
+    public IEnumerable<VectorCanvasElement> ComputeAll()
     {
-        float groupRelX = EvaluateField("RelativeX", progress, 0.5f);
-        float groupRelY = EvaluateField("RelativeY", progress, 0.5f);
-        float groupWidth = EvaluateField("Width", progress, 0.3f);
-        float groupHeight = EvaluateField("Height", progress, 0.3f);
-        float groupRot = EvaluateField("Rotation", progress, 0f);
+        float groupRelX = GetFloatParam("RelativeX", 0.5f);
+        float groupRelY = GetFloatParam("RelativeY", 0.5f);
+        float groupWidth = GetFloatParam("Width", 0.3f);
+        float groupHeight = GetFloatParam("Height", 0.3f);
+        float groupRot = GetFloatParam("Rotation", 0f);
 
         float initialWidth = Math.Max(0.0001f, InitialWidth);
         float initialHeight = Math.Max(0.0001f, InitialHeight);
@@ -163,19 +152,9 @@ public class ComponentGroup : IVectorComponent
         float sin = MathF.Sin(groupRot);
 
         foreach (var child in Children)
+        foreach (var source in child.ComputeAll())
         {
-            if (child is ComponentGroup)
-            {
-                // Nested groups are not supported in this version.
-                continue;
-            }
-
-            var element = child.Compute(progress);
-            if (element is null)
-            {
-                continue;
-            }
-
+            var element = new VectorViewportElement(source, 1, 1, 0, 0, 1, 1);
             float childRelX = element.RelativeX;
             float childRelY = element.RelativeY;
             float childRot = element.Rotation;
@@ -190,19 +169,17 @@ public class ComponentGroup : IVectorComponent
             element.RelativeY = groupRelY + scaleX * localX * sin + scaleY * localY * cos;
             element.Rotation = groupRot;
 
-            if (element is ShapeCanvasElement shape)
-            {
-                float childCos = MathF.Cos(childRot);
-                float childSin = MathF.Sin(childRot);
-                shape.TransformSegments(s => TransformSegment(s, scaleX, scaleY, childCos, childSin));
-            }
+            element.TransformSegments(s => TransformSegment(s, scaleX, scaleY, MathF.Cos(childRot), MathF.Sin(childRot)));
 
             yield return element;
         }
     }
 
-    private static VectorSegment TransformSegment(VectorSegment segment, float scaleX, float scaleY, float cos, float sin)
+    public static VectorSegment TransformSegment(VectorSegment segment, float scaleX, float scaleY, float cos, float sin)
     {
+        if (MathF.Abs(sin) > 0.000001f || cos < 0
+            || segment is RoundedRectangleVectorSegment && MathF.Abs(scaleX - scaleY) > 0.000001f)
+            segment = VectorPrimitiveGeometry.ToPath(segment);
         // Pre-rotate segment coordinates by the child's own rotation, then apply the group's
         // non-uniform scale (scaleX for X-components, scaleY for Y-components).
         // Transform order: R(childRot) * S(scaleX, scaleY) — rotate first, then scale.
@@ -267,6 +244,8 @@ public class ComponentGroup : IVectorComponent
             PolygonVectorSegment p => p with
             {
                 Points = p.Points.Select(pt => RotateScalePoint(pt, scaleX, scaleY, cos, sin)).ToArray(),
+                Holes = p.Holes?.Select(points => points.Select(pt => RotateScalePoint(pt, scaleX, scaleY, cos, sin)).ToArray()).ToArray(),
+                AdditionalContours = p.AdditionalContours?.Select(points => points.Select(pt => RotateScalePoint(pt, scaleX, scaleY, cos, sin)).ToArray()).ToArray(),
             },
             PolylineVectorSegment p => p with
             {
@@ -278,11 +257,6 @@ public class ComponentGroup : IVectorComponent
 
     private static Point RotateScalePoint(Point point, float scaleX, float scaleY, float cos, float sin) =>
         new(scaleX * (point.X * cos - point.Y * sin), scaleY * (point.X * sin + point.Y * cos));
-
-    private float EvaluateField(string fieldId, float progress, float defaultValue)
-    {
-        return AnimationFrames.EvaluateField(fieldId, progress, GetFloatParam(fieldId, defaultValue));
-    }
 
     private float GetFloatParam(string key, float defaultValue)
     {
@@ -344,57 +318,18 @@ public class ComponentGroup : IVectorComponent
 
     private List<IVectorComponent> DeserializeChildren()
     {
-        EnsureDefaultParameters();
-
-        var result = new List<IVectorComponent>();
-
-        if (!Parameters.TryGetValue(ChildrenKey, out var raw))
-        {
-            return result;
-        }
-
-        string? json = raw switch
-        {
-            string s when !string.IsNullOrEmpty(s) => s,
-            JsonElement { ValueKind: JsonValueKind.String } je => je.GetString(),
-            JsonElement je => je.GetRawText(),
-            _ => null,
-        };
-
-        if (string.IsNullOrEmpty(json))
-        {
-            return result;
-        }
-
         try
         {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            return VectorComponentSerializer.Read(new Dictionary<string, object>
             {
-                return result;
-            }
-
-            foreach (var element in doc.RootElement.EnumerateArray())
-            {
-                var pluginId = element.TryGetProperty("FromPlugin", out var pluginElement)
-                    ? pluginElement.GetString()
-                    : InternalPluginBase.InternalPluginBaseID;
-                var resolvedPluginId = string.IsNullOrWhiteSpace(pluginId)
-                    ? InternalPluginBase.InternalPluginBaseID
-                    : pluginId;
-                var plugin = PluginManager.LoadedPlugins.TryGetValue(resolvedPluginId, out var loaded)
-                    ? loaded
-                    : PluginManager.LoadedPlugins[InternalPluginBase.InternalPluginBaseID];
-                result.Add(plugin.VectComponentCreator(element));
-            }
+                [VectorComponentSerializer.ComponentsKey] = Parameters[ChildrenKey]
+            });
         }
         catch (Exception ex)
         {
-            // Log the error to aid debugging while falling back to an empty children list.
-            Logger.Log(ex, $"ComponentGroup.DeserializeChildren for '{Name}' ({Id})", this);
+            Logger.Log(ex, $"Restore vector group {Name} ({Id})", this);
+            throw;
         }
-
-        return result;
     }
 
     private void EnsureDefaultParameters()

@@ -7,7 +7,6 @@ using LocalizedResources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -22,6 +21,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -65,53 +65,9 @@ using projectFrameCut.Platforms.MacOS;
 
 namespace projectFrameCut
 {
-    public static class MauiProgram
+    public static partial class MauiProgram
     {
-        internal static IReadOnlyList<IPluginBase> IntegratedPlugins { get; private set; } = [];
-        public static StreamWriter LogWriter;
-
-        public static string LogPath { get; private set; }
-
-        public static string DataPath { get; private set; }
-
-        public static string BasicDataPath { get; private set; }
-
-        public static string CachePath { get; private set; }
-
-        public static string FFmpegRoot { get; private set; }
-
-        public static string ProgramConfig = "?", ProgramCommit = "?", AssemblyName = "projectFrameCut";
-
-        public static string AppIdentifier =>
-#if MAUISDK
-            AppInfo.PackageName;
-#else
-            "hexadecimal0x12e.projectFrameCut";
-#endif
-
-        private static readonly string[] FoldersNeedInUserdata =
-        [
-            "My Drafts",
-            "My Assets",
-            "My Templates",
-            "My Skills",
-            "RenderCache",
-#if WINDOWS
-            "My Assets\\.database",
-            "My Assets\\.thumbnails",
-            "My Assets\\.perAssetThumb",
-#else
-            "My Assets/.database",
-            "My Assets/.thumbnails",
-            "My Assets/.perAssetThumb",
-            "Logs",
-            "AppData",
-#endif
-        ];
-
-        public static string[] CmdlineArgs = Array.Empty<string>();
-
-        public static bool IsStoreMode { get; private set; } = true;
+        internal static string LaunchWorkingDirectory { get; } = Environment.CurrentDirectory;
 
         public static MauiApp CreateMauiApp()
         {
@@ -217,17 +173,15 @@ namespace projectFrameCut
                 catch //use the default path (/data/data/...)           
                 { }
 #elif WINDOWS
-                if (projectFrameCut.Helper.HelperProgram.AppChannel.Equals("MS Store", StringComparison.InvariantCultureIgnoreCase)) // <AppContainer Data>\LocalState
+                if (Platforms.Windows.WindowsPluginIsolationPlatform.IsInAppContainer() || WinUI.Program.IsStoreModeEnabled ||projectFrameCut.Helper.HelperProgram.AppChannel.Equals("Store", StringComparison.InvariantCultureIgnoreCase)) // <AppContainer Data>\LocalState
                 {
-                    Directory.CreateDirectory(Path.Combine(FileSystem.AppDataDirectory, "AppData"));
-                    Directory.CreateDirectory(Path.Combine(FileSystem.AppDataDirectory, "UserData"));
-                    DataPath = Path.Combine(FileSystem.AppDataDirectory, "UserData");
-                    BasicDataPath = Path.Combine(FileSystem.AppDataDirectory, "AppData");
+                    DataPath = Windows.Storage.ApplicationData.Current.RoamingFolder.Path;
                 }
                 else
                 {
                     DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
                 }
+
                 if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
                 {
                     if (!string.IsNullOrWhiteSpace(Program.BasicDataPathOverride))
@@ -238,9 +192,9 @@ namespace projectFrameCut
                     {
                         DataPath = Program.UserDataPathOverride;
                     }
-                    loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
                 }
 
+                loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
                 IsStoreMode = WinUI.Program.IsStoreModeEnabled;
 #elif IOS
                 DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -317,6 +271,7 @@ namespace projectFrameCut
                 MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
 
                 IApplicationPluginBase.AppDataRoot = BasicDataPath;
+                projectFrameCut.Render.Text.TextStylePronunciation.DictionaryDirectory = Path.Combine(BasicDataPath, "JapaneseDictionary");
             }
             catch (Exception ex)
             {
@@ -324,6 +279,7 @@ namespace projectFrameCut
                 Crash(new InvalidOperationException($"projectFrameCut can't initialize BasicData. Try uninstall program, cleanup BasicData and reinstall program.", ex));
             }
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
+            ClearStartupState();
             try
             {
                 if (File.Exists(Path.Combine(BasicDataPath, "settings.json")))
@@ -398,8 +354,6 @@ namespace projectFrameCut
                 SettingsManager.Settings = new();
                 SettingsManager.WriteSetting("_SettingFailLoad", "True");
                 SettingsManager.WriteSetting("_SettingFailLoadMsg", $"An unhandled {ex.GetType().Name} exception: {ex.Message}");
-
-
             }
             var locate = SettingsManager.GetSetting("locate", "default");
 #if !ANDROID
@@ -443,6 +397,7 @@ namespace projectFrameCut
                     if (!Directory.Exists(newPath))
                     {
                         Log($"User defined UserData path '{newPath}' is not exist, ignore the override.");
+                        HomePage.IsUserDataFailed = true;
                     }
                     else
                     {
@@ -461,12 +416,22 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Log(ex, "setup user data dir", CreateMauiApp);
-#if ANDROID
-                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the userdata because of a {ex.GetType().Name} exception:{ex.Message}");
-#elif WINDOWS
-                _ = WinUI.App.MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the UserData directory because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou may found your options disappeared.\r\nTry reset the data directory.", "projectFrameCut", 0U);
-#endif
+                HomePage.IsUserDataFailed = true;
             }
+
+#if WINDOWS
+            if (WinUI.App.IsPackaged())
+            {
+                try
+                {
+                    Platforms.Windows.WindowsPluginIsolationPlatform.PrepareAssetsLibraryAccess(Path.Combine(DataPath, "My Assets"));
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "prepare asset library access for AppContainer plugins", CreateMauiApp);
+                }
+            }
+#endif
 
             try
             {
@@ -475,6 +440,14 @@ namespace projectFrameCut
                 builder
 #if MAUISDK
                        .UseMauiApp<App>()
+                       .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
+                       {
+                           options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
+                       })
+                       .ConfigureEssentials(essentials =>
+                       {
+                           essentials.UseVersionTracking();
+                       })
 #elif LINUX
                        .UseMauiAppLinuxGtk4<App>()
                        .AddLinuxGtk4Essentials()
@@ -488,45 +461,30 @@ namespace projectFrameCut
 #if WINDOWS
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Windows.ToggleButtonHandler>();
                     handlers.AddHandler<projectFrameCut.Controls.HdrPreviewView, projectFrameCut.Platforms.Windows.HdrPreviewViewHandler>();
+                    handlers.AddHandler<projectFrameCut.Controls.PreviewClipLayout, projectFrameCut.Platforms.Windows.PreviewClipLayoutHandler>();
 #elif ANDROID
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Android.ToggleButtonHandler>();
                     handlers.AddHandler<projectFrameCut.InteractableEditor.InteractableEditor, projectFrameCut.Platforms.Android.InteractableEditorHandler>();
+                    handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
+                    handlers.AddHandler<NativeVulkanSurfaceView, NativeVulkanSurfaceViewHandler>();
 #elif IOS
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.iOS.ToggleButtonHandler>();
 #elif LINUX
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Linux.ToggleButtonHandler>();
+                    handlers.AddHandler<Border, projectFrameCut.Platforms.Linux.LinuxBorderHandler>();
 #endif
                 });
-#if MAUISDK && (ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER)
-                builder.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
+
+#if WINDOWS
+                builder.ConfigureImageSources(sources =>
                 {
-                    options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
-                });
-#endif
-#if MAUISDK
-                builder.ConfigureEssentials(essentials =>
-                {
-                    essentials.UseVersionTracking();
+                    sources.AddService<IFileImageSource, WindowsFileImageSourceService>();
+                    sources.AddService<FileImageSource, WindowsFileImageSourceService>();
                 });
 #endif
 
 #pragma warning restore CA1416
                 var lastPath = SettingsManager.GetSetting("General_LastOpenedProject", "");
-                if (!string.IsNullOrWhiteSpace(lastPath) && Directory.Exists(lastPath))
-                {
-#if MAUISDK
-                    try
-                    {
-                        var dirName = Path.GetFileName(Path.GetDirectoryName(lastPath).TrimEnd(Path.DirectorySeparatorChar));
-                        builder = builder.ConfigureEssentials(essentials =>
-                        {
-                            essentials.AddAppAction("--continue", Localized.HomePage_Continue(dirName?.Split('\\')?.Last() ?? "Project"), icon: "icon_project")
-                                      .OnAppAction(HomePage.HandleAppActionLaunch);
-                        });
-                    }
-                    catch { }
-#endif
-                }
                 try
                 {
                     Log($"StoreMode: {IsStoreMode}, StoreModeOverride: {SettingsManager.GetSetting("StoreModeOverride", "disable")}");
@@ -555,14 +513,6 @@ namespace projectFrameCut
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
 #elif ANDROID
-                builder.ConfigureMauiHandlers(handlers =>
-                {
-                    handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
-                    handlers.AddHandler<NativeVulkanSurfaceView, NativeVulkanSurfaceViewHandler>();
-                });
-
-
-
                 try
                 {
                     MyLoggerExtensions.OnLog += [DebuggerNonUserCode()] (msg, level) =>
@@ -678,7 +628,7 @@ namespace projectFrameCut
 
                     Microsoft.Maui.Handlers.LabelHandler.Mapper.AppendToMapping("EnableTextSelection", (handler, view) =>
                     {
-                        if (view is Label l && (l.FontFamily == "MarkdownCodeBlock" || l.StyleId == "SelectableLabel"))
+                        if (view is Label l && (l.FontFamily == "Font_CodeBlock" || l.StyleId == "SelectableLabel"))
                         {
 #if WINDOWS
                             if (handler.PlatformView is Microsoft.UI.Xaml.Controls.TextBlock tb)
@@ -694,15 +644,6 @@ namespace projectFrameCut
                         }
                     });
 
-#if LINUX
-                    builder.ConfigureMauiHandlers(handlers =>
-                    {
-                        handlers.AddHandler<
-                            Border,
-                            projectFrameCut.Platforms.Linux.LinuxBorderHandler>();
-                    });
-#endif
-
                 }
                 catch
                 {
@@ -717,7 +658,7 @@ namespace projectFrameCut
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
-                        fonts.AddFont("SourceCodePro-Regular.ttf", "MarkdownCodeBlock");
+                        fonts.AddFont("SourceCodePro-Regular.ttf", "Font_CodeBlock");
                     });
                 }
 
@@ -761,30 +702,51 @@ namespace projectFrameCut
             }
         }
 
-        [ModuleInitializerAttribute]
-        public static void LoadModuleConfig()
+        private static void ClearStartupState()
         {
-            try
+            int removed = 0;
+            foreach (var name in new[] { "RenderJobs", "RpcRequest" })
+                DeleteStateDirectory(Path.Combine(BasicDataPath, name));
+#if WINDOWS
+            if (WinUI.App.IsPackaged())
             {
-                ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
-                ProgramCommit = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last();
-                AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
-                CachePath = GetInitialCachePath();
+                foreach (var name in new[] { "plugin-isolation", "project-plugins", "project-external-sources", "sandy-runtime", "CurrentProject", "AssetsLibrary" })
+                    DeleteStateDirectory(Path.Combine(Windows.Storage.ApplicationData.Current.LocalFolder.Path, name));
+                DeleteStateDirectory(WindowsPluginIsolationPlatform.CurrentProjectDirectory);
             }
-            catch { }
+#endif
+            if (removed > 0) Log($"Cleaned {removed} startup state directories.");
+
+            void DeleteStateDirectory(string path)
+            {
+                try
+                {
+                    var directory = new DirectoryInfo(path);
+                    if (directory.LinkTarget is not null) directory.Delete();
+                    else if (directory.Exists) directory.Delete(recursive: true);
+                    else return;
+                    removed++;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"clean startup state directory '{path}'");
+                }
+            }
         }
 
-        private static string GetInitialCachePath()
+        public static void InitializeExternalRpcAuthorizationStore()
         {
-#if WINDOWS
-            try
+            var keyText = TaskHelper.SyncWait(
+                () => SecureStorage.Default.GetAsync("external_rpc_authorization_key"),
+                CancellationToken.None);
+            if (string.IsNullOrWhiteSpace(keyText))
             {
-                if (WinUI.App.IsPackaged())
-                    return Windows.Storage.ApplicationData.Current.LocalCacheFolder.Path;
+                keyText = FileCryptoService.GenerateBase64Key();
+                TaskHelper.SyncWait(
+                    async () => { await SecureStorage.Default.SetAsync("external_rpc_authorization_key", keyText); return 1; },
+                    CancellationToken.None);
             }
-            catch { }
-#endif
-            return Path.Combine(Path.GetTempPath(), new string(AssemblyName.Select(t => char.IsAsciiLetterOrDigit(t) ? t : '_').ToArray()));
+            ExternalRpcAuthorizationStore.SetEncryptionKey(Convert.FromBase64String(keyText));
         }
 
         public static void InitLocate(ref string locate, ref CultureInfo culture)
@@ -817,14 +779,8 @@ namespace projectFrameCut
                 });
 
                 EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
-                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
-                {
-                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
-                    var loc = map.TryGetValue(locate, out var l) ? l
-                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
-                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
-                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
-                };
+                EffectProviderDisplayDefaults.AppPackageFileNamesResolver = FileSystemService.GetAppPackageFileNames;
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = ResolveEffectLocalizedString;
 
 
 
@@ -853,15 +809,19 @@ namespace projectFrameCut
                 PluginManager.CurrentLocale = "en-US";
                 PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                 EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
-                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
-                {
-                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
-                    var loc = map.TryGetValue(locate, out var l) ? l
-                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
-                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
-                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
-                };
+                EffectProviderDisplayDefaults.AppPackageFileNamesResolver = FileSystemService.GetAppPackageFileNames;
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = ResolveEffectLocalizedString;
             }
+        }
+
+        private static string ResolveEffectLocalizedString(string key, string fallback, string locate)
+        {
+            var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+            var loc = map.GetValueOrDefault(locate) ?? map.GetValueOrDefault(PluginManager.CurrentLocale);
+            var text = loc?.IsItemExist(key) == true ? loc.DynamicLookup(key, key) : null;
+            if (!string.IsNullOrEmpty(text) && !text.StartsWith("Unset localization item:", StringComparison.Ordinal)) return text;
+            var defaultLoc = map.First().Value;
+            return defaultLoc.IsItemExist(key) ? defaultLoc.DynamicLookup(key, key) : fallback;
         }
 
         public static CultureInfo ReadCultureFromSetting(string locate, CultureInfo culture)
@@ -1037,13 +997,16 @@ namespace projectFrameCut
                 {
                     if (!AdminServices.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
                     {
-                        plugins.AddRange(PluginService.LoadUserPlugins());
+                        plugins.AddRange(PluginService.LoadUserPlugins(internalPlugins: plugins));
 #if WINDOWS
                         Helper.HelperProgram.ResetPluginLoadingStat();
 #endif
                     }
                     else
                     {
+#if WINDOWS
+                        TaskHelper.SyncWait(() => WindowsAppExtensionService.RefreshAsync(plugins), CancellationToken.None);
+#endif
                         if (AdminServices.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
                         else Log("User disabled the plugin engine.");
                         PluginService.FailedLoadPlugin.Add("<No plugin ID available>", AdminServices.IsRunningAsAdministrator() ? Localized.PluginEngine_DisabledBecauseAdmin : Localized.PluginEngine_DisabledBecauseUserDisabled);
@@ -1181,28 +1144,6 @@ namespace projectFrameCut
 
             try
             {
-
-                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json")))
-                {
-                    AIHelper.CurrentOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json"))) ?? new AIOption { Provider = "OpenAI" };
-                }
-                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json")))
-                {
-                    AIHelper.CurrentImageOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json"))) ?? new AIOption { Provider = "OpenAI" };
-                }
-                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json")))
-                {
-                    AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<VideoGenAIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new VideoGenAIOption { Provider = "OpenAI" };
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Init AI Config", CreateMauiApp);
-            }
-
-
-            try
-            {
                 MessagingServices.Init();
 
             }
@@ -1211,6 +1152,9 @@ namespace projectFrameCut
                 Log(ex, "init services", CreateMauiApp);
             }
 
+#if WINDOWS
+            if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
+#endif
 
             Log("Background init completed.");
 

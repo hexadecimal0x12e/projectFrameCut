@@ -1,4 +1,7 @@
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Effect;
+#endif
+
 using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.DraftStuff;
@@ -17,12 +20,18 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
+        public static JsonSerializerOptions DraftJSONOption { get; } = new()
+        {
+            WriteIndented = true,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        };
+
         private const string ProjectDirectoryDesktopIni =
 """
 [.ShellClassInfo]
@@ -61,10 +70,30 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             }
         }
 
+#if !HEADLESS
+        internal static void ApplyTextStyleEffects(ClipElementUI element, ClipDraftDTO dto, int width, int height)
+        {
+            element.Effects = dto.Effects?.ToDictionary(e => string.IsNullOrWhiteSpace(e.Name) ? Guid.NewGuid().ToString() : e.Name,
+                e => PluginManager.CreateEffect(e, width, height)) ?? new();
+            element.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, null, out var diagnostics);
+            if (diagnostics.Count != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
+            ClipInfoBuilder.EnsureClipArgumentProvider(element, null);
+            ClipInfoBuilder.RebuildAllEffects(element);
+        }
+
         private static void InitializeEffects(ClipElementUI element, ClipDraftDTO dto, int relativeWidth, int relativeHeight)
         {
+            ClipInitializationFailure.Clear(element.ExtraData);
             try
             {
+                VideoClipRotation.Migrate(dto);
+                if (element.ClipType == ClipMode.ExtendClip)
+                {
+                    using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto));
+                    element.DeclaredStages = owner.SupportedStages.ToArray();
+                }
+                element.Rotation = dto.Rotation;
+                element.Opacity = dto.Opacity;
                 element.Effects = dto.Effects?.ToDictionary(
                     effect => string.IsNullOrWhiteSpace(effect.Name) ? $"Effect-{Guid.NewGuid()}" : effect.Name,
                     effect => PluginManager.CreateEffect(effect, relativeWidth, relativeHeight))
@@ -97,7 +126,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
         [return: NotNullIfNotNull(nameof(page))]
         [return: NotNullIfNotNull(nameof(element))]
-        public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage? page, ClipElementUI? element, bool wrapSoundtrackAsClip = true)
+        public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage? page, ClipElementUI? element, bool wrapSoundtrackAsClip = true, bool rebuildEffects = true)
         {
             if (page == null || element == null) return null!;
 
@@ -106,7 +135,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 throw new KeyNotFoundException($"Cannot find clip element '{element.Id}' in current draft page tracks.");
             }
 
-            RebuildEffectsForExport(element);
+            if (rebuildEffects) RebuildEffectsForExport(element);
 
             // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
             // These clips are filtered upstream in the calling code.
@@ -122,6 +151,11 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             bool rebuildEffects = true)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
+
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var exportMark = new UserMarkRange("Draft.Export", $"clips={page.Clips.Count}, rebuildEffects={rebuildEffects}");
+#endif
+            page.SyncGeneratedSoundTracks();
 
             var clips = new List<ClipDraftDTO>();
             var soundtracks = new List<SoundtrackDTO>();
@@ -148,7 +182,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
                         if (elem.ClipType == ClipMode.AudioClip)
                         {
-                            if (wrapSoundtrackAsClip)
+                            bool generatedSoundTrack = SoundTrackMetadata.ReadBool(elem.ExtraData, SoundTrackMetadata.GeneratedFromVideoKey);
+                            if (wrapSoundtrackAsClip && !generatedSoundTrack)
                             {
                                 var clipDto = CreateClipDraftDTO(page, border, elem, (uint)trackKey, true);
                                 clips.Add(clipDto);
@@ -163,12 +198,16 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                                     TypeName = string.IsNullOrEmpty(elem.TypeName) ? "NormalTrack" : elem.TypeName,
                                     TrackType = TrackMode.NormalTrack,
                                     LayerIndex = (uint)trackKey,
+                                    SubLayerIndex = (uint)Math.Max(0, elem.SubLayerIndex),
                                     StartFrame = startFrame,
                                     RelativeStartFrame = elem.relativeStartFrame,
                                     Duration = durationFrames,
                                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
                                     FilePath = elem.SourcePath,
-                                    MetaData = elem.ExtraData
+                                    ShouldDisplayInUI = elem.ShouldDisplayInUI,
+                                    Effects = SerializeEffects(elem),
+                                    EffectProviders = elem.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray(),
+                                    MetaData = ClipInitializationMetadata.ForPersistence(elem.ExtraData)
                                 };
                                 soundtracks.Add(dto);
                             }
@@ -184,36 +223,34 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             }
 
             long max = 0, audMax = 0;
-            foreach (var clip in clips)
+            foreach (var dto in clips.OfType<ClipDraftDTO>())
             {
-                if (clip is ClipDraftDTO dto)
+                var range = page.Clips.TryGetValue(dto.Id, out var element) ? page.GetClipFrameRange(element)
+                    : (Start: dto.StartFrame, Duration: dto.Duration);
+                ulong end = (ulong)range.Start + range.Duration;
+                if (end > uint.MaxValue)
                 {
-                    if (dto.ClipType == ClipMode.AudioClip)
-                    {
-                        if (wrapSoundtrackAsClip)
-                        {
-                            var end = (ulong)dto.StartFrame + dto.Duration;
-                            if (end > uint.MaxValue)
-                            {
-                                Log($"Ignoring overflowing audio clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
-                                end = (ulong)dto.StartFrame + 1;
-                            }
-                            audMax = Math.Max((long)end, audMax);
-                        }
-                    }
-                    else
-                    {
-                        var end = (ulong)dto.StartFrame + dto.Duration;
-                        if (end > uint.MaxValue)
-                        {
-                            Log($"Ignoring overflowing clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
-                            end = (ulong)dto.StartFrame + 1;
-                        }
-                        max = Math.Max((long)end, max);
-                    }
+                    Log($"Ignoring overflowing clip end during draft export: {dto.Id}/{dto.Name}, start={range.Start}, duration={range.Duration}.", "warn");
+                    end = (ulong)range.Start + 1;
                 }
+                if (dto.ClipType == ClipMode.AudioClip)
+                {
+                    if (wrapSoundtrackAsClip) audMax = Math.Max((long)end, audMax);
+                }
+                else max = Math.Max((long)end, max);
+            }
 
-
+            foreach (var track in soundtracks)
+            {
+                var range = Guid.TryParse(track.Id, out var id) && page.Clips.TryGetValue(id, out var element)
+                    ? page.GetClipFrameRange(element) : (Start: track.StartFrame, Duration: track.Duration);
+                ulong end = (ulong)range.Start + range.Duration;
+                if (end > uint.MaxValue)
+                {
+                    Log($"Ignoring overflowing soundtrack end during draft export: {track.Id}/{track.Name}, start={track.StartFrame}, duration={track.Duration}.", "warn");
+                    end = (ulong)track.StartFrame + 1;
+                }
+                audMax = Math.Max((long)end, audMax);
             }
 
             if (max > uint.MaxValue)
@@ -223,12 +260,13 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             var d = new DraftStructureJSON
             {
+                ProjectSettings = ProjectSettingsSnapshot.Capture(page.ProjectInfo),
                 Clips = clips.ToArray(),
                 SoundTracks = soundtracks.ToArray(),
                 Duration = (uint)max,
                 SavedAt = DateTime.Now
             };
-            if (wrapSoundtrackAsClip) d.AudioDuration = (uint)audMax;
+            d.AudioDuration = (uint)audMax;
             if (fixOverlap)
             {
                 try
@@ -279,6 +317,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 {
                     Id = elem.Id,
                     Name = name,
+                    BindedSoundTrack = elem.BindedSoundTrack,
                     FromPlugin = InternalPluginBase.InternalPluginBaseID,
                     TypeName = nameof(SoundTrackToClipWrapper),
                     ClipType = ClipMode.AudioClip,
@@ -297,10 +336,13 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     TargetHeight = elem.TargetHeight,
                     TargetX = elem.TargetX,
                     TargetY = elem.TargetY,
+                    Rotation = elem.Rotation,
+                    Opacity = elem.Opacity,
                     StartingX = elem.StartingX,
                     StartingY = elem.StartingY,
                     MetaData = normalizedMeta,
-                    Effects = null
+                    Effects = SerializeEffects(elem),
+                    EffectProviders = elem.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray()
                 };
             }
 
@@ -352,6 +394,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             {
                 Id = elem.Id,
                 Name = name,
+                BindedSoundTrack = elem.BindedSoundTrack,
                 FromPlugin = elem.FromPlugin,
                 TypeName = elem.TypeName,
                 ClipType = elem.ClipType,
@@ -370,71 +413,39 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 TargetHeight = exportTargetHeight,
                 TargetX = elem.TargetX,
                 TargetY = elem.TargetY,
+                Rotation = elem.Rotation,
+                Opacity = elem.Opacity,
                 StartingX = elem.StartingX,
                 StartingY = elem.StartingY,
                 MetaData = normalizedMeta2,
-                Effects = elem.Effects?.Select((kv) =>
-                {
-                    var effect = kv.Value;
-                    // Filter out Func<object> dynamic values from effect.Parameters (they cannot be serialized).
-                    // The binding state is preserved in the provider-level Fields serialization.
-                    var parameters = effect.Parameters is { Count: > 0 }
-                        ? effect.Parameters
-                            .Where(kvp => !DynamicParam.IsDynamicValue(kvp.Value))
-                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-                        : effect.Parameters;
-
-                    var structure = new EffectAndMixtureJSONStructure
-                    {
-                        Name = kv.Key,
-                        FromPlugin = effect.FromPlugin,
-                        TypeName = effect.TypeName,
-                        Parameters = parameters,
-                        Index = effect.Index,
-                        Enabled = effect.Enabled,
-                        RelativeHeight = effect.RelativeHeight,
-                        RelativeWidth = effect.RelativeWidth,
-                        IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
-                        IsVariableArgumentEffect = false,
-                        ImplementType = effect.ImplementType,
-                        BindedEffectGroupID = effect.BindedEffectProvidingSystemID ?? "",
-                    };
-
-                    if (effect is IBindableArgumentEffect bindableEffect)
-                    {
-                        structure.Id = bindableEffect.Id;
-                        structure.BindedInputID = bindableEffect.BindedArgumentProviderID;
-                        if (bindableEffect is IBindableArgumentEffectManyToOneValueProcesser mpe)
-                        {
-                            structure.BindedInputIDs = mpe.BindedArgumentProviderIDs;
-                        }
-                        else if (bindableEffect is IBindableArgumentEffectManyInputResultGenerator mpg)
-                        {
-                            structure.BindedInputIDs = mpg.BindedArgumentProviderIDs;
-                        }
-                        structure.Enabled = true;
-                    }
-
-                    return structure;
-                }).ToArray(),
+                Effects = SerializeEffects(elem),
                 EffectBundles = null,
-                EffectProviders = elem.EffectProviders?.Values
-                    .Select(p => new EffectProviderJSONStructure
-                    {
-                        Id = p.Id,
-                        FromPlugin = p.FromPlugin,
-                        TypeName = p.TypeName,
-                        Name = p.Name,
-                        Enabled = p.Enabled,
-                        AnchorsBindingState = p.AnchorsBindingState,
-                        StaticFields = p.Fields?
-                            .Where(kv => kv.Value is StaticEffectArgumentField)
-                            .ToDictionary(
-                                kv => kv.Key,
-                                kv => EffectParamConvert.Normalize(((StaticEffectArgumentField)kv.Value).Value) ?? new object()),
-                        MetaData = p.MetaData is { Count: > 0 } ? p.MetaData : null,
-                    }).ToArray()
+                EffectProviders = elem.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray()
             };
+        }
+
+        private static EffectAndMixtureJSONStructure[]? SerializeEffects(ClipElementUI elem)
+        {
+            return elem.Effects?.Where(kv => !DynamicEffectBindings.IsGraphEffect(kv.Value)).Select(kv =>
+            {
+                var effect = kv.Value;
+                return new EffectAndMixtureJSONStructure
+                {
+                    Name = kv.Key,
+                    FromPlugin = effect.FromPlugin,
+                    TypeName = effect.TypeName,
+                    Parameters = effect.Parameters is { Count: > 0 }
+                        ? effect.Parameters.Where(p => !DynamicParam.IsDynamicValue(p.Value)).ToDictionary(p => p.Key, p => p.Value)
+                        : effect.Parameters,
+                    Index = effect.Index,
+                    Enabled = effect.Enabled,
+                    RelativeHeight = effect.RelativeHeight,
+                    RelativeWidth = effect.RelativeWidth,
+                    IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
+                    ImplementType = effect.ImplementType,
+                    BindedEffectGroupID = effect.BindedEffectProvidingSystemID ?? ""
+                };
+            }).ToArray();
         }
 
         private static void ResolveExportTiming(
@@ -444,58 +455,12 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             out uint startFrame,
             out uint durationFrames)
         {
-            double ratio = elem.SecondPerFrameRatio;
-            if (!double.IsFinite(ratio) || ratio <= 0d)
-            {
-                ratio = 1d;
-            }
-
-            double startPx = border.TranslationX;
-            if (!double.IsFinite(startPx) || startPx < 0d)
-            {
-                startPx = double.IsFinite(elem.layoutX) && elem.layoutX > 0d ? elem.layoutX : 0d;
-            }
-
-            startFrame = ConvertExportFrame(page.PixelToFrame(startPx) / ratio, 0u);
-
-            double widthPx = border.WidthRequest;
-            if (!double.IsFinite(widthPx) || widthPx <= 0d)
-            {
-                widthPx = border.Width;
-            }
-            if (!double.IsFinite(widthPx) || widthPx <= 0d)
-            {
-                widthPx = elem.origLength;
-            }
-
-            uint fallbackDuration = elem.lengthInFrame is > 0 and < uint.MaxValue
-                ? elem.lengthInFrame
-                : 1u;
-            durationFrames = !double.IsFinite(widthPx) || widthPx <= 0d
-                ? fallbackDuration
-                : ConvertExportFrame(page.PixelToFrame(widthPx) / ratio, fallbackDuration);
-
-            if (durationFrames == 0 || (ulong)startFrame + durationFrames > uint.MaxValue)
-            {
-                Log($"Invalid clip timing was repaired during draft export: {elem.Id}/{elem.DisplayName}, start={startFrame}, duration={durationFrames}, width={widthPx}.", "warn");
-                durationFrames = startFrame < uint.MaxValue ? 1u : 0u;
-                if (durationFrames == 0)
-                {
-                    startFrame = uint.MaxValue - 1;
-                    durationFrames = 1u;
-                }
-            }
+            elem.AttachTiming(page);
+            startFrame = elem.TimelineStartFrame!.Value;
+            durationFrames = elem.lengthInFrame;
         }
 
-        private static uint ConvertExportFrame(double value, uint fallback)
-        {
-            if (!double.IsFinite(value) || value < 0d || value >= uint.MaxValue)
-            {
-                return fallback;
-            }
-
-            return (uint)Math.Round(value);
-        }
+#endif
 
         private static Dictionary<string, object> NormalizeClipMetaData(Dictionary<string, object>? source, uint targetFrameRate)
         {
@@ -519,10 +484,12 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             normalized[ClipDraftDTO.ProjectFrameRateMetaKey] = targetFrameRate;
             normalized[ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion;
+            ClipInitializationFailure.Clear(normalized);
             return normalized;
         }
 
-        public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null)
+        public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null,
+            IReadOnlyDictionary<string, AssetItem>? projectAssets = null)
         {
             var clips = json.Clips;
             if (clips is null || clips.Length == 0)
@@ -540,12 +507,19 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 }
 
                 var clipJson = JsonSerializer.SerializeToElement(clip);
+                ProjectReferenceRuntime.BindPart(clip.MetaData, Environment.CurrentDirectory);
+                if (clip.ClipType == ClipMode.ProjectReferenceClip && ProjectReference.Read(clip.MetaData) is { } reference)
+                    clip.FilePath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, reference.SnapshotPath));
+                clipJson = JsonSerializer.SerializeToElement(clip);
                 var clipInstance = PluginManager.CreateClip(clipJson) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })})");
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
                     {
-                        clipInstance.FilePath = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)].Path;
+                        var id = clipInstance.FilePath.Substring(1);
+                        clipInstance.FilePath = projectAssets is not null && projectAssets.TryGetValue(id, out var asset)
+                            ? asset.Path
+                            : AssetDatabase.Assets.TryGetValue(id, out var globalAsset) ? globalAsset.Path : clipInstance.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -584,8 +558,6 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 {
                     // 从 EffectProviders 重建（保留动态绑定），无 provider 时回退静态 Effects。
                     clipInstance.EffectsInstances = EffectHelper.GetClipEffectsInstances(clipInstance);
-                    if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
-                        ClipInitializationFailure.Clear(clipInstance);
                 }
                 catch (Exception ex)
                 {
@@ -608,24 +580,38 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 clipsList.Add(clipInstance);
 
             }
-            return clipsList.ToArray();
+            return clipsList.SelectMany(c => c is ProjectReferenceClip reference ? reference.GetLayers(true) : new[] { c }).ToArray();
         }
 
-        public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true)
+        public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true,
+            IReadOnlyDictionary<string, AssetItem>? projectAssets = null)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var audioMark = new UserMarkRange("Draft.LoadSoundTracks", $"soundtracks={json.SoundTracks?.Length ?? 0}, initialize={InitAtLoad}");
+#endif
             var tracks = json.SoundTracks;
-            if (tracks is null || tracks.Length == 0)
+            if ((tracks is null || tracks.Length == 0) && !json.Clips.Any(c => c.ClipType == ClipMode.ProjectReferenceClip))
             {
                 return Array.Empty<ISoundTrack>();
             }
 
             var tracksList = new List<ISoundTrack>();
 
-            foreach (var track in tracks)
+            foreach (var track in tracks ?? [])
             {
+                ProjectReferenceRuntime.BindPart(track.MetaData, Environment.CurrentDirectory);
+                if (ProjectReferencePart.Read(track.MetaData) is not null && !string.IsNullOrWhiteSpace(track.FilePath))
+                {
+                    if (track.FilePath.StartsWith('$'))
+                        track.FilePath = projectAssets is not null && projectAssets.TryGetValue(track.FilePath[1..], out var asset)
+                            ? asset.Path
+                            : AssetDatabase.Assets.TryGetValue(track.FilePath[1..], out var globalAsset) ? globalAsset.Path : track.FilePath;
+                    else if (!track.FilePath.StartsWith('#')) track.FilePath = Path.GetFullPath(track.FilePath);
+                }
                 var trackJson = JsonSerializer.SerializeToElement(track);
                 var trackInstance = PluginManager.CreateSoundTrack(trackJson);
                 trackInstance.ExtraData = track.MetaData ?? new();
+                trackInstance.Ratio = track.SecondPerFrameRatio > 0 ? track.SecondPerFrameRatio : 1f;
 
                 if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
                 {
@@ -643,7 +629,10 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 {
                     try
                     {
-                        trackInstance.FilePath = AssetDatabase.Assets[trackInstance.FilePath.Substring(1)].Path;
+                        var id = trackInstance.FilePath.Substring(1);
+                        trackInstance.FilePath = projectAssets is not null && projectAssets.TryGetValue(id, out var asset)
+                            ? asset.Path
+                            : AssetDatabase.Assets.TryGetValue(id, out var globalAsset) ? globalAsset.Path : trackInstance.FilePath;
                     }
                     catch (InvalidOperationException)
                     {
@@ -670,10 +659,24 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     }
                 }
 
-                if (InitAtLoad) trackInstance.ReInit();
+                if (InitAtLoad && SoundTrackMetadata.ReadBool(trackInstance.ExtraData, SoundTrackMetadata.EnabledKey, true)) SoundTrackMetadata.ReInit(trackInstance);
                 tracksList.Add(trackInstance);
             }
 
+            foreach (var dto in json.Clips.Where(c => c.ClipType == ClipMode.ProjectReferenceClip))
+            {
+                var reference = ProjectReference.Read(dto.MetaData) ?? throw new InvalidDataException("Missing project reference configuration.");
+                var node = JsonSerializer.SerializeToNode(dto, DraftJSONOption)!;
+                node["FilePath"] = Path.GetFullPath(reference.SnapshotPath);
+                var owner = (ProjectReferenceClip)PluginManager.CreateClip(JsonSerializer.SerializeToElement(node, DraftJSONOption));
+                try
+                {
+                    var audio = owner.GetSoundTracks(true);
+                    if (audio.Length == 0) owner.Dispose();
+                    tracksList.AddRange(audio);
+                }
+                catch { owner.Dispose(); throw; }
+            }
             return tracksList.ToArray();
         }
 
@@ -860,6 +863,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             }
         }
 
+#if !HEADLESS
         public static (ConcurrentDictionary<Guid, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj)
         {
             if (draft == null) throw new ArgumentNullException(nameof(draft));
@@ -915,6 +919,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
+                element.TimelineStartFrame = dto.StartFrame;
+                element.lengthInFrame = Math.Max(1u, dto.Duration);
                 element.SubLayerIndex = (int)dto.SubLayerIndex;
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = maxFrames;
@@ -922,6 +928,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.ShouldDisplayInUI = dto.ShouldDisplayInUI;
                 element.Clip.IsVisible = dto.ShouldDisplayInUI;
                 element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
+                element.BindedSoundTrack = dto.BindedSoundTrack;
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
@@ -995,18 +1002,23 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
+                element.TimelineStartFrame = dto.StartFrame;
+                element.lengthInFrame = Math.Max(1u, dto.Duration);
                 element.relativeStartFrame = dto.RelativeStartFrame;
-                element.maxFrameCount = dto.Duration;
+                element.SubLayerIndex = (int)dto.SubLayerIndex;
+                element.maxFrameCount = ProjectReferencePart.Read(dto.MetaData) is null ? dto.Duration : checked(dto.RelativeStartFrame + dto.Duration);
                 element.isInfiniteLength = false;
                 element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = ClipMode.AudioClip;
                 element.ExtraData = dto.MetaData ?? new();
+                element.ShouldDisplayInUI = dto.ShouldDisplayInUI;
+                element.Clip.IsVisible = dto.ShouldDisplayInUI;
                 element.sourceSecondPerFrame = 1f / proj.TargetFrameRate;
                 //element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
-                element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
-                element.Effects = new Dictionary<string, IEffect>();
+                InitializeEffects(element, new ClipDraftDTO { Effects = dto.Effects, EffectProviders = dto.EffectProviders }, proj.RelativeWidth, proj.RelativeHeight);
+                element.ApplySpeedRatio();
 
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
@@ -1014,6 +1026,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             return (clipsDict, trackCount);
         }
 
+#endif
 
         public static void FixSmallOverlaps(DraftStructureJSON draft, uint thresholdFrames = 3)
         {
@@ -1094,6 +1107,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             draft.Clips = dtos.ToArray();
         }
 
+#if !HEADLESS
         private static string? ExtractLabelText(Microsoft.Maui.Controls.Border border)
         {
             try
@@ -1145,6 +1159,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             element.origTrack = (int)clip.LayerIndex;
             element.origLength = widthPx;
             element.origX = clip.StartFrame;
+            element.TimelineStartFrame = clip.StartFrame;
+            element.lengthInFrame = Math.Max(1u, clip.Duration);
             element.SubLayerIndex = (int)clip.SubLayerIndex;
             element.relativeStartFrame = clip.RelativeStartFrame;
             element.maxFrameCount = maxFrames;
@@ -1152,6 +1168,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             element.ShouldDisplayInUI = clip.ShouldDisplayInUI;
             element.Clip.IsVisible = clip.ShouldDisplayInUI;
             element.SourcePath = clip.FilePath ?? (clip.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
+            element.BindedSoundTrack = clip.BindedSoundTrack;
             element.ClipType = clip.ClipType;
             element.ExtraData = clip.MetaData ?? new();
             element.sourceSecondPerFrame = clip.FrameTime;
@@ -1183,5 +1200,6 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             return element;
         }
+#endif
     }
 }

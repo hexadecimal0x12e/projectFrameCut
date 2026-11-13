@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-android;net10.0_linux</TargetFrameworks>
+		<TargetFrameworks>net11.0-android;net11.0_linux</TargetFrameworks>
 		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net11.0-ios</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net11.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks Condition="'$(BuildingInsideVisualStudio)' != 'true'">$(TargetFrameworks);net11.0</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
 			The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -24,7 +25,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-
 		<!-- Display name -->
 		<ApplicationTitle>projectFrameCut</ApplicationTitle>
 
@@ -33,7 +33,7 @@
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-		<ApplicationVersion>10</ApplicationVersion>
+		<ApplicationVersion>11</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">13.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
@@ -44,12 +44,13 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
+		<WindowsPackageType>MSIX</WindowsPackageType>
 		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
-		<WindowsPackageType>MSIX</WindowsPackageType>
+		<Features>runtime-async=on</Features>
 
-		<AssemblyVersion>1.7.0.0</AssemblyVersion>
-		<FileVersion>1.7.0.0</FileVersion>
+		<AssemblyVersion>1.8.0.0</AssemblyVersion>
+		<FileVersion>1.8.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut</Product>
 		<Description>projectFrameCut Application</Description>
@@ -68,13 +69,12 @@
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
-
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
 		<AndroidPackageFormat>apk</AndroidPackageFormat>
-		<RunAOTCompilation>False</RunAOTCompilation>
+		<PublishReadyToRun>False</PublishReadyToRun>
 		<PublishTrimmed>False</PublishTrimmed>
 		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
 		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
@@ -85,9 +85,15 @@
 		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
 		<StartupObject>projectFrameCut.WinUI.Program</StartupObject>
 		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION;MAUISDK</DefineConstants>
+		<WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
+		<WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
+		<SandyArchitecture>x64</SandyArchitecture>
+		<SandyArchitecture Condition="'$(RuntimeIdentifier)' == 'win-arm64' or '$(Platform)' == 'ARM64'">arm64</SandyArchitecture>
+		<SelectedPackageManifest>Platforms\Windows\Package.$(PackageFlavor).appxmanifest</SelectedPackageManifest>
+		<IntermediateOutputPath Condition="'$(PackageFlavor)' != ''">$(BaseIntermediateOutputPath)$(PackageFlavor)\$(Platform)\$(Configuration)\</IntermediateOutputPath>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
 	</PropertyGroup>
 
@@ -143,22 +149,30 @@
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Resources\Styles\**" LogicalName="Styles\%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="..\License.txt" LogicalName="Licenses\License.txt" />
+		<MauiAsset Include="..\license.md" LogicalName="Licenses\projectFrameCut_license.md" />
+		<MauiAsset Include="..\.agents\skills\*projectframecut*\**\*" LogicalName="Public\Skills\%(RecursiveDir)%(Filename)%(Extension)" />
 
 		<!-- Plugin trusting Root CA -->
 		<EmbeddedResource Include="Resources\PluginTrust\builtin-root-ca.cer" LogicalName="projectFrameCut.PluginTrust.builtin-root-ca.cer" Condition="Exists('Resources\PluginTrust\builtin-root-ca.cer')" />
 	</ItemGroup>
 
 
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<DefineConstants>$(DefineConstants);DIAGHUB_ENABLE_TRACE_SYSTEM</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Debug' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<PackageReference Include="Microsoft.Diagnostics.Runtime" Version="4.1.745802" />
+		<PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.UserMarks" Version="18.7.37220.1" />
+		<Using Include="Microsoft.DiagnosticsHub" />
+	</ItemGroup>
+
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.0" />
-		<PackageReference Include="OpenAI" Version="2.12.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="$(ExtensionsVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="17.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="12.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
 	</ItemGroup>
@@ -190,33 +204,77 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
 		<PackageReference Include="Woohoo.Platform.Windows" Version="0.1.0" />
-		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
+		<PackageReference Include="System.Management" Version="11.0.0-rc.2.26504.105" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="Platforms\Windows\Sandy\win-$(SandyArchitecture)\sandy.exe" LogicalName="sandy.exe" />
+		<MauiAsset Include="Platforms\Windows\Sandy\LICENSE.txt" LogicalName="Licenses\Sandy\LICENSE.txt" />
+		<MauiAsset Include="Platforms\Windows\Sandy\toml11-LICENSE.txt" LogicalName="Licenses\Sandy\toml11.LICENSE.txt" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
-		<PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260610101" />
+	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260903100">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
+
+	<PropertyGroup Condition="'$(PackageFlavor)' == ''">
+		<SelectedPackageManifest>Platforms\Windows\Package.appxmanifest</SelectedPackageManifest>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(PackageFlavor)' == 'MSStore' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
+		<PublishReadyToRun>true</PublishReadyToRun>
+		<PublishSelfContained>true</PublishSelfContained>
+		<ApplicationId>0xeeeeeeeeeeee.projectframecut</ApplicationId>
+	</PropertyGroup>
+
+	<Target Name="SelectWindowsPackageManifest" BeforeTargets="MauiGeneratePackageAppxManifest" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<ItemGroup>
+			<AppxManifest Remove="@(AppxManifest)" />
+			<AppxManifest Include="$(SelectedPackageManifest)" />
+		</ItemGroup>
+
+		<Message Text="Selected Windows Package Manifest: $(SelectedPackageManifest)" Importance="High" />
+	</Target>
+
+	<Target Name="ValidateSandyRuntime" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(DesignTimeBuild)' != 'true'">
+		<Error Condition="!Exists('Platforms\Windows\Sandy\win-$(SandyArchitecture)\sandy.exe')" Text="Missing Sandy $(SandyArchitecture) runtime. Run tools/Prepare-Sandy.ps1 before packaging." />
+	</Target>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<ProjectReference Include="..\tools\projectFrameCut.PowerShell\projectFrameCut.PowerShell.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" SetTargetFramework="TargetFramework=net10.0" />
+	</ItemGroup>
+	<Target Name="BundleScriptTemplateModule" BeforeTargets="AssignTargetPaths" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(DesignTimeBuild)' != 'true'">
+		<MSBuild Projects="..\tools\projectFrameCut.PowerShell\projectFrameCut.PowerShell.csproj" Targets="GetScriptTemplateModuleFiles" Properties="Configuration=$(Configuration);TargetFramework=net10.0" RemoveProperties="RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishSelfContained;TargetFrameworks">
+			<Output TaskParameter="TargetOutputs" ItemName="_BundledScriptModuleFiles" />
+		</MSBuild>
+		<ItemGroup>
+			<Content Include="@(_BundledScriptModuleFiles)" Link="Public\PowerShell\%(Filename)%(Extension)" TargetPath="Public\PowerShell\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		</ItemGroup>
+	</Target>
 
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<AndroidMavenLibrary Include="io.github.kyant0:fishnet" Version="1.1.0" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
+		<PackageReference Include="Xamarin.AndroidX.Window.WindowJava" Version="1.5.1.3" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net11.0-android'">
 		<AndroidMavenLibrary Include="com.github.L-JINBIN:MTDataFilesProvider" Version="1.0.0" Repository="https://jitpack.io" />
+		<AndroidNativeLibraryNoJniPreload Include="libfishnet.so" />
 	</ItemGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net11.0-android'">
 		<AndroidKeyStore>False</AndroidKeyStore>
 		<DefineConstants>$(DefineConstants);ANDROID;MAUISDK</DefineConstants>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net10.0-android'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net11.0-android'">
 		<AndroidKeyStore>True</AndroidKeyStore>
 		<AndroidSigningKeyStore>0x12e.keystore</AndroidSigningKeyStore>
 		<AndroidSigningKeyAlias>123456</AndroidSigningKeyAlias>
@@ -229,31 +287,72 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
 	</ItemGroup>
 
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
-	</ItemGroup>
-
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 		<TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
-		<TargetFrameworkVersion>v10.0</TargetFrameworkVersion>
-		<TargetFrameworkMoniker>.NETCoreApp,Version=v10.0</TargetFrameworkMoniker>
+		<TargetFrameworkVersion>v11.0</TargetFrameworkVersion>
+		<TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
 		<DefineConstants>$(DefineConstants);LINUX</DefineConstants>
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
-		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-preview.12.26368.2" />
-		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="0.1.0-preview.12.26368.2" />
+	<ItemGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
+		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="$(MAUIGTK4Version)" />
+		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="$(MAUIGTK4Version)" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0'">
+		<UseMaui>false</UseMaui>
+		<SingleProject>false</SingleProject>
+		<DefineConstants>$(DefineConstants);HEADLESS</DefineConstants>
+		<StartupObject>projectFrameCut.HeadlessProgramClass</StartupObject>
+		<Description>projectFrameCut Headless client</Description>
+		<AssemblyTitle>projectFrameCut Headless client</AssemblyTitle>
+		<AssemblyDescription>projectFrameCut Headless client</AssemblyDescription>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+		<Compile Remove="**\*.xaml.cs;MauiProgram.cs;DraftPage*.cs;ProjectPluginPage.cs" />
+		<Compile Remove="ApplicationPluginBase\**\*.cs;Controls\**\*.cs;Converters\**\*.cs;InteractableEditor\**\*.cs;Interaction\**\*.cs;ViewModels\**\*.cs;Platforms\**\*.cs;Setting\SettingPages\**\*.cs" />
+		<Compile Remove="DraftStuff\**\*.cs" />
+		<Compile Include="DraftStuff\DraftImportAndExportHelper.cs" />
+		<Compile Remove="Localize\MAUILocalizedHelper.cs;Template\TemplateVariableItem.cs" />
+		<Compile Remove="Services\EffectServices.cs;Services\TextServices.cs;Services\TextStyleServices.cs;Services\UIServices.cs;Services\UIThreadWatchdogService*.cs;Services\ScreenReaderService.cs;Services\IntegratedApiBackend.cs;Services\TimelineMcpLiveService.cs;Services\RemoteProjectSession.cs;Services\VectorComponentHandlerServices.cs;Services\VectorClipServices*.cs;Services\TransformServices.cs;Services\FileSystemService.cs" />
+		<Compile Remove="Services\SubtitleServices.cs" />
+		<MauiXaml Remove="**\*.xaml" />
+		<MauiIcon Remove="@(MauiIcon)" />
+		<MauiSplashScreen Remove="@(MauiSplashScreen)" />
+		<MauiImage Remove="@(MauiImage)" />
+		<MauiFont Remove="@(MauiFont)" />
+		<MauiAsset Remove="@(MauiAsset)" />
+		<PackageReference Remove="Microsoft.Maui.Controls;Microsoft.Maui.Controls.Xaml;CommunityToolkit.Maui;CommunityToolkit.Maui.MediaElement" />
+		<ProjectReference Remove="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj;..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
+		<PackageReference Include="ILGPU" Version="1.5.3" />
+		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\**\*.cs" Exclude="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\Win2DVectorRasterizer.cs" Link="Platforms\Headless\HwAccel\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Effect\**\*.cs" Link="Platforms\Headless\HwAccel\Effect\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\AcceleratorsManager.cs" Link="Platforms\Headless\HwAccel\AcceleratorsManager.cs" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\VectorRasterizer\**\*.cs" Link="Platforms\Headless\HwAccel\VectorRasterizer\%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
 	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">
-		<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+		<ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+			<Compile Include="Platforms\Headless\**\*.cs" />
+			<Compile Include="Platforms\Windows\WasapiPreviewAudioSink.cs" Link="Platforms\Headless\WasapiPreviewAudioSink.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 			<Compile Include="Platforms\Linux\**\*.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+			<Compile Include="Platforms\iDevices\**\*.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
+			<Compile Include="Platforms\iDevices\**\*.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+			<Compile Include="Platforms\iDevices\**\*.cs" />
 		</ItemGroup>
 	</Target>
 
 	<ItemGroup>
-		<MauiXaml Update="AIAssistance\AssistanceChatView.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
 		<MauiXaml Update="AssetsLibraryPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
@@ -273,9 +372,6 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="DraftStuff\ProjectAddClipView.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="VectorContent\VectorContentEditorPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="HomePage.xaml">
@@ -340,9 +436,6 @@
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="VectorContent\VectorContentEditorPage.xaml.cs">
-			<DependentUpon>VectorContentEditorPage.xaml</DependentUpon>
 		</Compile>
 	</ItemGroup>
 

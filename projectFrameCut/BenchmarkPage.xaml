@@ -29,9 +29,6 @@
                         <x:String>BlackholeVideoWriter</x:String>
                     </Picker.Items>
                 </Picker>
-                <Label Text="{l:Localized Key=BenchmarkPage_BoostMode}"
-                       VerticalOptions="Center"/>
-                <Switch x:Name="BoostModeSwitch"/>
             </HorizontalStackLayout>
 
             <!-- 控制按钮 -->
@@ -54,7 +51,7 @@
             <VerticalStackLayout x:Name="ResultsPanel" IsVisible="False">
                 <Label Text="{l:Localized Key=BenchmarkPage_Results}"
                        FontSize="18" FontAttributes="Bold"/>
-                <Label x:Name="ResultsLabel" FontFamily="Consolas"/>
+                <Label x:Name="ResultsLabel" FontFamily="Font_CodeBlock"/>
             </VerticalStackLayout>
 
             <!-- 日志面板 -->

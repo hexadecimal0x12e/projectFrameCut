@@ -1,6 +1,5 @@
 using Foundation;
 using ObjCRuntime;
-using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;

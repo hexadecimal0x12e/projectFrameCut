@@ -1,4 +1,5 @@
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -13,9 +14,10 @@ internal sealed class PluginPackageVerificationResult : IDisposable
     public required PluginPackageManifest Manifest { get; init; }
     public required PluginTrustReport TrustReport { get; init; }
     public required byte[] AssemblyBytes { get; init; }
-    public required X509Certificate2 SigningCertificate { get; init; }
+    public X509Certificate2? SigningCertificate { get; init; }
+    public required string PluginEncryptionKey { get; init; }
 
-    public void Dispose() => SigningCertificate.Dispose();
+    public void Dispose() => SigningCertificate?.Dispose();
 }
 
 internal sealed class PluginPublisherTrustRecord
@@ -38,6 +40,14 @@ internal static class PluginPackageSecurityService
     public const string ManifestFileName = "manifest.json";
     public const string ManifestSignatureFileName = "manifest.sig";
     public const string PublisherChainFileName = "publisher-chain.pem";
+    public const string DisablePluginTrustSetting = "Debug_DisablePluginTrust";
+
+    public static bool IsPluginTrustDisabled =>
+#if DEBUG
+        SettingsManager.Settings is not null && SettingsManager.IsBoolSettingTrue(DisablePluginTrustSetting);
+#else
+        false;
+#endif
 
     private const string BuiltInRootCertificateSha256 = "C3E7349066D93C16E45C292B34B9CDD3ADB32F9067315EA0ECB43C51839EF491";
     private const string BuiltInRootResourceName = "projectFrameCut.PluginTrust.builtin-root-ca.cer";
@@ -83,13 +93,42 @@ internal static class PluginPackageSecurityService
         var chainPath = Path.Combine(pluginRoot, PublisherChainFileName);
 
         RequireFile(metadataPath);
-        RequireFile(manifestPath);
-        RequireFile(signaturePath);
-        RequireFile(chainPath);
 
         var metadata = JsonSerializer.Deserialize<PluginMetadata>(
             await File.ReadAllTextAsync(metadataPath, cancellationToken),
             JsonOptions) ?? throw new InvalidDataException("metadata.json is invalid.");
+        ValidateMetadata(metadata);
+        if (projectPublisherCertificateDer is not null && metadata.BackendKind == PluginBackendKind.External)
+            throw new NotSupportedException("External backend packages cannot be installed as project plugins.");
+
+#if DEBUG
+        if (IsPluginTrustDisabled)
+        {
+            Log($"Plugin trust validation is disabled for '{metadata.PluginID}' in this Debug build.", "warn");
+            return new PluginPackageVerificationResult
+            {
+                Metadata = metadata,
+                Manifest = new PluginPackageManifest
+                {
+                    FormatVersion = metadata.PackageFormatVersion,
+                    PluginId = metadata.PluginID,
+                    BackendKind = metadata.BackendKind,
+                    PublisherId = metadata.PublisherId,
+                    SigningCertificateFingerprint = metadata.SigningCertificateFingerprint,
+                    PluginHash = metadata.PluginHash
+                },
+                TrustReport = new PluginTrustReport(PluginTrustLevel.Bypassed, metadata.PluginID,
+                    metadata.PublisherId, metadata.Author, metadata.SigningCertificateFingerprint, null),
+                AssemblyBytes = metadata.BackendKind == PluginBackendKind.External ? [] : FileCryptoService.DecryptToFileWithPassword(
+                    metadata.PluginKey, await File.ReadAllBytesAsync(Path.Combine(pluginRoot, metadata.PluginID + ".dll.enc"), cancellationToken)),
+                PluginEncryptionKey = metadata.PluginKey
+            };
+        }
+#endif
+
+        RequireFile(manifestPath);
+        RequireFile(signaturePath);
+        RequireFile(chainPath);
         var manifest = JsonSerializer.Deserialize<PluginPackageManifest>(
             await File.ReadAllTextAsync(manifestPath, cancellationToken),
             JsonOptions) ?? throw new InvalidDataException("manifest.json is invalid.");
@@ -157,9 +196,6 @@ internal static class PluginPackageSecurityService
 
             await ValidateManifestFilesAsync(pluginRoot, manifest, cancellationToken);
 
-            if (projectPublisherCertificateDer is not null && metadata.BackendKind == PluginBackendKind.External)
-                throw new NotSupportedException("External backend packages cannot be installed as project plugins.");
-
             if (metadata.BackendKind == PluginBackendKind.External)
             {
                 return new PluginPackageVerificationResult
@@ -171,6 +207,7 @@ internal static class PluginPackageSecurityService
                         Level = publisherTrusted ? PluginTrustLevel.PublisherTrusted : PluginTrustLevel.ChainValid
                     },
                     AssemblyBytes = [],
+                    PluginEncryptionKey = string.Empty,
                     SigningCertificate = X509CertificateLoader.LoadCertificate(certificateValidation.SigningCertificate.RawData)
                 };
             }
@@ -212,6 +249,7 @@ internal static class PluginPackageSecurityService
                     Level = publisherTrusted ? PluginTrustLevel.PublisherTrusted : PluginTrustLevel.ChainValid
                 },
                 AssemblyBytes = assemblyBytes,
+                PluginEncryptionKey = expectedEncryptionKey,
                 SigningCertificate = X509CertificateLoader.LoadCertificate(certificateValidation.SigningCertificate.RawData)
             };
         }
@@ -219,9 +257,12 @@ internal static class PluginPackageSecurityService
 
     public static async Task TrustPublisherAsync(PluginTrustReport report, string rootCertificateFingerprint = "")
     {
-        if (report.Level is PluginTrustLevel.Invalid or PluginTrustLevel.Revoked)
+#if HEADLESS
+        throw new PlatformNotSupportedException("Publisher trust cannot be changed by the headless client.");
+#else
+        if (report.Level is not (PluginTrustLevel.ChainValid or PluginTrustLevel.PublisherTrusted))
         {
-            throw new InvalidOperationException("An invalid or revoked publisher cannot be trusted.");
+            throw new InvalidOperationException("Only a publisher with a valid certificate chain can be trusted.");
         }
 
         var record = new PluginPublisherTrustRecord
@@ -235,16 +276,24 @@ internal static class PluginPackageSecurityService
         // Compatibility marker for the existing non-UTF8 settings page. The value is a
         // publisher fingerprint, never a PEM key. Removing it revokes this plugin binding.
         await SecureStorage.Default.SetAsync($"plugin_pem_{report.PluginId}", report.PublisherId);
+#endif
     }
 
     public static Task ForgetPublisherAsync(string publisherId)
     {
+#if HEADLESS
+        throw new PlatformNotSupportedException("Publisher trust cannot be changed by the headless client.");
+#else
         SecureStorage.Default.Remove(GetPublisherTrustStorageKey(publisherId));
         return Task.CompletedTask;
+#endif
     }
 
     public static async Task<bool> IsPublisherTrustedAsync(string publisherId, string pluginId)
     {
+#if HEADLESS
+        return false;
+#else
         if (string.IsNullOrWhiteSpace(publisherId))
         {
             return false;
@@ -271,11 +320,14 @@ internal static class PluginPackageSecurityService
         {
             return false;
         }
+#endif
     }
 
     public static async Task RegisterDevelopmentRootCertificateAsync(byte[] certificateDer, string? label = null)
     {
-#if DEBUG
+#if HEADLESS
+        throw new PlatformNotSupportedException("Development trust roots cannot be changed by the headless client.");
+#else
         ArgumentNullException.ThrowIfNull(certificateDer);
         using var certificate = X509CertificateLoader.LoadCertificate(certificateDer);
         if (!certificate.Extensions.OfType<X509BasicConstraintsExtension>().Any(extension => extension.CertificateAuthority))
@@ -289,25 +341,33 @@ internal static class PluginPackageSecurityService
         roots.Add(new DevelopmentPluginRootRecord
         {
             Fingerprint = fingerprint,
-            Label = label,
+            Label = string.IsNullOrWhiteSpace(label) ? certificate.GetNameInfo(X509NameType.SimpleName, false) : label,
             CertificateDerBase64 = Convert.ToBase64String(certificate.RawData)
         });
         await SecureStorage.Default.SetAsync(DevelopmentRootsStorageKey, JsonSerializer.Serialize(roots));
-#else
-        await Task.CompletedTask;
-        throw new PlatformNotSupportedException("Custom plugin root certificates are only supported in Debug builds.");
+        Log($"Registered development plugin root '{label}': {fingerprint}.");
 #endif
     }
 
     public static async Task RemoveDevelopmentRootCertificateAsync(string fingerprint)
     {
-#if DEBUG
+#if HEADLESS
+        throw new PlatformNotSupportedException("Development trust roots cannot be changed by the headless client.");
+#else
         var roots = await ReadDevelopmentRootsAsync();
         roots.RemoveAll(root => string.Equals(root.Fingerprint, fingerprint, StringComparison.OrdinalIgnoreCase));
         await SecureStorage.Default.SetAsync(DevelopmentRootsStorageKey, JsonSerializer.Serialize(roots));
+        Log($"Removed development plugin root: {fingerprint}.");
+#endif
+    }
+
+    internal static async Task<List<DevelopmentPluginRootRecord>> GetDevelopmentRootCertificatesAsync()
+    {
+#if !HEADLESS
+        return await ReadDevelopmentRootsAsync();
 #else
         await Task.CompletedTask;
-        throw new PlatformNotSupportedException("Custom plugin root certificates are only supported in Debug builds.");
+        throw new PlatformNotSupportedException("Custom plugin trust roots can only be managed by the GUI client.");
 #endif
     }
 
@@ -436,14 +496,6 @@ internal static class PluginPackageSecurityService
 
         var external = manifest.FormatVersion == PluginPackageManifest.ExternalBackendFormatVersion;
         if (metadata.BackendKind != manifest.BackendKind ||
-            external != (metadata.BackendKind == PluginBackendKind.External) ||
-            string.IsNullOrWhiteSpace(metadata.PluginID) ||
-            metadata.PluginID is "." or ".." ||
-            metadata.PluginID != Path.GetFileName(metadata.PluginID) ||
-            metadata.PluginID.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
-            metadata.PluginAPIVersion != PluginService.PluginAPIVersion ||
-            !Enum.IsDefined(metadata.BackendKind) ||
-            (!external && !Enum.IsDefined(metadata.MaximumSupportedIsolationMode)) ||
             !string.Equals(metadata.PluginID, manifest.PluginId, StringComparison.Ordinal) ||
             !string.Equals(metadata.PublisherId, manifest.PublisherId, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(metadata.SigningCertificateFingerprint, manifest.SigningCertificateFingerprint, StringComparison.OrdinalIgnoreCase) ||
@@ -456,20 +508,38 @@ internal static class PluginPackageSecurityService
         }
 
         if (!external) return;
-        if (metadata.IsAppLevelPlugin != false || metadata.ExternalBackend is null ||
-            new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.All(x => x is null))
-            throw new InvalidDataException("An external backend package must be non-AppLevel and declare at least one desktop entry point.");
-        if ((metadata.ExternalBackend.Capabilities & ~ExternalPluginCapabilities.All) != 0)
-            throw new InvalidDataException("The external backend capability declaration is invalid.");
         if (!string.IsNullOrWhiteSpace(metadata.PluginHash) || !string.IsNullOrWhiteSpace(metadata.PluginKey) || !string.IsNullOrWhiteSpace(manifest.PluginHash))
             throw new InvalidDataException("An external backend package cannot declare a managed assembly hash or encryption key.");
-        foreach (var launch in new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.OfType<ExternalPluginBackendLaunchOption>())
+        foreach (var launch in new[] { metadata.ExternalBackend!.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.OfType<ExternalPluginBackendLaunchOption>())
         {
-            if (string.IsNullOrWhiteSpace(launch.EntryPoint)) throw new InvalidDataException("External backend entry points cannot be empty.");
             if (launch.UseShellExecute || Path.IsPathRooted(launch.EntryPoint)) continue;
             var normalized = PluginTrustValidator.NormalizeManifestPath(launch.EntryPoint);
             if (!manifest.Files.Any(x => string.Equals(PluginTrustValidator.NormalizeManifestPath(x.Path), normalized, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException($"External backend entry point '{launch.EntryPoint}' is not covered by the signed manifest.");
+        }
+    }
+
+    internal static void ValidateMetadata(PluginMetadata metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata.PluginID) || metadata.PluginID is "." or ".." ||
+            metadata.PluginID != Path.GetFileName(metadata.PluginID) || metadata.PluginID.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            metadata.PluginAPIVersion != PluginService.PluginAPIVersion || !Enum.IsDefined(metadata.BackendKind) ||
+            metadata.PackageFormatVersion != (metadata.BackendKind == PluginBackendKind.External
+                ? PluginPackageManifest.ExternalBackendFormatVersion : PluginPackageManifest.ManagedAssemblyFormatVersion) ||
+            (metadata.BackendKind == PluginBackendKind.ManagedAssembly && !Enum.IsDefined(metadata.MaximumSupportedIsolationMode)))
+            throw new InvalidDataException("The plugin metadata has an invalid id, package format, isolation mode, or API version.");
+
+        if (metadata.BackendKind != PluginBackendKind.External) return;
+        if (metadata.IsAppLevelPlugin != false || metadata.ExternalBackend is null ||
+            new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.All(x => x is null) ||
+            (metadata.ExternalBackend.Capabilities & ~ExternalPluginCapabilities.All) != 0)
+            throw new InvalidDataException("The external backend metadata is invalid.");
+        foreach (var launch in new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.OfType<ExternalPluginBackendLaunchOption>())
+        {
+            if (string.IsNullOrWhiteSpace(launch.EntryPoint))
+                throw new InvalidDataException("External backend entry points cannot be empty.");
+            if (!launch.UseShellExecute && !Path.IsPathRooted(launch.EntryPoint))
+                PluginTrustValidator.NormalizeManifestPath(launch.EntryPoint);
         }
     }
 
@@ -517,7 +587,7 @@ internal static class PluginPackageSecurityService
             roots.Add(certificate);
         }
 
-#if DEBUG
+#if !HEADLESS
         foreach (var root in await ReadDevelopmentRootsAsync())
         {
             try
@@ -535,9 +605,9 @@ internal static class PluginPackageSecurityService
                     certificate.Dispose();
                 }
             }
-            catch (Exception) when (root.CertificateDerBase64.Length > 0)
+            catch (Exception ex) when (root.CertificateDerBase64.Length > 0)
             {
-                // Ignore a damaged development root record; it must never broaden trust.
+                Log(ex, $"Load development plugin root '{root.Fingerprint}'");
             }
         }
 #endif
@@ -546,6 +616,9 @@ internal static class PluginPackageSecurityService
 
     private static async Task<List<DevelopmentPluginRootRecord>> ReadDevelopmentRootsAsync()
     {
+#if HEADLESS
+        return [];
+#else
         var value = await SecureStorage.Default.GetAsync(DevelopmentRootsStorageKey);
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -556,10 +629,12 @@ internal static class PluginPackageSecurityService
         {
             return JsonSerializer.Deserialize<List<DevelopmentPluginRootRecord>>(value, JsonOptions) ?? [];
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Log(ex, "Read development plugin roots");
             return [];
         }
+#endif
     }
 
     private static string GetPublisherTrustStorageKey(string publisherId)

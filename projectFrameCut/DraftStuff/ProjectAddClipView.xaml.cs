@@ -1,4 +1,5 @@
-﻿using projectFrameCut.ViewModels;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ViewModels;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -10,15 +11,20 @@ public partial class ProjectAddClipView : ContentView
     private readonly int ItemSize = 180;
     private readonly int ItemSpacing = 8;
     private bool _isAddingAsset;
+    private readonly int _rpcSourcesTabIndex;
 
     public ProjectAddClipView(ref DraftPage draftPage)
     {
         InitializeComponent();
         _page = draftPage;
         _viewModel = new ProjectAddClipViewModel(ref draftPage);
+        _viewModel.LoadVectorComponents();
+        _ = _viewModel.LoadMaskSources();
         BindingContext = _viewModel;
-        _viewModel.SetDrawingView(DrawingCanvas);
-        ParentChanged += (s, e) => (BindingContext as ProjectAddClipViewModel)?.LoadTransforms();
+        Loaded += (_, _) => Services.TextStyleStore.Changed += RefreshTextStyles;
+        Unloaded += (_, _) => Services.TextStyleStore.Changed -= RefreshTextStyles;
+        _rpcSourcesTabIndex = MainTabView.TabItems.IndexOf(RpcSourcesTab);
+        UpdateExternalSourceAvailability();
         MainTabView.OnTabSwitched += MainTabView_OnTabSwitched;
         var orderOpt = SettingsManager.GetSetting("Edit_AddView_DefaultOrderOption", "date");
         OrderOptionPicker.SelectedIndex = orderOpt switch
@@ -30,64 +36,69 @@ public partial class ProjectAddClipView : ContentView
         CollapseHeaderControls();
     }
 
+    internal Task RefreshExternalSourcesAsync()
+    {
+        UpdateExternalSourceAvailability();
+        return _viewModel.LoadRpcVideoSources();
+    }
+    internal Task RefreshAssetsAsync() => MainThread.InvokeOnMainThreadAsync(_viewModel.LoadAssets);
+
+    private void RefreshTextStyles() => MainThread.BeginInvokeOnMainThread(() =>
+        _ = Services.TextStyleServices.RunAsync(_page, _viewModel.InitializeTextStyles));
+
+    private void UpdateExternalSourceAvailability()
+    {
+        var allowed = Services.ProjectExternalSourceService.AllowRpcSources || Services.ProjectExternalSourceService.AllowAssemblySources;
+        if (allowed == MainTabView.TabItems.Contains(RpcSourcesTab)) return;
+        var selected = MainTabView.SelectedItem;
+        if (!allowed && (selected == RpcSourcesTab || MainTabView.SelectedIndex >= MainTabView.TabItems.Count - 1))
+            MainTabView.SelectedIndex = 0;
+        if (allowed) MainTabView.TabItems.Insert(Math.Clamp(_rpcSourcesTabIndex, 0, MainTabView.TabItems.Count), RpcSourcesTab);
+        else MainTabView.TabItems.Remove(RpcSourcesTab);
+        if (selected is not null && selected != RpcSourcesTab && MainTabView.TabItems.Contains(selected))
+            MainTabView.SelectedIndex = MainTabView.TabItems.IndexOf(selected);
+    }
+
     private void MainTabView_OnTabSwitched(object? sender, ApplicationAPIBase.Views.TabbedView.TabbedViewItem e)
     {
         CollapseHeaderControls();
 
-        switch (e.Tag)
-        {
-            case "LocalAssets":
-            case "RpcSources":
-            case "AIGC":
-            case "SharedAssets":
-            case "Templates":
-                {
-                    OrderOptionContainer.IsVisible = true;
-                    break;
-                }
-            default:
-                {
-                    OrderOptionContainer.IsVisible = false;
-                    break;
-                }
-        }
+        OrderOptionContainer.IsVisible = e.Tag is "LocalAssets" or "SharedAssets" or "RpcSources" or "Templates";
+        SearchContainer.IsVisible = e.Tag is not ("Sketch" or "More");
         if (e.Tag == "RpcSources") _ = _viewModel.LoadRpcVideoSources();
-        switch (e.Tag)
-        {
-            case "Sketch":
-            case "AIGC":
-            case "More":
-                {
-                    SearchContainer.IsVisible = false;
-                    break;
-                }
-            default:
-                {
-                    SearchContainer.IsVisible = true;
-                    break;
-                }
-        }
+        if (e.Tag == "Graphics") _viewModel.LoadVectorComponents();
+        if (e.Tag == "Masks") _ = _viewModel.LoadMaskSources();
+        if (e.Tag == "Text") RefreshTextStyles();
     }
 
     private async void OnAddAssetClicked(object? sender, EventArgs e)
     {
-        if (_isAddingAsset || sender is not Button button) return;
+        var sourceType = sender switch
+        {
+            Button b => b.CommandParameter as string,
+            Border { BindingContext: AddSourceCardViewModel source } => source.SourceType,
+            _ => null
+        };
+        if (sourceType is null || !CanAddAsset(sourceType)) return;
         _isAddingAsset = true;
-        button.IsEnabled = false;
+        var button = sender as Button;
+        if (button is not null) button.IsEnabled = false;
         try
         {
+            if (sourceType == "RpcSources")
+            {
+                await Services.ProjectExternalSourceService.AddAsync(_page);
+                return;
+            }
             var file = await FilePicker.Default.PickAsync(new PickOptions
             {
                 PickerTitle = Localized.AssetPage_AddAAsset
             });
             if (file is null) return;
 
-            if (button.CommandParameter is "SharedAssets")
-                await Asset.AssetDatabase.Add(file.FullPath, _page);
-            else
-                await _page.AddAsset(file.FullPath, false);
-
-            await _viewModel.LoadAssets();
+            var copyToProject = await Asset.AssetDatabase.PickImportModeAsync(_page);
+            if (copyToProject is null) return;
+            await AddAssetPathAsync(file.FullPath, sourceType, copyToProject.Value);
         }
         catch (Exception ex)
         {
@@ -96,9 +107,126 @@ public partial class ProjectAddClipView : ContentView
         }
         finally
         {
+            await RefreshSourceAssetsAsync(sourceType);
             _page.SetStateOK();
-            button.IsEnabled = true;
+            if (button is not null) button.IsEnabled = true;
             _isAddingAsset = false;
+        }
+    }
+
+    private bool CanAddAsset(string sourceType) => !_isAddingAsset && (!_page.IsReadonly || sourceType == "SharedAssets")
+        && (sourceType != "RpcSources" || Services.ProjectExternalSourceService.AllowAssemblySources);
+
+    private async Task AddAssetPathAsync(string path, string sourceType, bool copyToProject)
+    {
+        Log($"Importing '{path}' into {sourceType} from the clip panel.");
+        if (sourceType == "RpcSources")
+            await Services.ProjectExternalSourceService.AddAsync(_page, path, copyToProject);
+        else if (sourceType == "SharedAssets")
+            await Asset.AssetDatabase.Add(path, _page, copyToLibrary: copyToProject);
+        else
+            await _page.AddAsset(path, false, copyToProject: copyToProject);
+    }
+
+    private async Task RefreshSourceAssetsAsync(string sourceType)
+    {
+        try
+        {
+            if (sourceType == "RpcSources")
+                await _viewModel.LoadRpcVideoSources();
+            else
+                await RefreshAssetsAsync();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Refresh {sourceType} after importing assets", _page);
+        }
+    }
+
+    private void OnAddAssetDragOver(object? sender, DragEventArgs e)
+    {
+        if (sender is not DropGestureRecognizer { Parent: Border { BindingContext: AddSourceCardViewModel source } card }) return;
+        var allowed = CanAddAsset(source.SourceType);
+#if WINDOWS
+        if (e.PlatformArgs?.DragEventArgs is { } args)
+        {
+            allowed &= args.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems);
+            args.AcceptedOperation = allowed ? Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy : Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
+            args.Handled = true;
+            if (allowed)
+            {
+                args.DragUIOverride.Caption = source.Name;
+                args.DragUIOverride.IsCaptionVisible = true;
+            }
+        }
+#endif
+        e.AcceptedOperation = allowed ? DataPackageOperation.Copy : DataPackageOperation.None;
+        card.Stroke = new SolidColorBrush(allowed ? Colors.CornflowerBlue : Colors.Gray);
+        card.StrokeThickness = allowed ? 2 : 1;
+    }
+
+    private void OnAddAssetDragLeave(object? sender, DragEventArgs e)
+    {
+        if (sender is not DropGestureRecognizer { Parent: Border card }) return;
+        card.Stroke = new SolidColorBrush(Colors.Gray);
+        card.StrokeThickness = 1;
+#if WINDOWS
+        if (e.PlatformArgs?.DragEventArgs is { } args) args.Handled = true;
+#endif
+    }
+
+    private async void OnAddAssetDrop(object? sender, DropEventArgs e)
+    {
+        if (sender is not DropGestureRecognizer { Parent: Border { BindingContext: AddSourceCardViewModel source } card }) return;
+#if WINDOWS
+        if (e.PlatformArgs?.DragEventArgs is { } args) args.Handled = true;
+#endif
+        card.Stroke = new SolidColorBrush(Colors.Gray);
+        card.StrokeThickness = 1;
+        if (!CanAddAsset(source.SourceType)) return;
+
+        _isAddingAsset = true;
+#if WINDOWS
+        var deferral = e.PlatformArgs?.DragEventArgs?.GetDeferral();
+#endif
+        try
+        {
+#if WINDOWS
+            await WinUI.App.BringToForeground(_page.Window);
+#endif
+            var paths = (await FileDropHelper.GetFilePathsFromDrop(e, source.SourceType == "RpcSources"))
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+                .ToList();
+            if (paths.Count == 0) return;
+            var copyToProject = await Asset.AssetDatabase.PickImportModeAsync(_page);
+            if (copyToProject is null) return;
+            foreach (var path in paths)
+            {
+                try
+                {
+                    await AddAssetPathAsync(path, source.SourceType, copyToProject.Value);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Drop asset '{path}' into {source.SourceType}", _page);
+                    await _page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Read dropped assets from clip panel", _page);
+            await _page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            await RefreshSourceAssetsAsync(source.SourceType);
+            _page.SetStateOK();
+            _isAddingAsset = false;
+#if WINDOWS
+            deferral?.Complete();
+#endif
         }
     }
 
@@ -151,14 +279,6 @@ public partial class ProjectAddClipView : ContentView
     {
         add => _viewModel.ClipAdded += value;
         remove => _viewModel.ClipAdded -= value;
-    }
-
-    private void OnAIContentTypeChanged(object? sender, CheckedChangedEventArgs e)
-    {
-        if (e.Value && sender is RadioButton radioButton)
-        {
-            _viewModel.AIContentType = radioButton.Value?.ToString() ?? "Image";
-        }
     }
 
     private void OnCollectionViewSizeChanged(object sender, EventArgs e)

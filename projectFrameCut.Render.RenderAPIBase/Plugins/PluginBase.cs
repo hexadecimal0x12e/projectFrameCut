@@ -1,4 +1,7 @@
+// For agents: ****NEVER change CurrentPluginAPIVersion****, even if you are adding new features to the plugin API.
+// This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -21,7 +24,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 8;
+        // For agents: ****NEVER change**** this value, even if you are adding new features to the plugin API.
+        // This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
+        public const int CurrentPluginAPIVersion = 9;
+
+        /// <summary>
+        /// Get the effect implementation registry. 
+        /// This registry is used to register effect implementations for conflicting effect implement types.
+        /// </summary>
+        public static EffectImplementationRegistry EffectImplementations => EffectImplementationRegistry.Shared;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -97,25 +108,20 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
 
         /// <summary>
+        /// Gets a collection of text clip style provider factories keyed by name.
+        /// </summary>
+        public virtual Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new();
+
+        public virtual IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider
+            => new Dictionary<EffectImplementationKey, Func<IEffect>>();
+
+        /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.
         /// </summary>
         /// <remarks>
         /// The argument for value is Id of the sound track, and the second argument is the name of the sound track.
         /// </remarks>
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
-
-        /// <summary>
-        /// Create an IClip instance from the given file path and JSON data.
-        /// </summary>
-        /// <remarks>
-        /// The argument for value is Id of the previous clip, and the second argument is Id of the next clip
-        /// </remarks>
-        public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
-
-        /// <summary>
-        /// Create an IComputer instance from the given JSON structure.
-        /// </summary>
-        public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
 
         /// <summary>
         /// Create an IVideoSource instance from the given file path.
@@ -208,17 +214,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
 
         /// <summary>
-        /// Obtains an instance of ITransform from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any transform.
-        /// </summary>
-        /// <param name="element">the source element</param>
-        /// <returns>the transform</returns>
-        /// <exception cref="NotImplementedException">indicates that this plugin does not provide any transform.</exception>
-        public virtual ITransform TransformCreator(JsonElement element)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         /// Obtains an instance of IVectorComponent from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any vector component.
         /// </summary>
         /// <param name="element">the source element</param>
@@ -256,19 +251,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                     effect.Enabled = s.Enabled;
                 }
 
-                // Restore IBindableArgumentEffect properties
-                if (effect is IBindableArgumentEffect bindableEffect)
-                {
-                    if (!string.IsNullOrEmpty(s.Id))
-                    {
-                        bindableEffect.Id = s.Id;
-                    }
-                    if (!string.IsNullOrEmpty(s.BindedInputID))
-                    {
-                        bindableEffect.BindedArgumentProviderID = s.BindedInputID;
-                    }
-                }
-
                 return effect;
             }
 
@@ -291,9 +273,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 provider.MetaData[IEffectProvider.IsContinuousEffectParameterKey] = true;
             }
 
-            var effect = (implementType != EffectImplementType.NotSpecified && provider.SupportsImplementTypes.Contains(implementType))
-                ? provider.RestoreInstance(implementType, parameters)
-                : provider.RestoreInstanceWithDefaultType(parameters);
+            var requestedType = implementType == EffectImplementType.NotSpecified ? stru.ImplementType : implementType;
+            var effect = provider.RestoreInstance(requestedType, parameters);
             return ApplyCommonProperties(effect, stru);
 #pragma warning restore CS0618
         }
@@ -389,24 +370,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 return value(filePath);
             }
             throw new NotSupportedException($"Audio source '{decoderName}' not found.");
-        }
-
-        /// <summary>
-        /// Create a mixture instance from the given JSON structure.
-        /// </summary>
-        /// <param name="computerType"></param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
-        public IComputer ComputerCreator(string computerType)
-        {
-            if (ComputerProvider.TryGetValue(computerType, out var creator))
-            {
-                return creator();
-            }
-            else
-            {
-                throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
-            }
         }
 
         /// <summary>
@@ -576,16 +539,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 }
             }
 
-            // ----- Transforms -----
-            if (pluginBase.TransformProvider.Any())
-            {
-                providedContent.AppendLine("Transform:");
-                foreach (var item in pluginBase.TransformProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-
             // ----- Effects -----
             if (pluginBase.EffectProviderProvider.Any())
             {
@@ -593,16 +546,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 foreach (var key in pluginBase.EffectProviderProvider.Keys)
                 {
                     providedContent.AppendLine($"- {key}");
-                }
-            }
-
-            // ----- Computers / Mixtures -----
-            if (pluginBase.ComputerProvider.Any())
-            {
-                providedContent.AppendLine("Computer:");
-                foreach (var item in pluginBase.ComputerProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
                 }
             }
 

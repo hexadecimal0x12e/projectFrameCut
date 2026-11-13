@@ -685,11 +685,6 @@ internal static class ProjectModeEditingTools
             Tool("replace_vector_components", "Atomically replace all vector components with validated serialized component objects.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"components":{"type":"array","items":{"type":"object"}}
                 """, "clipId", "components"), Edit(controller, "replaceVectorComponents"), requireAuthorization),
-            Tool("set_vector_component_keyframes", "Replace keyframes for one animatable vector component field. Time is normalized to 0..1.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"componentId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"},
-                "keyframes":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"time":{"type":"number","minimum":0,"maximum":1},"value":{"type":"number"},"easing":{"type":"string","enum":["Linear","QuadIn","QuadOut","QuadInOut","CubicIn","CubicOut","CubicInOut","SineIn","SineOut","SineInOut","ElasticIn","ElasticOut","BounceOut"]}},"required":["time","value"]}}
-                """, "clipId", "componentId", "fieldId", "keyframes"), Edit(controller, "setVectorComponentKeyframes"), requireAuthorization),
-
             Tool("list_clip_effect_providers", "List complete EffectProvider nodes, fields, ports, values, metadata, and stored bindings on a clip.", ClipIdSchema,
                 Query(controller, "clipEffectProviders"), requireAuthorization),
             Tool("add_effect_provider", "Add an EffectProvider with typed static fields and optional automatic picture-chain connection.", ObjectSchema("""
@@ -698,6 +693,21 @@ internal static class ProjectModeEditingTools
                 "implementType":{"type":"string","enum":["None","NotSpecified","IPicture","HwAcceleration","Custom1","Custom2","Custom3","Custom4","Custom5"]},
                 "autoConnect":{"type":"string","enum":["output","input","none"],"default":"output"}
                 """, "clipId", "typeName"), Edit(controller, "addEffectProvider"), requireAuthorization),
+            Tool("get_clip_effect_steps", "Read keyframe steps and editable static field metadata. Indexes follow progress order.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
+                "stepIndex":{"type":"integer","minimum":0}
+                """, "clipId", "providerId"), Query(controller, "clipEffectSteps"), requireAuthorization),
+            Tool("add_effect_step", "Add a keyframe using typed static fields, including Progress. Returns the sorted step list.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fields":{"type":"object"}
+                """, "clipId", "providerId"), Edit(controller, "addEffectStep"), requireAuthorization),
+            Tool("set_effect_step", "Update a keyframe by its current index. Fields cannot be bound. Returns the sorted step list.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
+                "stepIndex":{"type":"integer","minimum":0},"fields":{"type":"object"}
+                """, "clipId", "providerId", "stepIndex", "fields"), Edit(controller, "setEffectStep"), requireAuthorization),
+            Tool("remove_effect_step", "Remove a keyframe by its current index. Returns the remaining sorted step list.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
+                "stepIndex":{"type":"integer","minimum":0}
+                """, "clipId", "providerId", "stepIndex"), Edit(controller, "removeEffectStep"), requireAuthorization),
             Tool("update_effect_provider", "Update an EffectProvider's name, enabled state, typed static fields, or metadata.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
                 "name":{"type":"string"},"enabled":{"type":"boolean"},"fields":{"type":"object"},"metadata":{"type":"object"},
@@ -705,14 +715,14 @@ internal static class ProjectModeEditingTools
                 """, "clipId", "providerId"), Edit(controller, "updateEffectProvider"), requireAuthorization),
             Tool("remove_effect_provider", "Remove an EffectProvider and clear references to it.", ProviderIdSchema,
                 Edit(controller, "removeEffectProvider"), requireAuthorization),
-            Tool("connect_effect_provider_input", "Connect a provider picture input to clip-input, none, or another picture provider UUID.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"source":{"type":"string"}
+            Tool("connect_effect_provider_input", "Connect a provider input to clip-input, none, a built-in value, or a compatible provider output. Multiple-output sources require sourceOutputId or a provider:// output reference.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"source":{"type":"string"},"sourceOutputId":{"type":"string"}
                 """, "clipId", "providerId", "source"), Edit(controller, "connectEffectProviderInput"), requireAuthorization),
-            Tool("set_effect_provider_output", "Select the provider connected to final picture output; omit providerId to disconnect output.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":["string","null"],"format":"uuid"}
+            Tool("set_effect_provider_output", "Select the provider output connected to final picture output; multiple-output providers require outputId. Omit providerId to disconnect output.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":["string","null"],"format":"uuid"},"outputId":{"type":"string"}
                 """, "clipId"), Edit(controller, "setEffectProviderOutput"), requireAuthorization),
-            Tool("bind_effect_provider_field", "Bind a provider field to a compatible value-provider UUID, builtin://frame, or builtin://progress.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"},"source":{"type":"string"}
+            Tool("bind_effect_provider_field", "Bind a provider field to a compatible provider output, clip-input, builtin://frame, or builtin://progress. Multiple-output sources require sourceOutputId or a provider:// output reference.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"},"source":{"type":"string"},"sourceOutputId":{"type":"string"}
                 """, "clipId", "providerId", "fieldId", "source"), Edit(controller, "bindEffectProviderField"), requireAuthorization),
             Tool("unbind_effect_provider_field", "Remove a dynamic field binding while preserving its static fallback.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"}
@@ -740,7 +750,7 @@ internal static class ProjectModeEditingTools
                 """, "clipId", "targetProviderId", "fieldId", "fromValue", "toValue"), Edit(controller, "setLinearEffectAnimation"), requireAuthorization),
             Tool("set_position_keyframes", "Add or update ProgressPlacer position/size keyframes with normalized indexes.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
-                "keyframes":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"index":{"type":"number","minimum":0,"maximum":1},"position":{"type":"object","additionalProperties":false,"properties":{"targetX":{"type":"integer"},"targetY":{"type":"integer"},"targetWidth":{"type":"integer"},"targetHeight":{"type":"integer"},"isDelta":{"type":"boolean"}},"required":["targetX","targetY","targetWidth","targetHeight"]}},"required":["index","position"]}}
+                "keyframes":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"index":{"type":"number","minimum":0,"maximum":1},"position":{"type":"object","additionalProperties":false,"properties":{"targetX":{"type":"integer"},"targetY":{"type":"integer"},"targetWidth":{"type":"integer","minimum":1},"targetHeight":{"type":"integer","minimum":1},"isDelta":{"type":"boolean"},"rotation":{"type":"number"}},"required":["targetX","targetY","targetWidth","targetHeight"]}},"required":["index","position"]}}
                 """, "clipId", "keyframes"), Edit(controller, "setPositionKeyframes"), requireAuthorization),
             Tool("set_crop_keyframes", "Add or update ProgressCrop keyframes with normalized indexes.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},

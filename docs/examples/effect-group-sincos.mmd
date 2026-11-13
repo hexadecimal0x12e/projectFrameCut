@@ -1,0 +1,56 @@
+%% projectFrameCut Effect Binding Graph
+%% Version 1
+graph TD
+    sincos --> NodeDefsincos["projectFrameCut.Render.Plugins.InternalPluginBase@AdvancedMath1"]
+    maximum --> NodeDefmaximum["projectFrameCut.Render.Plugins.InternalPluginBase@AdvancedMath2"]
+
+    %% @source {"Id":"progress","Source":"builtin://progress"}
+    subgraph progress["Clip progress"]
+        progress-output-__Output__
+    end
+
+    subgraph trig-max["Max(Sin, Cos)"]
+        trig-max-input-angle(["Angle (radians)"])
+        trig-max-output-result(["Max(Sin, Cos)"])
+
+        subgraph trig["Trigonometry"]
+            trig-input-angle(["Angle"])
+            trig-output-sin(["Sine"])
+            trig-output-cos(["Cosine"])
+
+            subgraph sincos["SinCos"]
+                sincos-input-A
+                sincos-param-Operation
+                sincos-output-Value
+                sincos-output-Cos
+                sincos-value-Operation["#34;SinCos#34;"]
+                sincos-value-A["0"]
+            end
+        end
+
+        subgraph maximum["Max"]
+            maximum-input-A
+            maximum-input-B
+            maximum-param-Operation
+            maximum-output-Value
+            maximum-value-Operation["#34;Max#34;"]
+            maximum-value-A["0"]
+            maximum-value-B["0"]
+        end
+    end
+
+    sincos-value-Operation ==> sincos-param-Operation
+    sincos-value-A ==> sincos-input-A
+    maximum-value-Operation ==> maximum-param-Operation
+    maximum-value-A ==> maximum-input-A
+    maximum-value-B ==> maximum-input-B
+
+    trig-max-input-angle -.-> trig-input-angle
+    trig-input-angle -.-> sincos-input-A
+    sincos-output-Value -.-> trig-output-sin
+    sincos-output-Cos -.-> trig-output-cos
+    maximum-output-Value -.-> trig-max-output-result
+
+    progress-output-__Output__ --> trig-max-input-angle
+    trig-output-sin --> maximum-input-A
+    trig-output-cos --> maximum-input-B

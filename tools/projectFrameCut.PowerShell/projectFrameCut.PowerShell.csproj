@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net10.0</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
@@ -11,11 +11,19 @@
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Management.Automation" Version="7.6.5" PrivateAssets="all" IncludeAssets="compile" />
+    <PackageReference Include="System.Management.Automation" Version="7.6.9" PrivateAssets="all" IncludeAssets="compile" />
     <ProjectReference Include="..\..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
     <None Update="projectFrameCut.PowerShell.psd1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<Using Remove="projectFrameCut.Drawing.Base.IPicture"/>
+		<Using Remove="projectFrameCut.Drawing.Base.PictureExtensions"/>
+		<Using Remove="projectFrameCut.Shared.Logger"/>
   </ItemGroup>
+  <Target Name="GetScriptTemplateModuleFiles" DependsOnTargets="Build" Returns="@(_ScriptTemplateModuleFiles)">
+    <ItemGroup>
+      <_ScriptTemplateModuleFiles Include="$(TargetDir)*.dll;$(TargetDir)projectFrameCut.PowerShell.psd1;$(TargetDir)README.md" />
+    </ItemGroup>
+  </Target>
   <Target Name="FilterModulePublish" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.PowerShell' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.Contracts' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.RPCProtocol' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net.Core' and '%(ResolvedFileToPublish.Filename)' != 'Microsoft.Windows.SDK.NET' and '%(ResolvedFileToPublish.Filename)' != 'WinRT.Runtime' and '%(ResolvedFileToPublish.Filename)' != 'README'" />

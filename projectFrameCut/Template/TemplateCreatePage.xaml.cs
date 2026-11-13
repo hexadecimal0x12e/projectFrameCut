@@ -23,11 +23,12 @@ public partial class TemplateCreatePage : ContentView
     private JsonObject _draftNode = new();
     private readonly Dictionary<string, TemplateVariableDefinition> _variableDefinitions = new(StringComparer.OrdinalIgnoreCase);
     private bool _isBusy;
+    private CancellationTokenSource? _scriptPreparationCts;
     private bool _isTemplateInputMode;
     private TaskCompletionSource<Dictionary<string, string?>?>? _templateInputCompletion;
     private TaskCompletionSource<AssetItem?>? _assetPickerCompletion;
 
-    public event EventHandler? CloseRequested;
+    public event Func<Task>? CloseRequested;
 
     public TemplateCreatePage()
     {
@@ -451,6 +452,11 @@ public partial class TemplateCreatePage : ContentView
 
     private async void Cancel_Clicked(object sender, EventArgs e)
     {
+        if (_isBusy)
+        {
+            _scriptPreparationCts?.Cancel();
+            return;
+        }
         if (AssetPickerOverlay.IsVisible)
         {
             CloseInlineAssetPicker(null);
@@ -492,11 +498,15 @@ public partial class TemplateCreatePage : ContentView
 
             if (_isTemplateInputMode)
             {
-                _templateInputCompletion?.TrySetResult(values);
                 await RequestCloseAsync();
+                _templateInputCompletion?.TrySetResult(values);
                 return;
             }
-            var projectName = "";
+            _scriptPreparationCts = new CancellationTokenSource();
+            CancelButton.IsEnabled = true;
+            await using var scriptRunner = _template is ScriptBasedTemplateStructure script
+                ? await ScriptTemplateRunner.PrepareAsync(script, values, _scriptPreparationCts.Token) : null;
+            var projectName = ProjectNameEntry.Text?.Trim() ?? "";
             if (!ImportControlGrid.IsVisible)
             {
                 var page = FindHostPage();
@@ -535,6 +545,7 @@ public partial class TemplateCreatePage : ContentView
 
             var projectClone = JsonNode.Parse(_projectNode.ToJsonString()) as JsonObject ?? new JsonObject();
             var draftClone = JsonNode.Parse(_draftNode.ToJsonString()) as JsonObject ?? new JsonObject();
+            projectClone.Remove(nameof(ProjectJSONStructure.ProjectUniqueId));
 
             ReplacePlaceholders(projectClone, values, defaults, _variableDefinitions);
             ReplacePlaceholders(draftClone, values, defaults, _variableDefinitions);
@@ -567,14 +578,30 @@ public partial class TemplateCreatePage : ContentView
             File.WriteAllText(Path.Combine(projectDir, "assets.json"), JsonSerializer.Serialize(projectAssets, DraftPage.DraftJSONOption));
             DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectDir);
 
+            var host = FindHostPage();
+            var home = host?.Navigation.NavigationStack.OfType<HomePage>().FirstOrDefault();
+            var rootPage = host?.Window?.Page;
             await RequestCloseAsync();
+            if (scriptRunner is not null && rootPage is not null)
+            {
+                if (home is null)
+                {
+                    home = new HomePage();
+                    await rootPage.Navigation.PushAsync(home);
+                }
+                await home.OpenTemplateProjectAsync(projectDir, projectName, scriptRunner.RunWithUiAsync);
+            }
         }
+        catch (OperationCanceledException) when (_scriptPreparationCts?.IsCancellationRequested == true) { }
         catch (Exception ex)
         {
+            Log(ex, "Create project from template", this);
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFail(ex), Localized._OK);
         }
         finally
         {
+            _scriptPreparationCts?.Dispose();
+            _scriptPreparationCts = null;
             SetBusy(false);
         }
     }
@@ -603,7 +630,8 @@ public partial class TemplateCreatePage : ContentView
 
     private async Task RequestCloseAsync()
     {
-        CloseRequested?.Invoke(this, EventArgs.Empty);
+        if (CloseRequested is not null)
+            foreach (Func<Task> close in CloseRequested.GetInvocationList()) await close();
         if (CloseRequested is not null)
         {
             return;
@@ -880,7 +908,7 @@ public partial class TemplateCreatePage : ContentView
         }
     }
 
-    private static bool TryResolveVariable(
+    internal static bool TryResolveVariable(
     string key,
     IReadOnlyDictionary<string, string?> values,
     IReadOnlyDictionary<string, string?> defaults,
@@ -923,7 +951,7 @@ public partial class TemplateCreatePage : ContentView
         return false;
     }
 
-    private static JsonNode? ConvertResolvedValue(string? value, TemplateVariableType type)
+    internal static JsonNode? ConvertResolvedValue(string? value, TemplateVariableType type)
     {
         if (value is null)
         {
@@ -1126,21 +1154,23 @@ public partial class TemplateCreatePage : ContentView
             var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
             string[] map = lang switch
             {
-                "zh" => ["字符串", "数字", "整数", "布尔", "文件", "JSON"],
-                "ja" => ["文字列", "数値", "整数", "真偽値", "ファイル", "JSON"],
-                "ko" => ["문자열", "숫자", "정수", "불리언", "파일", "JSON"],
-                "fr" => ["Chaine", "Nombre", "Entier", "Booleen", "Fichier", "JSON"],
-                "de" => ["Zeichenfolge", "Zahl", "Ganzzahl", "Boolesch", "Datei", "JSON"],
-                "es" => ["Cadena", "Numero", "Entero", "Booleano", "Archivo", "JSON"],
-                "it" => ["Stringa", "Numero", "Intero", "Booleano", "File", "JSON"],
-                "pl" => ["Lancuch", "Liczba", "Calkowita", "Logiczna", "Plik", "JSON"],
-                "pt" => ["Texto", "Numero", "Inteiro", "Booleano", "Arquivo", "JSON"],
-                "ru" => ["Stroka", "Chislo", "Tseloe", "Bulovo", "Fail", "JSON"],
-                "tr" => ["Metin", "Sayi", "Tam sayi", "Mantiksal", "Dosya", "JSON"],
-                "ar" => ["نص", "رقم", "عدد صحيح", "منطقي", "ملف", "JSON"],
-                _ => ["String", "Number", "Integer", "Boolean", "File", "JSON"]
+                "zh" => ["自动", "字符串", "数字", "整数", "布尔", "文件", "JSON"],
+                "ja" => ["自動", "文字列", "数値", "整数", "真偽値", "ファイル", "JSON"],
+                "ko" => ["자동", "문자열", "숫자", "정수", "불리언", "파일", "JSON"],
+                "fr" => ["Automatique", "Chaine", "Nombre", "Entier", "Booleen", "Fichier", "JSON"],
+                "de" => ["Automatisch", "Zeichenfolge", "Zahl", "Ganzzahl", "Boolesch", "Datei", "JSON"],
+                "es" => ["Automático", "Cadena", "Numero", "Entero", "Booleano", "Archivo", "JSON"],
+                "it" => ["Automatico", "Stringa", "Numero", "Intero", "Booleano", "File", "JSON"],
+                "pl" => ["Automatyczny", "Lancuch", "Liczba", "Calkowita", "Logiczna", "Plik", "JSON"],
+                "pt" => ["Automático", "Texto", "Numero", "Inteiro", "Booleano", "Arquivo", "JSON"],
+                "ru" => ["Авто", "Stroka", "Chislo", "Tseloe", "Bulovo", "Fail", "JSON"],
+                "tr" => ["Otomatik", "Metin", "Sayi", "Tam sayi", "Mantiksal", "Dosya", "JSON"],
+                "ar" => ["تلقائي", "نص", "رقم", "عدد صحيح", "منطقي", "ملف", "JSON"],
+                _ => ["Auto", "String", "Number", "Integer", "Boolean", "File", "JSON"]
             };
-            return map[(int)variableType];
+            return (int)variableType >= 0 && (int)variableType < map.Length
+                ? map[(int)variableType]
+                : variableType.ToString();
         }
 
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

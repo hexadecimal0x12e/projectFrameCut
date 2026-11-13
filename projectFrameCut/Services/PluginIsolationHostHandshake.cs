@@ -47,7 +47,7 @@ internal static class PluginIsolationHostHandshake
             };
         if (valid) projectFrameCut.Shared.Logger.Log($"Authorized external backend plugin '{context.PluginId}' for instance '{context.InstancePackageName}'.");
         await IsolationFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(response), cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) response.Error.ThrowAsException();
+        response?.Error?.ThrowAsException();
     }
 
     public static async Task AuthorizeRuntimeAsync(Stream stream, PluginIsolationLaunchContext context, CancellationToken cancellationToken)
@@ -103,6 +103,6 @@ internal static class PluginIsolationHostHandshake
             };
         if (valid) projectFrameCut.Shared.Logger.Log($"Authorized isolated plugin '{context.PluginId}' for instance '{context.InstancePackageName}'.");
         await IsolationFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(response), cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) response.Error.ThrowAsException();
+        response?.Error?.ThrowAsException();
     }
 }

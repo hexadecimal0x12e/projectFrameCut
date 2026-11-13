@@ -1,19 +1,195 @@
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
+    public static class SoundTrackMetadata
+    {
+        public const string SourceClipIdKey = "SourceClipId";
+        public const string GeneratedFromVideoKey = "GeneratedFromVideo";
+        public const string EnabledKey = "Enabled";
+        public const string VolumeKey = "Volume";
+        public const string DetachedKey = "AudioDetached";
+        public const string ProbeSourceKey = "AudioProbeSource";
+        public const string ProbeHasStreamKey = "AudioProbeHasStream";
+
+        public static bool ReadBool(IReadOnlyDictionary<string, object>? data, string key, bool fallback = false)
+        {
+            if (data is null || !data.TryGetValue(key, out var value) || value is null) return fallback;
+            if (value is bool result) return result;
+            if (value is JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.True) return true;
+                if (element.ValueKind == JsonValueKind.False) return false;
+                if (element.ValueKind == JsonValueKind.String && bool.TryParse(element.GetString(), out result)) return result;
+            }
+            return bool.TryParse(value.ToString(), out result) ? result : fallback;
+        }
+
+        public static float ReadVolume(IReadOnlyDictionary<string, object>? data, float fallback = 1f)
+        {
+            if (data is null || !data.TryGetValue(VolumeKey, out var value) || value is null) return fallback;
+            if (value is double doubleValue) return (float)doubleValue;
+            if (value is float floatValue) return floatValue;
+            if (value is JsonElement element && element.TryGetDouble(out var jsonValue)) return (float)jsonValue;
+            return float.TryParse(value.ToString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : fallback;
+        }
+
+        public static Guid? ReadSourceClipId(IReadOnlyDictionary<string, object>? data)
+        {
+            if (data is null || !data.TryGetValue(SourceClipIdKey, out var value) || value is null) return null;
+            if (value is JsonElement element && element.ValueKind == JsonValueKind.String)
+                return Guid.TryParse(element.GetString(), out var jsonGuid) ? jsonGuid : null;
+            return Guid.TryParse(value.ToString(), out var guid) ? guid : null;
+        }
+
+        private static float ReadRatio(IClip clip)
+        {
+            var value = clip.GetType().GetProperty("SecondPerFrameRatio")?.GetValue(clip);
+            if (value is float ratio && ratio > 0) return ratio;
+            if (value is double doubleRatio && doubleRatio > 0) return (float)doubleRatio;
+            return 1f;
+        }
+
+        public static NormalSoundTrack CreateLegacyTrack(IClip clip)
+        {
+            var data = clip.ExtraData is null
+                ? new Dictionary<string, object>()
+                : new Dictionary<string, object>(clip.ExtraData);
+            data[SourceClipIdKey] = clip.Id.ToString("D");
+            data[GeneratedFromVideoKey] = clip.ClipType == ClipMode.VideoClip;
+            data[EnabledKey] = ReadBool(data, EnabledKey, true);
+            data[VolumeKey] = ReadVolume(data);
+            return new NormalSoundTrack
+            {
+                Id = string.IsNullOrWhiteSpace(clip.BindedSoundTrack) ? $"legacy-audio-{clip.Id:N}" : clip.BindedSoundTrack,
+                Name = $"{clip.Name}'s Audio",
+                LayerIndex = clip.LayerIndex,
+                SubLayerIndex = clip.SubLayerIndex,
+                StartFrame = clip.StartFrame,
+                RelativeStartFrame = clip.RelativeStartFrame,
+                Duration = clip.Duration,
+                Ratio = ReadRatio(clip),
+                Volume = ReadVolume(data),
+                FilePath = clip.FilePath,
+                Effects = clip.Effects,
+                EffectProviders = clip.ClipType == ClipMode.AudioClip ? clip.EffectProviders : null,
+                ExtraData = data
+            };
+        }
+
+        public static void ReInit(ISoundTrack track)
+        {
+            ReleaseEffects(track);
+            ClipInitializationFailure.Clear(track.ExtraData);
+            try { track.ReInit(); }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                track.ExtraData ??= new();
+                ClipInitializationFailure.Mark(track.ExtraData, "SourceNotFound", ex);
+                Log(ex, $"Initialize soundtrack {track.Id}; using silence", nameof(SoundTrackMetadata));
+            }
+            if (IsSourceUnavailable(track.ExtraData)) return;
+            var clip = new SoundTrackToClipWrapper
+            {
+                Id = Guid.TryParse(track.Id, out var id) ? id : ReadSourceClipId(track.ExtraData) ?? Guid.NewGuid(),
+                Name = track.Name, LayerIndex = track.LayerIndex, SubLayerIndex = track.SubLayerIndex,
+                StartFrame = track.StartFrame, Duration = track.Duration, RelativeStartFrame = track.RelativeStartFrame,
+                ExtraData = track.ExtraData,
+                Effects = track.Effects,
+                EffectProviders = track.EffectProviders
+            };
+            track.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip, syncClipState: false);
+            clip.EffectsInstances = track.EffectsInstances;
+            track.EffectStagePlan = clip.EffectStagePlan;
+        }
+
+        internal static bool IsSourceUnavailable(Dictionary<string, object>? data)
+            => ClipInitializationFailure.GetStage(data) is "SourceNotFound" or "SourceReading" or "SourceNotMatch" or "ExternalSourceUnavailable";
+
+        public static void ReleaseEffects(ISoundTrack track)
+        {
+            track.EffectStagePlan?.Dispose();
+            track.EffectStagePlan = null;
+            foreach (var effect in (track.EffectsInstances ?? []).OfType<IDisposable>().Distinct(ReferenceEqualityComparer.Instance))
+                ((IDisposable)effect).Dispose();
+            track.EffectsInstances = null;
+        }
+
+        public static void AddMissingLegacyTracks(IEnumerable<IClip> clips, ICollection<ISoundTrack> tracks, Action<string>? log = null,
+            bool initialize = true, CancellationToken cancellationToken = default)
+        {
+            foreach (var clip in clips.Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (EmptyVideoSource.IsPath(clip.FilePath)) continue;
+                if (ReadBool(clip.ExtraData, DetachedKey)) continue;
+                if (clip.ExtraData?.ContainsKey(ProbeHasStreamKey) == true
+                    && !ReadBool(clip.ExtraData, ProbeHasStreamKey)) continue;
+                if ((!string.IsNullOrWhiteSpace(clip.BindedSoundTrack) && tracks.Any(t => t.Id == clip.BindedSoundTrack))
+                    || tracks.Any(t => ReadSourceClipId(t.ExtraData) == clip.Id))
+                    continue;
+
+                ISoundTrack track;
+                if (clip is ReferencePartClip reference && ProjectReferencePart.Read(clip.ExtraData) is { } part)
+                {
+                    var dto = reference.Dto;
+                    track = ProjectReferenceRuntime.CreateDetachedTrack(new()
+                    {
+                        Id = clip.Id.ToString(), Name = clip.Name, LayerIndex = clip.LayerIndex, SubLayerIndex = clip.SubLayerIndex,
+                        StartFrame = clip.StartFrame, RelativeStartFrame = clip.RelativeStartFrame, Duration = clip.Duration,
+                        FilePath = clip.FilePath, Effects = dto.Effects, EffectProviders = dto.EffectProviders, MetaData = clip.ExtraData,
+                    }, part);
+                    track.ExtraData[SourceClipIdKey] = clip.Id.ToString();
+                }
+                else track = CreateLegacyTrack(clip);
+                try
+                {
+                    if (initialize)
+                    {
+                        ReInit(track);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (track.SamplePerSecond <= 0 && !IsSourceUnavailable(track.ExtraData))
+                            throw new InvalidOperationException("The media has no readable audio stream.");
+                    }
+                    tracks.Add(track);
+                    log?.Invoke($"Migrated legacy clip audio {clip.Id} to soundtrack {track.Id}.");
+                }
+                catch (OperationCanceledException)
+                {
+                    track.Dispose();
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    track.Dispose();
+                    log?.Invoke($"Clip {clip.Id}/{clip.Name} has no readable audio stream: {ex.Message}");
+                }
+            }
+        }
+    }
+
     public class NormalSoundTrack : ISoundTrack
     {
+        [JsonIgnore] public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Audio;
+        [JsonIgnore] public IEffectStagePlan? EffectStagePlan { get; set; }
         private bool disposedValue;
+        private ProjectExternalSourceHost? externalSourceHost;
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
@@ -22,12 +198,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string Id { get; init; }
         public string Name { get; init; }
         public uint LayerIndex { get; init; }
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float Ratio { get; set; } = 1f;
         public float Volume { get; set; } = 1f;
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
+        [JsonIgnore]
         public IEffect[]? EffectsInstances { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
 
@@ -44,7 +223,22 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
-            AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
+            ClipInitializationFailure.Clear(ExtraData);
+            AudioSource?.Dispose();
+            AudioSource = null;
+            if (ProjectExternalAudioSource.IsPath(FilePath)) externalSourceHost ??= ProjectExternalSourceRuntime.Current;
+            using var sourceScope = ProjectExternalSourceRuntime.Use(externalSourceHost ?? ProjectExternalSourceRuntime.Current);
+            try
+            {
+                AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                ExtraData ??= new();
+                ClipInitializationFailure.Mark(ExtraData, RemoteRpcAudioSource.IsExternalPath(FilePath) ? "ExternalSourceUnavailable"
+                    : ex is FileNotFoundException or DirectoryNotFoundException ? "SourceNotFound" : "SourceReading", ex);
+                Log(ex, $"Initialize audio track {Id}; using silence", this);
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -53,6 +247,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 if (disposing)
                 {
+                    SoundTrackMetadata.ReleaseEffects(this);
                     AudioSource?.Dispose();
                 }
 
@@ -89,6 +284,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Audio;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
@@ -97,10 +296,18 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
+
+        [JsonIgnore]
+        public uint? SourceFrameCount => SoundTrack is NormalSoundTrack { AudioSource.DurationSeconds: { } seconds }
+            && ExtraData?.GetValueOrDefault(ClipDraftDTO.ProjectFrameRateMetaKey) is { } raw
+            && double.TryParse(raw.ToString(), out var fps) && fps > 0
+                ? (uint)Math.Clamp(Math.Ceiling(seconds * fps - 1e-9d), 0, uint.MaxValue) : null;
 
         public ISoundTrack SoundTrack { get; set; }
         public TrackMode TrackType => TrackMode.NormalTrack;
@@ -110,6 +317,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            EffectHelper.ReleaseClipEffects(this);
+            SoundTrack?.Dispose();
         }
 
         public uint? GetClipLength() => null;
@@ -126,6 +335,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            ClipInitializationFailure.Clear(this);
+            SoundTrack?.Dispose();
+            ExtraData ??= new();
             SoundTrack = TrackType switch
             {
                 TrackMode.NormalTrack => new NormalSoundTrack
@@ -133,21 +345,28 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     Id = BindedSoundTrack ?? Guid.NewGuid().ToString(),
                     Name = Name,
                     LayerIndex = LayerIndex,
+                    SubLayerIndex = SubLayerIndex,
                     StartFrame = StartFrame,
                     RelativeStartFrame = RelativeStartFrame,
                     Duration = Duration,
                     Ratio = SecondPerFrameRatio,
                     Volume = 1.0f,
-                    AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null
+                    Effects = Effects,
+                    EffectProviders = EffectProviders,
+                    FilePath = FilePath,
+                    ExtraData = ExtraData
                 },
                 _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),
             };
 
-           EffectHelper.ResolveClipEffects(this);
+            SoundTrack.ReInit();
+            EffectHelper.ResolveClipEffects(this);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
+            EffectHelper.ResolveClipEffects(this);
         }
     }
 }

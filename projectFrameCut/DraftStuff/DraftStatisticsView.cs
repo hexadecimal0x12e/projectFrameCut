@@ -3,6 +3,7 @@ using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -38,6 +39,7 @@ internal sealed class DraftStatisticsContributor
 internal sealed class DraftStatisticsData
 {
     public DateTime CreatedOn { get; init; } = DateTime.MinValue;
+    public DateTime EstimatedCreatedOn { get; init; } = DateTime.MinValue;
     public List<DraftStatisticsSnapshot> Snapshots { get; init; } = [];
     public List<(DateTime Date, int Count)> DailyActivity { get; init; } = [];
     public List<(string Reason, int Count)> Operations { get; init; } = [];
@@ -165,7 +167,8 @@ internal static partial class DraftStatisticsBuilder
                 .ToList(),
             Contributors = BuildContributors(snapshots),
             ContributorCount = snapshots.Select(GetContributorIdentity).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
-            CreatedOn = created
+            CreatedOn = created,
+            EstimatedCreatedOn = created == DateTime.MinValue ? Directory.GetCreationTime(projectPath) : DateTime.MinValue
         };
     }
 
@@ -241,18 +244,53 @@ internal sealed class DraftStatisticsView : ContentView
     private readonly string _projectPath;
     private readonly Guid _currentSnapshotId;
     private readonly double _frameRate;
+    private bool _loading;
 
     public DraftStatisticsView(string projectPath, Guid currentSnapshotId, double frameRate)
     {
         _projectPath = projectPath;
         _currentSnapshotId = currentSnapshotId;
         _frameRate = frameRate > 0 ? frameRate : 30;
-        Content = BuildContent();
     }
 
-    private View BuildContent()
+    public async Task LoadAsync()
     {
-        DraftStatisticsData data = DraftStatisticsBuilder.Build(_projectPath, _currentSnapshotId);
+        if (_loading) return;
+        _loading = true;
+        var timer = Stopwatch.StartNew();
+        Logger.LogDiagnostic($"Loading draft statistics: {_projectPath}, snapshot={_currentSnapshotId}.");
+        Content = new ActivityIndicator
+        {
+            IsRunning = true,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+        try
+        {
+            var data = await Task.Run(() => DraftStatisticsBuilder.Build(_projectPath, _currentSnapshotId));
+            Content = BuildContent(data);
+            Logger.LogDiagnostic($"Loaded draft statistics: {_projectPath}, snapshots={data.Snapshots.Count}, invalid={data.InvalidSnapshotCount}, elapsed={timer.ElapsedMilliseconds}ms.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(ex, $"Load draft statistics for {_projectPath}", this);
+            var retry = new Button { Text = Localized.DraftSettingPage_Statistics_Refresh };
+            retry.Clicked += async (_, _) => await LoadAsync();
+            Content = new VerticalStackLayout
+            {
+                Padding = 14,
+                Spacing = 14,
+                Children = { new Label { Text = ex.Message }, retry }
+            };
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private View BuildContent(DraftStatisticsData data)
+    {
         var root = new VerticalStackLayout
         {
             Padding = new Thickness(14),
@@ -279,7 +317,7 @@ internal sealed class DraftStatisticsView : ContentView
             Text = Localized.DraftSettingPage_Statistics_Refresh,
             HorizontalOptions = LayoutOptions.End
         };
-        refresh.Clicked += (_, _) => Dispatcher.Dispatch(() => Content = BuildContent());
+        refresh.Clicked += async (_, _) => await LoadAsync();
         header.Add(refresh, 1);
         root.Add(header);
 
@@ -336,7 +374,7 @@ internal sealed class DraftStatisticsView : ContentView
             AlignItems = FlexAlignItems.Stretch
         };
 
-        AddCard(cards, Localized.DraftSettingPage_Statistics_CreatedOn, data.CreatedOn > DateTime.MinValue ? data.CreatedOn.ToString("F") : Directory.GetCreationTime(_projectPath).ToString("F"), data.CreatedOn > DateTime.MinValue ? "" : Localized.DraftSettingPage_Statistics_CreatedOn_Estimated);
+        AddCard(cards, Localized.DraftSettingPage_Statistics_CreatedOn, (data.CreatedOn > DateTime.MinValue ? data.CreatedOn : data.EstimatedCreatedOn).ToString("F"), data.CreatedOn > DateTime.MinValue ? "" : Localized.DraftSettingPage_Statistics_CreatedOn_Estimated);
         AddCard(cards, Localized.DraftSettingPage_Statistics_Snapshots, data.Snapshots.Count.ToString());
         AddCard(cards, Localized.DraftSettingPage_Statistics_ActiveDays, data.ActiveDays.ToString());
         AddCard(cards, Localized.DraftSettingPage_Statistics_Contributors, data.ContributorCount.ToString());

@@ -2,6 +2,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Shared;
 using System.Text.Json;
 
 namespace SomePublisher;
@@ -46,22 +47,20 @@ public class MyPlugin : IPluginBase
 
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new()
     {
-        ["ExampleInvert"] = () => new ExampleInvertEffectProvider()
+        ["ExampleInvert"] = () => new ExampleInvertEffectProvider(),
+        ["ExampleCrossfade"] = () => new ExampleCrossfadeTransformProvider()
     };
+
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
+        new Dictionary<EffectImplementationKey, Func<IEffect>>
+        {
+            [new("ExampleInvert", EffectImplementType.IPicture)] = () => new ExampleInvertEffect(),
+            [new("ExampleCrossfade", EffectImplementType.IPicture)] = () => new ExampleCrossfadeTransform()
+        };
 
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new()
     {
         ["ExampleToneTrack"] = (id, name) => new ExampleToneTrack(id, name)
-    };
-
-    public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new()
-    {
-        ["ExampleCrossfade"] = (left, right) => new ExampleCrossfadeTransform(left, right)
-    };
-
-    public Dictionary<string, Func<IComputer>> ComputerProvider => new()
-    {
-        ["ExampleAddComputer"] = () => new ExampleAddComputer()
     };
 
     public Dictionary<string, IVideoSource> VideoSourceProvider => new()
@@ -94,10 +93,4 @@ public class MyPlugin : IPluginBase
         element.TryGetProperty("Id", out var id) ? id.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString(),
         element.TryGetProperty("Name", out var name) ? name.GetString() ?? "Example tone" : "Example tone");
 
-    public ITransform TransformCreator(JsonElement element) => new ExampleCrossfadeTransform(
-        element.TryGetProperty("BindedLeftClip", out var left) ? left.GetGuid() : Guid.Empty,
-        element.TryGetProperty("BindedRightClip", out var right) ? right.GetGuid() : Guid.Empty)
-    {
-        Duration = element.TryGetProperty("Duration", out var duration) ? duration.GetUInt32() : 30
-    };
 }

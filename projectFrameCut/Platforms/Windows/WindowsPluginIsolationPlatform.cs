@@ -16,6 +16,8 @@ namespace projectFrameCut.Platforms.Windows;
 
 internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationPlatform
 {
+    private static readonly object DirectoryLinkLock = new();
+
     internal static string PackageFamilyName
     {
         get
@@ -28,8 +30,85 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         }
     }
 
-    internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "plugin-isolation");
-    internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "project-plugins");
+    internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "plugin-isolation");
+    internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "project-plugins");
+    internal static string ExternalSourceDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "project-external-sources");
+    internal static string CurrentProjectDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "CurrentProject");
+    internal static SecurityIdentifier AppContainerSid => GetAppContainerSid(PackageFamilyName);
+    internal static void PrepareExternalSourceAccess(string root)
+    {
+        if (!Path.GetFullPath(root).StartsWith(Path.GetFullPath(ExternalSourceDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("External source runtime must be below the current package source directory.");
+        var directory = new DirectoryInfo(root);
+        using var current = WindowsIdentity.GetCurrent();
+        var security = new DirectorySecurity();
+        security.SetAccessRuleProtection(true, false);
+        foreach (var sid in new[] { current.User ?? throw new InvalidOperationException("No user SID."), new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null) })
+            security.AddAccessRule(new FileSystemAccessRule(sid, FileSystemRights.FullControl,
+                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        security.AddAccessRule(new FileSystemAccessRule(AppContainerSid, FileSystemRights.ReadAndExecute,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        directory.SetAccessControl(security);
+    }
+    internal static SecurityIdentifier GetAppContainerSid(string packageFamilyName) => DeriveAppContainerSid(GetContainerName(packageFamilyName));
+    internal static NamedPipeServerStream CreateRpcPipe(string name, bool isolated, string dataRoot) =>
+        projectFrameCut.Services.ExternalRpcPipePermissions.CreatePipe(name, dataRoot, isolated ? AppContainerSid : null);
+
+    internal static void PrepareCurrentProjectAccess(string projectRoot) =>
+        PrepareDirectoryAccess(projectRoot, "CurrentProject");
+
+    internal static void PrepareAssetsLibraryAccess(string assetsRoot) =>
+        PrepareDirectoryAccess(assetsRoot, "AssetsLibrary");
+
+    private static void PrepareDirectoryAccess(string targetRoot, string linkName)
+    {
+        var fullTargetRoot = Path.GetFullPath(targetRoot);
+        if (!Directory.Exists(fullTargetRoot)) throw new DirectoryNotFoundException(fullTargetRoot);
+
+        var appContainerSid = AppContainerSid;
+        var directory = new DirectoryInfo(fullTargetRoot);
+        var security = directory.GetAccessControl();
+        security.SetAccessRule(new FileSystemAccessRule(
+            appContainerSid,
+            FileSystemRights.Modify | FileSystemRights.ReadAndExecute,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow));
+        directory.SetAccessControl(security);
+
+        lock (DirectoryLinkLock)
+        {
+            var linkPath = Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, linkName);
+            var link = new DirectoryInfo(linkPath);
+            var existingTarget = link.LinkTarget;
+            if (existingTarget is not null)
+            {
+                if (string.Equals(Path.GetFullPath(existingTarget, link.Parent!.FullName), fullTargetRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+                link.Delete();
+            }
+            else if (link.Exists || File.Exists(linkPath))
+            {
+                throw new IOException($"'{linkPath}' already exists and is not a directory link.");
+            }
+
+            Directory.CreateSymbolicLink(linkPath, fullTargetRoot);
+        }
+    }
+
+    internal static void ClearCurrentProjectLink(string projectRoot)
+    {
+        var fullProjectRoot = Path.GetFullPath(projectRoot);
+        lock (DirectoryLinkLock)
+        {
+            var link = new DirectoryInfo(CurrentProjectDirectory);
+            var linkTarget = link.LinkTarget;
+            if (linkTarget is null || !string.Equals(Path.GetFullPath(linkTarget, link.Parent!.FullName), fullProjectRoot, StringComparison.OrdinalIgnoreCase)) return;
+            link.Delete();
+        }
+    }
 
     public static bool IsInAppContainer()
     {
@@ -39,14 +118,11 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         return isAppContainer != 0;
     }
 
-    internal static void ValidateWorkerProcess()
+    internal static void ValidateWorkerProcess(string instanceName)
     {
-        _ = PackageFamilyName;
         using var identity = WindowsIdentity.GetCurrent();
-        if (!NativeMethods.GetTokenInformation(identity.AccessToken, 29, out var isAppContainer, sizeof(int), out _))
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
-        if (isAppContainer == 0)
-            throw new UnauthorizedAccessException("plugin_worker with --appContainer parameter must be activated through InSandboxWorker in an AppContainer.");
+        if (!GetTokenAppContainerSid(identity.AccessToken).Equals(GetAppContainerSid(instanceName)))
+            throw new UnauthorizedAccessException("The worker is not running in the expected Sandy AppContainer.");
         Log($"AppContainer verified for process {Environment.ProcessId}.");
     }
 
@@ -63,12 +139,14 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         var sessionRoot = Path.GetFullPath(context.SessionRoot);
         if (!string.Equals(Path.GetDirectoryName(sessionRoot), Path.GetFullPath(SessionDirectory), StringComparison.OrdinalIgnoreCase)
             || !Guid.TryParseExact(Path.GetFileName(sessionRoot), "N", out _))
-            throw new ArgumentException("The isolation session must be a unique directory under the current package LocalState.");
+            throw new ArgumentException("The isolation session must be a unique directory under the current package LocalCache.");
         if (Directory.Exists(sessionRoot)) throw new IOException("The isolation session directory already exists.");
-        var appContainerSid = DeriveAppContainerSid(familyName);
+        await Task.Run(() => EnsureSandyProfile(familyName, cancellationToken), cancellationToken).ConfigureAwait(false);
+        var appContainerSid = GetAppContainerSid(familyName);
         NamedPipeServerStream? pendingPipe = null;
         StreamIsolationControlChannel? channel = null;
         Process? process = null;
+        Process? launcher = null;
         var terminated = 0;
         try
         {
@@ -76,12 +154,13 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             Directory.CreateDirectory(sessionRoot);
             ApplySessionAcl(sessionRoot, appContainerSid);
             var pluginDirectory = ResolvePluginDirectory(context);
+            // LOCAL names resolve inside the container, so the host pipe uses the global pipe namespace.
             var pipeName = $"projectFrameCut.PluginIsolation.{Guid.NewGuid():N}";
             pendingPipe = CreatePipe(pipeName, appContainerSid);
             Log($"Created isolation pipe '\\\\.\\pipe\\{pipeName}' for AppContainer SID '{appContainerSid.Value}'.");
             List<string> args = 
                 [
-                    "plugin_worker",
+                    context.ExternalSourceManifestHash is null ? "plugin_worker" : "external_source_worker",
                     $"--pipe={pipeName}",
                     $"--token={context.AuthenticationToken}",
                     $"--sessionRoot={sessionRoot}",
@@ -90,29 +169,43 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                     $"--pluginRoot={pluginDirectory}",
                     $"--instancePackageName={familyName}",
                     "--forceRouteToCLI",
+                    "--consoleLog",
+                    "--workerMode",
                     "--appContainer",
                 ];
+            if (context.ExternalSourceManifestHash is not null) args.Add($"--externalSourceHash={context.ExternalSourceManifestHash}");
             if (MyLoggerExtensions.LoggingDiagnosticInfo)
             {
                 args.Add("--logDiagnostic");
             }
-            if (SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole"))
-            {
-                args.Add("--consoleLog");
-            }
-            var arguments = string.Join(" ", args.Select(Quote));
-            var workerEntryPoint = SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole")  ? "InSandboxWorkerConsole" : "InSandboxWorkerNoConsole";
-            var processId = ActivateRuntime($"{familyName}!{workerEntryPoint}", arguments);
-            process = Process.GetProcessById(processId);
-            Log($"Activated InSandboxWorker {processId} for plugin '{context.PluginId}'.");
+            var showConsole = SettingsManager.Settings is not null && SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole");
+            var executable = Path.Combine(AppContext.BaseDirectory, showConsole ? "pjfc-cli.exe" : "projectFrameCut.exe");
+            launcher = StartSandyWorker(familyName, sessionRoot, executable, args, showConsole);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(context.Transport.RequestTimeout);
-            await pendingPipe.WaitForConnectionAsync(timeout.Token).ConfigureAwait(false);
-            if (!NativeMethods.GetNamedPipeClientProcessId(pendingPipe.SafePipeHandle, out var clientProcessId)
-                || clientProcessId != processId)
-                throw new UnauthorizedAccessException("The process connected to the plugin isolation pipe does not match the activated runtime.");
+            var connection = pendingPipe.WaitForConnectionAsync(timeout.Token);
+            if (await Task.WhenAny(connection, launcher.WaitForExitAsync(timeout.Token)).ConfigureAwait(false) != connection)
+            {
+                timeout.Token.ThrowIfCancellationRequested();
+                throw new InvalidOperationException($"Sandy exited before the worker connected (exit code {launcher.ExitCode}). See '{SandyRuntimeDirectory}'.");
+            }
+            await connection.ConfigureAwait(false);
+            if (!NativeMethods.GetNamedPipeClientProcessId(pendingPipe.SafePipeHandle, out var clientProcessId))
+                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            var connectedProcess = Process.GetProcessById(checked((int)clientProcessId));
+            try { ValidateSandyChild(connectedProcess, launcher, executable, appContainerSid); }
+            catch
+            {
+                connectedProcess.Dispose();
+                throw;
+            }
+            process = connectedProcess;
+            Log($"Connected Sandy worker {process.Id} for plugin '{context.PluginId}' (launcher {launcher.Id}).");
 
-            await projectFrameCut.Services.PluginIsolationHostHandshake.AuthorizeRuntimeAsync(pendingPipe, context, timeout.Token).ConfigureAwait(false);
+            if (context.ExternalSourceManifestHash is not null)
+                await ProjectExternalSourceWorker.AuthorizeAsync(pendingPipe, context, timeout.Token).ConfigureAwait(false);
+            else
+                await projectFrameCut.Services.PluginIsolationHostHandshake.AuthorizeRuntimeAsync(pendingPipe, context, timeout.Token).ConfigureAwait(false);
             channel = new StreamIsolationControlChannel(pendingPipe, IsolationControlMode.NamedPipe);
             var request = new RenderRequestEnvelope
             {
@@ -126,7 +219,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                 }),
             };
             var response = await channel.SendAsync(request, timeout.Token).ConfigureAwait(false);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
             var capabilities = RenderRpcSerializer.Deserialize<IsolationChannelCapabilities>(response.Payload);
             if (capabilities.ProtocolVersion != PluginIsolationProtocol.CurrentVersion)
                 throw new InvalidDataException("Plugin isolation protocol version mismatch.");
@@ -137,8 +230,9 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             _ = MonitorWorkerAsync();
             return session;
         }
-        catch
+        catch (Exception ex)
         {
+            Log(ex, $"start the Sandy worker for '{context.PluginId}'", this);
             if (channel is not null) await channel.DisposeAsync().ConfigureAwait(false);
             else if (pendingPipe is not null) await pendingPipe.DisposeAsync().ConfigureAwait(false);
             await TerminateAsync("Worker startup failed.").ConfigureAwait(false);
@@ -150,16 +244,15 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             if (Interlocked.Exchange(ref terminated, 1) != 0) return;
             try
             {
-                if (process is not null && !process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
-                }
+                await StopSandyWorkerAsync(process, launcher).ConfigureAwait(false);
                 if (Directory.Exists(sessionRoot)) Directory.Delete(sessionRoot, recursive: true);
             }
             catch (Exception ex) { projectFrameCut.Shared.Logger.Log(ex, "clean up the plugin isolation session", this); }
-            finally { process?.Dispose(); }
+            finally
+            {
+                process?.Dispose();
+                launcher?.Dispose();
+            }
             projectFrameCut.Shared.Logger.Log($"Plugin isolation worker for '{context.PluginId}' stopped: {reason}");
         }
 
@@ -168,7 +261,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             try
             {
                 await process!.WaitForExitAsync().ConfigureAwait(false);
-                await TerminateAsync("Worker process exited.").ConfigureAwait(false);
+                await TerminateAsync($"Worker process exited with code {process.ExitCode}.").ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -184,10 +277,9 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         if (!Directory.Exists(sourceRoot)) throw new DirectoryNotFoundException(sourceRoot);
         ValidatePathSegment(context.InstancePackageName, nameof(context.InstancePackageName));
         ValidatePathSegment(context.PluginId, nameof(context.PluginId));
-        var localState = Path.GetFullPath(ApplicationData.Current.LocalFolder.Path);
-        var localStatePrefix = localState.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (!sourceRoot.StartsWith(localStatePrefix, StringComparison.OrdinalIgnoreCase))
-            throw new UnauthorizedAccessException("The isolated plugin must be installed below the current package LocalState.");
+        if (!new[] { ApplicationData.Current.LocalFolder.Path, ProjectPluginDirectory, ExternalSourceDirectory }
+            .Any(root => sourceRoot.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+            throw new UnauthorizedAccessException("The isolated plugin must be installed below the current package plugin directories.");
 
         var expectedName = context.PluginId;
         if (!string.Equals(Path.GetFileName(sourceRoot), expectedName, StringComparison.OrdinalIgnoreCase))
@@ -201,18 +293,6 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
     {
         if (string.IsNullOrWhiteSpace(value) || value is "." or ".." || value.Contains(Path.DirectorySeparatorChar) || value.Contains(Path.AltDirectorySeparatorChar) || value.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new ArgumentException($"'{name}' must be a single path segment.", name);
-    }
-
-    private static int ActivateRuntime(string aumid, string arguments)
-    {
-        var type = Type.GetTypeFromCLSID(new Guid("45BA127D-10A8-46EA-8AB7-56EA9078943C"), throwOnError: true)!;
-        var manager = (IApplicationActivationManager)Activator.CreateInstance(type)!;
-        try
-        {
-            Marshal.ThrowExceptionForHR(manager.ActivateApplication(aumid, arguments, 0, out var processId));
-            return checked((int)processId);
-        }
-        finally { Marshal.FinalReleaseComObject(manager); }
     }
 
     private static NamedPipeServerStream CreatePipe(string name, SecurityIdentifier appContainerSid)
@@ -236,7 +316,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         finally { NativeMethods.LocalFree(descriptor); }
     }
 
-    private static SecurityIdentifier DeriveAppContainerSid(string packageFamilyName)
+    internal static SecurityIdentifier DeriveAppContainerSid(string packageFamilyName)
     {
         // Some packaged calls succeed without writing the SID; keep the native output initialized.
         var sid = IntPtr.Zero;
@@ -248,13 +328,13 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         }
         if (sid == IntPtr.Zero)
         {
-            projectFrameCut.Shared.Logger.Log($"SID derivation returned no SID for '{packageFamilyName}'; looking up the registered AppContainer.");
+            projectFrameCut.Shared.Logger.LogDiagnostic($"SID derivation returned no SID for '{packageFamilyName}'; looking up the registered AppContainer.");
             return FindRegisteredAppContainerSid(packageFamilyName);
         }
         try
         {
             var result = new SecurityIdentifier(sid);
-            projectFrameCut.Shared.Logger.Log($"Derived AppContainer SID '{result.Value}' for '{packageFamilyName}'.");
+            projectFrameCut.Shared.Logger.LogDiagnostic($"Derived AppContainer SID '{result.Value}' for '{packageFamilyName}'.");
             return result;
         }
         finally { NativeMethods.FreeSid(sid); }
@@ -277,7 +357,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                     continue;
                 // Copy the SID before freeing the enumeration buffer that owns it.
                 var sid = new SecurityIdentifier(container.Sid);
-                projectFrameCut.Shared.Logger.Log($"Found registered AppContainer SID '{sid.Value}' for '{packageFamilyName}'.");
+                projectFrameCut.Shared.Logger.LogDiagnostic($"Found registered AppContainer SID '{sid.Value}' for '{packageFamilyName}'.");
                 return sid;
             }
             throw new InvalidOperationException($"No registered AppContainer SID was found for '{packageFamilyName}' among {count} containers.");
@@ -298,19 +378,6 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         security.AddAccessRule(new FileSystemAccessRule(current.User!, FileSystemRights.FullControl, inheritance, PropagationFlags.None, AccessControlType.Allow));
         security.AddAccessRule(new FileSystemAccessRule(appContainerSid, FileSystemRights.Modify | FileSystemRights.ReadAndExecute, inheritance, PropagationFlags.None, AccessControlType.Allow));
         directory.SetAccessControl(security);
-    }
-
-    private static string Quote(string value) => '"' + value + '"';
-
-    [ComImport, Guid("2e941141-7f97-4756-ba1d-9decde894a3d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IApplicationActivationManager
-    {
-        [PreserveSig]
-        int ActivateApplication([MarshalAs(UnmanagedType.LPWStr)] string appUserModelId, [MarshalAs(UnmanagedType.LPWStr)] string arguments, uint options, out uint processId);
-        [PreserveSig]
-        int ActivateForFile(IntPtr appUserModelId, IntPtr itemArray, IntPtr verb, out uint processId);
-        [PreserveSig]
-        int ActivateForProtocol(IntPtr appUserModelId, IntPtr itemArray, out uint processId);
     }
 
     private static partial class NativeMethods

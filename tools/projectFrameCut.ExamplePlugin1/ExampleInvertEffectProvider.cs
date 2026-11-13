@@ -5,6 +5,10 @@ namespace SomePublisher;
 
 public sealed class ExampleInvertEffectProvider : EffectProviderBase
 {
+    public override IReadOnlyList<EffectStage> SupportedStages => [EffectStage.Render];
+
+    public override bool IsDeterministic => true;
+
     public override string TypeName => "ExampleInvert";
     public override string FromPlugin => ExamplePluginConstants.PluginId;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
@@ -18,14 +22,5 @@ public sealed class ExampleInvertEffectProvider : EffectProviderBase
 
     protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 
-    protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-    {
-        if (implementType != EffectImplementType.IPicture)
-            throw new NotSupportedException("ExampleInvert supports the IPicture implementation only.");
 
-        object value = parameters.GetValueOrDefault("Amount", 1f);
-        if (value is Func<object> getter) value = getter();
-        float amount = Math.Clamp(Convert.ToSingle(value), 0, 1);
-        return [new ExampleInvertEffect(amount)];
-    }
 }

@@ -1,4 +1,5 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Plugin;
 using Color = Microsoft.Maui.Graphics.Color;
 
 namespace projectFrameCut.DraftStuff
@@ -12,7 +13,7 @@ namespace projectFrameCut.DraftStuff
         /// Strip high-bit flags (HasMinValue, HasMaxValue, Mandatory, etc.) to get the base type.
         /// </summary>
         public static EffectArgumentFieldType GetBaseType(EffectArgumentFieldType ft)
-            => ft & (EffectArgumentFieldType)0x3FF;
+            => ft.IsHwAccelPicture() ? EffectArgumentFieldType.IPicture : ft.BaseType();
 
         /// <summary>
         /// Get the display color for a port type.
@@ -23,6 +24,9 @@ namespace projectFrameCut.DraftStuff
             return baseType switch
             {
                 EffectArgumentFieldType.IPicture => Color.FromArgb("#4CAF50"),    // Green
+                EffectArgumentFieldType.VectorPicture => Color.FromArgb("#A6C436"),
+                EffectArgumentFieldType.AudioSample => Color.FromArgb("#E0B04B"),
+                EffectArgumentFieldType.SpeedVariance => Color.FromArgb("#26A69A"),
                 EffectArgumentFieldType.Numeric => Color.FromArgb("#1E90FF"),      // Blue
                 EffectArgumentFieldType.Integer => Color.FromArgb("#4169E1"),      // Royal Blue
                 EffectArgumentFieldType.UnsignedInteger => Color.FromArgb("#87CEEB"), // Sky Blue
@@ -45,7 +49,11 @@ namespace projectFrameCut.DraftStuff
             var baseType = GetBaseType(ft);
             return baseType switch
             {
+                EffectArgumentFieldType.Any => "*",
                 EffectArgumentFieldType.IPicture => "P",
+                EffectArgumentFieldType.VectorPicture => "V",
+                EffectArgumentFieldType.AudioSample => "A",
+                EffectArgumentFieldType.SpeedVariance => "T",
                 EffectArgumentFieldType.Numeric => "N",
                 EffectArgumentFieldType.Integer => "I",
                 EffectArgumentFieldType.UnsignedInteger => "U",
@@ -66,9 +74,14 @@ namespace projectFrameCut.DraftStuff
         public static string HumanizeTypeName(EffectArgumentFieldType ft)
         {
             var baseType = GetBaseType(ft);
-            return baseType switch
+            return PluginManager.GetLocalizationItem("Effect_PortType_" + baseType, baseType switch
             {
+                EffectArgumentFieldType.Any => "Any",
+                EffectArgumentFieldType.CustomType => "Custom",
                 EffectArgumentFieldType.IPicture => "IPicture",
+                EffectArgumentFieldType.VectorPicture => Localized.Effect_VectorContentType,
+                EffectArgumentFieldType.AudioSample => "AudioSample",
+                EffectArgumentFieldType.SpeedVariance => "Speed provider",
                 EffectArgumentFieldType.Numeric => "Numeric",
                 EffectArgumentFieldType.Integer => "Integer",
                 EffectArgumentFieldType.UnsignedInteger => "UInt",
@@ -81,47 +94,24 @@ namespace projectFrameCut.DraftStuff
                 EffectArgumentFieldType.Position => "Position",
                 EffectArgumentFieldType.SizeAndPosition => "Size&Pos",
                 _ => "?",
-            };
+            });
         }
+
+        public static string HumanizeTypeName(EffectArgumentFieldType ft, EffectPortTypeContract? contract) =>
+            ft.BaseType() == EffectArgumentFieldType.CustomType && contract is not null ? contract.DisplayName : HumanizeTypeName(ft);
 
         /// <summary>
         /// Check whether two port types are compatible for connection.
-        /// Unknown/CustomType are permissive; same base types are compatible;
+        /// Custom ports require matching contracts; same base types are compatible;
         /// numeric family (Numeric/Integer/UInt/Long/ULong) is inter-compatible;
         /// SizeAndPosition is compatible with Size and Position;
         /// otherwise strict equality is required.
         /// </summary>
         public static bool IsPortTypeCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target)
-        {
-            var src = GetBaseType(source);
-            var tgt = GetBaseType(target);
+            => EffectFieldTypes.AreCompatible(source, target);
 
-            if (src == EffectArgumentFieldType.Unknown || tgt == EffectArgumentFieldType.Unknown)
-                return true;
-            if (src == EffectArgumentFieldType.CustomType || tgt == EffectArgumentFieldType.CustomType)
-                return true;
-            if (src == tgt) return true;
-
-            // Numeric family inter-compatibility
-            if (IsNumericFamily(src) && IsNumericFamily(tgt))
-                return true;
-
-            // SizeAndPosition ↔ Size / Position
-            if (src == EffectArgumentFieldType.SizeAndPosition)
-                return tgt == EffectArgumentFieldType.Size || tgt == EffectArgumentFieldType.Position;
-            if (tgt == EffectArgumentFieldType.SizeAndPosition)
-                return src == EffectArgumentFieldType.Size || src == EffectArgumentFieldType.Position;
-
-            return false;
-        }
-
-        private static bool IsNumericFamily(EffectArgumentFieldType ft)
-        {
-            return ft == EffectArgumentFieldType.Numeric
-                || ft == EffectArgumentFieldType.Integer
-                || ft == EffectArgumentFieldType.UnsignedInteger
-                || ft == EffectArgumentFieldType.Long
-                || ft == EffectArgumentFieldType.UnsignedLong;
-        }
+        public static bool IsPortTypeCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target,
+            EffectPortTypeContract? sourceContract, EffectPortTypeContract? targetContract)
+            => EffectFieldTypes.AreCompatible(source, target, sourceContract, targetContract);
     }
 }

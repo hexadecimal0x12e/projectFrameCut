@@ -8,19 +8,21 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using FFmpeg.AutoGen;
+using projectFrameCut.Render.RPCProtocol;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
-    public class VideoClip : IClip
+    public class VideoClip : IRotatableClip
     {
-        private const int MaxDecoderPoolSize = 128;
+        private static readonly int MaxDecoderPoolSize = 12;
 
-        private static readonly object DecoderPoolRegistryLock = new();
+        private static readonly Lock DecoderPoolRegistryLock = new();
         private static readonly Dictionary<string, VideoDecoderPool> DecoderPools = new(StringComparer.OrdinalIgnoreCase);
 
         private VideoDecoderPool? _decoderPool;
         private string? _decoderPoolKey;
         private long _nextRemoteReconnectAttempt;
+        private ProjectExternalSourceHost? _externalSourceHost;
 
         public required Guid Id { get; init; }
         public required string Name { get; init; }
@@ -39,6 +41,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
 
@@ -46,6 +52,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         [System.Text.Json.Serialization.JsonIgnore]
         public IVideoSource? Decoder { get; set; } = null;
+
+        [JsonIgnore]
+        public uint? SourceFrameCount => Decoder is { TotalFrames: >= 0 } decoder
+            ? (uint)Math.Min(uint.MaxValue, decoder.TotalFrames) : null;
+
+        internal bool HasCurrentDecoder => !RemoteRpcVideoSource.IsExternalPath(FilePath)
+            || _decoderPoolKey == BuildDecoderPoolKey(FilePath!, TargetDecoder);
 
         public ClipMode ClipType => ClipMode.VideoClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -55,12 +68,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
+        [JsonIgnore]
+        public IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields => ClipArgumentHandler.SourceCropFields;
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
 
-        public string TargetDecoder { get; set; } = string.Empty;
+        private string _targetDecoder = string.Empty;
+        public string TargetDecoder
+        {
+            get => _targetDecoder;
+            set => _targetDecoder = PluginManager.NormalizeVideoDecoderName(value);
+        }
         public double HDRBrightnessOffset { get; set; } = 0;
 
         [JsonIgnore()]
@@ -74,10 +96,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
+            => GetUnrotatedFrame(targetFrame, targetWidth, targetHeight, targetPPB);
+
+        public IPicture GetUnrotatedFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
             var now = Environment.TickCount64;
+            if (_decoderPool is not null && RemoteRpcVideoSource.IsExternalPath(FilePath)
+                && _decoderPoolKey != BuildDecoderPoolKey(FilePath!, TargetDecoder))
+                ((IClip)this).ReInit(targetPPB);
             var retryAt = Volatile.Read(ref _nextRemoteReconnectAttempt);
-            if (_decoderPool is null && RemoteRpcVideoSource.IsPath(FilePath) && now >= retryAt
+            if (_decoderPool is null && RemoteRpcVideoSource.IsExternalPath(FilePath) && now >= retryAt
                 && Interlocked.CompareExchange(ref _nextRemoteReconnectAttempt, now + 2000, retryAt) == retryAt)
             {
                 ((IClip)this).ReInit(targetPPB);
@@ -88,42 +116,37 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (!IsVirtualSourcePath(FilePath) && !File.Exists(FilePath))
                 {
                     ClipInitializationFailure.Mark(this, "SourceNotFound", new FileNotFoundException($"VideoClip {Name}'s source is not available: {FilePath}.", FilePath));
-                    return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, "SourceNotFound", ClipInitializationFailure.GetDescription(ExtraData));
+                    return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, ExtraData);
                 }
                 else
                 {
-                    ClipInitializationFailure.Mark(this, "SourceReading", new InvalidOperationException($"VideoClip {Name}'s decoder is not initialized, maybe because the video file is corrupted or the decoder is not available."));
-                    return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, "SourceReading", ClipInitializationFailure.GetDescription(ExtraData));
+                    if (!ClipInitializationFailure.HasDeferredFailures(ExtraData))
+                        ClipInitializationFailure.Mark(this, "SourceReading", new InvalidOperationException($"VideoClip {Name}'s decoder is not initialized, maybe because the video file is corrupted or the decoder is not available."));
+                    return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, ExtraData);
                 }
             }
 
-            using var decoderLease = _decoderPool.Rent(targetFrame);
-            var decoder = decoderLease.Decoder;
-            targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);
-            int sourceX = Math.Clamp(StartingX, 0, Math.Max(0, decoder.Width - 1));
-            int sourceY = Math.Clamp(StartingY, 0, Math.Max(0, decoder.Height - 1));
-            // targetWidth/targetHeight describe the requested output resolution. They must not
-            // limit the source region, otherwise a low-resolution preview decodes only the
-            // top-left corner of the video instead of scaling the complete source frame.
-            // StartingX/StartingY intentionally crop the leading source area; the remaining
-            // source rectangle is then scaled to the requested output dimensions by the decoder.
-            int sourceWidth = Math.Max(1, decoder.Width - sourceX);
-            int sourceHeight = Math.Max(1, decoder.Height - sourceY);
-
             try
             {
+                using var decoderLease = _decoderPool.Rent(targetFrame);
+                var decoder = decoderLease.Decoder;
+                targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);
+                var (sourceX, sourceY, sourceWidth, sourceHeight) = GetSourceRegion(decoder.Width, decoder.Height);
                 IPicture result;
-                if (decoder is IHDRVideoSource h)
+                if (decoder is IHDRVideoSource { HasHdrContent: true } h)
                 {
                     result = h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
                             targetWidth, targetHeight, hasAlpha: true)
-                        .SetBrightnessOffset(HDRBrightnessOffset)
+                        .SetBrightnessOffset((Half)HDRBrightnessOffset)
                         .ToBitPerPixel(targetPPB);
                 }
                 else
                 {
                     result = decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
-                        targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                        targetWidth, targetHeight);
+                    EffectPictureProcessing.RequireFP16(result, $"Video source {decoder.TypeName}, clip {Name}/{Id}");
+                    if (result is HDRPictureFP16 hdr) hdr.SetBrightnessOffset((Half)HDRBrightnessOffset);
+                    if (targetPPB != IPicture.PicturePixelMode.Float16Picture) result = result.ToBitPerPixel(targetPPB);
                 }
 
                 // Only publish the position after a successful decode. Decoder.Index is a request
@@ -132,12 +155,28 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (decoder is RemoteRpcVideoSource) ClipInitializationFailure.Clear(this);
                 return result;
             }
-            catch (Exception ex) when (decoder is RemoteRpcVideoSource)
+            catch (Exception ex) when (RemoteRpcVideoSource.IsExternalPath(FilePath))
             {
                 ClipInitializationFailure.Mark(this, "SourceReading", ex);
                 Log(ex, $"Read external RPC video source for clip {Name}", this);
-                return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, "SourceReading", ClipInitializationFailure.GetDescription(ExtraData));
+                return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, ExtraData);
             }
+        }
+
+        internal (int X, int Y, int Width, int Height) GetSourceRegion(int width, int height)
+        {
+            int x = Math.Clamp(StartingX, 0, Math.Max(0, width - 1));
+            int y = Math.Clamp(StartingY, 0, Math.Max(0, height - 1));
+            width = Math.Max(1, width - x);
+            height = Math.Max(1, height - y);
+            if (SoundTrackMetadata.ReadBool(ExtraData, "__Internal_DirectCropEnabled__"))
+            {
+                if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropWidth__"), out int w) && w > 0)
+                    width = Math.Min(width, w);
+                if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropHeight__"), out int h) && h > 0)
+                    height = Math.Min(height, h);
+            }
+            return (x, y, width, height);
         }
 
         private uint ClampFrameToDecoderRange(IVideoSource? decoder, uint targetFrame)
@@ -159,7 +198,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             if (string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
+            if (ProjectExternalVideoSource.IsPath(FilePath)) _externalSourceHost ??= ProjectExternalSourceRuntime.Current;
             if (!IsVirtualSourcePath(FilePath) && !File.Exists(FilePath))
             {
                 ClipInitializationFailure.Mark(this, "SourceNotFound", new FileNotFoundException($"VideoClip {Name}'s source is not available: {FilePath}.", FilePath));
@@ -181,7 +222,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (_decoderPool is not null && string.Equals(_decoderPoolKey, poolKey, StringComparison.OrdinalIgnoreCase) && !_decoderPool.Disposed)
                 {
                     Decoder = _decoderPool.RepresentativeDecoder;
-                   EffectHelper.ResolveClipEffects(this);
+                    ClipInitializationFailure.ClearRecovered(this, "SourceReading", "SourceNotFound", "SourceNotMatch", "ExternalSourceUnavailable");
                     return;
                 }
 
@@ -191,6 +232,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 _decoderPoolKey = poolKey;
                 _decoderPool = pool;
                 Decoder = pool.RepresentativeDecoder;
+                ClipInitializationFailure.ClearRecovered(this, "SourceReading", "SourceNotFound", "SourceNotMatch", "ExternalSourceUnavailable");
             }
             catch (Exception ex)
             {
@@ -204,6 +246,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IDisposable.Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             ReleaseDecoderPool();
         }
 
@@ -215,6 +258,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 {
                     throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
                 }
+
+                if (ProjectExternalVideoSource.IsPath(FilePath))
+                    return ProjectExternalVideoSource.Open(FilePath, _externalSourceHost ?? ProjectExternalSourceRuntime.Current);
 
                 if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
                 {
@@ -244,6 +290,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 return;
             }
 
+            ReleaseDecoderPool(poolKey, pool);
+        }
+
+        internal static void ReleaseDecoderPool(string poolKey, VideoDecoderPool pool)
+        {
             lock (DecoderPoolRegistryLock)
             {
                 if (!DecoderPools.TryGetValue(poolKey, out var existing) || !ReferenceEquals(existing, pool))
@@ -258,7 +309,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             }
         }
 
-        private static VideoDecoderPool AcquireDecoderPool(string poolKey, Func<IVideoSource> decoderFactory)
+        internal static VideoDecoderPool AcquireDecoderPool(string poolKey, Func<IVideoSource> decoderFactory)
         {
             lock (DecoderPoolRegistryLock)
             {
@@ -273,14 +324,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
             }
         }
 
-        private static string BuildDecoderPoolKey(string filePath, string targetDecoder)
+        private string BuildDecoderPoolKey(string filePath, string targetDecoder)
         {
             var normalizedPath = IsVirtualSourcePath(filePath) ? filePath : Path.GetFullPath(filePath);
             var normalizedDecoder = string.IsNullOrWhiteSpace(targetDecoder) ? "auto" : targetDecoder.Trim();
-            return $"{normalizedPath}::{normalizedDecoder}";
+            return $"{normalizedPath}::{normalizedDecoder}{(ProjectExternalVideoSource.IsPath(filePath) ? "::" + (_externalSourceHost ?? ProjectExternalSourceRuntime.Current).CacheToken
+                : RemoteRpcVideoSource.IsPath(filePath) ? "::" + ExternalVideoSourceRegistry.CacheToken : string.Empty)}";
         }
 
-        private sealed class VideoDecoderPool : IDisposable
+        internal sealed class VideoDecoderPool : IDisposable
         {
             private readonly string _poolKey;
             private readonly Func<IVideoSource> _decoderFactory;
@@ -296,6 +348,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                 var representative = CreateDecoder();
                 _decoders.Add(new PooledDecoderEntry(representative));
+                LogDiagnostic($"[DecoderPool] Created '{_poolKey}', limit={MaxDecoderPoolSize}.");
             }
 
             public IVideoSource RepresentativeDecoder
@@ -348,6 +401,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
 
                     _disposed = true;
+                    Monitor.PulseAll(_sync);
                     foreach (var entry in _decoders)
                     {
                         if (!entry.InUse)
@@ -362,33 +416,32 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             public DecoderLease Rent(uint targetFrame)
             {
+                var token = ValueProviderFrameContext.CancellationToken;
                 lock (_sync)
                 {
-                    if (_disposed)
+                    while (true)
                     {
-                        throw new ObjectDisposedException(nameof(VideoDecoderPool), $"Decoder pool '{_poolKey}' is already disposed.");
-                    }
-
-                    var bestEntry = GetBestFreeEntry(targetFrame);
-                    if (bestEntry is not null)
-                    {
-                        bestEntry.InUse = true;
-                        return new DecoderLease(this, bestEntry);
-                    }
-
-                    if (_decoders.Count < MaxDecoderPoolSize)
-                    {
-                        var decoder = CreateDecoder();
-                        var entry = new PooledDecoderEntry(decoder)
+                        token.ThrowIfCancellationRequested();
+                        if (_disposed)
+                            throw new ObjectDisposedException(nameof(VideoDecoderPool), $"Decoder pool '{_poolKey}' is already disposed.");
+                        _decoders.RemoveAll(e => !e.InUse && e.Decoder.Disposed);
+                        var entry = GetBestFreeEntry(targetFrame);
+                        if (entry is null && _decoders.Count < MaxDecoderPoolSize)
                         {
-                            InUse = true
-                        };
-                        _decoders.Add(entry);
-                        return new DecoderLease(this, entry);
+                            entry = new PooledDecoderEntry(CreateDecoder());
+                            _decoders.Add(entry);
+                        }
+                        if (entry is not null)
+                        {
+                            entry.InUse = true;
+                            entry.OwnerThread = Environment.CurrentManagedThreadId;
+                            return new DecoderLease(this, entry);
+                        }
+                        if (_decoders.Any(e => e.InUse && e.OwnerThread == Environment.CurrentManagedThreadId))
+                            throw new InvalidOperationException($"Recursive decoding exhausted the decoder pool '{_poolKey}'.");
+                        Monitor.Wait(_sync, 50);
                     }
                 }
-
-                return new DecoderLease(CreateDecoder());
             }
 
             private PooledDecoderEntry? GetBestFreeEntry(uint targetFrame)
@@ -410,7 +463,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         continue;
                     }
 
-                    long distance = Math.Abs((long)entry.LastSuccessfulFrame - targetFrame);
+                    long distance = (long)targetFrame - entry.LastSuccessfulFrame;
+                    if (distance < 0) distance = (1L << 32) - distance;
                     if (distance < bestDistance)
                     {
                         bestDistance = distance;
@@ -418,7 +472,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
 
-                return bestEntry ?? unpositionedEntry;
+                return bestDistance >= (1L << 32) ? unpositionedEntry ?? bestEntry : bestEntry ?? unpositionedEntry;
             }
 
             private IVideoSource CreateDecoder()
@@ -432,14 +486,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 lock (_sync)
                 {
+                    entry.InUse = false;
+                    entry.OwnerThread = 0;
+                    Monitor.PulseAll(_sync);
                     if (_disposed)
                     {
-                        entry.InUse = false;
                         entry.Dispose();
                         return;
                     }
-
-                    entry.InUse = false;
                 }
             }
 
@@ -465,6 +519,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
 
                     _disposed = true;
+                    Monitor.PulseAll(_sync);
                     foreach (var entry in _decoders)
                     {
                         if (!entry.InUse)
@@ -484,6 +539,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                 public IVideoSource Decoder { get; }
                 public bool InUse { get; set; }
+                public int OwnerThread { get; set; }
                 public uint LastSuccessfulFrame { get; set; }
                 public bool HasSuccessfulPosition { get; set; }
 
@@ -495,9 +551,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             internal sealed class DecoderLease : IDisposable
             {
-                private readonly VideoDecoderPool? _pool;
-                private readonly PooledDecoderEntry? _entry;
-                private readonly IVideoSource? _temporaryDecoder;
+                private readonly VideoDecoderPool _pool;
+                private readonly PooledDecoderEntry _entry;
                 private bool _disposed;
 
                 internal DecoderLease(VideoDecoderPool pool, PooledDecoderEntry entry)
@@ -507,18 +562,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     Decoder = entry.Decoder;
                 }
 
-                internal DecoderLease(IVideoSource temporaryDecoder)
-                {
-                    _temporaryDecoder = temporaryDecoder;
-                    Decoder = temporaryDecoder;
-                }
-
                 public IVideoSource Decoder { get; }
 
                 public void MarkPosition(uint frameIndex)
                 {
-                    if (_entry is not null && _pool is not null)
-                        _pool.MarkPosition(_entry, frameIndex);
+                    _pool.MarkPosition(_entry, frameIndex);
                 }
 
                 public void Dispose()
@@ -530,13 +578,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                     _disposed = true;
 
-                    if (_entry is not null && _pool is not null)
-                    {
-                        _pool.Return(_entry);
-                        return;
-                    }
-
-                    _temporaryDecoder?.Dispose();
+                    _pool.Return(_entry);
                 }
             }
         }
@@ -549,7 +591,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     /// Unlike <see cref="VideoClip"/>, this clip does not require a file on disk —
     /// frames are generated on-the-fly by the <see cref="VirtualSource"/>.
     /// </summary>
-    public class VirtualSourceVideoClip : IClip
+    public class VirtualSourceVideoClip : IRotatableClip
     {
         public required Guid Id { get; init; }
         public required string Name { get; init; }
@@ -569,6 +611,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<EffectStage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public Dictionary<string, object> ExtraData { get; set; } = new();
         public bool ExtendToWholeDraft { get; set; }
         [JsonIgnore]
@@ -576,6 +622,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         [JsonIgnore]
         public IVirtualVideoSource? VirtualSource { get; set; }
+
+        [JsonIgnore]
+        public uint? SourceFrameCount => Duration;
 
         public ClipMode ClipType => ClipMode.VideoClip;
         public string TypeName => "VirtualSourceVideoClip";
@@ -586,6 +635,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
+        public float Opacity { get; set; } = 1;
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -628,6 +679,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
             int targetWidth,
             int targetHeight,
             IPicture.PicturePixelMode targetPPB)
+            => GetUnrotatedFrame(targetFrame, targetWidth, targetHeight, targetPPB);
+
+        public IPicture GetUnrotatedFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
             if (VirtualSource is null)
             {
@@ -653,6 +707,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// </summary>
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClipInitializationFailure.Clear(this);
             if (VirtualSource is null)
             {
                 throw new NullReferenceException(
@@ -678,12 +733,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
             VirtualSource.Init(initWidth, initHeight, fps, duration, targetPPB);
 
             // Rebuild effect, speed-variance, and mixture instances from serialized data
+            EffectHelper.ReleaseClipEffects(this);
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource)
                 = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
         void IDisposable.Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             VirtualSource?.Dispose();
         }
     }

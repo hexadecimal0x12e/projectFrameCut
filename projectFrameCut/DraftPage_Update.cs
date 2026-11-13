@@ -1,0 +1,1435 @@
+using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Devices;
+using Microsoft.Maui.Storage;
+using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Input;
+
+using Path = System.IO.Path;
+using Grid = Microsoft.Maui.Controls.Grid;
+using Image = Microsoft.Maui.Controls.Image;
+using Application = Microsoft.Maui.Controls.Application;
+
+using projectFrameCut.Render;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Shared;
+using projectFrameCut.DraftStuff;
+
+using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.LivePreview;
+using CommunityToolkit.Maui.Views;
+using CommunityToolkit.Maui.Core;
+using projectFrameCut.Services;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Asset;
+using projectFrameCut.ViewModels;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Effect;
+using System.Runtime;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using CommunityToolkit.Maui.Alerts;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Effect;
+using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using System.Reflection;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Contracts;
+using System.Runtime.InteropServices;
+using projectFrameCut.ApplicationAPIBase.Project;
+using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.ApplicationAPIBase.Workspace;
+using projectFrameCut.ApplicationAPIBase.Workspace.Modules;
+using projectFrameCut.InteractableEditor;
+using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.ApplicationPluginBase.Effect;
+using CommunityToolkit.Maui.Extensions;
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Interaction;
+using System.Security.Cryptography;
+using System.Globalization;
+using System.Text.Json.Nodes;
+
+#if WINDOWS
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
+using System.Reflection.Metadata.Ecma335;
+
+#endif
+
+#if iDevices
+using Foundation;
+using UIKit;
+using MobileCoreServices;
+#if IOS
+using projectFrameCut.Render.HwAccelEngine.Platforms.iOS;
+#endif
+#endif
+
+#if ANDROID
+using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
+using projectFrameCut.Render.HwAccelEngine;
+using Microsoft.Maui.Platform;
+#endif
+
+namespace projectFrameCut;
+
+public partial class DraftPage : ContentPage, IDraftPage
+{
+    #region handle changes
+    private void TryMoveToInitialPreviewFrame(DraftStructureJSON draft)
+    {
+        if (_hasResolvedInitialPreviewFrame)
+        {
+            return;
+        }
+
+        _hasResolvedInitialPreviewFrame = true;
+
+        if (_selected is not null || _selectedClipIds.Count > 0)
+        {
+            return;
+        }
+
+        if (_currentFrame > 0 || draft.Clips is null || draft.Clips.Length == 0)
+        {
+            return;
+        }
+
+        var firstVisualStartFrame = draft.Clips
+            .Where(c => c.ShouldDisplayInUI && c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
+            .Select(c => (double)c.StartFrame)
+            .DefaultIfEmpty(0)
+            .Min();
+
+        if (firstVisualStartFrame <= 0)
+        {
+            return;
+        }
+
+        _currentFrame = firstVisualStartFrame;
+        SyncClipEditorCurrentFrame();
+        UpdatePlayheadPosition();
+        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
+    }
+
+    private bool IsRenderBackendRecovering => !IsRemoteProject &&
+        (Volatile.Read(ref _renderBackendRecoveryPending) != 0 || RenderRpcBootstrap.WorkerExitTask?.IsCompletedSuccessfully == true);
+
+    private bool IsRenderBackendConnectionFailure(Exception ex) => !IsRemoteProject &&
+        (ex is RenderPipeException || ((ex is IOException or ObjectDisposedException) && IsRenderBackendRecovering));
+
+    private void StartRenderBackendWatchdog()
+    {
+        if (IsRemoteProject || _renderBackendWatchdogCts is not null) return;
+
+        var cts = new CancellationTokenSource();
+        _renderBackendWatchdogCts = cts;
+        _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
+        var token = cts.Token;
+        _ = Task.Run(() => MonitorRenderBackendAsync(token));
+        _ = Task.Run(() => MonitorRenderBackendExitAsync(token));
+        _ = Task.Run(() => MonitorExternalRpcRequestsAsync(token));
+        _ = Task.Run(() => MonitorGuiRpcAsync(token));
+    }
+
+    private void StopRenderBackendWatchdog()
+    {
+        var cts = Interlocked.Exchange(ref _renderBackendWatchdogCts, null);
+        if (cts is null) return;
+        try { cts.Cancel(); } catch { }
+        cts.Dispose();
+    }
+
+    private async Task MonitorRenderBackendAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(RenderBackendHealthCheckIntervalMs, cancellationToken).ConfigureAwait(false);
+                if (AlreadyDisappeared || _renderBackendRestartLock.CurrentCount == 0) continue;
+
+                RenderRpcBootstrap.TryGetClient(out var client);
+                if (Volatile.Read(ref _renderBackendRecoveryPending) != 0)
+                {
+                    if (Environment.TickCount64 < Volatile.Read(ref _renderBackendRetryAfter)) continue;
+                    await RestartRenderBackendAsync(showErrorDialog: false, expectedClient: client,
+                        checkCurrentClient: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                bool connected = false;
+                if (client is not null)
+                {
+                    using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    probeCts.CancelAfter(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        await RenderServerProcessManager.ProbeAsync(client, probeCts.Token).ConfigureAwait(false);
+                        connected = true;
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                    {
+                        Log(ex, "Probe render RPC backend connection", this);
+                    }
+                }
+
+                if (connected)
+                {
+                    _renderBackendDisconnectedSinceUtc = null;
+                    continue;
+                }
+
+                var now = DateTime.UtcNow;
+                _renderBackendDisconnectedSinceUtc ??= now;
+                if (now - _renderBackendDisconnectedSinceUtc < RenderBackendReconnectTimeout) continue;
+
+                _renderBackendDisconnectedSinceUtc = now;
+                await RestartRenderBackendAsync(showErrorDialog: false, captureThreadStacks: true, expectedClient: client,
+                    checkCurrentClient: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Monitor render RPC backend", this);
+            }
+        }
+    }
+
+    private async Task MonitorRenderBackendExitAsync(CancellationToken cancellationToken)
+    {
+        var nextRestart = DateTime.MinValue;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var exitedWorker = RenderRpcBootstrap.WorkerExitTask;
+                if (exitedWorker is null)
+                {
+                    await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+                await exitedWorker.WaitAsync(cancellationToken).ConfigureAwait(false);
+                if (AlreadyDisappeared) return;
+                if (!ReferenceEquals(exitedWorker, RenderRpcBootstrap.WorkerExitTask)) continue;
+                var delay = Math.Max((long)(nextRestart - DateTime.UtcNow).TotalMilliseconds,
+                    Volatile.Read(ref _renderBackendRetryAfter) - Environment.TickCount64);
+                if (delay > 0) await Task.Delay(TimeSpan.FromMilliseconds(delay), cancellationToken).ConfigureAwait(false);
+                await RestartRenderBackendAsync(showErrorDialog: false, exitedWorker: exitedWorker,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                nextRestart = DateTime.UtcNow.AddSeconds(5);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
+            catch (Exception ex)
+            {
+                Log(ex, "Monitor render RPC backend process", this);
+                try { await Task.Delay(5000, cancellationToken).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
+            }
+        }
+    }
+
+    private async Task RestartRenderBackendAsync(bool showErrorDialog, bool captureThreadStacks = false,
+        Task? exitedWorker = null, IRenderClient? expectedClient = null, bool checkCurrentClient = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (IsRemoteProject)
+        {
+            if (showErrorDialog)
+                await DisplayAlertAsync(Localized._Info, Localized.DraftPage_RestartBackend_RemoteUnavailable, Localized._OK);
+            return;
+        }
+
+        if (!cancellationToken.CanBeCanceled)
+        {
+            try { cancellationToken = _renderBackendWatchdogCts?.Token ?? cancellationToken; }
+            catch (ObjectDisposedException) { return; }
+        }
+        try { await _renderBackendRestartLock.WaitAsync(cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
+        try
+        {
+            if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
+            RenderRpcBootstrap.TryGetClient(out var currentClient);
+            if (checkCurrentClient && !ReferenceEquals(currentClient, expectedClient)) return;
+            if (exitedWorker is not null && !ReferenceEquals(exitedWorker, RenderRpcBootstrap.WorkerExitTask)) return;
+            Volatile.Write(ref _renderBackendRecoveryPending, 1);
+            if (exitedWorker is not null) Log("Render RPC backend exited unexpectedly; restarting.", "warning");
+#if WINDOWS && DEBUG
+            if (captureThreadStacks)
+                await Task.Run(RenderRpcBootstrap.CaptureThreadStacksBeforeRestart).ConfigureAwait(false);
+#endif
+            await Dispatcher.DispatchAsync(() =>
+            {
+                if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
+                SetStateBusy();
+                SetStatusText(Localized.DraftPage_RestartBackend_Restarting);
+                CancelDynamicPreview();
+                DynamicPreviewProvider.CancelClipWarmups();
+            });
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var pause = isPlaying || previewer.HasDynamicPreview ? PauseLivePreview(refreshPreview: false) : Task.CompletedTask;
+            var restart = Task.Run(() => RenderRpcBootstrap.Restart(WorkingPath, ProjectName, currentClient, cancellationToken));
+            await Task.WhenAll(pause, restart).ConfigureAwait(false);
+            if (!await restart.ConfigureAwait(false))
+            {
+                Volatile.Write(ref _renderBackendRecoveryPending, 0);
+                Volatile.Write(ref _renderBackendRetryAfter, 0);
+                Interlocked.Exchange(ref _renderBackendRecoveryFailures, 0);
+                return;
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (AlreadyDisappeared) return;
+            await previewer.RestoreBackendAsync(() => MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                if (AlreadyDisappeared) throw new OperationCanceledException();
+                return DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+            }), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!AlreadyDisappeared)
+            {
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
+                    DynamicPreviewProvider.SetClips(previewer.Clips);
+                    var refresh = RefreshPreviewFromCurrentProviderAsync(cancellationToken);
+                    try { await refresh.WaitAsync(cancellationToken); }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        _ = refresh.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        throw;
+                    }
+                    if (AlreadyDisappeared || cancellationToken.IsCancellationRequested) return;
+                    SetStateOK();
+                    SetStatusText(Localized.DraftPage_RestartBackend_Succeeded);
+                });
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (AlreadyDisappeared) return;
+            _renderBackendDisconnectedSinceUtc = null;
+            Interlocked.Exchange(ref _renderBackendRecoveryFailures, 0);
+            Volatile.Write(ref _renderBackendRetryAfter, 0);
+            Volatile.Write(ref _renderBackendRecoveryPending, 0);
+            Log("Render RPC backend restarted and project session restored.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || AlreadyDisappeared) { }
+        catch (Exception ex)
+        {
+            _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
+            var failures = Math.Min(Interlocked.Increment(ref _renderBackendRecoveryFailures), 4);
+            Volatile.Write(ref _renderBackendRetryAfter, Environment.TickCount64 + Math.Min(30000, 5000L << (failures - 1)));
+            Log(ex, "Restart render RPC backend", this);
+            if (!AlreadyDisappeared)
+            {
+                await Dispatcher.DispatchAsync(() =>
+                {
+                    SetStateFail($"{Localized.DraftPage_RestartBackend_Failed} {Localized._ExceptionTemplate(ex)}");
+                });
+                if (showErrorDialog)
+                    await DisplayAlertAsync(Localized._Error, $"{Localized.DraftPage_RestartBackend_Failed} {Localized._ExceptionTemplate(ex)}", Localized._OK);
+            }
+        }
+        finally
+        {
+            _renderBackendRestartLock.Release();
+        }
+    }
+
+    private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
+    {
+        // RPC requests await their own draft update after applying all changes.
+        if (!IsGuiRpcRequest) await DraftChangedAsync(sender, e);
+    }
+
+    private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e, bool throwOnFailure = false,
+        CancellationToken cancellationToken = default)
+    {
+        throwOnFailure |= IsGuiRpcRequest || e.Operator == ClipChangeOperatorKind.ExternalRPC;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (IsGuiBatchOverlayVisible && e.DetailInfo != "RPC batch") return;
+        if (e.DetailInfo == "__EFFECT_BINDING_CHANGED__")
+        {
+            if (!IsReadonly && !AlreadyDisappeared && !e.NoSave) ScheduleSnapshotSave(e);
+            return;
+        }
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var changeMark = new UserMarkRange("Draft.ApplyChanges", $"reason={e.Reason}, clip={e.SourceId}");
+#endif
+        using var busy = new PreviewBusyScope(this);
+        CancelGeneratedSoundTrackSync();
+        if (AlreadyDisappeared) return;
+        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview(refreshPreview: false);
+        if (AlreadyDisappeared) return;
+        CancelDynamicPreview();
+        DynamicPreviewProvider.CancelClipWarmups();
+
+        if (string.IsNullOrEmpty(WorkingPath))
+        {
+            SetStateFail(Localized.DraftPage_CannotSave_NoPath);
+        }
+        if (IsReadonly)
+        {
+            SetStateFail(Localized.DraftPage_CannotSave_Readonly);
+        }
+
+        foreach (var item in Clips)
+        {
+            if (!item.Value.isInfiniteLength && item.Value.lengthInFrame > item.Value.maxFrameCount)
+            {
+                SetStateFail($"Clip {item.Key} has a invalid length {item.Value.lengthInFrame} frames, larger than it's source {item.Value.maxFrameCount}.");
+            }
+        }
+        if (!IsReadonly && (!e?.NoSave ?? false))
+        {
+            ScheduleSnapshotSave(e);
+        }
+
+        UpdatePlayheadHeight();
+        DraftStructureJSON d = null!;
+        SetStateBusy();
+        SetStatusText(Localized.DraftPage_ApplyingChanges);
+
+        try
+        {
+            bool usePreparedRenderProject = Interlocked.Exchange(ref _renderProjectPrepared, 0) == 1;
+            await Dispatcher.DispatchAsync(() =>
+            {
+                if (AlreadyDisappeared) return;
+                d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+            });
+            if (AlreadyDisappeared) return;
+            if (!usePreparedRenderProject) await previewer.UpdateDraft(d, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (AlreadyDisappeared) return;
+            ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
+            TryMoveToInitialPreviewFrame(d);
+            {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                using var editorMark = new UserMarkRange("Preview.UpdateEditors", $"clips={Clips.Count}");
+#endif
+                DynamicPreviewProvider.SetClips(previewer.Clips);
+                await ClipEditor.UpdateClips(Clips, updateVisuals: false);
+                SyncClipEditorCurrentFrame();
+            }
+            if (e.Reason == ClipUpdateReason.PropertyChanged)
+                await RefreshPreviewAfterPropertyChangeAsync(throwOnFailure || e.Operator != ClipChangeOperatorKind.User, cancellationToken);
+            else
+                await RefreshPreviewFromCurrentProviderAsync(cancellationToken, throwOnFailure || e.Operator != ClipChangeOperatorKind.User);
+            if (AlreadyDisappeared) return;
+            if (e.Reason == ClipUpdateReason.PropertyChanged && e.SourceId is Guid clipId && ShouldWarmClipPreview(e.DetailInfo))
+                StartClipPreviewWarmup(clipId);
+            SetStatusText(Localized.DraftPage_ChangesApplied);
+            SetStateOK();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (OperationCanceledException ex)
+        {
+            Log(ex, "Draft update cancelled during render RPC shutdown", this);
+            if (throwOnFailure) throw;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "apply change", this);
+            if (throwOnFailure) throw;
+            if (AlreadyDisappeared || IsRenderBackendRecovering || IsRenderBackendConnectionFailure(ex)) return;
+            SetStateFail(Localized._ExceptionTemplate(ex));
+            if (e.Operator != ClipChangeOperatorKind.User) return;
+#if DEBUG
+            if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), "Throw", Localized._OK)) throw;
+#else
+            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), Localized._OK);
+#endif
+
+        }
+
+    }
+
+    private async Task OnClipEditorUpdate()
+    {
+        using var busy = new PreviewBusyScope(this);
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var editorMark = new UserMarkRange("Draft.EditorUpdate");
+#endif
+        if (AlreadyDisappeared) return;
+
+        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
+        if (AlreadyDisappeared) return;
+        CancelDynamicPreview();
+        DynamicPreviewProvider.CancelClipWarmups();
+        var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+        await previewer.UpdateDraft(d);
+        DynamicPreviewProvider.SetClips(previewer.Clips);
+
+        var currentX = PlayheadLine.TranslationX - TrackHeadLayout.Width + TimelineScrollView.ScrollX;
+        if (currentX < 0) currentX = 0;
+        var duration = PixelToFrame(currentX);
+        _currentFrame = duration;
+        SyncClipEditorCurrentFrame();
+
+        if (UseDynamicPreview)
+        {
+            await RefreshDynamicPreviewOverlay();
+        }
+        else
+        {
+            await RenderOneFrame(duration);
+        }
+
+        ScheduleAutoSave();
+    }
+
+    private void ScheduleAutoSave()
+    {
+        _autoSaveCts?.Cancel();
+        _autoSaveCts?.Dispose();
+        _autoSaveCts = new CancellationTokenSource();
+        var cts = _autoSaveCts;
+
+        _ = Task.Delay(AutoSaveDelayMs, cts.Token).ContinueWith(async _ =>
+        {
+            if (cts.Token.IsCancellationRequested) return;
+            try
+            {
+                await Save(noSlot: true);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "auto-save failed", this);
+            }
+        }, TaskContinuationOptions.RunContinuationsAsynchronously);
+    }
+
+    private void ScheduleSnapshotSave(ClipUpdateEventArgs e)
+    {
+        if (AlreadyDisappeared || IsReadonly || string.IsNullOrWhiteSpace(WorkingPath))
+        {
+            return;
+        }
+
+        lock (_snapshotSaveGate)
+        {
+            _pendingSnapshotSaveArgs = e;
+            _snapshotSaveCts?.Cancel();
+            _snapshotSaveCts?.Dispose();
+            _snapshotSaveCts = new CancellationTokenSource();
+            var cts = _snapshotSaveCts;
+            var token = cts.Token;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(SnapshotSaveDebounceMs, token);
+                    if (token.IsCancellationRequested || AlreadyDisappeared || IsReadonly || string.IsNullOrWhiteSpace(WorkingPath))
+                    {
+                        return;
+                    }
+
+                    ClipUpdateEventArgs? pendingArgs;
+                    lock (_snapshotSaveGate)
+                    {
+                        pendingArgs = _pendingSnapshotSaveArgs;
+                    }
+
+                    if (pendingArgs is null) return;
+                    await SaveCoreAsync(false, pendingArgs, false, token);
+                    MarkHistoryPanelDirty();
+                }
+                catch (TaskCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "snapshot save failed", this);
+                }
+            }, token);
+        }
+    }
+
+    private void MarkHistoryPanelDirty()
+    {
+        _historyPanelDirty = true;
+        if (MainMultiWindowView.Children.Contains(HistorySubWindow))
+        {
+            RefreshHistorySubWindowContent();
+        }
+    }
+
+    private void RefreshHistorySubWindowContent()
+    {
+        try
+        {
+            HistorySubWindow.Content = new DraftSettingPage(this, historyOnly: true).HistoryTabContent;
+            _historyPanelDirty = false;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "refresh history panel", this);
+        }
+    }
+
+
+    private async void PlayheadTapped(object? sender, TappedEventArgs e)
+    {
+        try
+        {
+            // RulerLayout and PlayheadLine are both children of LowerContent, so the ruler's
+            // local X is also the playhead's viewport X. Keep this conversion entirely in the
+            // timeline window's coordinate space: a floating MultiWindowItem may be translated
+            // relative to the page, and including that page offset would turn window movement
+            // into an apparent timeline offset.
+            var p = e.GetPosition(RulerLayout);
+            if (p is null || p.Value.X < TrackHeadLayout.Width) return;
+
+            double timelineX = p.Value.X - TrackHeadLayout.Width + TimelineScrollView.ScrollX;
+            if (timelineX >= 0)
+            {
+                // Clip edges and the snap grid are expressed in timeline-content coordinates,
+                // not viewport/page coordinates.
+                double snappedTimelineX = SnapPixels(timelineX);
+                var duration = EditPixelToFrame(snappedTimelineX);
+                _currentFrame = duration;
+                SyncClipEditorCurrentFrame();
+                UpdatePlayheadPosition();
+                CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(duration * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
+
+                // Debounce overlapping clicks so only the latest playhead position is rendered. The
+                // playhead/label above already moved synchronously; RenderOneFrame additionally
+                // supersedes any in-flight render so a burst of clicks can never wedge the preview.
+                _movePlayheadDebounceCts?.Cancel();
+                _movePlayheadDebounceCts = new CancellationTokenSource();
+                var renderToken = _movePlayheadDebounceCts.Token;
+                try
+                {
+                    await Task.Delay(120, renderToken);
+                    if (!renderToken.IsCancellationRequested)
+                    {
+                        await RenderOneFrame(duration);
+                    }
+                }
+                catch (TaskCanceledException) { }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "playhead tap", this);
+        }
+    }
+
+    private void TimelineScrollView_Scrolled(object sender, ScrolledEventArgs e)
+    {
+        if (AlreadyDisappeared) return;
+        UpdatePlayheadPosition(e.ScrollX);
+        RulerLayout.Invalidate();
+        NotifyClipPreviewsScrollChanged(e.ScrollX);
+    }
+
+    private void NotifyClipPreviewsScrollChanged(double scrollX)
+    {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var scrollMark = new UserMarkRange("Timeline.ScrollPreviews", $"scrollX={scrollX}, previews={_activeClipPreviews.Count}");
+#endif
+        ScheduleClipPreviewViewportUpdate();
+    }
+
+    private async Task MovePlayhead(int deltaFrames)
+    {
+        var targetFrame = _currentFrame + deltaFrames;
+        if (targetFrame < 0) targetFrame = 0;
+        _currentFrame = targetFrame;
+        SyncClipEditorCurrentFrame();
+
+        UpdatePlayheadPosition();
+        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
+
+        var timeX = FrameToPixel((uint)_currentFrame);
+
+        // Auto Scroll
+        var scrollX = TimelineScrollView.ScrollX;
+        var viewportWidth = TimelineScrollView.Width;
+
+        if (viewportWidth > 0)
+        {
+            double margin = 50;
+
+            if (timeX < scrollX + margin)
+            {
+                await TimelineScrollView.ScrollToAsync(Math.Max(0, timeX - margin), 0, true);
+                // After scrolling, the playhead position (overlay) needs update? 
+                // The ScrollView.Scrolled event usually handles this, but calling it manually ensures sync.
+                UpdatePlayheadPosition();
+            }
+            else if (timeX > scrollX + viewportWidth - margin)
+            {
+                await TimelineScrollView.ScrollToAsync(timeX - viewportWidth + margin, 0, true);
+                UpdatePlayheadPosition();
+            }
+        }
+
+        // Render Logic
+        _movePlayheadDebounceCts?.Cancel();
+
+        if (previewer.IsFrameRendered((uint)_currentFrame))
+        {
+            await RenderOneFrame((uint)_currentFrame);
+        }
+        else
+        {
+            _movePlayheadDebounceCts = new CancellationTokenSource();
+            var token = _movePlayheadDebounceCts.Token;
+            try
+            {
+                await Task.Delay(200, token);
+                if (!token.IsCancellationRequested)
+                {
+                    await RenderOneFrame((uint)_currentFrame);
+                }
+            }
+            catch (TaskCanceledException) { }
+        }
+    }
+
+    private void UpdatePlayheadPosition() => UpdatePlayheadPosition(TimelineScrollView.ScrollX);
+
+    private void UpdatePlayheadPosition(double scrollX)
+    {
+        if (IsPreviewForm)
+        {
+            UpdatePreviewFormPlaybackControls();
+            return;
+        }
+        double timeX = FrameToPixel((uint)_currentFrame);
+        double screenX = timeX + TrackHeadLayout.Width - scrollX;
+        PlayheadLine.TranslationX = screenX;
+    }
+
+    private void UpdatePlayheadHeight()
+    {
+        PlayheadLine.HeightRequest = Math.Max(0, RulerLayout.Height) + Math.Max(0, TracksAndClipsLayout.Height);
+    }
+
+    public void UpdateTimelineWidth()
+    {
+        if (!Inited) return;
+        double maxPixel = 0;
+        foreach (var clip in Clips.Values)
+        {
+            if (clip.IsGhost || clip.IsShadow || clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft")) continue;
+            var range = GetClipFrameRange(clip);
+            double end = ((double)range.Start + range.Duration) / (FramePerPixel * tracksZoomOffest);
+            if (end > maxPixel) maxPixel = end;
+        }
+
+        ProjectDuration = GetTimelineDuration();
+        UpdatePreviewFormPlaybackControls();
+        maxPixel += 50;
+
+        double minWidth = Math.Max(1000d, Window?.Width ?? 2000 + 200);
+        if (maxPixel < minWidth) maxPixel = minWidth;
+
+        TimelineContentLayout.WidthRequest = maxPixel;
+        RulerLayout.Invalidate();
+
+        // 更新所有ext endToWholeDraft的clips，使其能延伸到整个项目
+        UpdateAllExtendToWholeDraftClips();
+        InvalidateClipPreviewViewport();
+    }
+
+    [DebuggerNonUserCode()] //too annoying in step-through debugging
+    internal IClip? GetLoadedClipInstance(Guid clipId)
+    {
+        return previewer?.Clips?.FirstOrDefault(c => c.Id == clipId);
+    }
+
+    internal IClip? GetOrCreateClipInstance(ClipElementUI element)
+    {
+        if (GetLoadedClipInstance(element.Id) is IClip c) return c;
+        try
+        {
+            return PluginManager.CreateClip(JsonSerializer.SerializeToElement(DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, element)));
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Create clip instance for {element.Id} failed", this);
+            return null;
+        }
+    }
+
+    [DebuggerNonUserCode()]
+    private IClip? OnGetClipInstanceCallback(ClipElementUI element) => GetOrCreateClipInstance(element);
+
+    #endregion
+
+    #region save, undo and redo
+    public Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false)
+        => SaveCoreAsync(noSlot, args, throwOnFailure);
+
+    private async Task SaveCoreAsync(bool noSlot, ClipUpdateEventArgs? args, bool throwOnFailure,
+        CancellationToken snapshotSaveToken = default, Guid requestedSnapshotId = default, Guid? previousSnapshotId = null,
+        DraftStructureJSON? preparedDraft = null)
+    {
+        throwOnFailure |= IsGuiRpcRequest || args?.Operator == ClipChangeOperatorKind.ExternalRPC;
+        if (_guiBatch is not null && requestedSnapshotId == Guid.Empty) return;
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var saveMark = new UserMarkRange("Draft.Save", $"noSlot={noSlot}");
+#endif
+        if (string.IsNullOrEmpty(WorkingPath))
+        {
+            if (throwOnFailure) throw new InvalidOperationException("Project working path is empty.");
+            Log("saving failed: working path is empty", "warn");
+            SetStateFail(Localized.DraftPage_CannotSave_NoPath);
+            return;
+        }
+        if (IsReadonly)
+        {
+            if (throwOnFailure) throw new InvalidOperationException("Project is read-only.");
+            Log("saving failed: project is read-only", "warn");
+            SetStateFail(Localized.DraftPage_CannotSave_Readonly);
+            return;
+        }
+        await saveLocker.WaitAsync();
+        try
+        {
+            if (snapshotSaveToken.IsCancellationRequested) return;
+            lock (_snapshotSaveGate)
+            {
+                args = _pendingSnapshotSaveArgs ?? args;
+                _pendingSnapshotSaveArgs = null;
+                _snapshotSaveCts?.Cancel();
+            }
+            DraftStructureJSON draft = null!;
+            List<AssetItem> assets = null!;
+            await Dispatcher.DispatchAsync(() =>
+            {
+                draft = preparedDraft ?? DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
+                assets = Assets.Values.ToList();
+            });
+            var timelineModule = _workspace.GetModule<TimelineModule>();
+            var assetModule = _workspace.GetModule<AssetModule>();
+            timelineModule.Reset(draft.Clips);
+            assetModule.Reset(assets);
+
+            if (_remoteProjectSession is not null)
+            {
+                ProjectInfo.LastChanged = DateTime.Now;
+                ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
+                ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+                ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
+                ProjectInfo.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
+                ProjectInfo.ProjectName ??= ProjectName;
+                ProjectDuration = draft.Duration;
+                try
+                {
+                    await _remoteProjectSession.ApplyAndSaveAsync(
+                        ProjectInfo,
+                        draft,
+                        assets,
+                        args?.ToString() ?? (noSlot ? "Auto-save" : "Save"));
+                }
+                catch (RemoteRenderException ex) when (ex.ErrorCode == RenderErrorCode.VersionConflict)
+                {
+                    if (throwOnFailure) throw;
+                    Log("Remote project was modified by another client; local changes conflict with the server.", "warn");
+                    SetStateFail(Localized.DraftPage_RemoteProject_ModifiedOnServer);
+                    if (!noSlot)
+                    {
+                        bool sync = await DisplayAlertAsync(
+                            Localized._Info,
+                            Localized.DraftPage_RemoteProject_ModifiedOnServer,
+                            Localized.DraftPage_RemoteProject_SyncFromServer,
+                            Localized._Cancel);
+                        if (sync) await SyncRemoteProjectFromServerAsync();
+                    }
+                    return;
+                }
+                _workspace.GetModule<ProjectModule>().MarkClean();
+                SetStateOK(Localized.DraftPage_EverythingFine);
+                return;
+            }
+
+            bool createSnapshot = !noSlot || args is not null || CurrentSnapshotID == Guid.Empty || FindSlotDirectory(CurrentSnapshotID) is null;
+            if (createSnapshot && await HasSameTimelineAsync(draft, assets, previousSnapshotId ?? CurrentSnapshotID))
+            {
+                createSnapshot = false;
+                LogDiagnostic("Timeline unchanged; skipping duplicate history snapshot.");
+            }
+            if (createSnapshot)
+            {
+                var snapshotId = requestedSnapshotId == Guid.Empty ? Guid.NewGuid() : requestedSnapshotId;
+                var slot = $"slot_{snapshotId}";
+                if (args is not null)
+                {
+                    draft.ChangeReason = args.ToString();
+                    draft.DetailedChangeReason = args.DetailInfo ?? string.Empty;
+                }
+                draft.Operator = args?.Operator ?? ClipChangeOperatorKind.User;
+                draft.OperatorDetailName = args?.OperatorDetailName ?? string.Empty;
+                draft.ChangedByUserDisplayName = SettingsManager.GetSetting("UserName", "User");
+                draft.ChangedByUser = SettingsManager.GetSettingAs("UserID", Guid.Empty, Guid.Empty);
+                draft.PreviousSnapshot = previousSnapshotId ?? CurrentSnapshotID;
+                draft.SnapshotID = snapshotId;
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), draft);
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), assets);
+                // Publish the pointer only after both snapshot files are durable.
+                await WriteCurrentSnapshotAsync(draft, slot, true);
+                ProjectInfo.SnapshotIDMapping[snapshotId] = new ProjectJSONStructure.SnapshotIDMappingStructure
+                {
+                    Previous = draft.PreviousSnapshot
+                };
+                if (ProjectInfo.SnapshotIDMapping.TryGetValue(draft.PreviousSnapshot, out var prevEntry)
+                    && !prevEntry.Next.Contains(snapshotId))
+                    prevEntry.Next.Add(snapshotId);
+                // A batch can still be rolled back until its commit finishes.
+                if (MaximumSaveSlot >= 0 && requestedSnapshotId == Guid.Empty) await PruneOldestSaveSlotsAsync();
+                _historyNavigatedByUndoRedo = false;
+            }
+            else
+            {
+                if (_currentSnapshot is null)
+                {
+                    var path = FindSlotDirectory(CurrentSnapshotID)!;
+                    InitializeCurrentSnapshot(JsonSerializer.Deserialize<DraftStructureJSON>(
+                        File.ReadAllText(Path.Combine(path, "timeline.json")), savingOpts)
+                        ?? throw new InvalidDataException("Current snapshot timeline is invalid."), Path.GetFileName(path));
+                }
+                _currentSnapshot.CopyTo(draft);
+            }
+
+            if (noSlot)
+            {
+                await Task.Run(SaveProjectThumbnailBeforeExit);
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "timeline.json"), draft);
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "assets.json"), assets);
+            }
+            ProjectInfo.NormallyExited = noSlot;
+
+            ProjectDuration = draft.Duration;
+            ProjectInfo.LastChanged = DateTime.Now;
+            ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
+            ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+            ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
+            ProjectInfo.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
+            ProjectInfo.PluginUsed =
+                draft.Clips
+                           .Select(c => c.FromPlugin)
+                           .Concat(draft.Clips.SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.SelectMany(c => c.EffectProviders?.Select(eff => eff.FromPlugin) ?? []))
+                           .Where(c => !c.StartsWith("projectFrameCut.Render."))
+                           .Distinct().ToList();
+
+            if (ProjectInfo.ProjectUniqueId == Guid.Empty)
+            {
+                ProjectInfo.ProjectUniqueId = Guid.NewGuid();
+            }
+
+            if (ClipEditor != null)
+            {
+                ProjectInfo.Properties["InteractableEditor_LockLayout"] = ClipEditor.LockLayout.ToString();
+                ProjectInfo.Properties["InteractableEditor_EnableSnapping"] = ClipEditor.EnableSnapping.ToString();
+                ProjectInfo.Properties["InteractableEditor_DisallowClipOutOfBounds"] = ClipEditor.DisallowClipOutOfBounds.ToString();
+                ProjectInfo.Properties["InteractableEditor_ShowReferenceLines"] = ClipEditor.ShowReferenceLines.ToString();
+                ProjectInfo.Properties["InteractableEditor_EnableKeyframeRecording"] = ClipEditor.EnableKeyframeRecording.ToString();
+            }
+
+            if (!AlreadyDisappeared) _workspaceWindowHost.SaveLayout();
+            await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "project.pjfc"), ProjectInfo);
+            await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, ProjectJSONStructure.SnapshotMappingFileName), ProjectInfo.SnapshotIDMapping);
+            if (noSlot)
+            {
+                bool isDirty;
+                lock (_snapshotSaveGate) isDirty = _pendingSnapshotSaveArgs is not null;
+                await WriteCurrentSnapshotAsync(draft, _currentSnapshot!.SlotName, isDirty);
+                if (isDirty)
+                    _workspace.GetModule<ProjectModule>().MarkDirty(draft.ChangeReason);
+                else
+                    _workspace.GetModule<ProjectModule>().MarkClean();
+            }
+            else
+                _workspace.GetModule<ProjectModule>().MarkDirty(draft.ChangeReason);
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(WorkingPath);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "saving draft failed", this);
+            if (throwOnFailure) throw;
+            SetStateFail(Localized.DraftPage_CannotSave_Exception(ex));
+        }
+        finally
+        {
+            saveLocker.Release();
+        }
+
+    }
+
+    private async Task<bool> HasSameTimelineAsync(DraftStructureJSON draft, List<AssetItem> assets, Guid snapshotId)
+    {
+        var path = FindSlotDirectory(snapshotId);
+        if (path is null) return false;
+        try
+        {
+            await using var stream = File.OpenRead(Path.Combine(path, "timeline.json"));
+            var previous = await JsonSerializer.DeserializeAsync<DraftStructureJSON>(stream, savingOpts);
+            if (previous is null) return false;
+
+            // Compare timeline content without history metadata.
+            if (!System.Text.Json.Nodes.JsonNode.DeepEquals(GetTimelineContent(draft), GetTimelineContent(previous))) return false;
+            await using var assetStream = File.OpenRead(Path.Combine(path, "assets.json"));
+            var previousAssets = await JsonSerializer.DeserializeAsync<List<AssetItem>>(assetStream, savingOpts);
+            return System.Text.Json.Nodes.JsonNode.DeepEquals(
+                JsonSerializer.SerializeToNode(assets.OrderBy(a => a.AssetId), savingOpts),
+                JsonSerializer.SerializeToNode(previousAssets?.OrderBy(a => a.AssetId), savingOpts));
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Compare previous timeline snapshot failed", this);
+            return false;
+        }
+    }
+
+    private static System.Text.Json.Nodes.JsonNode? GetTimelineContent(DraftStructureJSON draft)
+        => JsonSerializer.SerializeToNode(new
+        {
+            draft.ProjectSettings,
+            draft.Clips,
+            draft.SoundTracks,
+            draft.Duration,
+            draft.AudioDuration
+        }, savingOpts);
+
+    private List<SaveSlotMeta> GetSaveSlotsSortedByTime()
+    {
+        List<SaveSlotMeta> slots = [];
+        if (string.IsNullOrWhiteSpace(WorkingPath))
+        {
+            return slots;
+        }
+
+        var saveRoot = Path.Combine(WorkingPath, "saveSlots");
+        if (!Directory.Exists(saveRoot))
+        {
+            return slots;
+        }
+
+        foreach (var dir in Directory.GetDirectories(saveRoot, "slot_*"))
+        {
+            var folderName = Path.GetFileName(dir);
+            if (string.IsNullOrWhiteSpace(folderName) || !folderName.StartsWith("slot_"))
+            {
+                continue;
+            }
+
+            var timelinePath = Path.Combine(dir, "timeline.json");
+            if (!File.Exists(timelinePath))
+            {
+                continue;
+            }
+
+            try
+            {
+                var tml = File.ReadAllText(timelinePath);
+                var draft = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
+                if (draft is null)
+                {
+                    continue;
+                }
+
+                var snapshotId = draft.SnapshotID;
+                if (snapshotId == Guid.Empty)
+                {
+                    continue;
+                }
+
+                DateTime savedAtUtc;
+                if (draft.SavedAt == default)
+                {
+                    savedAtUtc = File.GetLastWriteTimeUtc(timelinePath);
+                }
+                else
+                {
+                    savedAtUtc = draft.SavedAt.Kind switch
+                    {
+                        DateTimeKind.Utc => draft.SavedAt,
+                        DateTimeKind.Local => draft.SavedAt.ToUniversalTime(),
+                        _ => DateTime.SpecifyKind(draft.SavedAt, DateTimeKind.Local).ToUniversalTime()
+                    };
+                }
+
+                slots.Add(new SaveSlotMeta
+                {
+                    SnapshotID = snapshotId,
+                    SavedAtUtc = savedAtUtc
+                });
+            }
+            catch
+            {
+                // Ignore broken slot data to keep undo/redo usable.
+            }
+        }
+
+        return slots
+            .OrderBy(x => x.SavedAtUtc)
+            .ThenBy(x => x.SnapshotID)
+            .ToList();
+    }
+
+    private SaveSlotMeta? GetPreviousSlot()
+    {
+        if (CurrentSnapshotID == Guid.Empty
+            || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var entry)
+            || entry.Previous == Guid.Empty)
+        {
+            return null;
+        }
+
+        return new SaveSlotMeta { SnapshotID = entry.Previous, SavedAtUtc = DateTime.MinValue };
+    }
+
+    private List<SaveSlotMeta> GetNextSlots()
+    {
+        if (CurrentSnapshotID == Guid.Empty
+            || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var entry)
+            || entry.Next.Count == 0)
+        {
+            return new List<SaveSlotMeta>();
+        }
+
+        return entry.Next.Select(id =>
+        {
+            var savedAt = GetSlotSavedAt(id);
+            return new SaveSlotMeta { SnapshotID = id, SavedAtUtc = savedAt };
+        }).ToList();
+    }
+
+    private DateTime GetSlotSavedAt(Guid snapshotId)
+    {
+        var slotPath = FindSlotDirectory(snapshotId);
+        if (slotPath is null) return DateTime.MinValue;
+        var timelinePath = Path.Combine(slotPath, "timeline.json");
+        if (!File.Exists(timelinePath)) return DateTime.MinValue;
+        try
+        {
+            using var stream = File.OpenRead(timelinePath);
+            using var json = JsonDocument.Parse(stream);
+            return json.RootElement.TryGetProperty(nameof(DraftStructureJSON.SavedAt), out var value)
+                && value.ValueKind == JsonValueKind.String && value.TryGetDateTime(out var savedAt) ? savedAt : DateTime.MinValue;
+        }
+        catch { return DateTime.MinValue; }
+    }
+
+    private void PruneNewerSaveSlotsFromCurrent()
+    {
+        if (CurrentSnapshotID == Guid.Empty
+            || !ProjectInfo.SnapshotIDMapping.TryGetValue(CurrentSnapshotID, out var curEntry))
+            return;
+
+        foreach (var nextId in curEntry.Next.ToList())
+        {
+            PruneRecursive(nextId);
+        }
+        curEntry.Next.Clear();
+        ProjectInfo.SnapshotIDMapping[CurrentSnapshotID] = curEntry;
+    }
+
+    private void PruneRecursive(Guid id)
+    {
+        if (!ProjectInfo.SnapshotIDMapping.TryGetValue(id, out var entry)) return;
+        foreach (var nextId in entry.Next.ToList())
+        {
+            PruneRecursive(nextId);
+        }
+        DeleteSlotDirectory(id);
+        ProjectInfo.SnapshotIDMapping.Remove(id);
+    }
+
+    private async Task PruneOldestSaveSlotsAsync()
+    {
+        var protectedSnapshots = ReadCurrentSnapshotRecords(WorkingPath).Select(r => r.SnapshotID).ToHashSet();
+        protectedSnapshots.Add(CurrentSnapshotID);
+        while (ProjectInfo.SnapshotIDMapping.Count > MaximumSaveSlot && MaximumSaveSlot >= 0)
+        {
+            var candidates = ProjectInfo.SnapshotIDMapping
+                .Where(kv => kv.Value.Next.Count == 0 && !protectedSnapshots.Contains(kv.Key))
+                .Select(kv => kv.Key).ToArray();
+            var leafToRemove = await Task.Run(() => candidates.Select(id => new { Key = id, SavedAt = GetSlotSavedAt(id) })
+                .OrderBy(x => x.SavedAt).FirstOrDefault());
+
+            if (leafToRemove is null || leafToRemove.Key == Guid.Empty) break;
+
+            if (ProjectInfo.SnapshotIDMapping.TryGetValue(leafToRemove.Key, out var leafEntry)
+                && leafEntry.Previous != Guid.Empty
+                && ProjectInfo.SnapshotIDMapping.TryGetValue(leafEntry.Previous, out var prevEntry))
+            {
+                prevEntry.Next.Remove(leafToRemove.Key);
+            }
+
+            await Task.Run(() => DeleteSlotDirectory(leafToRemove.Key));
+            ProjectInfo.SnapshotIDMapping.Remove(leafToRemove.Key);
+        }
+    }
+
+    private void DeleteSlotDirectory(Guid snapshotId)
+    {
+        try
+        {
+            var slotPath = Path.Combine(WorkingPath, "saveSlots", $"slot_{snapshotId}");
+            if (Directory.Exists(slotPath))
+            {
+                Directory.Delete(slotPath, true);
+                LogDiagnostic($"Pruned save slot: slot_{snapshotId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"prune save slot slot_{snapshotId}", this);
+        }
+    }
+
+    private async Task RedoChanges()
+    {
+        var nextSlots = GetNextSlots();
+        if (nextSlots is null || nextSlots.Count == 0)
+        {
+            SetStateOK(Localized.DraftPage_RedoAndUndo_NoMoreSlots);
+            return;
+        }
+        if (IsSyncCooldown()) return;
+        SetSyncCooldown();
+        var oldSlot = CurrentSnapshotID;
+        // If multiple next slots exist (branch), pick the most recently saved one
+        var nextSlot = nextSlots.Count == 1
+            ? nextSlots[0]
+            : nextSlots.OrderByDescending(s => s.SavedAtUtc).First();
+        await ApplySlot(nextSlot.SnapshotID);
+        if (CurrentSnapshotID != oldSlot)
+        {
+            _historyNavigatedByUndoRedo = true;
+        }
+    }
+
+    private async Task UndoChanges()
+    {
+        var nextSlot = GetPreviousSlot();
+        if (nextSlot is null)
+        {
+            SetStateOK(Localized.DraftPage_RedoAndUndo_NoMoreSlots);
+            return;
+        }
+        if (IsSyncCooldown()) return;
+        SetSyncCooldown();
+        var oldSlot = CurrentSnapshotID;
+        await ApplySlot(nextSlot.SnapshotID);
+        if (CurrentSnapshotID != oldSlot)
+        {
+            _historyNavigatedByUndoRedo = true;
+        }
+    }
+
+    private ProjectHistoryState GetProjectHistoryState()
+    {
+        var previous = GetPreviousSlot();
+        return new()
+        {
+            CurrentSnapshotId = CurrentSnapshotID,
+            CanUndo = previous is not null && FindSlotDirectory(previous.SnapshotID) is not null,
+            CanRedo = GetNextSlots().Any(x => FindSlotDirectory(x.SnapshotID) is not null),
+        };
+    }
+
+    private ProjectHistory GetProjectHistory()
+    {
+        var (nodes, _) = HistoryGraphDataBuilder.BuildFromDraftPage(this);
+        return new()
+        {
+            State = GetProjectHistoryState(),
+            Nodes = nodes.Select(x => new ProjectHistoryNode
+            {
+                SnapshotId = x.SnapshotID,
+                PreviousSnapshotId = x.PreviousSnapshotID,
+                NextSnapshotIds = x.NextSnapshotIDs.ToList(),
+                SavedAtUtc = x.SavedAt == default ? DateTime.MinValue : x.SavedAt.Kind switch
+                {
+                    DateTimeKind.Utc => x.SavedAt,
+                    DateTimeKind.Local => x.SavedAt.ToUniversalTime(),
+                    _ => DateTime.SpecifyKind(x.SavedAt, DateTimeKind.Local).ToUniversalTime(),
+                },
+                ChangeReason = x.ChangeReason,
+                ChangedBy = x.ChangedByUserDisplayName,
+                ChangedByUserId = x.ChangedByUser,
+                IsCurrentSnapshot = x.IsCurrentSnapshot,
+            }).ToList(),
+        };
+    }
+
+    private async Task<ProjectHistoryState> ApplyProjectHistorySnapshotAsync(Guid snapshotId, bool navigatedByUndoRedo)
+    {
+        if (snapshotId == Guid.Empty) throw new ArgumentException("SnapshotId is required.");
+        if (snapshotId == CurrentSnapshotID) return GetProjectHistoryState();
+        if (FindSlotDirectory(snapshotId) is null) throw new KeyNotFoundException("Project history snapshot not found.");
+        await ApplySlotAsync(snapshotId, throwOnFailure: true);
+        if (CurrentSnapshotID != snapshotId) throw new InvalidOperationException("Project history snapshot could not be restored.");
+        if (navigatedByUndoRedo) _historyNavigatedByUndoRedo = true;
+        return GetProjectHistoryState();
+    }
+
+    /// <summary>
+    /// Registers an <see cref="IHistoryGraphProvider"/> for this DraftPage session.
+    /// The provider's <see cref="IHistoryGraphProvider.CurrentSnapshotChanged"/> event
+    /// is raised when <see cref="ApplySlot"/> applies a new snapshot.
+    /// </summary>
+    public void RegisterHistoryProvider(IHistoryGraphProvider provider)
+    {
+        _activeHistoryProvider = provider;
+    }
+
+    public Task ApplySlot(Guid snapshotId) => ApplySlotAsync(snapshotId, IsGuiRpcRequest);
+
+    private async Task ApplySlotAsync(Guid snapshotId, bool throwOnFailure)
+    {
+        await saveLocker.WaitAsync();
+        try
+        {
+            lock (_snapshotSaveGate)
+            {
+                _snapshotSaveCts?.Cancel();
+                _pendingSnapshotSaveArgs = null;
+            }
+            LogDiagnostic($"Switching slot from {CurrentSnapshotID} to {snapshotId}...");
+            var slotPath = FindSlotDirectory(snapshotId);
+            if (slotPath is null)
+            {
+                SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
+                return;
+            }
+
+            var tml = File.ReadAllText(Path.Combine(slotPath, "timeline.json"));
+            var assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(slotPath, "assets.json")), savingOpts)
+                ?? throw new InvalidDataException("Snapshot assets are invalid.");
+            var draftJson = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
+            if (draftJson is null || draftJson.SnapshotID != snapshotId)
+            {
+                SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
+                return;
+            }
+            draftJson.ProjectSettings?.ApplyTo(ProjectInfo);
+            previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
+            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo);
+            Clips = new ConcurrentDictionary<Guid, ClipElementUI>(clips);
+            Assets = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
+            ClipEditor.SetAssets(Assets);
+
+            foreach (var item in Tracks)
+            {
+                var t = item.Value;
+                while (t.Children.Count > 0)
+                {
+                    t.Children.RemoveAt(0);
+                }
+            }
+
+            foreach (var kv in Clips.OrderBy(kv => kv.Value.origTrack ?? 0).ThenBy(kv => kv.Value.origX))
+            {
+                var item = kv.Value;
+                int t = item.origTrack ?? 0;
+                if (!Tracks.ContainsKey(t)) AddATrack(t);
+                RegisterClip(item, false);
+                AddAClip(item, false);
+            }
+
+            NormalizeLoadedClipFrameSemantics();
+            EnsureContinuousTrackIndices();
+            await UpdateAdjacencyForTrack();
+            UpdateTimelineWidth();
+            await ClipEditor.UpdateClips(Clips);
+            await RefreshRestoredSelectionAsync();
+            if (!IsReadonly && !IsRemoteProject)
+                await WriteCurrentSnapshotAsync(draftJson, Path.GetFileName(slotPath), true);
+            else
+                InitializeCurrentSnapshot(draftJson, Path.GetFileName(slotPath));
+            _workspace.GetModule<ProjectModule>().MarkDirty("Sync changes");
+            _activeHistoryProvider?.NotifyExternalSnapshotChanged();
+            RefreshHistorySubWindowContent();
+            await DraftChangedAsync(this, new() { DetailInfo = "Sync changes", NoSave = true }, throwOnFailure);
+            SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
+
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "apply changes", this);
+            if (throwOnFailure) throw;
+            SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
+        }
+        finally
+        {
+            saveLocker.Release();
+        }
+    }
+
+    private string? FindSlotDirectory(Guid snapshotId)
+    {
+        var saveRoot = Path.Combine(WorkingPath, "saveSlots");
+        if (!Directory.Exists(saveRoot))
+        {
+            return null;
+        }
+
+        // Try new format first: slot_<guid>
+        var directPath = Path.Combine(saveRoot, $"slot_{snapshotId}");
+        if (Directory.Exists(directPath) && File.Exists(Path.Combine(directPath, "timeline.json")))
+        {
+            return directPath;
+        }
+
+        // Fallback: scan directories for matching SnapshotID in timeline.json
+        foreach (var dir in Directory.GetDirectories(saveRoot, "slot_*"))
+        {
+            var timelinePath = Path.Combine(dir, "timeline.json");
+            if (!File.Exists(timelinePath))
+            {
+                continue;
+            }
+
+            try
+            {
+                var tml = File.ReadAllText(timelinePath);
+                var draft = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
+                if (draft?.SnapshotID == snapshotId)
+                {
+                    return dir;
+                }
+            }
+            catch
+            {
+                // Skip unreadable slots
+            }
+        }
+
+        return null;
+    }
+
+    private bool IsSyncCooldown() => DateTime.Now - lastSyncTime < SyncCooldown;
+    private void SetSyncCooldown() => lastSyncTime = DateTime.Now;
+
+
+    #endregion
+
+}

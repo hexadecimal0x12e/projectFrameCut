@@ -37,6 +37,7 @@ public sealed class PluginChannelWireRequest
     [ProtoMember(6)] public string Command { get; set; } = string.Empty;
     [ProtoMember(7)] public string JsonPayload { get; set; } = "{}";
     [ProtoMember(8)] public byte[] BinaryPayload { get; set; } = [];
+    [ProtoMember(9)] public PluginChannelRequestKind Kind { get; set; }
 }
 
 [ProtoContract]
@@ -46,4 +47,31 @@ public sealed class PluginChannelWireResponse
     [ProtoMember(2)] public string Error { get; set; } = string.Empty;
     [ProtoMember(3)] public string JsonPayload { get; set; } = "{}";
     [ProtoMember(4)] public byte[] BinaryPayload { get; set; } = [];
+    [ProtoMember(5)] public List<PluginChannelCommandDescriptor> Commands { get; set; } = [];
+}
+
+[ProtoContract]
+public enum PluginChannelRequestKind
+{
+    [ProtoEnum] Invoke = 0,
+    [ProtoEnum] Discover = 1,
+}
+
+[ProtoContract]
+public sealed class PluginChannelCommandDescriptor
+{
+    [ProtoMember(1)] public string Command { get; set; } = string.Empty;
+    [ProtoMember(2)] public string Description { get; set; } = string.Empty;
+    [ProtoMember(3)] public List<PluginChannelCommandParameter> Parameters { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class PluginChannelCommandParameter
+{
+    [ProtoMember(1)] public string Name { get; set; } = string.Empty;
+    [ProtoMember(2)] public string Type { get; set; } = "string";
+    [ProtoMember(3)] public string Description { get; set; } = string.Empty;
+    [ProtoMember(4)] public bool Required { get; set; }
+    [ProtoMember(5)] public string DefaultJson { get; set; } = string.Empty;
+    [ProtoMember(6)] public bool HasDefault { get; set; }
 }

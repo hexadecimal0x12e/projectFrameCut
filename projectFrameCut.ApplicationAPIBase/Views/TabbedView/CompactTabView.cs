@@ -234,6 +234,24 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 
         private async void UpdateSelection(bool raiseEvent)
         {
+            try { await UpdateSelectionAsync(raiseEvent); }
+            catch (Exception ex)
+            {
+                Log(ex, "Select compact tab", this);
+                try
+                {
+                    if (SelectedItem is { } selected)
+                    {
+                        selected.Content = new Label { Text = ex.Message, TextColor = Colors.OrangeRed, Margin = new Thickness(8) };
+                        _pendingTabContents[selected] = null;
+                    }
+                }
+                catch (Exception error) { Log(error, "Show compact tab error", this); }
+            }
+        }
+
+        private async Task UpdateSelectionAsync(bool raiseEvent)
+        {
             if (TabItems == null || TabItems.Count == 0)
             {
                 SelectedItem = null;
@@ -318,7 +336,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                     };
                 }
 
-                MainThread.BeginInvokeOnMainThread(() =>
+                await MainThread.InvokeOnMainThreadAsync(() =>
                 {
                     if (lazyContent != null)
                     {

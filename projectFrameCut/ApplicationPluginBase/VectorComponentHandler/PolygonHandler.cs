@@ -1,7 +1,8 @@
-﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent.Components;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Point = projectFrameCut.Drawing.Vector.Point;
@@ -18,9 +19,7 @@ public class PolygonHandler : BaseVectorComponentHandler
 
     protected override void AddShapeSpecificProperties(PropertyPanelBuilder builder, IVectorComponent component)
     {
-        var points = component.Parameters.TryGetValue("Points", out var val) && val is List<Point> pts
-            ? pts
-            : new List<Point>();
+        var points = ((PolygonComponent)component).GetPoints();
         int count = Math.Max(3, points.Count);
 
         builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Shape, b =>
@@ -50,7 +49,7 @@ public class PolygonHandler : BaseVectorComponentHandler
 
             // 计算当前多边形中心点和平均半径（或使用默认值）
             float cx, cy, avgRadius;
-            if (component.Parameters.TryGetValue("Points", out var val) && val is List<Point> existing && existing.Count > 0)
+            if (((PolygonComponent)component).GetPoints() is { Count: > 0 } existing)
             {
                 cx = existing.Average(p => (float)p.X);
                 cy = existing.Average(p => (float)p.Y);
@@ -87,9 +86,7 @@ public class PolygonHandler : BaseVectorComponentHandler
 
     public override IReadOnlyList<ShapeHandleDescriptor> CreateHandles(IVectorComponent component)
     {
-        var points = component.Parameters.TryGetValue("Points", out var val) && val is List<Point> pts
-            ? pts
-            : new List<Point>();
+        var points = ((PolygonComponent)component).GetPoints();
 
         var handles = new ShapeHandleDescriptor[points.Count];
         for (int i = 0; i < points.Count; i++)
@@ -110,10 +107,8 @@ public class PolygonHandler : BaseVectorComponentHandler
         if (!handleId.StartsWith("v") || !int.TryParse(handleId[1..], out int idx))
             return;
 
-        if (component.Parameters.TryGetValue("Points", out var val) && val is List<Point> pts)
-        {
-            if (idx >= 0 && idx < pts.Count)
-                pts[idx] = new Point(newX, newY);
-        }
+        var pts = ((PolygonComponent)component).GetPoints();
+        if (idx >= 0 && idx < pts.Count)
+            pts[idx] = new Point(newX, newY);
     }
 }
