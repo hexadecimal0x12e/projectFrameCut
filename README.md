@@ -16,7 +16,6 @@
 > 本人很忙，接下来的开发过程会很慢。如果你有很好的想法，建议你写个[Issue](https://github.com/hexadecimal0x12e/projectFrameCut/issues/new)。
 
 
-
 ### 为什么要做这个东西
 
 众所周知，某个剪辑软件的越来越多基础的功能要VIP了（比如生成字幕）~~就差直接先开VIP再用了~~ ，很多人都忍不了做了一些开源的替代品，包括我。
@@ -51,6 +50,8 @@
 
 - [x] 脚本/自动化
 
+- [x] 可扩展性 
+
 - [ ] ...
 
 ### 支持的平台
@@ -60,7 +61,7 @@
 
 projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大，但是你的CPU或者GPU越好，渲染就越快。
 
-对于Windows目标，我们支持**Windows 10 2004或者更新**的系统，并且你还需要安装WinUI3的必要组件（系统会提示你安装它）。要使用硬件加速，你的电脑上还要有一张/多张支持CUDA或者OpenCL的图形处理器（这涵盖了你在市面上能买到的99%的显卡）。
+对于Windows目标，我们支持**Windows 10 2004或者更新**的系统，并且你还需要安装WinUI3的必要组件（系统会提示你安装它）。要使用硬件加速，你的电脑上还要有一张/多张支持CUDA或者OpenCL，并且**支持FP16运算（NVIDIA GTX 10xx或者更新的显卡/计算卡，使用GCN 3或者更新架构的AMD显卡/计算卡，以及第五代或者更新的Intel Core中的集成显卡）**的图形处理器。
 
 对于安卓目标，projectFrameCut需要**在Android 11或者更新系统**，搭载至少8GB的运行内存，使用Arm64架构的CPU上运行。要使用硬件加速，你的设备的GPU必须支持OpenGL ES 3.1 和/或 Vulkan 4.50。
 
@@ -70,8 +71,8 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 
 对于MacCatalyst目标，我们支持MacOS 14.0\(macOS Sonoma\) 或者更新的系统上运行，同时支持Intel或者Apple芯片的Mac。**我们建议使用至少有16GB的统一内存Apple芯片的Mac。**
 
-### Agent 自动化
-外部的AI Agent也可以使用脚本引擎 (详见[projectFrameCut.PowerShell](tools/projectFrameCut.PowerShell/README.md))和 MCP 服务，允许他们（例如Codex，Claude Code等）为你自动完成一些任务，甚至帮你完成整个视频创作。
+### 可扩展性
+projectFrameCut 提供了丰富的扩展接口，允许你在不修改主程序的情况下增加新的功能。你可以使用 PowerShell 脚本、插件或者远程过程调用(RPC)服务来扩展 projectFrameCut 的能力。
 
 #### 脚本引擎
 [projectFrameCut.PowerShell](tools/projectFrameCut.PowerShell/README.md) 提供了一组PowerShell脚本接口，允许你使用PowerShell连接到客户端，并且完成一些任务。
@@ -79,18 +80,11 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 
 #### Agent Skill
 仓库的 [`.agents/skills`](.agents/skills) 提供外部 Agent 使用的 Skill，包含视频创作、PowerShell 和 MCP 操作指南。
-
-#### MCP Server
-> [!NOTE]
-> 由于工具切换可能带来的兼容性问题，我们建议在可用的情况下，优先考虑使用PowerShell集成而不是MCP服务。
-> 一部分Agent可能会在使用 MCP 服务时遇到一些问题，如果你遇到了问题，请尝试使用PowerShell集成。
-MCP 服务支持 STDIO、HTTP 和命名管道，允许第三方 Agent 连接并控制软件。
-
-MCP 服务提供项目、时间轴、素材和效果等操作接口，连接方式见 [MCP Server 文档](./projectFrameCut.IntegratedAPIServer/README.md)。
-
-### 可扩展性
-你可以使用插件来扩展projectFrameCut，
-也可以使用 RPC 服务来控制projectFrameCut，实现连接到其他应用程序（包括脚本引擎和扩展源）。
+Skill 和 PowerShell SDK也在 Windows 版本中和程序包一起提供，它们位于MSIX安装目录下的 `Public` 目录中。
+使用下列命令加载 PowerShell SDK:
+```powershell
+Import-Module (Join-Path -Path (Get-AppxPackage -Name 'hexadecimal0x12e.projectFrameCut').InstallLocation -ChildPath "Public\PowerShell\projectFrameCut.PowerShell.psd1")
+ ```
 
 #### 插件
 
@@ -112,7 +106,6 @@ GUI RPC 使用命名管道连接。调用方可以发起一次性授权请求，
 RPC 还支持外部视频源：外部程序保持运行并注册视频源目录，projectFrameCut 在读取素材帧时通过同一条双工命名管道向调用方请求创建、初始化、读取和释放。协议支持 8/16 位数据、Alpha 和 HDR 帧，项目中保存的是虚拟源引用而不是管道凭据，因此外部程序可以在重新授权并重新注册后恢复源的读取。
 
 第三方 Agent 可以根据使用场景选择 MCP、PowerShell 或直接实现 Render RPC 客户端来编辑项目。
-
 
 
 ### 如何编译
